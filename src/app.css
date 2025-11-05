@@ -91,3 +91,7 @@ main {
   display: flex;
   flex-direction: column;
 }
+
+svg {
+  stroke-width: 0;
+}
