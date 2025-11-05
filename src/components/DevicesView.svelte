@@ -23,6 +23,32 @@
         return maxChannel >= 512 ? 0 : maxChannel;
     }
 
+    function validateDevice(device) {
+        const deviceChannels = DEVICE_TYPES[device.type].channels;
+        const deviceEnd = device.startChannel + deviceChannels;
+
+        // Check if device goes beyond channel 512
+        if (deviceEnd > 512) {
+            return false;
+        }
+
+        // Check for overlaps with other devices
+        for (let otherDevice of devices) {
+            if (otherDevice.id === device.id) continue;
+
+            const otherChannels = DEVICE_TYPES[otherDevice.type].channels;
+            const otherStart = otherDevice.startChannel;
+            const otherEnd = otherStart + otherChannels;
+
+            // Check if ranges overlap
+            if (device.startChannel < otherEnd && deviceEnd > otherStart) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     function addDevice() {
         const startChannel = getNextFreeChannel();
         const device = new Device(nextId++, selectedType, startChannel);
@@ -43,11 +69,14 @@
     function updateDeviceValue(device, controlIndex, value) {
         device.setValue(controlIndex, value);
 
-        // Update DMX controller
-        if (dmxController) {
+        // Update DMX controller only if device is valid
+        if (dmxController && validateDevice(device)) {
             const channelIndex = device.startChannel + controlIndex;
             dmxController.setChannel(channelIndex, value);
         }
+
+        // Force UI update
+        devices = [...devices];
     }
 </script>
 
@@ -75,7 +104,8 @@
         {/if}
 
         {#each devices as device (device.id)}
-            <div class="device-card">
+            {@const isValid = validateDevice(device)}
+            <div class="device-card" class:invalid={!isValid}>
                 <div class="device-header">
                     <h3>{device.name}</h3>
                     <div class="channel-config">
@@ -87,6 +117,7 @@
                             value={device.startChannel + 1}
                             onchange={(e) => updateDeviceChannel(device, parseInt(e.target.value))}
                             class="channel-input"
+                            class:invalid={!isValid}
                         />
                         <span class="channel-range">
                             ({DEVICE_TYPES[device.type].channels} ch)
@@ -94,6 +125,12 @@
                     </div>
                     <button class="remove-btn" onclick={() => removeDevice(device.id)}>×</button>
                 </div>
+
+                {#if !isValid}
+                    <div class="error-message">
+                        ⚠ Channel conflict or out of range (1-512). Device disabled.
+                    </div>
+                {/if}
 
                 <div class="device-controls">
                     {#each DEVICE_TYPES[device.type].controls as control, index}
@@ -107,6 +144,7 @@
                                     value={device.getValue(index)}
                                     oninput={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
                                     style="accent-color: {control.color}"
+                                    disabled={!isValid}
                                 />
                                 <input
                                     type="number"
@@ -115,6 +153,7 @@
                                     value={device.getValue(index)}
                                     onchange={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
                                     class="value-input"
+                                    disabled={!isValid}
                                 />
                             </div>
                         </div>
@@ -186,6 +225,22 @@
         padding: 15px;
     }
 
+    .device-card.invalid {
+        border-color: #ff4444;
+        background: #fff5f5;
+    }
+
+    .error-message {
+        background: #ffeeee;
+        border: 1px solid #ff4444;
+        border-radius: 4px;
+        padding: 8px 12px;
+        margin-bottom: 15px;
+        color: #cc0000;
+        font-size: 9pt;
+        font-weight: 600;
+    }
+
     .device-header {
         display: flex;
         align-items: center;
@@ -226,6 +281,11 @@
         outline: none;
         border-color: #2196F3;
         box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+    }
+
+    .channel-input.invalid {
+        border-color: #ff4444;
+        background: #ffeeee;
     }
 
     .channel-range {
@@ -314,5 +374,10 @@
         outline: none;
         border-color: #2196F3;
         box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+    }
+
+    .control-input input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 </style>
