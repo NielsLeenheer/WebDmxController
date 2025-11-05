@@ -26,7 +26,7 @@ export const DEVICE_TYPES = {
             { name: 'Red', type: 'slider', color: '#ff0000' },
             { name: 'Green', type: 'slider', color: '#00ff00' },
             { name: 'Blue', type: 'slider', color: '#0000ff' },
-            { name: 'White', type: 'slider', color: '#ffffff' }
+            { name: 'White', type: 'slider', color: '#808080' }
         ]
     },
     DIMMER: {
@@ -53,7 +53,7 @@ export const DEVICE_TYPES = {
             { name: 'Red', type: 'slider', color: '#ff0000' },
             { name: 'Green', type: 'slider', color: '#00ff00' },
             { name: 'Blue', type: 'slider', color: '#0000ff' },
-            { name: 'White', type: 'slider', color: '#ffffff' }
+            { name: 'White', type: 'slider', color: '#808080' }
         ]
     }
 };
