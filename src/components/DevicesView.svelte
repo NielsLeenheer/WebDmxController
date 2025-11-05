@@ -6,23 +6,38 @@
     let devices = $state([]);
     let nextId = $state(1);
     let selectedType = $state('RGB');
-    let startChannel = $state(1);
+
+    function getNextFreeChannel() {
+        if (devices.length === 0) return 0; // Channel 1 (0-indexed)
+
+        // Find the highest used channel
+        let maxChannel = 0;
+        devices.forEach(device => {
+            const deviceEndChannel = device.startChannel + DEVICE_TYPES[device.type].channels;
+            if (deviceEndChannel > maxChannel) {
+                maxChannel = deviceEndChannel;
+            }
+        });
+
+        // Return next free channel, or wrap to 1 if over 512
+        return maxChannel >= 512 ? 0 : maxChannel;
+    }
 
     function addDevice() {
-        const device = new Device(nextId++, selectedType, startChannel - 1);
+        const startChannel = getNextFreeChannel();
+        const device = new Device(nextId++, selectedType, startChannel);
         devices.push(device);
-
-        // Update start channel for next device
-        startChannel = startChannel + DEVICE_TYPES[selectedType].channels;
-
-        // Ensure we don't go over 512
-        if (startChannel > 512) {
-            startChannel = 1;
-        }
     }
 
     function removeDevice(deviceId) {
         devices = devices.filter(d => d.id !== deviceId);
+    }
+
+    function updateDeviceChannel(device, newChannel) {
+        // Convert from 1-indexed to 0-indexed
+        device.startChannel = Math.max(0, Math.min(511, newChannel - 1));
+        // Force UI update
+        devices = [...devices];
     }
 
     function updateDeviceValue(device, controlIndex, value) {
@@ -49,14 +64,6 @@
             {/each}
         </select>
 
-        <input
-            type="number"
-            bind:value={startChannel}
-            min="1"
-            max="512"
-            placeholder="Start channel"
-        />
-
         <button onclick={addDevice}>Add Device</button>
     </div>
 
@@ -71,9 +78,20 @@
             <div class="device-card">
                 <div class="device-header">
                     <h3>{device.name}</h3>
-                    <span class="channel-info">
-                        Ch {device.startChannel + 1}-{device.startChannel + DEVICE_TYPES[device.type].channels}
-                    </span>
+                    <div class="channel-config">
+                        <label>Start Ch:</label>
+                        <input
+                            type="number"
+                            min="1"
+                            max="512"
+                            value={device.startChannel + 1}
+                            onchange={(e) => updateDeviceChannel(device, parseInt(e.target.value))}
+                            class="channel-input"
+                        />
+                        <span class="channel-range">
+                            ({DEVICE_TYPES[device.type].channels} ch)
+                        </span>
+                    </div>
                     <button class="remove-btn" onclick={() => removeDevice(device.id)}>×</button>
                 </div>
 
@@ -145,17 +163,6 @@
         flex: 1;
     }
 
-    .add-device input {
-        margin: 0;
-        border: 1px solid #ccc;
-        border-radius: 6px;
-        padding: 0 12px;
-        height: 32px;
-        width: 120px;
-        font-family: system-ui;
-        font-size: 10pt;
-    }
-
     .add-device button {
         margin: 0;
     }
@@ -193,12 +200,37 @@
         flex: 1;
     }
 
-    .channel-info {
+    .channel-config {
+        display: flex;
+        align-items: center;
+        gap: 6px;
         font-size: 9pt;
         color: #666;
-        background: #f0f0f0;
-        padding: 4px 8px;
+    }
+
+    .channel-config label {
+        font-weight: 600;
+    }
+
+    .channel-input {
+        width: 60px;
+        border: 1px solid #ccc;
         border-radius: 4px;
+        padding: 4px 6px;
+        font-size: 9pt;
+        font-family: var(--font-stack-mono);
+        text-align: center;
+    }
+
+    .channel-input:focus {
+        outline: none;
+        border-color: #2196F3;
+        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+    }
+
+    .channel-range {
+        font-size: 9pt;
+        color: #999;
         font-family: var(--font-stack-mono);
     }
 

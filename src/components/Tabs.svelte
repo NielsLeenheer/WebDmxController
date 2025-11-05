@@ -5,13 +5,13 @@
 <div class="tabs-container">
     <nav>
         <label>
-            <input type="radio" name="view" value="universe" bind:group={view}>
-            Universe
+            <input type="radio" name="view" value="devices" bind:group={view}>
+            Devices
         </label>
 
         <label>
-            <input type="radio" name="view" value="devices" bind:group={view}>
-            Devices
+            <input type="radio" name="view" value="universe" bind:group={view}>
+            Universe
         </label>
     </nav>
 </div>
