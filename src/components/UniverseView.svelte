@@ -1,7 +1,10 @@
 <script>
+    import { onMount, onDestroy } from 'svelte';
+
     let { dmxController } = $props();
 
     let universe = $state(new Array(512).fill(0));
+    let updateInterval;
 
     // Update local universe state when dmxController changes
     function updateUniverse() {
@@ -10,8 +13,16 @@
         }
     }
 
-    // Periodically sync universe state
-    let updateInterval = setInterval(updateUniverse, 100);
+    onMount(() => {
+        // Periodically sync universe state
+        updateInterval = setInterval(updateUniverse, 100);
+    });
+
+    onDestroy(() => {
+        if (updateInterval) {
+            clearInterval(updateInterval);
+        }
+    });
 
     function handleChannelChange(channel, event) {
         const value = parseInt(event.target.value) || 0;

@@ -1,16 +1,16 @@
 <script>
-    let { view } = $props();
+    let { view = $bindable() } = $props();
 </script>
 
 <div class="tabs-container">
     <nav>
         <label>
-            <input type="radio" name="view" value="universe" bind:group={$view}>
+            <input type="radio" name="view" value="universe" bind:group={view}>
             Universe
         </label>
 
         <label>
-            <input type="radio" name="view" value="devices" bind:group={$view}>
+            <input type="radio" name="view" value="devices" bind:group={view}>
             Devices
         </label>
     </nav>
