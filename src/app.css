@@ -87,7 +87,7 @@ header {
 
 main {
   grid-row: 2;
-  overflow: hidden;
+  overflow: auto;
   display: flex;
   flex-direction: column;
 }

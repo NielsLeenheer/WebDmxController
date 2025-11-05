@@ -39,11 +39,3 @@
         <DevicesView {dmxController} />
     {/if}
 </main>
-
-<style>
-    main {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-    }
-</style>
