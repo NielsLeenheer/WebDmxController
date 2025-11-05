@@ -1,18 +1,20 @@
 <script>
+    import { Icon } from 'svelte-icon';
+    import connectIcon from '../assets/icons/connect.svg?raw';
+    import disconnectIcon from '../assets/icons/disconnect.svg?raw';
+
     let { onconnect, ondisconnect, connected } = $props();
 </script>
 
 <header>
-    <h1>WebDMX Controller</h1>
-
-    <div class="spacer"></div>
-
     {#if !connected}
         <button onclick={onconnect}>
+            <Icon data={connectIcon} />
             Connect
         </button>
     {:else}
         <button onclick={ondisconnect}>
+            <Icon data={disconnectIcon} />
             Disconnect
         </button>
     {/if}
@@ -24,14 +26,9 @@
         align-items: center;
     }
 
-    h1 {
-        font-size: 14pt;
-        font-weight: 600;
-        margin: 0;
-        color: #333;
-    }
-
-    .spacer {
-        flex: 1;
+    button :global(svg) {
+        width: 1.2em;
+        height: 1.2em;
+        margin-right: 4px;
     }
 </style>
