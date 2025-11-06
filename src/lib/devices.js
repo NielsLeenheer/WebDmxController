@@ -47,8 +47,7 @@ export const DEVICE_TYPES = {
         name: 'Moving Head (Basic)',
         channels: 7,
         controls: [
-            { name: 'Pan', type: 'slider', color: '#888888' },
-            { name: 'Tilt', type: 'slider', color: '#888888' },
+            { name: 'Pan/Tilt', type: 'xypad', panIndex: 0, tiltIndex: 1 },
             { name: 'Dimmer', type: 'slider', color: '#888888' },
             { name: 'Red', type: 'slider', color: '#b83838' },
             { name: 'Green', type: 'slider', color: '#4a964a' },

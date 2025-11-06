@@ -1,6 +1,7 @@
 <script>
     import { Icon } from 'svelte-icon';
     import { DEVICE_TYPES, Device } from '../lib/devices.js';
+    import XYPad from './XYPad.svelte';
     import disconnectIcon from '../assets/icons/disconnect.svg?raw';
 
     let { dmxController, selectedType = $bindable() } = $props();
@@ -197,6 +198,37 @@
         }
     }
 
+    function handleXYPadUpdate(device, panIndex, tiltIndex, panValue, tiltValue) {
+        // Update device values
+        deviceValues[device.id][panIndex] = panValue;
+        deviceValues[device.id][tiltIndex] = tiltValue;
+
+        // Update DMX controller
+        if (dmxController) {
+            dmxController.setChannel(device.startChannel + panIndex, panValue);
+            dmxController.setChannel(device.startChannel + tiltIndex, tiltValue);
+        }
+
+        // Trigger reactivity
+        deviceValues = { ...deviceValues };
+    }
+
+    // Get the channel index for a control
+    function getControlChannelIndex(deviceType, controlIndex) {
+        const controls = DEVICE_TYPES[deviceType].controls;
+        let channelOffset = 0;
+
+        for (let i = 0; i < controlIndex; i++) {
+            if (controls[i].type === 'xypad') {
+                channelOffset += 2; // XY pad uses 2 channels
+            } else {
+                channelOffset += 1;
+            }
+        }
+
+        return channelOffset;
+    }
+
     // Restore all device values to DMX controller on load
     $effect(() => {
         if (dmxController) {
@@ -236,26 +268,38 @@
                 </div>
 
                 <div class="device-controls">
-                    {#each DEVICE_TYPES[device.type].controls as control, index}
-                        <div class="control">
-                            <label>{control.name}</label>
-                            <input
-                                type="range"
-                                min="0"
-                                max="255"
-                                bind:value={deviceValues[device.id][index]}
-                                oninput={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
-                                style="accent-color: {control.color}"
-                            />
-                            <input
-                                type="number"
-                                min="0"
-                                max="255"
-                                bind:value={deviceValues[device.id][index]}
-                                onchange={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
-                                class="value-input"
-                            />
-                        </div>
+                    {#each DEVICE_TYPES[device.type].controls as control, controlIndex}
+                        {#if control.type === 'xypad'}
+                            <div class="control-xypad">
+                                <label>{control.name}</label>
+                                <XYPad
+                                    bind:panValue={deviceValues[device.id][control.panIndex]}
+                                    bind:tiltValue={deviceValues[device.id][control.tiltIndex]}
+                                    onUpdate={(pan, tilt) => handleXYPadUpdate(device, control.panIndex, control.tiltIndex, pan, tilt)}
+                                />
+                            </div>
+                        {:else}
+                            {@const channelIndex = getControlChannelIndex(device.type, controlIndex)}
+                            <div class="control">
+                                <label>{control.name}</label>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="255"
+                                    bind:value={deviceValues[device.id][channelIndex]}
+                                    oninput={(e) => updateDeviceValue(device, channelIndex, parseInt(e.target.value))}
+                                    style="accent-color: {control.color}"
+                                />
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="255"
+                                    bind:value={deviceValues[device.id][channelIndex]}
+                                    onchange={(e) => updateDeviceValue(device, channelIndex, parseInt(e.target.value))}
+                                    class="value-input"
+                                />
+                            </div>
+                        {/if}
                     {/each}
                 </div>
             </div>
@@ -420,6 +464,18 @@
     .control input:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+    }
+
+    .control-xypad {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .control-xypad label {
+        font-size: 9pt;
+        font-weight: 600;
+        color: #555;
     }
 
     /* Dialog styles */
