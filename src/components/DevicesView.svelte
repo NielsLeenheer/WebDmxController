@@ -221,17 +221,25 @@
     }
 
     function handleDeviceValueChange(device, channelIndex, value) {
-        // Update device default value
-        device.defaultValues[channelIndex] = value;
+        // Create new device instance with updated value
+        const updatedDevice = new Device(
+            device.id,
+            device.type,
+            device.startChannel,
+            device.name,
+            device.linkedTo
+        );
+        updatedDevice.defaultValues = [...device.defaultValues];
+        updatedDevice.defaultValues[channelIndex] = value;
+
+        // Update devices array with new instance
+        devices = devices.map(d => d.id === device.id ? updatedDevice : d);
 
         // Update DMX controller
-        updateDeviceToDMX(device);
+        updateDeviceToDMX(updatedDevice);
 
         // Propagate to linked devices
-        propagateToLinkedDevices(device);
-
-        // Trigger reactivity
-        devices = [...devices];
+        propagateToLinkedDevices(updatedDevice);
     }
 
     function updateDeviceToDMX(device) {
@@ -244,26 +252,34 @@
     }
 
     function propagateToLinkedDevices(sourceDevice) {
-        let needsUpdate = false;
-
-        devices.forEach(device => {
+        // Create new device instances for all linked devices
+        devices = devices.map(device => {
             if (device.linkedTo === sourceDevice.id) {
+                // Create new device instance to trigger reactivity
+                const updatedDevice = new Device(
+                    device.id,
+                    device.type,
+                    device.startChannel,
+                    device.name,
+                    device.linkedTo
+                );
+
+                // Apply linked values
                 const newValues = applyLinkedValues(
                     sourceDevice.type,
                     device.type,
                     sourceDevice.defaultValues,
                     device.defaultValues
                 );
-                device.defaultValues = newValues;
-                updateDeviceToDMX(device);
-                needsUpdate = true;
-            }
-        });
+                updatedDevice.defaultValues = newValues;
 
-        // Force reactivity update if any linked devices were modified
-        if (needsUpdate) {
-            devices = [...devices];
-        }
+                // Update DMX
+                updateDeviceToDMX(updatedDevice);
+
+                return updatedDevice;
+            }
+            return device;
+        });
     }
 
     function getLinkableDevices(device) {
