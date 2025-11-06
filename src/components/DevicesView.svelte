@@ -62,21 +62,16 @@
     function updateDeviceChannel(device, newChannel) {
         // Convert from 1-indexed to 0-indexed
         device.startChannel = Math.max(0, Math.min(511, newChannel - 1));
-        // Force UI update
-        devices = [...devices];
     }
 
     function updateDeviceValue(device, controlIndex, value) {
-        device.setValue(controlIndex, value);
+        device.values[controlIndex] = Math.max(0, Math.min(255, value));
 
         // Update DMX controller only if device is valid
         if (dmxController && validateDevice(device)) {
             const channelIndex = device.startChannel + controlIndex;
             dmxController.setChannel(channelIndex, value);
         }
-
-        // Force UI update
-        devices = [...devices];
     }
 </script>
 
@@ -141,8 +136,8 @@
                                     type="range"
                                     min="0"
                                     max="255"
-                                    value={device.getValue(index)}
-                                    oninput={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
+                                    bind:value={device.values[index]}
+                                    oninput={() => updateDeviceValue(device, index, device.values[index])}
                                     style="accent-color: {control.color}"
                                     disabled={!isValid}
                                 />
@@ -150,8 +145,8 @@
                                     type="number"
                                     min="0"
                                     max="255"
-                                    value={device.getValue(index)}
-                                    onchange={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
+                                    bind:value={device.values[index]}
+                                    onchange={() => updateDeviceValue(device, index, device.values[index])}
                                     class="value-input"
                                     disabled={!isValid}
                                 />
@@ -199,7 +194,7 @@
 
     .add-device select {
         margin: 0;
-        flex: 1;
+        min-width: 200px;
     }
 
     .add-device button {
