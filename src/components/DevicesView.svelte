@@ -10,6 +10,7 @@
     // Link dialog state
     let linkDialog = $state(null);
     let linkingDevice = $state(null);
+    let selectedLinkTarget = $state(null);
 
     // Dialog state
     let editingDevice = $state(null);
@@ -29,12 +30,15 @@
 
     function openLinkDialog(device) {
         linkingDevice = device;
+        // Set current link target or null for the select
+        selectedLinkTarget = device.linkedTo || null;
         linkDialog?.showModal();
     }
 
     function closeLinkDialog() {
         linkDialog?.close();
         linkingDevice = null;
+        selectedLinkTarget = null;
     }
 
     function submitChannelChange() {
@@ -232,6 +236,8 @@
     }
 
     function propagateToLinkedDevices(sourceDevice) {
+        let needsUpdate = false;
+
         devices.forEach(device => {
             if (device.linkedTo === sourceDevice.id) {
                 const newValues = applyLinkedValues(
@@ -242,8 +248,14 @@
                 );
                 device.defaultValues = newValues;
                 updateDeviceToDMX(device);
+                needsUpdate = true;
             }
         });
+
+        // Force reactivity update if any linked devices were modified
+        if (needsUpdate) {
+            devices = [...devices];
+        }
     }
 
     function getLinkableDevices(device) {
@@ -255,34 +267,36 @@
         );
     }
 
-    function linkToDevice(targetDeviceId) {
+    function saveLinkChanges() {
         if (!linkingDevice) return;
 
-        linkingDevice.linkedTo = targetDeviceId;
+        const wasLinked = linkingDevice.linkedTo !== null;
+        const newTarget = selectedLinkTarget;
 
-        // Apply values from linked device immediately
-        const sourceDevice = devices.find(d => d.id === targetDeviceId);
-        if (sourceDevice) {
-            const newValues = applyLinkedValues(
-                sourceDevice.type,
-                linkingDevice.type,
-                sourceDevice.defaultValues,
-                linkingDevice.defaultValues
-            );
-            linkingDevice.defaultValues = newValues;
-            updateDeviceToDMX(linkingDevice);
+        // If changing from one link to another or from no link to linked
+        if (newTarget !== null) {
+            linkingDevice.linkedTo = newTarget;
+
+            // Apply values from linked device immediately
+            const sourceDevice = devices.find(d => d.id === newTarget);
+            if (sourceDevice) {
+                const newValues = applyLinkedValues(
+                    sourceDevice.type,
+                    linkingDevice.type,
+                    sourceDevice.defaultValues,
+                    linkingDevice.defaultValues
+                );
+                linkingDevice.defaultValues = newValues;
+                updateDeviceToDMX(linkingDevice);
+            }
+        } else {
+            // Unlink
+            linkingDevice.linkedTo = null;
         }
 
         // Force complete reactivity update
         devices = devices.map(d => d.id === linkingDevice.id ? linkingDevice : d);
 
-        closeLinkDialog();
-    }
-
-    function unlinkDevice(device) {
-        device.linkedTo = null;
-        // Force reactivity update
-        devices = devices.map(d => d.id === device.id ? device : d);
         closeLinkDialog();
     }
 
@@ -381,47 +395,30 @@
 
     <dialog bind:this={linkDialog} class="link-dialog">
         {#if linkingDevice}
-            <form method="dialog">
+            <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveLinkChanges(); }}>
                 <h3>Link {linkingDevice.name}</h3>
 
-                {#if linkingDevice.isLinked()}
-                    {@const sourceDevice = devices.find(d => d.id === linkingDevice.linkedTo)}
-                    {#if sourceDevice}
-                        <p class="link-status">Currently linked to: <strong>{sourceDevice.name}</strong></p>
-                    {/if}
-                {:else}
-                    <p class="link-description">Link this device to follow another device's values</p>
-                {/if}
+                <p class="link-description">Link this device to follow another device's values</p>
 
-                <div class="link-options">
-                    {#if linkingDevice.isLinked()}
-                        <button
-                            type="button"
-                            class="unlink-button"
-                            onclick={() => unlinkDevice(linkingDevice)}
-                        >
-                            Unlink Device
-                        </button>
-                    {:else if getLinkableDevices(linkingDevice).length > 0}
-                        <div class="link-list">
+                <div class="dialog-input-group">
+                    <label for="link-select">Link to:</label>
+                    {#if getLinkableDevices(linkingDevice).length > 0 || linkingDevice.isLinked()}
+                        <select id="link-select" bind:value={selectedLinkTarget}>
+                            <option value={null}>None (unlink)</option>
                             {#each getLinkableDevices(linkingDevice) as linkableDevice}
-                                <button
-                                    type="button"
-                                    class="device-link-option"
-                                    onclick={() => linkToDevice(linkableDevice.id)}
-                                >
-                                    {linkableDevice.name}
-                                    <span class="device-type">{DEVICE_TYPES[linkableDevice.type].name}</span>
-                                </button>
+                                <option value={linkableDevice.id}>
+                                    {linkableDevice.name} ({DEVICE_TYPES[linkableDevice.type].name})
+                                </option>
                             {/each}
-                        </div>
+                        </select>
                     {:else}
                         <p class="no-devices">No compatible devices available to link</p>
                     {/if}
                 </div>
 
                 <div class="dialog-buttons">
-                    <button type="button" onclick={closeLinkDialog}>Close</button>
+                    <button type="button" onclick={closeLinkDialog}>Cancel</button>
+                    <button type="submit">Save</button>
                 </div>
             </form>
         {/if}
@@ -588,6 +585,22 @@
         background: #fff5f5;
     }
 
+    .dialog-input-group select {
+        width: 100%;
+        padding: 8px 12px;
+        font-size: 10pt;
+        border: 2px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        background: white;
+        cursor: pointer;
+    }
+
+    .dialog-input-group select:focus {
+        outline: none;
+        border-color: #2196F3;
+    }
+
     .dialog-buttons {
         display: flex;
         gap: 10px;
@@ -644,71 +657,10 @@
         color: #333;
     }
 
-    .link-status {
-        margin: 0 0 16px 0;
-        padding: 10px;
-        background: #e3f2fd;
-        border-left: 3px solid #2196F3;
-        border-radius: 4px;
-        font-size: 10pt;
-    }
-
     .link-description {
         margin: 0 0 16px 0;
         font-size: 10pt;
         color: #666;
-    }
-
-    .link-options {
-        margin-bottom: 20px;
-    }
-
-    .link-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .device-link-option {
-        padding: 12px;
-        background: #f5f5f5;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        cursor: pointer;
-        text-align: left;
-        font-size: 10pt;
-        transition: all 0.2s ease;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .device-link-option:hover {
-        background: #e3f2fd;
-        border-color: #2196F3;
-    }
-
-    .device-type {
-        font-size: 9pt;
-        color: #666;
-        font-style: italic;
-    }
-
-    .unlink-button {
-        width: 100%;
-        padding: 12px;
-        background: #ffebee;
-        color: #c62828;
-        border: 1px solid #ef5350;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 10pt;
-        font-weight: 600;
-        transition: background 0.2s ease;
-    }
-
-    .unlink-button:hover {
-        background: #ffcdd2;
     }
 
     .no-devices {
