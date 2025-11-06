@@ -158,6 +158,17 @@
     function updateDeviceChannel(device, newChannel) {
         // Convert from 1-indexed to 0-indexed
         device.startChannel = Math.max(0, Math.min(511, newChannel - 1));
+
+        // Trigger reactivity by reassigning the array
+        devices = [...devices];
+
+        // Update DMX controller with new channel values
+        if (dmxController && validateDevice(device) && deviceValues[device.id]) {
+            deviceValues[device.id].forEach((value, index) => {
+                const channelIndex = device.startChannel + index;
+                dmxController.setChannel(channelIndex, value);
+            });
+        }
     }
 
     function updateDeviceValue(device, controlIndex, value) {
