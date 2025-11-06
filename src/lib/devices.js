@@ -5,7 +5,7 @@ export const DEVICE_TYPES = {
         channels: 3,
         controls: [
             { name: 'Red', type: 'slider', color: '#cc0000' },
-            { name: 'Green', type: 'slider', color: '#00aa00' },
+            { name: 'Green', type: 'slider', color: '#008800' },
             { name: 'Blue', type: 'slider', color: '#0000cc' }
         ]
     },
@@ -14,9 +14,9 @@ export const DEVICE_TYPES = {
         channels: 4,
         controls: [
             { name: 'Red', type: 'slider', color: '#cc0000' },
-            { name: 'Green', type: 'slider', color: '#00aa00' },
+            { name: 'Green', type: 'slider', color: '#008800' },
             { name: 'Blue', type: 'slider', color: '#0000cc' },
-            { name: 'Amber', type: 'slider', color: '#cc9900' }
+            { name: 'Amber', type: 'slider', color: '#aa7700' }
         ]
     },
     RGBW: {
@@ -24,7 +24,7 @@ export const DEVICE_TYPES = {
         channels: 4,
         controls: [
             { name: 'Red', type: 'slider', color: '#cc0000' },
-            { name: 'Green', type: 'slider', color: '#00aa00' },
+            { name: 'Green', type: 'slider', color: '#008800' },
             { name: 'Blue', type: 'slider', color: '#0000cc' },
             { name: 'White', type: 'slider', color: '#808080' }
         ]
@@ -51,7 +51,7 @@ export const DEVICE_TYPES = {
             { name: 'Tilt', type: 'slider', color: '#888888' },
             { name: 'Dimmer', type: 'slider', color: '#888888' },
             { name: 'Red', type: 'slider', color: '#cc0000' },
-            { name: 'Green', type: 'slider', color: '#00aa00' },
+            { name: 'Green', type: 'slider', color: '#008800' },
             { name: 'Blue', type: 'slider', color: '#0000cc' },
             { name: 'White', type: 'slider', color: '#808080' }
         ]
