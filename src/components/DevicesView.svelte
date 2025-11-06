@@ -270,32 +270,35 @@
     function saveLinkChanges() {
         if (!linkingDevice) return;
 
-        const wasLinked = linkingDevice.linkedTo !== null;
         const newTarget = selectedLinkTarget;
 
-        // If changing from one link to another or from no link to linked
-        if (newTarget !== null) {
-            linkingDevice.linkedTo = newTarget;
+        // Create new Device instance to ensure reactivity
+        const updatedDevice = new Device(
+            linkingDevice.id,
+            linkingDevice.type,
+            linkingDevice.startChannel,
+            linkingDevice.name,
+            newTarget
+        );
+        updatedDevice.defaultValues = [...linkingDevice.defaultValues];
 
-            // Apply values from linked device immediately
+        // If linking, apply values from source device
+        if (newTarget !== null) {
             const sourceDevice = devices.find(d => d.id === newTarget);
             if (sourceDevice) {
                 const newValues = applyLinkedValues(
                     sourceDevice.type,
-                    linkingDevice.type,
+                    updatedDevice.type,
                     sourceDevice.defaultValues,
-                    linkingDevice.defaultValues
+                    updatedDevice.defaultValues
                 );
-                linkingDevice.defaultValues = newValues;
-                updateDeviceToDMX(linkingDevice);
+                updatedDevice.defaultValues = newValues;
+                updateDeviceToDMX(updatedDevice);
             }
-        } else {
-            // Unlink
-            linkingDevice.linkedTo = null;
         }
 
-        // Force complete reactivity update
-        devices = devices.map(d => d.id === linkingDevice.id ? linkingDevice : d);
+        // Update devices array with new instance
+        devices = devices.map(d => d.id === linkingDevice.id ? updatedDevice : d);
 
         closeLinkDialog();
     }
