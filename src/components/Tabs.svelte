@@ -33,7 +33,6 @@
     nav {
         border: none;
         border-radius: 6px;
-        background: #eaeaea;
         font-family: system-ui;
         font-size: 10pt;
         display: flex;
@@ -46,21 +45,14 @@
         display: flex;
         align-items: center;
         gap: 6px;
-        padding: 0px 16px;
+        padding: 0px 12px;
         cursor: pointer;
+        border-radius: 6px;
     }
 
     label :global(svg) {
-        width: 1.2em;
-        height: 1.2em;
-    }
-
-    label:first-child {
-        border-radius: 6px 0 0 6px;
-    }
-
-    label:last-child {
-        border-radius: 0 6px 6px 0;
+        width: 1.8em;
+        height: 1.8em;
     }
 
     label:has(:focus-visible) {
@@ -68,7 +60,7 @@
     }
 
     label:has(input:checked) {
-        background: #d5d5d5;
+        background: #fff;
     }
 
     input {
