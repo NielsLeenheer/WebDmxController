@@ -277,6 +277,26 @@
                                     bind:tiltValue={deviceValues[device.id][control.tiltIndex]}
                                     onUpdate={(pan, tilt) => handleXYPadUpdate(device, control.panIndex, control.tiltIndex, pan, tilt)}
                                 />
+                                <div class="xypad-inputs">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="255"
+                                        bind:value={deviceValues[device.id][control.panIndex]}
+                                        onchange={(e) => handleXYPadUpdate(device, control.panIndex, control.tiltIndex, parseInt(e.target.value), deviceValues[device.id][control.tiltIndex])}
+                                        class="value-input"
+                                        title="Pan"
+                                    />
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="255"
+                                        bind:value={deviceValues[device.id][control.tiltIndex]}
+                                        onchange={(e) => handleXYPadUpdate(device, control.panIndex, control.tiltIndex, deviceValues[device.id][control.panIndex], parseInt(e.target.value))}
+                                        class="value-input"
+                                        title="Tilt"
+                                    />
+                                </div>
                             </div>
                         {:else}
                             {@const channelIndex = getControlChannelIndex(device.type, controlIndex)}
@@ -467,15 +487,26 @@
     }
 
     .control-xypad {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: 4em 1fr 3em;
         gap: 8px;
+        align-items: center;
     }
 
     .control-xypad label {
         font-size: 9pt;
         font-weight: 600;
         color: #555;
+    }
+
+    .xypad-inputs {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .xypad-inputs input {
+        width: 4em;
     }
 
     /* Dialog styles */

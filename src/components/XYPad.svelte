@@ -65,52 +65,39 @@
     let dotY = $derived((1 - tiltValue / 255) * 100); // Invert for display
 </script>
 
-<div class="xy-pad-container">
+<div
+    class="xy-pad"
+    bind:this={padElement}
+    onmousedown={handleMouseDown}
+    onmousemove={handleMouseMove}
+    role="slider"
+    aria-label="Pan and Tilt Control"
+    tabindex="0"
+>
+    <!-- Grid lines -->
+    <div class="grid-line vertical" style="left: 25%"></div>
+    <div class="grid-line vertical" style="left: 50%"></div>
+    <div class="grid-line vertical" style="left: 75%"></div>
+    <div class="grid-line horizontal" style="top: 25%"></div>
+    <div class="grid-line horizontal" style="top: 50%"></div>
+    <div class="grid-line horizontal" style="top: 75%"></div>
+
+    <!-- Crosshair dot -->
     <div
-        class="xy-pad"
-        bind:this={padElement}
-        onmousedown={handleMouseDown}
-        onmousemove={handleMouseMove}
-        role="slider"
-        aria-label="Pan and Tilt Control"
-        tabindex="0"
-    >
-        <!-- Grid lines -->
-        <div class="grid-line vertical" style="left: 25%"></div>
-        <div class="grid-line vertical" style="left: 50%"></div>
-        <div class="grid-line vertical" style="left: 75%"></div>
-        <div class="grid-line horizontal" style="top: 25%"></div>
-        <div class="grid-line horizontal" style="top: 50%"></div>
-        <div class="grid-line horizontal" style="top: 75%"></div>
-
-        <!-- Crosshair dot -->
-        <div
-            class="crosshair"
-            style="left: {dotX}%; top: {dotY}%"
-            class:active={isDragging}
-        ></div>
-    </div>
-
-    <div class="xy-pad-labels">
-        <span>Pan: {panValue}</span>
-        <span>Tilt: {tiltValue}</span>
-    </div>
+        class="crosshair"
+        style="left: {dotX}%; top: {dotY}%"
+        class:active={isDragging}
+    ></div>
 </div>
 
 <style>
-    .xy-pad-container {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
     .xy-pad {
         position: relative;
         width: 100%;
         aspect-ratio: 1;
         background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
         border: 2px solid #ccc;
-        border-radius: 8px;
+        border-radius: 6px;
         cursor: crosshair;
         user-select: none;
         touch-action: none;
@@ -144,8 +131,8 @@
 
     .crosshair {
         position: absolute;
-        width: 16px;
-        height: 16px;
+        width: 12px;
+        height: 12px;
         background: #2196F3;
         border: 2px solid white;
         border-radius: 50%;
@@ -158,13 +145,5 @@
     .crosshair.active {
         transform: translate(-50%, -50%) scale(1.2);
         background: #1976D2;
-    }
-
-    .xy-pad-labels {
-        display: flex;
-        justify-content: space-between;
-        font-size: 9pt;
-        font-family: var(--font-stack-mono);
-        color: #666;
     }
 </style>
