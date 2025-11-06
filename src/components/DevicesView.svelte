@@ -220,7 +220,7 @@
                         class:invalid={!isValid}
                         onclick={() => openChannelDialog(device)}
                     >
-                        {device.startChannel + 1} - {device.startChannel + DEVICE_TYPES[device.type].channels}
+                        Channel: {device.startChannel + 1}-{device.startChannel + DEVICE_TYPES[device.type].channels}
                     </button>
                     <button class="remove-btn" onclick={() => removeDevice(device.id)}>
                         <Icon data={disconnectIcon} />
@@ -341,9 +341,10 @@
 
     .device-header {
         display: flex;
-        align-items: center;
+        align-items: baseline;
         margin-bottom: 15px;
-        gap: 10px;
+        gap: 8px;
+        margin-top: -0.4em;
     }
 
     .device-header h3 {
@@ -354,7 +355,7 @@
 
     .channel-button {
         padding: 4px 8px;
-        font-size: 8pt;
+        font-size: 7pt;
         text-align: center;
         background: transparent;
         cursor: pointer;
@@ -407,8 +408,8 @@
     }
 
     .control label {
-        font-size: 9pt;
-        font-weight: 600;
+        font-size: 8pt;
+        font-weight: 400;
         color: #555;
     }
 
@@ -421,7 +422,7 @@
         border: none;
         background: transparent;
         padding: 4px;
-        font-size: 9pt;
+        font-size: 8pt;
         font-family: var(--font-stack-mono);
         text-align: right;
         border-radius: 5px;
