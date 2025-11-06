@@ -76,8 +76,7 @@
 
     .channels-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-        /* gap: 8px; */
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
     }
 
     .channel {
@@ -91,10 +90,10 @@
 
     .channel label {
         font-size: 7pt;
-        color: #aaa;
+        color: #ccc;
         margin-bottom: 4px;
         font-weight: 600;
-        width: 5ch;
+        width: 7em;
     }
 
     .channel input {
