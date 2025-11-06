@@ -4,6 +4,7 @@
     let { dmxController } = $props();
 
     let devices = $state([]);
+    let deviceValues = $state({}); // Store values separately as reactive state
     let nextId = $state(1);
     let selectedType = $state('RGB');
 
@@ -52,13 +53,14 @@
     function addDevice() {
         const startChannel = getNextFreeChannel();
         const device = new Device(nextId++, selectedType, startChannel);
-        // Make values reactive by wrapping in $state
-        device.values = $state(device.values);
         devices.push(device);
+        // Initialize values for this device
+        deviceValues[device.id] = new Array(DEVICE_TYPES[device.type].channels).fill(0);
     }
 
     function removeDevice(deviceId) {
         devices = devices.filter(d => d.id !== deviceId);
+        delete deviceValues[deviceId];
     }
 
     function updateDeviceChannel(device, newChannel) {
@@ -136,7 +138,7 @@
                                     type="range"
                                     min="0"
                                     max="255"
-                                    bind:value={device.values[index]}
+                                    bind:value={deviceValues[device.id][index]}
                                     oninput={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
                                     style="accent-color: {control.color}"
                                     disabled={!isValid}
@@ -145,7 +147,7 @@
                                     type="number"
                                     min="0"
                                     max="255"
-                                    bind:value={device.values[index]}
+                                    bind:value={deviceValues[device.id][index]}
                                     onchange={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
                                     class="value-input"
                                     disabled={!isValid}
