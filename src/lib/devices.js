@@ -4,28 +4,28 @@ export const DEVICE_TYPES = {
         name: 'RGB Light',
         channels: 3,
         controls: [
-            { name: 'Red', type: 'slider', color: '#ff0000' },
-            { name: 'Green', type: 'slider', color: '#00ff00' },
-            { name: 'Blue', type: 'slider', color: '#0000ff' }
+            { name: 'Red', type: 'slider', color: '#cc0000' },
+            { name: 'Green', type: 'slider', color: '#00aa00' },
+            { name: 'Blue', type: 'slider', color: '#0000cc' }
         ]
     },
     RGBA: {
         name: 'RGBA Light',
         channels: 4,
         controls: [
-            { name: 'Red', type: 'slider', color: '#ff0000' },
-            { name: 'Green', type: 'slider', color: '#00ff00' },
-            { name: 'Blue', type: 'slider', color: '#0000ff' },
-            { name: 'Amber', type: 'slider', color: '#ffbf00' }
+            { name: 'Red', type: 'slider', color: '#cc0000' },
+            { name: 'Green', type: 'slider', color: '#00aa00' },
+            { name: 'Blue', type: 'slider', color: '#0000cc' },
+            { name: 'Amber', type: 'slider', color: '#cc9900' }
         ]
     },
     RGBW: {
         name: 'RGBW Light',
         channels: 4,
         controls: [
-            { name: 'Red', type: 'slider', color: '#ff0000' },
-            { name: 'Green', type: 'slider', color: '#00ff00' },
-            { name: 'Blue', type: 'slider', color: '#0000ff' },
+            { name: 'Red', type: 'slider', color: '#cc0000' },
+            { name: 'Green', type: 'slider', color: '#00aa00' },
+            { name: 'Blue', type: 'slider', color: '#0000cc' },
             { name: 'White', type: 'slider', color: '#808080' }
         ]
     },
@@ -50,9 +50,9 @@ export const DEVICE_TYPES = {
             { name: 'Pan', type: 'slider', color: '#888888' },
             { name: 'Tilt', type: 'slider', color: '#888888' },
             { name: 'Dimmer', type: 'slider', color: '#888888' },
-            { name: 'Red', type: 'slider', color: '#ff0000' },
-            { name: 'Green', type: 'slider', color: '#00ff00' },
-            { name: 'Blue', type: 'slider', color: '#0000ff' },
+            { name: 'Red', type: 'slider', color: '#cc0000' },
+            { name: 'Green', type: 'slider', color: '#00aa00' },
+            { name: 'Blue', type: 'slider', color: '#0000cc' },
             { name: 'White', type: 'slider', color: '#808080' }
         ]
     }
