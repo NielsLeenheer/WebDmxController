@@ -4,48 +4,78 @@
     import { canLinkDevices, applyLinkedValues, getMappedChannels } from '../lib/channelMapping.js';
     import DeviceControls from './DeviceControls.svelte';
     import disconnectIcon from '../assets/icons/disconnect.svg?raw';
+    import settingsIcon from '../assets/icons/settings.svg?raw';
 
     let { dmxController, selectedType = $bindable(), devices = $bindable([]) } = $props();
 
-    // Link dialog state
-    let linkDialog = $state(null);
-    let linkingDevice = $state(null);
+    // Settings dialog state
+    let settingsDialog = $state(null);
+    let editingDevice = $state(null);
+    let dialogName = $state('');
+    let dialogChannel = $state(1);
     let selectedLinkTarget = $state(null);
 
-    // Dialog state
-    let editingDevice = $state(null);
-    let dialogChannel = $state(1);
-    let channelDialog = $state(null);
-
-    function openChannelDialog(device) {
+    function openSettingsDialog(device) {
         editingDevice = device;
+        dialogName = device.name;
         dialogChannel = device.startChannel + 1;
-        channelDialog?.showModal();
-    }
-
-    function closeChannelDialog() {
-        channelDialog?.close();
-        editingDevice = null;
-    }
-
-    function openLinkDialog(device) {
-        linkingDevice = device;
-        // Set current link target or null for the select
         selectedLinkTarget = device.linkedTo || null;
-        linkDialog?.showModal();
+        settingsDialog?.showModal();
     }
 
-    function closeLinkDialog() {
-        linkDialog?.close();
-        linkingDevice = null;
+    function closeSettingsDialog() {
+        settingsDialog?.close();
+        editingDevice = null;
+        dialogName = '';
         selectedLinkTarget = null;
     }
 
-    function submitChannelChange() {
-        if (editingDevice && isChannelValid(editingDevice, dialogChannel - 1)) {
-            updateDeviceChannel(editingDevice, dialogChannel);
-            closeChannelDialog();
+    function saveDeviceSettings() {
+        if (!editingDevice) return;
+
+        // Validate channel
+        if (!isChannelValid(editingDevice, dialogChannel - 1)) {
+            return;
         }
+
+        const newStartChannel = Math.max(0, Math.min(511, dialogChannel - 1));
+
+        // Create new Device instance with all updated properties
+        const updatedDevice = new Device(
+            editingDevice.id,
+            editingDevice.type,
+            newStartChannel,
+            dialogName.trim() || editingDevice.name,
+            selectedLinkTarget
+        );
+        updatedDevice.defaultValues = [...editingDevice.defaultValues];
+
+        // If linking, apply values from source device
+        if (selectedLinkTarget !== null) {
+            const sourceDevice = devices.find(d => d.id === selectedLinkTarget);
+            if (sourceDevice) {
+                const newValues = applyLinkedValues(
+                    sourceDevice.type,
+                    updatedDevice.type,
+                    sourceDevice.defaultValues,
+                    updatedDevice.defaultValues
+                );
+                updatedDevice.defaultValues = newValues;
+            }
+        }
+
+        // Update DMX controller with new channel values
+        if (dmxController) {
+            updatedDevice.defaultValues.forEach((value, index) => {
+                const channelIndex = updatedDevice.startChannel + index;
+                dmxController.setChannel(channelIndex, value);
+            });
+        }
+
+        // Update devices array
+        devices = devices.map(d => d.id === editingDevice.id ? updatedDevice : d);
+
+        closeSettingsDialog();
     }
 
     function isChannelValid(device, startChannel0indexed) {
@@ -190,28 +220,6 @@
         }).filter(d => d.id !== deviceId);
     }
 
-    function updateDeviceChannel(device, newChannel) {
-        // Convert from 1-indexed to 0-indexed
-        const newStartChannel = Math.max(0, Math.min(511, newChannel - 1));
-
-        // Create new device instances to trigger reactivity
-        devices = devices.map(d => {
-            if (d.id === device.id) {
-                // Create a new Device instance with updated channel
-                const updated = new Device(d.id, d.type, newStartChannel, d.name, d.linkedTo);
-                updated.defaultValues = [...d.defaultValues];
-                return updated;
-            }
-            return d;
-        });
-
-        // Update DMX controller with new channel values
-        const updatedDevice = devices.find(d => d.id === device.id);
-        if (dmxController && updatedDevice) {
-            updateDeviceToDMX(updatedDevice);
-        }
-    }
-
     function handleDeviceValueChange(device, channelIndex, value) {
         // Update device default value
         device.defaultValues[channelIndex] = value;
@@ -267,42 +275,6 @@
         );
     }
 
-    function saveLinkChanges() {
-        if (!linkingDevice) return;
-
-        const newTarget = selectedLinkTarget;
-
-        // Create new Device instance to ensure reactivity
-        const updatedDevice = new Device(
-            linkingDevice.id,
-            linkingDevice.type,
-            linkingDevice.startChannel,
-            linkingDevice.name,
-            newTarget
-        );
-        updatedDevice.defaultValues = [...linkingDevice.defaultValues];
-
-        // If linking, apply values from source device
-        if (newTarget !== null) {
-            const sourceDevice = devices.find(d => d.id === newTarget);
-            if (sourceDevice) {
-                const newValues = applyLinkedValues(
-                    sourceDevice.type,
-                    updatedDevice.type,
-                    sourceDevice.defaultValues,
-                    updatedDevice.defaultValues
-                );
-                updatedDevice.defaultValues = newValues;
-                updateDeviceToDMX(updatedDevice);
-            }
-        }
-
-        // Update devices array with new instance
-        devices = devices.map(d => d.id === linkingDevice.id ? updatedDevice : d);
-
-        closeLinkDialog();
-    }
-
     function getDisabledChannels(device) {
         if (!device.linkedTo) return [];
 
@@ -334,21 +306,19 @@
             <div class="device-card">
                 <div class="device-header">
                     <h3>{device.name}</h3>
-                    <button
-                        class="channel-button"
-                        onclick={() => openChannelDialog(device)}
-                    >
-                        Channel: {device.startChannel + 1}-{device.startChannel + DEVICE_TYPES[device.type].channels}
-                    </button>
-                    {#if getLinkableDevices(device).length > 0 || device.isLinked()}
-                        <button
-                            class="link-button"
-                            onclick={() => openLinkDialog(device)}
-                            title={device.isLinked() ? 'Linked' : 'Link to device'}
-                        >
-                            {device.isLinked() ? '🔗' : '⛓️'}
-                        </button>
+                    <span class="channel-info">
+                        Ch {device.startChannel + 1}-{device.startChannel + DEVICE_TYPES[device.type].channels}
+                    </span>
+                    {#if device.isLinked()}
+                        <span class="link-indicator" title="Linked to another device">🔗</span>
                     {/if}
+                    <button
+                        class="settings-btn"
+                        onclick={() => openSettingsDialog(device)}
+                        title="Device settings"
+                    >
+                        <Icon data={settingsIcon} />
+                    </button>
                     <button class="remove-btn" onclick={() => removeDevice(device.id)}>
                         <Icon data={disconnectIcon} />
                     </button>
@@ -364,13 +334,23 @@
         {/each}
     </div>
 
-    <dialog bind:this={channelDialog} class="channel-dialog">
+    <dialog bind:this={settingsDialog} class="settings-dialog">
         {#if editingDevice}
-            <form method="dialog" onsubmit={(e) => { e.preventDefault(); submitChannelChange(); }}>
-                <h3>{editingDevice.name}</h3>
+            <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveDeviceSettings(); }}>
+                <h3>Device Settings</h3>
 
                 <div class="dialog-input-group">
-                    <label for="channel-input">{DEVICE_TYPES[editingDevice.type].channels} channels, starting at:</label>
+                    <label for="name-input">Name:</label>
+                    <input
+                        id="name-input"
+                        type="text"
+                        bind:value={dialogName}
+                        placeholder="Device name"
+                    />
+                </div>
+
+                <div class="dialog-input-group">
+                    <label for="channel-input">Starting channel (1-512):</label>
                     <input
                         id="channel-input"
                         type="number"
@@ -379,49 +359,38 @@
                         bind:value={dialogChannel}
                         class:valid={isChannelValid(editingDevice, dialogChannel - 1)}
                         class:invalid={!isChannelValid(editingDevice, dialogChannel - 1)}
-                        autofocus
                     />
+                    <small class="channel-range">
+                        Device uses {DEVICE_TYPES[editingDevice.type].channels} channels
+                        (Ch {dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1})
+                    </small>
                 </div>
-
-                <div class="dialog-buttons">
-                    <button type="button" onclick={closeChannelDialog}>Cancel</button>
-                    <button
-                        type="submit"
-                        disabled={!isChannelValid(editingDevice, dialogChannel - 1)}
-                    >
-                        Apply
-                    </button>
-                </div>
-            </form>
-        {/if}
-    </dialog>
-
-    <dialog bind:this={linkDialog} class="link-dialog">
-        {#if linkingDevice}
-            <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveLinkChanges(); }}>
-                <h3>Link {linkingDevice.name}</h3>
-
-                <p class="link-description">Link this device to follow another device's values</p>
 
                 <div class="dialog-input-group">
-                    <label for="link-select">Link to:</label>
-                    {#if getLinkableDevices(linkingDevice).length > 0 || linkingDevice.isLinked()}
+                    <label for="link-select">Link to device:</label>
+                    {#if getLinkableDevices(editingDevice).length > 0 || editingDevice.isLinked()}
                         <select id="link-select" bind:value={selectedLinkTarget}>
-                            <option value={null}>None (unlink)</option>
-                            {#each getLinkableDevices(linkingDevice) as linkableDevice}
+                            <option value={null}>None</option>
+                            {#each getLinkableDevices(editingDevice) as linkableDevice}
                                 <option value={linkableDevice.id}>
                                     {linkableDevice.name} ({DEVICE_TYPES[linkableDevice.type].name})
                                 </option>
                             {/each}
                         </select>
+                        <small class="link-help">Link this device to follow another device's values</small>
                     {:else}
                         <p class="no-devices">No compatible devices available to link</p>
                     {/if}
                 </div>
 
                 <div class="dialog-buttons">
-                    <button type="button" onclick={closeLinkDialog}>Cancel</button>
-                    <button type="submit">Save</button>
+                    <button type="button" onclick={closeSettingsDialog}>Cancel</button>
+                    <button
+                        type="submit"
+                        disabled={!isChannelValid(editingDevice, dialogChannel - 1)}
+                    >
+                        Save
+                    </button>
                 </div>
             </form>
         {/if}
@@ -470,21 +439,18 @@
         color: #333;
     }
 
-    .channel-button {
-        padding: 4px 8px;
-        font-size: 7pt;
-        text-align: center;
-        background: transparent;
-        cursor: pointer;
-        margin: 0;
-        white-space: nowrap;
+    .channel-info {
+        font-size: 8pt;
         color: #888;
+        white-space: nowrap;
     }
 
-    .channel-button:hover {
-        text-decoration: underline;
+    .link-indicator {
+        font-size: 11pt;
+        line-height: 1;
     }
 
+    .settings-btn,
     .remove-btn {
         margin: 0;
         padding: 2px;
@@ -498,55 +464,44 @@
         justify-content: center;
         filter: grayscale(100%);
         transition: filter 0.2s ease;
+        cursor: pointer;
+    }
 
+    .settings-btn {
         margin-left: auto;
     }
 
+    .settings-btn :global(svg),
     .remove-btn :global(svg) {
         width: 100%;
         height: 100%;
     }
 
+    .settings-btn:hover,
     .remove-btn:hover {
         filter: grayscale(0%);
     }
 
-    .link-button {
-        margin: 0;
-        padding: 4px 8px;
-        background: transparent;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-        line-height: 1;
-        transition: background 0.2s ease;
-    }
-
-    .link-button:hover {
-        background: #e0e0e0;
-    }
-
     /* Dialog styles */
-    .channel-dialog {
+    .settings-dialog {
         border: none;
         border-radius: 8px;
         padding: 0;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        max-width: 400px;
+        max-width: 450px;
         width: 90%;
     }
 
-    .channel-dialog::backdrop {
+    .settings-dialog::backdrop {
         background: rgba(0, 0, 0, 0.5);
     }
 
-    .channel-dialog form {
+    .settings-dialog form {
         padding: 20px;
     }
 
-    .channel-dialog h3 {
-        margin: 0 0 8px 0;
+    .settings-dialog h3 {
+        margin: 0 0 20px 0;
         font-size: 14pt;
         color: #333;
     }
@@ -604,6 +559,17 @@
         border-color: #2196F3;
     }
 
+    .dialog-input-group input[type="text"] {
+        font-family: inherit;
+    }
+
+    .dialog-input-group small {
+        display: block;
+        margin-top: 6px;
+        font-size: 9pt;
+        color: #888;
+    }
+
     .dialog-buttons {
         display: flex;
         gap: 10px;
@@ -634,36 +600,6 @@
     .dialog-buttons button[type="submit"]:disabled {
         opacity: 0.5;
         cursor: not-allowed;
-    }
-
-    /* Link dialog styles */
-    .link-dialog {
-        border: none;
-        border-radius: 8px;
-        padding: 0;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        max-width: 400px;
-        width: 90%;
-    }
-
-    .link-dialog::backdrop {
-        background: rgba(0, 0, 0, 0.5);
-    }
-
-    .link-dialog form {
-        padding: 20px;
-    }
-
-    .link-dialog h3 {
-        margin: 0 0 12px 0;
-        font-size: 14pt;
-        color: #333;
-    }
-
-    .link-description {
-        margin: 0 0 16px 0;
-        font-size: 10pt;
-        color: #666;
     }
 
     .no-devices {
