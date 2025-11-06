@@ -265,11 +265,10 @@
     <dialog bind:this={channelDialog} class="channel-dialog">
         {#if editingDevice}
             <form method="dialog" onsubmit={(e) => { e.preventDefault(); submitChannelChange(); }}>
-                <h3>Set Start Channel</h3>
-                <p class="device-info">{editingDevice.name} ({DEVICE_TYPES[editingDevice.type].channels} channels)</p>
+                <h3>{editingDevice.name}</h3>
 
                 <div class="dialog-input-group">
-                    <label for="channel-input">Start Channel:</label>
+                    <label for="channel-input">{DEVICE_TYPES[editingDevice.type].channels} channels, starting at:</label>
                     <input
                         id="channel-input"
                         type="number"
@@ -280,15 +279,6 @@
                         class:invalid={!isChannelValid(editingDevice, dialogChannel - 1)}
                         autofocus
                     />
-                    {#if !isChannelValid(editingDevice, dialogChannel - 1)}
-                        <p class="validation-message">
-                            ⚠ Channel {dialogChannel} is not available or would exceed channel 512
-                        </p>
-                    {:else}
-                        <p class="validation-message success">
-                            ✓ Channel {dialogChannel} is available (uses {dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1})
-                        </p>
-                    {/if}
                 </div>
 
                 <div class="dialog-buttons">
@@ -485,12 +475,6 @@
         color: #333;
     }
 
-    .device-info {
-        margin: 0 0 20px 0;
-        font-size: 9pt;
-        color: #666;
-    }
-
     .dialog-input-group {
         margin-bottom: 20px;
     }
@@ -499,7 +483,7 @@
         display: block;
         margin-bottom: 8px;
         font-size: 10pt;
-        font-weight: 600;
+        font-weight: 400;
         color: #555;
     }
 
@@ -528,22 +512,6 @@
         background: #fff5f5;
     }
 
-    .validation-message {
-        margin: 8px 0 0 0;
-        padding: 8px 12px;
-        font-size: 9pt;
-        border-radius: 4px;
-        background: #fff5f5;
-        color: #cc0000;
-        border: 1px solid #ff4444;
-    }
-
-    .validation-message.success {
-        background: #f0fdf0;
-        color: #2d7a2d;
-        border-color: #4caf50;
-    }
-
     .dialog-buttons {
         display: flex;
         gap: 10px;
@@ -560,11 +528,15 @@
     .dialog-buttons button[type="button"] {
         background: #f5f5f5;
         color: #333;
-        border: 1px solid #ccc;
     }
 
     .dialog-buttons button[type="button"]:hover {
         background: #e0e0e0;
+    }
+
+    .dialog-buttons button[type="submit"] {
+        background-color: #bbdefb;
+        color: #1976d2;
     }
 
     .dialog-buttons button[type="submit"]:disabled {
