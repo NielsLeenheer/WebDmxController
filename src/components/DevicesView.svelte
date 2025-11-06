@@ -1,7 +1,7 @@
 <script>
     import { Icon } from 'svelte-icon';
     import { DEVICE_TYPES, Device } from '../lib/devices.js';
-    import removeIcon from '../assets/icons/remove.svg?raw';
+    import disconnectIcon from '../assets/icons/disconnect.svg?raw';
 
     let { dmxController } = $props();
 
@@ -118,7 +118,7 @@
                         </span>
                     </div>
                     <button class="remove-btn" onclick={() => removeDevice(device.id)}>
-                        <Icon data={removeIcon} />
+                        <Icon data={disconnectIcon} />
                     </button>
                 </div>
 
