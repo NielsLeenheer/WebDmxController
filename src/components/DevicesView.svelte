@@ -316,18 +316,19 @@
     }
 
     .value-input {
-        width: 3em;
+        width: 4em;
         border: none;
         background: transparent;
         padding: 4px;
         font-size: 9pt;
         font-family: var(--font-stack-mono);
-        text-align: center;
+        text-align: right;
+        border-radius: 5px;
     }
 
     .value-input:focus {
         outline: none;
-        background: #f5f5f5;
+        background: #fff;
     }
 
     .control input:disabled {
