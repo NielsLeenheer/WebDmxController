@@ -196,9 +196,8 @@
     }
 
     .device-card {
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 6px;
+        background: #f0f0f0;
+        border-radius: 8px;
         padding: 15px;
     }
 
