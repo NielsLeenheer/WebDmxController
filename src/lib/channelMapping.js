@@ -95,3 +95,11 @@ export function getLinkableDeviceTypes(deviceType) {
         type !== deviceType && canLinkDevices(deviceType, type)
     );
 }
+
+/**
+ * Get array of target channel indices that are mapped (disabled) when linked
+ */
+export function getMappedChannels(sourceType, targetType) {
+    const mapping = getChannelMapping(sourceType, targetType);
+    return Object.values(mapping);
+}

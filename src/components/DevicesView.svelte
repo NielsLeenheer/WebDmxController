@@ -1,11 +1,15 @@
 <script>
     import { Icon } from 'svelte-icon';
     import { DEVICE_TYPES, Device } from '../lib/devices.js';
-    import { canLinkDevices, applyLinkedValues } from '../lib/channelMapping.js';
+    import { canLinkDevices, applyLinkedValues, getMappedChannels } from '../lib/channelMapping.js';
     import DeviceControls from './DeviceControls.svelte';
     import disconnectIcon from '../assets/icons/disconnect.svg?raw';
 
     let { dmxController, selectedType = $bindable() } = $props();
+
+    // Link dialog state
+    let linkDialog = $state(null);
+    let linkingDevice = $state(null);
 
     // Dialog state
     let editingDevice = $state(null);
@@ -21,6 +25,16 @@
     function closeChannelDialog() {
         channelDialog?.close();
         editingDevice = null;
+    }
+
+    function openLinkDialog(device) {
+        linkingDevice = device;
+        linkDialog?.showModal();
+    }
+
+    function closeLinkDialog() {
+        linkDialog?.close();
+        linkingDevice = null;
     }
 
     function submitChannelChange() {
@@ -230,31 +244,50 @@
     function getLinkableDevices(device) {
         return devices.filter(d =>
             d.id !== device.id &&
+            !d.isLinked() && // Can't link to a device that's already linked
             canLinkDevices(device.type, d.type) &&
             d.linkedTo !== device.id // Don't allow circular links
         );
     }
 
-    function handleLinkChange(device, targetDeviceId) {
-        device.linkedTo = targetDeviceId === '' ? null : parseInt(targetDeviceId);
+    function linkToDevice(targetDeviceId) {
+        if (!linkingDevice) return;
 
-        if (device.linkedTo) {
-            // Apply values from linked device immediately
-            const sourceDevice = devices.find(d => d.id === device.linkedTo);
-            if (sourceDevice) {
-                const newValues = applyLinkedValues(
-                    sourceDevice.type,
-                    device.type,
-                    sourceDevice.defaultValues,
-                    device.defaultValues
-                );
-                device.defaultValues = newValues;
-                updateDeviceToDMX(device);
-            }
+        linkingDevice.linkedTo = targetDeviceId;
+
+        // Apply values from linked device immediately
+        const sourceDevice = devices.find(d => d.id === targetDeviceId);
+        if (sourceDevice) {
+            const newValues = applyLinkedValues(
+                sourceDevice.type,
+                linkingDevice.type,
+                sourceDevice.defaultValues,
+                linkingDevice.defaultValues
+            );
+            linkingDevice.defaultValues = newValues;
+            updateDeviceToDMX(linkingDevice);
         }
 
-        // Trigger reactivity
-        devices = [...devices];
+        // Force complete reactivity update
+        devices = devices.map(d => d.id === linkingDevice.id ? linkingDevice : d);
+
+        closeLinkDialog();
+    }
+
+    function unlinkDevice(device) {
+        device.linkedTo = null;
+        // Force reactivity update
+        devices = devices.map(d => d.id === device.id ? device : d);
+        closeLinkDialog();
+    }
+
+    function getDisabledChannels(device) {
+        if (!device.linkedTo) return [];
+
+        const sourceDevice = devices.find(d => d.id === device.linkedTo);
+        if (!sourceDevice) return [];
+
+        return getMappedChannels(sourceDevice.type, device.type);
     }
 
     // Restore all device values to DMX controller on load
@@ -285,31 +318,25 @@
                     >
                         Channel: {device.startChannel + 1}-{device.startChannel + DEVICE_TYPES[device.type].channels}
                     </button>
+                    {#if getLinkableDevices(device).length > 0 || device.isLinked()}
+                        <button
+                            class="link-button"
+                            onclick={() => openLinkDialog(device)}
+                            title={device.isLinked() ? 'Linked' : 'Link to device'}
+                        >
+                            {device.isLinked() ? '🔗' : '⛓️'}
+                        </button>
+                    {/if}
                     <button class="remove-btn" onclick={() => removeDevice(device.id)}>
                         <Icon data={disconnectIcon} />
                     </button>
                 </div>
 
-                {#if getLinkableDevices(device).length > 0}
-                    <div class="link-selector">
-                        <label>Link to:</label>
-                        <select
-                            value={device.linkedTo ?? ''}
-                            onchange={(e) => handleLinkChange(device, e.target.value)}
-                        >
-                            <option value="">None (independent)</option>
-                            {#each getLinkableDevices(device) as linkableDevice}
-                                <option value={linkableDevice.id}>{linkableDevice.name}</option>
-                            {/each}
-                        </select>
-                    </div>
-                {/if}
-
                 <DeviceControls
                     deviceType={device.type}
                     bind:values={device.defaultValues}
                     onChange={(channelIndex, value) => handleDeviceValueChange(device, channelIndex, value)}
-                    disabled={device.isLinked()}
+                    disabledChannels={getDisabledChannels(device)}
                 />
             </div>
         {/each}
@@ -342,6 +369,54 @@
                     >
                         Apply
                     </button>
+                </div>
+            </form>
+        {/if}
+    </dialog>
+
+    <dialog bind:this={linkDialog} class="link-dialog">
+        {#if linkingDevice}
+            <form method="dialog">
+                <h3>Link {linkingDevice.name}</h3>
+
+                {#if linkingDevice.isLinked()}
+                    {@const sourceDevice = devices.find(d => d.id === linkingDevice.linkedTo)}
+                    {#if sourceDevice}
+                        <p class="link-status">Currently linked to: <strong>{sourceDevice.name}</strong></p>
+                    {/if}
+                {:else}
+                    <p class="link-description">Link this device to follow another device's values</p>
+                {/if}
+
+                <div class="link-options">
+                    {#if linkingDevice.isLinked()}
+                        <button
+                            type="button"
+                            class="unlink-button"
+                            onclick={() => unlinkDevice(linkingDevice)}
+                        >
+                            Unlink Device
+                        </button>
+                    {:else if getLinkableDevices(linkingDevice).length > 0}
+                        <div class="link-list">
+                            {#each getLinkableDevices(linkingDevice) as linkableDevice}
+                                <button
+                                    type="button"
+                                    class="device-link-option"
+                                    onclick={() => linkToDevice(linkableDevice.id)}
+                                >
+                                    {linkableDevice.name}
+                                    <span class="device-type">{DEVICE_TYPES[linkableDevice.type].name}</span>
+                                </button>
+                            {/each}
+                        </div>
+                    {:else}
+                        <p class="no-devices">No compatible devices available to link</p>
+                    {/if}
+                </div>
+
+                <div class="dialog-buttons">
+                    <button type="button" onclick={closeLinkDialog}>Close</button>
                 </div>
             </form>
         {/if}
@@ -431,29 +506,20 @@
         filter: grayscale(0%);
     }
 
-    .link-selector {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
-        padding: 8px;
-        background: #e8e8e8;
-        border-radius: 4px;
-    }
-
-    .link-selector label {
-        font-size: 9pt;
-        font-weight: 600;
-        color: #555;
-    }
-
-    .link-selector select {
-        flex: 1;
+    .link-button {
+        margin: 0;
         padding: 4px 8px;
-        font-size: 9pt;
+        background: transparent;
         border: 1px solid #ccc;
         border-radius: 4px;
-        background: white;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+        transition: background 0.2s ease;
+    }
+
+    .link-button:hover {
+        background: #e0e0e0;
     }
 
     /* Dialog styles */
@@ -547,5 +613,106 @@
     .dialog-buttons button[type="submit"]:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+    }
+
+    /* Link dialog styles */
+    .link-dialog {
+        border: none;
+        border-radius: 8px;
+        padding: 0;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 400px;
+        width: 90%;
+    }
+
+    .link-dialog::backdrop {
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .link-dialog form {
+        padding: 20px;
+    }
+
+    .link-dialog h3 {
+        margin: 0 0 12px 0;
+        font-size: 14pt;
+        color: #333;
+    }
+
+    .link-status {
+        margin: 0 0 16px 0;
+        padding: 10px;
+        background: #e3f2fd;
+        border-left: 3px solid #2196F3;
+        border-radius: 4px;
+        font-size: 10pt;
+    }
+
+    .link-description {
+        margin: 0 0 16px 0;
+        font-size: 10pt;
+        color: #666;
+    }
+
+    .link-options {
+        margin-bottom: 20px;
+    }
+
+    .link-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .device-link-option {
+        padding: 12px;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: left;
+        font-size: 10pt;
+        transition: all 0.2s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .device-link-option:hover {
+        background: #e3f2fd;
+        border-color: #2196F3;
+    }
+
+    .device-type {
+        font-size: 9pt;
+        color: #666;
+        font-style: italic;
+    }
+
+    .unlink-button {
+        width: 100%;
+        padding: 12px;
+        background: #ffebee;
+        color: #c62828;
+        border: 1px solid #ef5350;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 10pt;
+        font-weight: 600;
+        transition: background 0.2s ease;
+    }
+
+    .unlink-button:hover {
+        background: #ffcdd2;
+    }
+
+    .no-devices {
+        margin: 0;
+        padding: 12px;
+        background: #f5f5f5;
+        border-radius: 4px;
+        color: #999;
+        text-align: center;
+        font-size: 10pt;
     }
 </style>

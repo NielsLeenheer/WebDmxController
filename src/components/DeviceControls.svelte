@@ -6,7 +6,7 @@
         deviceType,
         values = $bindable([]),
         onChange = null,
-        disabled = false
+        disabledChannels = [] // Array of channel indices that should be disabled
     } = $props();
 
     function handleSliderChange(channelIndex, value) {
@@ -23,6 +23,10 @@
             onChange(panIndex, panValue);
             onChange(tiltIndex, tiltValue);
         }
+    }
+
+    function isChannelDisabled(channelIndex) {
+        return disabledChannels.includes(channelIndex);
     }
 
     // Get the channel index for a control
@@ -45,57 +49,63 @@
 <div class="device-controls">
     {#each DEVICE_TYPES[deviceType].controls as control, controlIndex}
         {#if control.type === 'xypad'}
+            {@const panDisabled = isChannelDisabled(control.panIndex)}
+            {@const tiltDisabled = isChannelDisabled(control.tiltIndex)}
+            {@const bothDisabled = panDisabled && tiltDisabled}
             <div class="control-xypad">
                 <label>{control.name}</label>
-                <XYPad
-                    bind:panValue={values[control.panIndex]}
-                    bind:tiltValue={values[control.tiltIndex]}
-                    onUpdate={(pan, tilt) => handleXYPadChange(control.panIndex, control.tiltIndex, pan, tilt)}
-                />
+                <div class="xypad-wrapper" class:disabled={bothDisabled}>
+                    <XYPad
+                        bind:panValue={values[control.panIndex]}
+                        bind:tiltValue={values[control.tiltIndex]}
+                        onUpdate={(pan, tilt) => !bothDisabled && handleXYPadChange(control.panIndex, control.tiltIndex, pan, tilt)}
+                    />
+                </div>
                 <div class="xypad-inputs">
                     <input
                         type="number"
                         min="0"
                         max="255"
-                        bind:value={values[control.panIndex]}
-                        onchange={(e) => handleXYPadChange(control.panIndex, control.tiltIndex, parseInt(e.target.value), values[control.tiltIndex])}
+                        value={values[control.panIndex]}
+                        onchange={(e) => !panDisabled && handleXYPadChange(control.panIndex, control.tiltIndex, parseInt(e.target.value), values[control.tiltIndex])}
                         class="value-input"
                         title="Pan"
-                        {disabled}
+                        disabled={panDisabled}
                     />
                     <input
                         type="number"
                         min="0"
                         max="255"
-                        bind:value={values[control.tiltIndex]}
-                        onchange={(e) => handleXYPadChange(control.panIndex, control.tiltIndex, values[control.panIndex], parseInt(e.target.value))}
+                        value={values[control.tiltIndex]}
+                        onchange={(e) => !tiltDisabled && handleXYPadChange(control.panIndex, control.tiltIndex, values[control.panIndex], parseInt(e.target.value))}
                         class="value-input"
                         title="Tilt"
-                        {disabled}
+                        disabled={tiltDisabled}
                     />
                 </div>
             </div>
         {:else}
             {@const channelIndex = getControlChannelIndex(controlIndex)}
+            {@const channelDisabled = isChannelDisabled(channelIndex)}
             <div class="control">
                 <label>{control.name}</label>
                 <input
                     type="range"
                     min="0"
                     max="255"
-                    bind:value={values[channelIndex]}
-                    oninput={(e) => handleSliderChange(channelIndex, parseInt(e.target.value))}
+                    value={values[channelIndex]}
+                    oninput={(e) => !channelDisabled && handleSliderChange(channelIndex, parseInt(e.target.value))}
                     style="accent-color: {control.color}"
-                    {disabled}
+                    disabled={channelDisabled}
                 />
                 <input
                     type="number"
                     min="0"
                     max="255"
-                    bind:value={values[channelIndex]}
-                    onchange={(e) => handleSliderChange(channelIndex, parseInt(e.target.value))}
+                    value={values[channelIndex]}
+                    onchange={(e) => !channelDisabled && handleSliderChange(channelIndex, parseInt(e.target.value))}
                     class="value-input"
-                    {disabled}
+                    disabled={channelDisabled}
                 />
             </div>
         {/if}
@@ -168,5 +178,10 @@
 
     .xypad-inputs input {
         width: 4em;
+    }
+
+    .xypad-wrapper.disabled {
+        opacity: 0.5;
+        pointer-events: none;
     }
 </style>
