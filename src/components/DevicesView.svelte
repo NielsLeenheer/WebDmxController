@@ -3,12 +3,55 @@
     import { DEVICE_TYPES, Device } from '../lib/devices.js';
     import disconnectIcon from '../assets/icons/disconnect.svg?raw';
 
-    let { dmxController } = $props();
+    let { dmxController, selectedType = $bindable() } = $props();
 
-    let devices = $state([]);
-    let deviceValues = $state({}); // Store values separately as reactive state
-    let nextId = $state(1);
-    let selectedType = $state('RGB');
+    // Load initial state from localStorage
+    function loadFromLocalStorage() {
+        try {
+            const saved = localStorage.getItem('dmx-devices');
+            if (saved) {
+                const data = JSON.parse(saved);
+                // Reconstruct Device objects
+                const loadedDevices = data.devices.map(d => {
+                    const device = new Device(d.id, d.type, d.startChannel);
+                    device.name = d.name;
+                    return device;
+                });
+                return {
+                    devices: loadedDevices,
+                    deviceValues: data.deviceValues || {},
+                    nextId: data.nextId || 1
+                };
+            }
+        } catch (e) {
+            console.error('Failed to load from localStorage:', e);
+        }
+        return { devices: [], deviceValues: {}, nextId: 1 };
+    }
+
+    const initialState = loadFromLocalStorage();
+    let devices = $state(initialState.devices);
+    let deviceValues = $state(initialState.deviceValues);
+    let nextId = $state(initialState.nextId);
+
+    // Save to localStorage whenever devices or deviceValues change
+    $effect(() => {
+        try {
+            const data = {
+                devices: devices.map(d => ({
+                    id: d.id,
+                    name: d.name,
+                    type: d.type,
+                    startChannel: d.startChannel
+                })),
+                deviceValues,
+                nextId
+            };
+            localStorage.setItem('dmx-devices', JSON.stringify(data));
+        } catch (e) {
+            console.error('Failed to save to localStorage:', e);
+        }
+    });
 
     function getNextFreeChannel() {
         if (devices.length === 0) return 0; // Channel 1 (0-indexed)
@@ -52,9 +95,44 @@
         return true;
     }
 
-    function addDevice() {
+    function getAvailableChannels(device) {
+        const deviceChannels = DEVICE_TYPES[device.type].channels;
+        const available = [];
+
+        // Check each possible starting channel (1-512, 1-indexed for display)
+        for (let startChannel = 0; startChannel < 512; startChannel++) {
+            const endChannel = startChannel + deviceChannels;
+
+            // Skip if device would exceed channel 512
+            if (endChannel > 512) continue;
+
+            // Check if this range overlaps with any other device
+            let hasOverlap = false;
+            for (let otherDevice of devices) {
+                if (otherDevice.id === device.id) continue;
+
+                const otherChannels = DEVICE_TYPES[otherDevice.type].channels;
+                const otherStart = otherDevice.startChannel;
+                const otherEnd = otherStart + otherChannels;
+
+                // Check if ranges overlap
+                if (startChannel < otherEnd && endChannel > otherStart) {
+                    hasOverlap = true;
+                    break;
+                }
+            }
+
+            if (!hasOverlap) {
+                available.push(startChannel + 1); // Convert to 1-indexed for display
+            }
+        }
+
+        return available;
+    }
+
+    export function addDevice(type = selectedType) {
         const startChannel = getNextFreeChannel();
-        const device = new Device(nextId++, selectedType, startChannel);
+        const device = new Device(nextId++, type, startChannel);
         devices.push(device);
         // Initialize values for this device
         deviceValues[device.id] = new Array(DEVICE_TYPES[device.type].channels).fill(0);
@@ -77,19 +155,23 @@
             dmxController.setChannel(channelIndex, value);
         }
     }
+
+    // Restore all device values to DMX controller on load
+    $effect(() => {
+        if (dmxController) {
+            devices.forEach(device => {
+                if (validateDevice(device) && deviceValues[device.id]) {
+                    deviceValues[device.id].forEach((value, index) => {
+                        const channelIndex = device.startChannel + index;
+                        dmxController.setChannel(channelIndex, value);
+                    });
+                }
+            });
+        }
+    });
 </script>
 
 <div class="devices-container">
-    <div class="add-device">
-        <select bind:value={selectedType}>
-            {#each Object.entries(DEVICE_TYPES) as [key, type]}
-                <option value={key}>{type.name}</option>
-            {/each}
-        </select>
-
-        <button onclick={addDevice}>Add Device</button>
-    </div>
-
     <div class="devices-list">
         {#if devices.length === 0}
             <div class="empty-state">
@@ -104,15 +186,16 @@
                     <h3>{device.name}</h3>
                     <div class="channel-config">
                         <label>Start Ch:</label>
-                        <input
-                            type="number"
-                            min="1"
-                            max="512"
+                        <select
                             value={device.startChannel + 1}
                             onchange={(e) => updateDeviceChannel(device, parseInt(e.target.value))}
-                            class="channel-input"
+                            class="channel-select"
                             class:invalid={!isValid}
-                        />
+                        >
+                            {#each getAvailableChannels(device) as channel}
+                                <option value={channel}>{channel}</option>
+                            {/each}
+                        </select>
                         <span class="channel-range">
                             ({DEVICE_TYPES[device.type].channels} ch)
                         </span>
@@ -163,21 +246,6 @@
         flex: 1;
         overflow: auto;
         padding: 20px;
-    }
-
-    .add-device {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
-
-    .add-device select {
-        margin: 0;
-        min-width: 200px;
-    }
-
-    .add-device button {
-        margin: 0;
     }
 
     .devices-list {
@@ -243,23 +311,24 @@
         font-weight: 600;
     }
 
-    .channel-input {
-        width: 60px;
+    .channel-select {
+        width: 70px;
         border: 1px solid #ccc;
         border-radius: 4px;
         padding: 4px 6px;
         font-size: 9pt;
         font-family: var(--font-stack-mono);
         text-align: center;
+        background: white;
     }
 
-    .channel-input:focus {
+    .channel-select:focus {
         outline: none;
         border-color: #2196F3;
         box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
     }
 
-    .channel-input.invalid {
+    .channel-select.invalid {
         border-color: #ff4444;
         background: #ffeeee;
     }

@@ -3,7 +3,13 @@
     import listIcon from '../assets/icons/list.svg?raw';
     import universeIcon from '../assets/icons/universe.svg?raw';
 
-    let { view = $bindable() } = $props();
+    let {
+        view = $bindable(),
+        showAddDevice = false,
+        deviceTypes = null,
+        selectedType = $bindable(),
+        onAddDevice = null
+    } = $props();
 </script>
 
 <div class="tabs-container">
@@ -20,11 +26,24 @@
             Universe
         </label>
     </nav>
+
+    {#if showAddDevice && view === 'devices'}
+        <div class="add-device">
+            <select bind:value={selectedType}>
+                {#each Object.entries(deviceTypes) as [key, type]}
+                    <option value={key}>{type.name}</option>
+                {/each}
+            </select>
+            <button onclick={onAddDevice}>Add Device</button>
+        </div>
+    {/if}
 </div>
 
 <style>
     .tabs-container {
         display: flex;
+        justify-content: space-between;
+        align-items: center;
         padding: 15px;
         background: #f5f5f5;
         border-bottom: 1px solid #ddd;
@@ -63,8 +82,25 @@
         background: #fff;
     }
 
-    input {
+    input[type="radio"] {
         position: absolute;
         opacity: 0;
+    }
+
+    .add-device {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .add-device select {
+        margin: 0;
+        min-width: 200px;
+        height: 32px;
+    }
+
+    .add-device button {
+        margin: 0;
+        height: 32px;
     }
 </style>
