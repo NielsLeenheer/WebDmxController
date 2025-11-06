@@ -5,6 +5,53 @@
 
     let { dmxController, selectedType = $bindable() } = $props();
 
+    // Dialog state
+    let editingDevice = $state(null);
+    let dialogChannel = $state(1);
+    let channelDialog = $state(null);
+
+    function openChannelDialog(device) {
+        editingDevice = device;
+        dialogChannel = device.startChannel + 1;
+        channelDialog?.showModal();
+    }
+
+    function closeChannelDialog() {
+        channelDialog?.close();
+        editingDevice = null;
+    }
+
+    function submitChannelChange() {
+        if (editingDevice && isChannelValid(editingDevice, dialogChannel - 1)) {
+            updateDeviceChannel(editingDevice, dialogChannel);
+            closeChannelDialog();
+        }
+    }
+
+    function isChannelValid(device, startChannel0indexed) {
+        const deviceChannels = DEVICE_TYPES[device.type].channels;
+        const endChannel = startChannel0indexed + deviceChannels;
+
+        // Check if device would exceed channel 512
+        if (endChannel > 512 || startChannel0indexed < 0) return false;
+
+        // Check for overlaps with other devices
+        for (let otherDevice of devices) {
+            if (otherDevice.id === device.id) continue;
+
+            const otherChannels = DEVICE_TYPES[otherDevice.type].channels;
+            const otherStart = otherDevice.startChannel;
+            const otherEnd = otherStart + otherChannels;
+
+            // Check if ranges overlap
+            if (startChannel0indexed < otherEnd && endChannel > otherStart) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     // Load initial state from localStorage
     function loadFromLocalStorage() {
         try {
@@ -95,41 +142,6 @@
         return true;
     }
 
-    function getAvailableChannels(device) {
-        const deviceChannels = DEVICE_TYPES[device.type].channels;
-        const available = [];
-
-        // Check each possible starting channel (1-512, 1-indexed for display)
-        for (let startChannel = 0; startChannel < 512; startChannel++) {
-            const endChannel = startChannel + deviceChannels;
-
-            // Skip if device would exceed channel 512
-            if (endChannel > 512) continue;
-
-            // Check if this range overlaps with any other device
-            let hasOverlap = false;
-            for (let otherDevice of devices) {
-                if (otherDevice.id === device.id) continue;
-
-                const otherChannels = DEVICE_TYPES[otherDevice.type].channels;
-                const otherStart = otherDevice.startChannel;
-                const otherEnd = otherStart + otherChannels;
-
-                // Check if ranges overlap
-                if (startChannel < otherEnd && endChannel > otherStart) {
-                    hasOverlap = true;
-                    break;
-                }
-            }
-
-            if (!hasOverlap) {
-                available.push(startChannel + 1); // Convert to 1-indexed for display
-            }
-        }
-
-        return available;
-    }
-
     export function addDevice(type = selectedType) {
         const startChannel = getNextFreeChannel();
         const device = new Device(nextId++, type, startChannel);
@@ -186,16 +198,13 @@
                     <h3>{device.name}</h3>
                     <div class="channel-config">
                         <label>Start Ch:</label>
-                        <select
-                            value={device.startChannel + 1}
-                            onchange={(e) => updateDeviceChannel(device, parseInt(e.target.value))}
-                            class="channel-select"
+                        <button
+                            class="channel-button"
                             class:invalid={!isValid}
+                            onclick={() => openChannelDialog(device)}
                         >
-                            {#each getAvailableChannels(device) as channel}
-                                <option value={channel}>{channel}</option>
-                            {/each}
-                        </select>
+                            {device.startChannel + 1}
+                        </button>
                         <span class="channel-range">
                             ({DEVICE_TYPES[device.type].channels} ch)
                         </span>
@@ -239,6 +248,48 @@
             </div>
         {/each}
     </div>
+
+    <dialog bind:this={channelDialog} class="channel-dialog">
+        {#if editingDevice}
+            <form method="dialog" onsubmit={(e) => { e.preventDefault(); submitChannelChange(); }}>
+                <h3>Set Start Channel</h3>
+                <p class="device-info">{editingDevice.name} ({DEVICE_TYPES[editingDevice.type].channels} channels)</p>
+
+                <div class="dialog-input-group">
+                    <label for="channel-input">Start Channel:</label>
+                    <input
+                        id="channel-input"
+                        type="number"
+                        min="1"
+                        max="512"
+                        bind:value={dialogChannel}
+                        class:valid={isChannelValid(editingDevice, dialogChannel - 1)}
+                        class:invalid={!isChannelValid(editingDevice, dialogChannel - 1)}
+                        autofocus
+                    />
+                    {#if !isChannelValid(editingDevice, dialogChannel - 1)}
+                        <p class="validation-message">
+                            ⚠ Channel {dialogChannel} is not available or would exceed channel 512
+                        </p>
+                    {:else}
+                        <p class="validation-message success">
+                            ✓ Channel {dialogChannel} is available (uses {dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1})
+                        </p>
+                    {/if}
+                </div>
+
+                <div class="dialog-buttons">
+                    <button type="button" onclick={closeChannelDialog}>Cancel</button>
+                    <button
+                        type="submit"
+                        disabled={!isChannelValid(editingDevice, dialogChannel - 1)}
+                    >
+                        Apply
+                    </button>
+                </div>
+            </form>
+        {/if}
+    </dialog>
 </div>
 
 <style>
@@ -311,7 +362,7 @@
         font-weight: 600;
     }
 
-    .channel-select {
+    .channel-button {
         width: 70px;
         border: 1px solid #ccc;
         border-radius: 4px;
@@ -320,15 +371,22 @@
         font-family: var(--font-stack-mono);
         text-align: center;
         background: white;
+        cursor: pointer;
+        margin: 0;
     }
 
-    .channel-select:focus {
+    .channel-button:hover {
+        background: #f5f5f5;
+        border-color: #999;
+    }
+
+    .channel-button:focus {
         outline: none;
         border-color: #2196F3;
         box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
     }
 
-    .channel-select.invalid {
+    .channel-button.invalid {
         border-color: #ff4444;
         background: #ffeeee;
     }
@@ -401,6 +459,117 @@
     }
 
     .control input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Dialog styles */
+    .channel-dialog {
+        border: none;
+        border-radius: 8px;
+        padding: 0;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 400px;
+        width: 90%;
+    }
+
+    .channel-dialog::backdrop {
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .channel-dialog form {
+        padding: 20px;
+    }
+
+    .channel-dialog h3 {
+        margin: 0 0 8px 0;
+        font-size: 14pt;
+        color: #333;
+    }
+
+    .device-info {
+        margin: 0 0 20px 0;
+        font-size: 9pt;
+        color: #666;
+    }
+
+    .dialog-input-group {
+        margin-bottom: 20px;
+    }
+
+    .dialog-input-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 10pt;
+        font-weight: 600;
+        color: #555;
+    }
+
+    .dialog-input-group input {
+        width: 100%;
+        padding: 8px 12px;
+        font-size: 11pt;
+        font-family: var(--font-stack-mono);
+        border: 2px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    .dialog-input-group input:focus {
+        outline: none;
+        border-color: #2196F3;
+    }
+
+    .dialog-input-group input.valid {
+        border-color: #4caf50;
+        background: #f0fdf0;
+    }
+
+    .dialog-input-group input.invalid {
+        border-color: #ff4444;
+        background: #fff5f5;
+    }
+
+    .validation-message {
+        margin: 8px 0 0 0;
+        padding: 8px 12px;
+        font-size: 9pt;
+        border-radius: 4px;
+        background: #fff5f5;
+        color: #cc0000;
+        border: 1px solid #ff4444;
+    }
+
+    .validation-message.success {
+        background: #f0fdf0;
+        color: #2d7a2d;
+        border-color: #4caf50;
+    }
+
+    .dialog-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .dialog-buttons button {
+        margin: 0;
+        padding: 8px 20px;
+        font-size: 10pt;
+        cursor: pointer;
+    }
+
+    .dialog-buttons button[type="button"] {
+        background: #f5f5f5;
+        color: #333;
+        border: 1px solid #ccc;
+    }
+
+    .dialog-buttons button[type="button"]:hover {
+        background: #e0e0e0;
+    }
+
+    .dialog-buttons button[type="submit"]:disabled {
         opacity: 0.5;
         cursor: not-allowed;
     }
