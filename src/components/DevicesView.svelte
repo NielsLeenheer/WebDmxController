@@ -335,28 +335,7 @@
 
     .control-input input[type="range"] {
         flex: 1;
-        height: 6px;
-        border-radius: 3px;
-        appearance: none;
-        background: #ddd;
-    }
-
-    .control-input input[type="range"]::-webkit-slider-thumb {
-        appearance: none;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
         cursor: pointer;
-        background: currentColor;
-    }
-
-    .control-input input[type="range"]::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        cursor: pointer;
-        border: none;
-        background: currentColor;
     }
 
     .value-input {
