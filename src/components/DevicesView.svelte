@@ -128,26 +128,24 @@
                     {#each DEVICE_TYPES[device.type].controls as control, index}
                         <div class="control">
                             <label>{control.name}</label>
-                            <div class="control-input">
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="255"
-                                    bind:value={deviceValues[device.id][index]}
-                                    oninput={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
-                                    style="accent-color: {control.color}"
-                                    disabled={!isValid}
-                                />
-                                <input
-                                    type="number"
-                                    min="0"
-                                    max="255"
-                                    bind:value={deviceValues[device.id][index]}
-                                    onchange={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
-                                    class="value-input"
-                                    disabled={!isValid}
-                                />
-                            </div>
+                            <input
+                                type="range"
+                                min="0"
+                                max="255"
+                                bind:value={deviceValues[device.id][index]}
+                                oninput={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
+                                style="accent-color: {control.color}"
+                                disabled={!isValid}
+                            />
+                            <input
+                                type="number"
+                                min="0"
+                                max="255"
+                                bind:value={deviceValues[device.id][index]}
+                                onchange={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
+                                class="value-input"
+                                disabled={!isValid}
+                            />
                         </div>
                     {/each}
                 </div>
@@ -270,11 +268,11 @@
     .remove-btn {
         margin: 0;
         padding: 0;
-        width: 28px;
-        height: 28px;
+        width: 20px;
+        height: 20px;
         background: #ff4444;
         color: white;
-        font-size: 18pt;
+        font-size: 12pt;
         line-height: 1;
         display: flex;
         align-items: center;
@@ -288,34 +286,28 @@
     .device-controls {
         display: flex;
         flex-direction: column;
-        gap: 12px;
-    }
-
-    .control {
-        display: flex;
-        flex-direction: column;
         gap: 6px;
     }
 
+    .control {
+        display: grid;
+        grid-template-columns: 4em 1fr 3em;
+        gap: 8px;
+        align-items: center;
+    }
+
     .control label {
-        font-size: 10pt;
+        font-size: 9pt;
         font-weight: 600;
         color: #555;
     }
 
-    .control-input {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
-
-    .control-input input[type="range"] {
-        flex: 1;
+    .control input[type="range"] {
         cursor: pointer;
     }
 
     .value-input {
-        width: 50px;
+        width: 3em;
         border: none;
         background: transparent;
         padding: 4px;
@@ -329,7 +321,7 @@
         background: #f5f5f5;
     }
 
-    .control-input input:disabled {
+    .control input:disabled {
         opacity: 0.5;
         cursor: not-allowed;
     }
