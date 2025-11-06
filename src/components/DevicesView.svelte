@@ -170,8 +170,7 @@
         });
 
         // Update DMX controller with new channel values
-        const updatedDevice = devices.find(d => d.id === device.id);
-        if (dmxController && updatedDevice && validateDevice(updatedDevice) && deviceValues[device.id]) {
+        if (dmxController && deviceValues[device.id]) {
             deviceValues[device.id].forEach((value, index) => {
                 const channelIndex = newStartChannel + index;
                 dmxController.setChannel(channelIndex, value);
@@ -180,8 +179,8 @@
     }
 
     function updateDeviceValue(device, controlIndex, value) {
-        // Update DMX controller only if device is valid
-        if (dmxController && validateDevice(device)) {
+        // Update DMX controller
+        if (dmxController) {
             const channelIndex = device.startChannel + controlIndex;
             dmxController.setChannel(channelIndex, value);
         }
@@ -191,7 +190,7 @@
     $effect(() => {
         if (dmxController) {
             devices.forEach(device => {
-                if (validateDevice(device) && deviceValues[device.id]) {
+                if (deviceValues[device.id]) {
                     deviceValues[device.id].forEach((value, index) => {
                         const channelIndex = device.startChannel + index;
                         dmxController.setChannel(channelIndex, value);
@@ -211,13 +210,11 @@
         {/if}
 
         {#each devices as device (device.id)}
-            {@const isValid = validateDevice(device)}
-            <div class="device-card" class:invalid={!isValid}>
+            <div class="device-card">
                 <div class="device-header">
                     <h3>{device.name}</h3>
                     <button
                         class="channel-button"
-                        class:invalid={!isValid}
                         onclick={() => openChannelDialog(device)}
                     >
                         Channel: {device.startChannel + 1}-{device.startChannel + DEVICE_TYPES[device.type].channels}
@@ -226,12 +223,6 @@
                         <Icon data={disconnectIcon} />
                     </button>
                 </div>
-
-                {#if !isValid}
-                    <div class="error-message">
-                        ⚠ Channel conflict or out of range (1-512). Device disabled.
-                    </div>
-                {/if}
 
                 <div class="device-controls">
                     {#each DEVICE_TYPES[device.type].controls as control, index}
@@ -244,7 +235,6 @@
                                 bind:value={deviceValues[device.id][index]}
                                 oninput={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
                                 style="accent-color: {control.color}"
-                                disabled={!isValid}
                             />
                             <input
                                 type="number"
@@ -253,7 +243,6 @@
                                 bind:value={deviceValues[device.id][index]}
                                 onchange={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
                                 class="value-input"
-                                disabled={!isValid}
                             />
                         </div>
                     {/each}
@@ -321,22 +310,6 @@
         background: #f0f0f0;
         border-radius: 8px;
         padding: 15px;
-    }
-
-    .device-card.invalid {
-        border-color: #ff4444;
-        background: #fff5f5;
-    }
-
-    .error-message {
-        background: #ffeeee;
-        border: 1px solid #ff4444;
-        border-radius: 4px;
-        padding: 8px 12px;
-        margin-bottom: 15px;
-        color: #cc0000;
-        font-size: 9pt;
-        font-weight: 600;
     }
 
     .device-header {
