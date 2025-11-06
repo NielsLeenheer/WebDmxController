@@ -8,12 +8,12 @@
 
 <header>
     {#if !connected}
-        <button onclick={onconnect}>
+        <button id="start" onclick={onconnect}>
             <Icon data={connectIcon} />
             Connect
         </button>
     {:else}
-        <button onclick={ondisconnect}>
+        <button id="stop" onclick={ondisconnect}>
             <Icon data={disconnectIcon} />
             Disconnect
         </button>
@@ -27,8 +27,21 @@
     }
 
     button :global(svg) {
-        width: 1.2em;
-        height: 1.2em;
-        margin-right: 4px;
+        height: 75%;
+        margin-right: 3px;
+    }
+
+    button#start {
+        background-color: #bbdefb;
+        color: #1976d2;
+    }
+
+    button#start:hover {
+        /* background-color: #bbdefb; */
+    }
+
+    button#stop {
+        background-color: #fff;
+        color: #000;
     }
 </style>
