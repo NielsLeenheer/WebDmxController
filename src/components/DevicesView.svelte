@@ -350,37 +350,21 @@
         margin: 0;
         font-size: 12pt;
         color: #333;
-        flex: 1;
     }
 
     .channel-button {
-        min-width: 70px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
         padding: 4px 8px;
-        font-size: 9pt;
-        font-family: var(--font-stack-mono);
+        font-size: 8pt;
         text-align: center;
-        background: white;
+        background: transparent;
         cursor: pointer;
         margin: 0;
         white-space: nowrap;
+        color: #888;
     }
 
     .channel-button:hover {
-        background: #f5f5f5;
-        border-color: #999;
-    }
-
-    .channel-button:focus {
-        outline: none;
-        border-color: #2196F3;
-        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
-    }
-
-    .channel-button.invalid {
-        border-color: #ff4444;
-        background: #ffeeee;
+        text-decoration: underline;
     }
 
     .remove-btn {
@@ -396,6 +380,8 @@
         justify-content: center;
         filter: grayscale(100%);
         transition: filter 0.2s ease;
+
+        margin-left: auto;
     }
 
     .remove-btn :global(svg) {
