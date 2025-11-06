@@ -189,8 +189,10 @@
     .empty-state {
         grid-column: 1 / -1;
         text-align: center;
-        padding: 40px;
+        min-height: 50vh;
+        align-content: center;
         color: #999;
+        font-size: 0.9em;
     }
 
     .device-card {
