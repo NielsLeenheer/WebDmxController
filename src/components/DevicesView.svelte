@@ -159,16 +159,19 @@
         // Convert from 1-indexed to 0-indexed
         const newStartChannel = Math.max(0, Math.min(511, newChannel - 1));
 
-        // Find and update the device in the array
-        const index = devices.findIndex(d => d.id === device.id);
-        if (index !== -1) {
-            devices[index].startChannel = newStartChannel;
-            // Trigger reactivity by creating a new array reference
-            devices = devices.slice();
-        }
+        // Create new device instances to trigger reactivity
+        devices = devices.map(d => {
+            if (d.id === device.id) {
+                // Create a new Device instance with updated channel
+                const updated = new Device(d.id, d.type, newStartChannel, d.name);
+                return updated;
+            }
+            return d;
+        });
 
         // Update DMX controller with new channel values
-        if (dmxController && validateDevice(device) && deviceValues[device.id]) {
+        const updatedDevice = devices.find(d => d.id === device.id);
+        if (dmxController && updatedDevice && validateDevice(updatedDevice) && deviceValues[device.id]) {
             deviceValues[device.id].forEach((value, index) => {
                 const channelIndex = newStartChannel + index;
                 dmxController.setChannel(channelIndex, value);
@@ -212,19 +215,13 @@
             <div class="device-card" class:invalid={!isValid}>
                 <div class="device-header">
                     <h3>{device.name}</h3>
-                    <div class="channel-config">
-                        <label>Start Ch:</label>
-                        <button
-                            class="channel-button"
-                            class:invalid={!isValid}
-                            onclick={() => openChannelDialog(device)}
-                        >
-                            {device.startChannel + 1}
-                        </button>
-                        <span class="channel-range">
-                            ({DEVICE_TYPES[device.type].channels} ch)
-                        </span>
-                    </div>
+                    <button
+                        class="channel-button"
+                        class:invalid={!isValid}
+                        onclick={() => openChannelDialog(device)}
+                    >
+                        {device.startChannel + 1} - {device.startChannel + DEVICE_TYPES[device.type].channels}
+                    </button>
                     <button class="remove-btn" onclick={() => removeDevice(device.id)}>
                         <Icon data={disconnectIcon} />
                     </button>
@@ -366,29 +363,18 @@
         flex: 1;
     }
 
-    .channel-config {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 9pt;
-        color: #666;
-    }
-
-    .channel-config label {
-        font-weight: 600;
-    }
-
     .channel-button {
-        width: 70px;
+        min-width: 70px;
         border: 1px solid #ccc;
         border-radius: 4px;
-        padding: 4px 6px;
+        padding: 4px 8px;
         font-size: 9pt;
         font-family: var(--font-stack-mono);
         text-align: center;
         background: white;
         cursor: pointer;
         margin: 0;
+        white-space: nowrap;
     }
 
     .channel-button:hover {
@@ -407,12 +393,6 @@
         background: #ffeeee;
     }
 
-    .channel-range {
-        font-size: 9pt;
-        color: #999;
-        font-family: var(--font-stack-mono);
-    }
-
     .remove-btn {
         margin: 0;
         padding: 2px;
@@ -424,6 +404,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        filter: grayscale(100%);
+        transition: filter 0.2s ease;
     }
 
     .remove-btn :global(svg) {
@@ -432,7 +414,7 @@
     }
 
     .remove-btn:hover {
-        opacity: 0.7;
+        filter: grayscale(0%);
     }
 
     .device-controls {
