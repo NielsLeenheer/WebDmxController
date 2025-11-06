@@ -10,7 +10,7 @@
     {#if !connected}
         <button id="start" onclick={onconnect}>
             <Icon data={connectIcon} />
-            Connect
+            Connect DMX controller
         </button>
     {:else}
         <button id="stop" onclick={ondisconnect}>
@@ -34,10 +34,6 @@
     button#start {
         background-color: #bbdefb;
         color: #1976d2;
-    }
-
-    button#start:hover {
-        /* background-color: #bbdefb; */
     }
 
     button#stop {
