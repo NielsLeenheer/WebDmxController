@@ -78,11 +78,6 @@
 </script>
 
 <div class="devices-container">
-    <div class="devices-header">
-        <h2>Devices</h2>
-        <p>Add and control common DMX devices</p>
-    </div>
-
     <div class="add-device">
         <select bind:value={selectedType}>
             {#each Object.entries(DEVICE_TYPES) as [key, type]}
@@ -168,30 +163,10 @@
         padding: 20px;
     }
 
-    .devices-header {
-        margin-bottom: 20px;
-    }
-
-    .devices-header h2 {
-        margin: 0 0 5px 0;
-        font-size: 16pt;
-        color: #333;
-    }
-
-    .devices-header p {
-        margin: 0;
-        color: #666;
-        font-size: 10pt;
-    }
-
     .add-device {
         display: flex;
         gap: 10px;
         margin-bottom: 20px;
-        padding: 15px;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 6px;
     }
 
     .add-device select {
@@ -204,12 +179,13 @@
     }
 
     .devices-list {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(20em, 1fr));
         gap: 15px;
     }
 
     .empty-state {
+        grid-column: 1 / -1;
         text-align: center;
         padding: 40px;
         color: #999;
@@ -339,19 +315,18 @@
     }
 
     .value-input {
-        width: 60px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        padding: 6px;
-        font-size: 10pt;
+        width: 50px;
+        border: none;
+        background: transparent;
+        padding: 4px;
+        font-size: 9pt;
         font-family: var(--font-stack-mono);
         text-align: center;
     }
 
     .value-input:focus {
         outline: none;
-        border-color: #2196F3;
-        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+        background: #f5f5f5;
     }
 
     .control-input input:disabled {
