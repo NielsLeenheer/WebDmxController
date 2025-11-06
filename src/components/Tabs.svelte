@@ -2,6 +2,7 @@
     import { Icon } from 'svelte-icon';
     import listIcon from '../assets/icons/list.svg?raw';
     import universeIcon from '../assets/icons/universe.svg?raw';
+    import timelineIcon from '../assets/icons/timeline.svg?raw';
 
     let {
         view = $bindable(),
@@ -25,6 +26,12 @@
             <input type="radio" name="view" value="universe" bind:group={view}>
             <Icon data={universeIcon} />
             Universe
+        </label>
+
+        <label>
+            <input type="radio" name="view" value="timeline" bind:group={view}>
+            <Icon data={timelineIcon} />
+            Timeline
         </label>
     </nav>
 

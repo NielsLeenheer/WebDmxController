@@ -5,12 +5,14 @@
     import Tabs from './components/Tabs.svelte';
     import UniverseView from './components/UniverseView.svelte';
     import DevicesView from './components/DevicesView.svelte';
+    import TimelineView from './components/TimelineView.svelte';
 
     let view = $state('devices');
     let connected = $state(false);
     let dmxController = $state(new DMXController());
     let selectedType = $state('RGB');
     let devicesViewRef = $state(null);
+    let devices = $state([]);
 
     async function handleConnect() {
         try {
@@ -60,11 +62,15 @@
     />
 
     <div class="view-container" class:hidden={view !== 'devices'}>
-        <DevicesView {dmxController} bind:this={devicesViewRef} bind:selectedType />
+        <DevicesView {dmxController} bind:this={devicesViewRef} bind:selectedType bind:devices />
     </div>
 
     <div class="view-container" class:hidden={view !== 'universe'}>
         <UniverseView {dmxController} />
+    </div>
+
+    <div class="view-container" class:hidden={view !== 'timeline'}>
+        <TimelineView {dmxController} {devices} />
     </div>
 </main>
 

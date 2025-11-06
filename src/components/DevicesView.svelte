@@ -5,7 +5,7 @@
     import DeviceControls from './DeviceControls.svelte';
     import disconnectIcon from '../assets/icons/disconnect.svg?raw';
 
-    let { dmxController, selectedType = $bindable() } = $props();
+    let { dmxController, selectedType = $bindable(), devices = $bindable([]) } = $props();
 
     // Link dialog state
     let linkDialog = $state(null);
@@ -91,9 +91,14 @@
         return { devices: [], nextId: 1 };
     }
 
-    const initialState = loadFromLocalStorage();
-    let devices = $state(initialState.devices);
-    let nextId = $state(initialState.nextId);
+    // Initialize devices from localStorage if empty
+    let nextId = $state(1);
+
+    if (devices.length === 0) {
+        const initialState = loadFromLocalStorage();
+        devices = initialState.devices;
+        nextId = initialState.nextId;
+    }
 
     // Save to localStorage whenever devices change
     $effect(() => {
