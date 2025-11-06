@@ -58,23 +58,28 @@ export const DEVICE_TYPES = {
 };
 
 export class Device {
-    constructor(id, type, startChannel, name = '') {
+    constructor(id, type, startChannel, name = '', linkedTo = null) {
         this.id = id;
         this.type = type;
         this.startChannel = startChannel;
         this.name = name || `${DEVICE_TYPES[type].name} ${id}`;
-        this.values = new Array(DEVICE_TYPES[type].channels).fill(0);
+        this.defaultValues = new Array(DEVICE_TYPES[type].channels).fill(0);
+        this.linkedTo = linkedTo; // ID of device to follow, or null
     }
 
     setValue(controlIndex, value) {
-        this.values[controlIndex] = Math.max(0, Math.min(255, value));
+        this.defaultValues[controlIndex] = Math.max(0, Math.min(255, value));
     }
 
     getValue(controlIndex) {
-        return this.values[controlIndex];
+        return this.defaultValues[controlIndex];
     }
 
     getChannelValues() {
-        return this.values;
+        return this.defaultValues;
+    }
+
+    isLinked() {
+        return this.linkedTo !== null;
     }
 }
