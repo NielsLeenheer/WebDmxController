@@ -17,7 +17,6 @@ select {
   border-radius: 6px;
   padding: 0 28px 0 6px;
   height: 32px;
-  margin: 15px 15px 0 0;
 
   font-family: system-ui;
   font-weight: 600;
@@ -43,7 +42,6 @@ button {
   display: flex;
   place-items: center;
   height: 32px;
-  margin: 15px 15px 0 0;
   padding: 0px 12px;
   user-select: none;
   cursor: pointer;
