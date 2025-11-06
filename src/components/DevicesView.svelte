@@ -1,7 +1,8 @@
 <script>
     import { Icon } from 'svelte-icon';
     import { DEVICE_TYPES, Device } from '../lib/devices.js';
-    import XYPad from './XYPad.svelte';
+    import { canLinkDevices, applyLinkedValues } from '../lib/channelMapping.js';
+    import DeviceControls from './DeviceControls.svelte';
     import disconnectIcon from '../assets/icons/disconnect.svg?raw';
 
     let { dmxController, selectedType = $bindable() } = $props();
@@ -61,28 +62,26 @@
                 const data = JSON.parse(saved);
                 // Reconstruct Device objects
                 const loadedDevices = data.devices.map(d => {
-                    const device = new Device(d.id, d.type, d.startChannel);
-                    device.name = d.name;
+                    const device = new Device(d.id, d.type, d.startChannel, d.name, d.linkedTo);
+                    device.defaultValues = d.defaultValues || new Array(DEVICE_TYPES[d.type].channels).fill(0);
                     return device;
                 });
                 return {
                     devices: loadedDevices,
-                    deviceValues: data.deviceValues || {},
                     nextId: data.nextId || 1
                 };
             }
         } catch (e) {
             console.error('Failed to load from localStorage:', e);
         }
-        return { devices: [], deviceValues: {}, nextId: 1 };
+        return { devices: [], nextId: 1 };
     }
 
     const initialState = loadFromLocalStorage();
     let devices = $state(initialState.devices);
-    let deviceValues = $state(initialState.deviceValues);
     let nextId = $state(initialState.nextId);
 
-    // Save to localStorage whenever devices or deviceValues change
+    // Save to localStorage whenever devices change
     $effect(() => {
         try {
             const data = {
@@ -90,9 +89,10 @@
                     id: d.id,
                     name: d.name,
                     type: d.type,
-                    startChannel: d.startChannel
+                    startChannel: d.startChannel,
+                    defaultValues: d.defaultValues,
+                    linkedTo: d.linkedTo
                 })),
-                deviceValues,
                 nextId
             };
             localStorage.setItem('dmx-devices', JSON.stringify(data));
@@ -147,24 +147,24 @@
         const startChannel = getNextFreeChannel();
         const device = new Device(nextId++, type, startChannel);
         devices.push(device);
-        // Initialize values for this device
-        deviceValues[device.id] = new Array(DEVICE_TYPES[device.type].channels).fill(0);
     }
 
     export function clearAllDeviceValues() {
-        // Reset all device values to 0
-        devices.forEach(device => {
-            if (deviceValues[device.id]) {
-                deviceValues[device.id] = deviceValues[device.id].map(() => 0);
-            }
+        // Reset all device default values to 0
+        devices = devices.map(d => {
+            d.defaultValues = d.defaultValues.map(() => 0);
+            return d;
         });
-        // Trigger reactivity
-        deviceValues = { ...deviceValues };
     }
 
     function removeDevice(deviceId) {
-        devices = devices.filter(d => d.id !== deviceId);
-        delete deviceValues[deviceId];
+        // Also unlink any devices linked to this one
+        devices = devices.map(d => {
+            if (d.linkedTo === deviceId) {
+                d.linkedTo = null;
+            }
+            return d;
+        }).filter(d => d.id !== deviceId);
     }
 
     function updateDeviceChannel(device, newChannel) {
@@ -175,70 +175,93 @@
         devices = devices.map(d => {
             if (d.id === device.id) {
                 // Create a new Device instance with updated channel
-                const updated = new Device(d.id, d.type, newStartChannel, d.name);
+                const updated = new Device(d.id, d.type, newStartChannel, d.name, d.linkedTo);
+                updated.defaultValues = [...d.defaultValues];
                 return updated;
             }
             return d;
         });
 
         // Update DMX controller with new channel values
-        if (dmxController && deviceValues[device.id]) {
-            deviceValues[device.id].forEach((value, index) => {
-                const channelIndex = newStartChannel + index;
-                dmxController.setChannel(channelIndex, value);
-            });
+        const updatedDevice = devices.find(d => d.id === device.id);
+        if (dmxController && updatedDevice) {
+            updateDeviceToDMX(updatedDevice);
         }
     }
 
-    function updateDeviceValue(device, controlIndex, value) {
-        // Update DMX controller
-        if (dmxController) {
-            const channelIndex = device.startChannel + controlIndex;
-            dmxController.setChannel(channelIndex, value);
-        }
-    }
-
-    function handleXYPadUpdate(device, panIndex, tiltIndex, panValue, tiltValue) {
-        // Update device values
-        deviceValues[device.id][panIndex] = panValue;
-        deviceValues[device.id][tiltIndex] = tiltValue;
+    function handleDeviceValueChange(device, channelIndex, value) {
+        // Update device default value
+        device.defaultValues[channelIndex] = value;
 
         // Update DMX controller
-        if (dmxController) {
-            dmxController.setChannel(device.startChannel + panIndex, panValue);
-            dmxController.setChannel(device.startChannel + tiltIndex, tiltValue);
-        }
+        updateDeviceToDMX(device);
+
+        // Propagate to linked devices
+        propagateToLinkedDevices(device);
 
         // Trigger reactivity
-        deviceValues = { ...deviceValues };
+        devices = [...devices];
     }
 
-    // Get the channel index for a control
-    function getControlChannelIndex(deviceType, controlIndex) {
-        const controls = DEVICE_TYPES[deviceType].controls;
-        let channelOffset = 0;
+    function updateDeviceToDMX(device) {
+        if (!dmxController) return;
 
-        for (let i = 0; i < controlIndex; i++) {
-            if (controls[i].type === 'xypad') {
-                channelOffset += 2; // XY pad uses 2 channels
-            } else {
-                channelOffset += 1;
+        device.defaultValues.forEach((value, index) => {
+            const channelIndex = device.startChannel + index;
+            dmxController.setChannel(channelIndex, value);
+        });
+    }
+
+    function propagateToLinkedDevices(sourceDevice) {
+        devices.forEach(device => {
+            if (device.linkedTo === sourceDevice.id) {
+                const newValues = applyLinkedValues(
+                    sourceDevice.type,
+                    device.type,
+                    sourceDevice.defaultValues,
+                    device.defaultValues
+                );
+                device.defaultValues = newValues;
+                updateDeviceToDMX(device);
+            }
+        });
+    }
+
+    function getLinkableDevices(device) {
+        return devices.filter(d =>
+            d.id !== device.id &&
+            canLinkDevices(device.type, d.type) &&
+            d.linkedTo !== device.id // Don't allow circular links
+        );
+    }
+
+    function handleLinkChange(device, targetDeviceId) {
+        device.linkedTo = targetDeviceId === '' ? null : parseInt(targetDeviceId);
+
+        if (device.linkedTo) {
+            // Apply values from linked device immediately
+            const sourceDevice = devices.find(d => d.id === device.linkedTo);
+            if (sourceDevice) {
+                const newValues = applyLinkedValues(
+                    sourceDevice.type,
+                    device.type,
+                    sourceDevice.defaultValues,
+                    device.defaultValues
+                );
+                device.defaultValues = newValues;
+                updateDeviceToDMX(device);
             }
         }
 
-        return channelOffset;
+        // Trigger reactivity
+        devices = [...devices];
     }
 
     // Restore all device values to DMX controller on load
     $effect(() => {
         if (dmxController) {
             devices.forEach(device => {
-                if (deviceValues[device.id]) {
-                    deviceValues[device.id].forEach((value, index) => {
-                        const channelIndex = device.startChannel + index;
-                        dmxController.setChannel(channelIndex, value);
-                    });
-                }
+                updateDeviceToDMX(device);
             });
         }
     });
@@ -267,61 +290,27 @@
                     </button>
                 </div>
 
-                <div class="device-controls">
-                    {#each DEVICE_TYPES[device.type].controls as control, controlIndex}
-                        {#if control.type === 'xypad'}
-                            <div class="control-xypad">
-                                <label>{control.name}</label>
-                                <XYPad
-                                    bind:panValue={deviceValues[device.id][control.panIndex]}
-                                    bind:tiltValue={deviceValues[device.id][control.tiltIndex]}
-                                    onUpdate={(pan, tilt) => handleXYPadUpdate(device, control.panIndex, control.tiltIndex, pan, tilt)}
-                                />
-                                <div class="xypad-inputs">
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="255"
-                                        bind:value={deviceValues[device.id][control.panIndex]}
-                                        onchange={(e) => handleXYPadUpdate(device, control.panIndex, control.tiltIndex, parseInt(e.target.value), deviceValues[device.id][control.tiltIndex])}
-                                        class="value-input"
-                                        title="Pan"
-                                    />
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="255"
-                                        bind:value={deviceValues[device.id][control.tiltIndex]}
-                                        onchange={(e) => handleXYPadUpdate(device, control.panIndex, control.tiltIndex, deviceValues[device.id][control.panIndex], parseInt(e.target.value))}
-                                        class="value-input"
-                                        title="Tilt"
-                                    />
-                                </div>
-                            </div>
-                        {:else}
-                            {@const channelIndex = getControlChannelIndex(device.type, controlIndex)}
-                            <div class="control">
-                                <label>{control.name}</label>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="255"
-                                    bind:value={deviceValues[device.id][channelIndex]}
-                                    oninput={(e) => updateDeviceValue(device, channelIndex, parseInt(e.target.value))}
-                                    style="accent-color: {control.color}"
-                                />
-                                <input
-                                    type="number"
-                                    min="0"
-                                    max="255"
-                                    bind:value={deviceValues[device.id][channelIndex]}
-                                    onchange={(e) => updateDeviceValue(device, channelIndex, parseInt(e.target.value))}
-                                    class="value-input"
-                                />
-                            </div>
-                        {/if}
-                    {/each}
-                </div>
+                {#if getLinkableDevices(device).length > 0}
+                    <div class="link-selector">
+                        <label>Link to:</label>
+                        <select
+                            value={device.linkedTo ?? ''}
+                            onchange={(e) => handleLinkChange(device, e.target.value)}
+                        >
+                            <option value="">None (independent)</option>
+                            {#each getLinkableDevices(device) as linkableDevice}
+                                <option value={linkableDevice.id}>{linkableDevice.name}</option>
+                            {/each}
+                        </select>
+                    </div>
+                {/if}
+
+                <DeviceControls
+                    deviceType={device.type}
+                    bind:values={device.defaultValues}
+                    onChange={(channelIndex, value) => handleDeviceValueChange(device, channelIndex, value)}
+                    disabled={device.isLinked()}
+                />
             </div>
         {/each}
     </div>
@@ -442,71 +431,29 @@
         filter: grayscale(0%);
     }
 
-    .device-controls {
+    .link-selector {
         display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .control {
-        display: grid;
-        grid-template-columns: 4em 1fr 3em;
-        gap: 8px;
         align-items: center;
-    }
-
-    .control label {
-        font-size: 8pt;
-        font-weight: 400;
-        color: #555;
-    }
-
-    .control input[type="range"] {
-        cursor: pointer;
-    }
-
-    .value-input {
-        width: 4em;
-        border: none;
-        background: transparent;
-        padding: 4px;
-        font-size: 8pt;
-        font-family: var(--font-stack-mono);
-        text-align: right;
-        border-radius: 5px;
-    }
-
-    .value-input:focus {
-        outline: none;
-        background: #fff;
-    }
-
-    .control input:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .control-xypad {
-        display: grid;
-        grid-template-columns: 4em 1fr 3em;
         gap: 8px;
-        align-items: center;
+        margin-bottom: 12px;
+        padding: 8px;
+        background: #e8e8e8;
+        border-radius: 4px;
     }
 
-    .control-xypad label {
+    .link-selector label {
         font-size: 9pt;
         font-weight: 600;
         color: #555;
     }
 
-    .xypad-inputs {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .xypad-inputs input {
-        width: 4em;
+    .link-selector select {
+        flex: 1;
+        padding: 4px 8px;
+        font-size: 9pt;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background: white;
     }
 
     /* Dialog styles */
