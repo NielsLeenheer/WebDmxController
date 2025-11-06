@@ -1,5 +1,7 @@
 <script>
+    import { Icon } from 'svelte-icon';
     import { DEVICE_TYPES, Device } from '../lib/devices.js';
+    import removeIcon from '../assets/icons/remove.svg?raw';
 
     let { dmxController } = $props();
 
@@ -115,7 +117,9 @@
                             ({DEVICE_TYPES[device.type].channels} ch)
                         </span>
                     </div>
-                    <button class="remove-btn" onclick={() => removeDevice(device.id)}>×</button>
+                    <button class="remove-btn" onclick={() => removeDevice(device.id)}>
+                        <Icon data={removeIcon} />
+                    </button>
                 </div>
 
                 {#if !isValid}
@@ -267,20 +271,24 @@
 
     .remove-btn {
         margin: 0;
-        padding: 0;
+        padding: 2px;
         width: 20px;
         height: 20px;
-        background: #ff4444;
-        color: white;
-        font-size: 12pt;
+        background: transparent;
+        border: none;
         line-height: 1;
         display: flex;
         align-items: center;
         justify-content: center;
     }
 
+    .remove-btn :global(svg) {
+        width: 100%;
+        height: 100%;
+    }
+
     .remove-btn:hover {
-        background: #ff0000;
+        opacity: 0.7;
     }
 
     .device-controls {

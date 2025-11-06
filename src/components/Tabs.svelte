@@ -1,4 +1,8 @@
 <script>
+    import { Icon } from 'svelte-icon';
+    import listIcon from '../assets/icons/list.svg?raw';
+    import universeIcon from '../assets/icons/universe.svg?raw';
+
     let { view = $bindable() } = $props();
 </script>
 
@@ -6,11 +10,13 @@
     <nav>
         <label>
             <input type="radio" name="view" value="devices" bind:group={view}>
+            <Icon data={listIcon} />
             Devices
         </label>
 
         <label>
             <input type="radio" name="view" value="universe" bind:group={view}>
+            <Icon data={universeIcon} />
             Universe
         </label>
     </nav>
@@ -39,8 +45,14 @@
     label {
         display: flex;
         align-items: center;
+        gap: 6px;
         padding: 0px 16px;
         cursor: pointer;
+    }
+
+    label :global(svg) {
+        width: 1.2em;
+        height: 1.2em;
     }
 
     label:first-child {
