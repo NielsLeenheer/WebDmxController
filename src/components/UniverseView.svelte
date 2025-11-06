@@ -34,11 +34,6 @@
 </script>
 
 <div class="universe-container">
-    <div class="universe-header">
-        <h2>DMX Universe (512 Channels)</h2>
-        <p>Enter values from 0-255 for each channel</p>
-    </div>
-
     <div class="channels-grid">
         {#each universe as value, channel}
             <div class="channel">
@@ -82,32 +77,33 @@
     .channels-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-        gap: 8px;
+        /* gap: 8px; */
     }
 
     .channel {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         background: white;
-        border: 1px solid #ddd;
-        border-radius: 6px;
+        border: 1px solid #fafafa;
         padding: 8px;
+        align-items: baseline;
     }
 
     .channel label {
-        font-size: 9pt;
-        color: #666;
+        font-size: 7pt;
+        color: #aaa;
         margin-bottom: 4px;
         font-weight: 600;
+        width: 5ch;
     }
 
     .channel input {
-        border: 1px solid #ccc;
+        border: none;
         border-radius: 4px;
         padding: 6px;
         font-size: 10pt;
         font-family: var(--font-stack-mono);
-        width: 100%;
+        width: 7em;
     }
 
     .channel input:focus {
