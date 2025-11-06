@@ -52,6 +52,8 @@
     function addDevice() {
         const startChannel = getNextFreeChannel();
         const device = new Device(nextId++, selectedType, startChannel);
+        // Make values reactive by wrapping in $state
+        device.values = $state(device.values);
         devices.push(device);
     }
 
@@ -65,8 +67,6 @@
     }
 
     function updateDeviceValue(device, controlIndex, value) {
-        device.values[controlIndex] = Math.max(0, Math.min(255, value));
-
         // Update DMX controller only if device is valid
         if (dmxController && validateDevice(device)) {
             const channelIndex = device.startChannel + controlIndex;
@@ -137,7 +137,7 @@
                                     min="0"
                                     max="255"
                                     bind:value={device.values[index]}
-                                    oninput={() => updateDeviceValue(device, index, device.values[index])}
+                                    oninput={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
                                     style="accent-color: {control.color}"
                                     disabled={!isValid}
                                 />
@@ -146,7 +146,7 @@
                                     min="0"
                                     max="255"
                                     bind:value={device.values[index]}
-                                    onchange={() => updateDeviceValue(device, index, device.values[index])}
+                                    onchange={(e) => updateDeviceValue(device, index, parseInt(e.target.value))}
                                     class="value-input"
                                     disabled={!isValid}
                                 />
@@ -345,6 +345,7 @@
         height: 16px;
         border-radius: 50%;
         cursor: pointer;
+        background: currentColor;
     }
 
     .control-input input[type="range"]::-moz-range-thumb {
@@ -353,6 +354,7 @@
         border-radius: 50%;
         cursor: pointer;
         border: none;
+        background: currentColor;
     }
 
     .value-input {
