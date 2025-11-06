@@ -84,6 +84,10 @@ export class DMXController {
         return this.universe;
     }
 
+    clearUniverse() {
+        this.universe.fill(0);
+    }
+
     sendUniverse() {
         if (!this.device || !this.connected) return;
 

@@ -150,6 +150,17 @@
         deviceValues[device.id] = new Array(DEVICE_TYPES[device.type].channels).fill(0);
     }
 
+    export function clearAllDeviceValues() {
+        // Reset all device values to 0
+        devices.forEach(device => {
+            if (deviceValues[device.id]) {
+                deviceValues[device.id] = deviceValues[device.id].map(() => 0);
+            }
+        });
+        // Trigger reactivity
+        deviceValues = { ...deviceValues };
+    }
+
     function removeDevice(deviceId) {
         devices = devices.filter(d => d.id !== deviceId);
         delete deviceValues[deviceId];

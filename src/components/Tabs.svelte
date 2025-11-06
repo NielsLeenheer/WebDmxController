@@ -8,7 +8,8 @@
         showAddDevice = false,
         deviceTypes = null,
         selectedType = $bindable(),
-        onAddDevice = null
+        onAddDevice = null,
+        onClearUniverse = null
     } = $props();
 </script>
 
@@ -35,6 +36,12 @@
                 {/each}
             </select>
             <button onclick={onAddDevice}>Add Device</button>
+        </div>
+    {/if}
+
+    {#if view === 'universe' && onClearUniverse}
+        <div class="clear-universe">
+            <button onclick={onClearUniverse}>Clear</button>
         </div>
     {/if}
 </div>
@@ -100,6 +107,17 @@
     }
 
     .add-device button {
+        margin: 0;
+        height: 32px;
+    }
+
+    .clear-universe {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .clear-universe button {
         margin: 0;
         height: 32px;
     }

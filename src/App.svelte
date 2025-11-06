@@ -31,6 +31,16 @@
             devicesViewRef.addDevice(selectedType);
         }
     }
+
+    function handleClearUniverse() {
+        if (dmxController) {
+            dmxController.clearUniverse();
+        }
+        // Also clear device values
+        if (devicesViewRef?.clearAllDeviceValues) {
+            devicesViewRef.clearAllDeviceValues();
+        }
+    }
 </script>
 
 <Header
@@ -46,6 +56,7 @@
         deviceTypes={DEVICE_TYPES}
         bind:selectedType
         onAddDevice={handleAddDevice}
+        onClearUniverse={handleClearUniverse}
     />
 
     <div class="view-container" class:hidden={view !== 'devices'}>
