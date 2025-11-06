@@ -24,25 +24,30 @@
         } catch (e) {
             console.error('Failed to load timeline from localStorage:', e);
         }
-        return new Timeline(10000, true);
+        return new Timeline(30000, true); // Default 30 seconds
     }
 
     let timeline = $state(loadTimeline());
     let animationFrameId = $state(null);
+
+    // Keypoint editing state
+    let selectedKeypoint = $state(null);
     let selectedDevice = $state(null);
-    let editingKeypoint = $state(null);
-    let keypointDialog = $state(null);
-    let settingsDialog = $state(null);
-
-    // Timeline settings
-    let durationSeconds = $state(timeline.duration / 1000);
-    let loop = $state(timeline.loop);
-
-    // Keypoint editor state
-    let keypointTime = $state(0);
     let keypointValues = $state([]);
     let keypointEasing = $state('linear');
     let easingNames = getEasingNames();
+
+    // Right panel state
+    let rightPanelOpen = $state(false);
+
+    // Timeline settings dialog
+    let settingsDialog = $state(null);
+    let durationSeconds = $state(timeline.duration / 1000);
+    let loop = $state(timeline.loop);
+
+    // Timeline display settings
+    const pixelsPerSecond = 100; // How many pixels represent 1 second
+    const timelineWidth = $derived((timeline.duration / 1000) * pixelsPerSecond);
 
     // Save timeline to localStorage whenever it changes
     $effect(() => {
@@ -117,69 +122,99 @@
         updateDMXFromTimeline();
     }
 
-    // Seek to position
-    function handleSeek(e) {
+    // Click on timeline track to seek
+    function handleTimelineClick(e) {
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;
-        const percentage = x / rect.width;
-        const newTime = percentage * timeline.duration;
-        timeline.seek(newTime);
+        const clickedTime = (x / timelineWidth) * timeline.duration;
+        timeline.seek(clickedTime);
         updateDMXFromTimeline();
     }
 
-    // Open add keypoint dialog
-    function openAddKeypointDialog(device) {
-        selectedDevice = device;
-        editingKeypoint = null;
-        keypointTime = timeline.currentTime / 1000;
-        keypointValues = [...device.defaultValues];
-        keypointEasing = 'linear';
-        keypointDialog?.showModal();
+    // Click on timeline track to add keypoint
+    function handleTrackClick(e, device) {
+        // Prevent if clicking on existing keypoint
+        if (e.target.classList.contains('keypoint')) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const clickedTime = (x / timelineWidth) * timeline.duration;
+
+        // Create new keypoint at clicked position
+        const keypoint = new Keypoint(
+            Math.round(clickedTime),
+            device.id,
+            [...device.defaultValues],
+            'linear'
+        );
+
+        timeline.addKeypoint(keypoint);
+        timeline = timeline;
+
+        // Open for editing
+        openKeypointEditor(device, keypoint);
     }
 
-    // Open edit keypoint dialog
-    function openEditKeypointDialog(device, keypoint) {
+    // Open keypoint in right panel
+    function openKeypointEditor(device, keypoint) {
+        selectedKeypoint = keypoint;
         selectedDevice = device;
-        editingKeypoint = keypoint;
-        keypointTime = keypoint.time / 1000;
         keypointValues = [...keypoint.values];
         keypointEasing = keypoint.easing;
-        keypointDialog?.showModal();
+        rightPanelOpen = true;
     }
 
-    // Save keypoint
-    function saveKeypoint() {
-        if (!selectedDevice) return;
+    // Save keypoint changes
+    function saveKeypointChanges() {
+        if (!selectedKeypoint || !selectedDevice) return;
 
-        const time = Math.round(keypointTime * 1000);
-        const keypoint = new Keypoint(time, selectedDevice.id, keypointValues, keypointEasing);
+        const updatedKeypoint = new Keypoint(
+            selectedKeypoint.time,
+            selectedDevice.id,
+            keypointValues,
+            keypointEasing
+        );
 
-        if (editingKeypoint) {
-            timeline.updateKeypoint(editingKeypoint, keypoint);
-        } else {
-            timeline.addKeypoint(keypoint);
-        }
-
-        // Force reactivity
+        timeline.updateKeypoint(selectedKeypoint, updatedKeypoint);
         timeline = timeline;
-        closeKeypointDialog();
+
+        // Update selected keypoint reference
+        selectedKeypoint = updatedKeypoint;
         updateDMXFromTimeline();
     }
 
-    // Delete keypoint
-    function deleteKeypoint(device, keypoint) {
+    // Delete current keypoint
+    function deleteCurrentKeypoint() {
+        if (!selectedKeypoint) return;
+
         if (confirm('Delete this keypoint?')) {
-            timeline.removeKeypoint(keypoint);
+            timeline.removeKeypoint(selectedKeypoint);
             timeline = timeline;
+            closeRightPanel();
             updateDMXFromTimeline();
         }
     }
 
-    // Close keypoint dialog
-    function closeKeypointDialog() {
-        keypointDialog?.close();
+    // Close right panel
+    function closeRightPanel() {
+        rightPanelOpen = false;
+        selectedKeypoint = null;
         selectedDevice = null;
-        editingKeypoint = null;
+    }
+
+    // Get keypoints for a device
+    function getDeviceKeypoints(device) {
+        return timeline.getDeviceKeypoints(device.id);
+    }
+
+    // Calculate keypoint position
+    function getKeypointPosition(keypoint) {
+        return (keypoint.time / timeline.duration) * timelineWidth;
+    }
+
+    // Calculate playhead position
+    function getPlayheadPosition() {
+        return (timeline.currentTime / timeline.duration) * timelineWidth;
     }
 
     // Open settings dialog
@@ -195,11 +230,6 @@
         timeline.loop = loop;
         timeline = timeline;
         settingsDialog?.close();
-    }
-
-    // Get keypoints for a device
-    function getDeviceKeypoints(device) {
-        return timeline.getDeviceKeypoints(device.id);
     }
 
     // Cleanup on unmount
@@ -237,108 +267,112 @@
         </button>
     </div>
 
-    <!-- Timeline Scrubber -->
-    <div class="timeline-scrubber" onclick={handleSeek}>
-        <div class="timeline-track">
-            <div
-                class="timeline-playhead"
-                style="left: {(timeline.currentTime / timeline.duration) * 100}%"
-            ></div>
-            {#each timeline.keypoints as keypoint}
-                <div
-                    class="timeline-keypoint-marker"
-                    style="left: {(keypoint.time / timeline.duration) * 100}%"
-                    title="Keypoint at {formatTime(keypoint.time)}"
-                ></div>
-            {/each}
-        </div>
-    </div>
-
-    <!-- Devices List -->
-    <div class="devices-container">
-        {#if devices.length === 0}
-            <div class="empty-state">
-                <p>No devices added yet.</p>
-                <p>Switch to the Devices tab to add devices.</p>
-            </div>
-        {:else}
-            {#each devices as device}
-                {@const deviceKeypoints = getDeviceKeypoints(device)}
-                <div class="device-card">
-                    <div class="device-header">
-                        <h3>{device.name}</h3>
-                        <span class="device-type">{DEVICE_TYPES[device.type].name}</span>
-                        <button class="add-keypoint-button" onclick={() => openAddKeypointDialog(device)}>
-                            Add Keypoint
-                        </button>
+    <!-- Timeline Editor -->
+    <div class="timeline-editor">
+        <!-- Device Names Column -->
+        <div class="device-names">
+            <div class="device-names-header">Devices</div>
+            {#if devices.length === 0}
+                <div class="empty-state">
+                    <p>No devices</p>
+                    <p>Add devices in the Devices tab</p>
+                </div>
+            {:else}
+                {#each devices as device}
+                    <div class="device-name-row">
+                        {device.name}
                     </div>
+                {/each}
+            {/if}
+        </div>
 
-                    {#if deviceKeypoints.length > 0}
-                        <div class="keypoints-list">
-                            <h4>Keypoints ({deviceKeypoints.length})</h4>
-                            {#each deviceKeypoints as keypoint}
-                                <div class="keypoint-item">
-                                    <span class="keypoint-time">{formatTime(keypoint.time)}</span>
-                                    <span class="keypoint-easing">{keypoint.easing}</span>
-                                    <button onclick={() => openEditKeypointDialog(device, keypoint)}>
-                                        Edit
-                                    </button>
-                                    <button onclick={() => deleteKeypoint(device, keypoint)}>
-                                        Delete
-                                    </button>
-                                </div>
+        <!-- Timeline Tracks (scrollable) -->
+        <div class="timeline-tracks-container">
+            <div class="timeline-tracks" style="width: {timelineWidth}px">
+                <!-- Time ruler -->
+                <div class="time-ruler">
+                    {#each Array(Math.ceil(timeline.duration / 1000)) as _, index}
+                        <div class="time-marker" style="left: {index * pixelsPerSecond}px">
+                            <span>{index}s</span>
+                        </div>
+                    {/each}
+                </div>
+
+                <!-- Playhead -->
+                <div class="playhead" style="left: {getPlayheadPosition()}px"></div>
+
+                <!-- Device tracks -->
+                {#if devices.length === 0}
+                    <div class="empty-tracks"></div>
+                {:else}
+                    {#each devices as device}
+                        <div
+                            class="device-track"
+                            onclick={(e) => handleTrackClick(e, device)}
+                        >
+                            {#each getDeviceKeypoints(device) as keypoint}
+                                <div
+                                    class="keypoint"
+                                    class:selected={selectedKeypoint === keypoint}
+                                    style="left: {getKeypointPosition(keypoint)}px"
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        openKeypointEditor(device, keypoint);
+                                    }}
+                                    title="{formatTime(keypoint.time)} - {keypoint.easing}"
+                                ></div>
                             {/each}
                         </div>
-                    {:else}
-                        <p class="no-keypoints">No keypoints yet</p>
-                    {/if}
+                    {/each}
+                {/if}
+            </div>
+        </div>
+
+        <!-- Right Panel (collapsible) -->
+        <div class="right-panel" class:open={rightPanelOpen}>
+            {#if rightPanelOpen && selectedKeypoint && selectedDevice}
+                <div class="panel-header">
+                    <h3>Keypoint Settings</h3>
+                    <button class="close-btn" onclick={closeRightPanel}>×</button>
                 </div>
-            {/each}
-        {/if}
+
+                <div class="panel-content">
+                    <div class="panel-field">
+                        <label>Device:</label>
+                        <span class="device-info">{selectedDevice.name}</span>
+                    </div>
+
+                    <div class="panel-field">
+                        <label>Time:</label>
+                        <span class="time-info">{formatTime(selectedKeypoint.time)}</span>
+                    </div>
+
+                    <div class="panel-field">
+                        <label>Easing:</label>
+                        <select bind:value={keypointEasing} onchange={saveKeypointChanges}>
+                            {#each easingNames as name}
+                                <option value={name}>{name}</option>
+                            {/each}
+                        </select>
+                    </div>
+
+                    <div class="panel-field">
+                        <label>Values:</label>
+                        <DeviceControls
+                            deviceType={selectedDevice.type}
+                            bind:values={keypointValues}
+                            onChange={saveKeypointChanges}
+                        />
+                    </div>
+
+                    <button class="delete-btn" onclick={deleteCurrentKeypoint}>
+                        Delete Keypoint
+                    </button>
+                </div>
+            {/if}
+        </div>
     </div>
 </div>
-
-<!-- Keypoint Editor Dialog -->
-<dialog bind:this={keypointDialog} class="keypoint-dialog">
-    {#if selectedDevice}
-        <form method="dialog">
-            <h3>{editingKeypoint ? 'Edit' : 'Add'} Keypoint - {selectedDevice.name}</h3>
-
-            <div class="dialog-field">
-                <label>Time (seconds):</label>
-                <input
-                    type="number"
-                    bind:value={keypointTime}
-                    min="0"
-                    max={timeline.duration / 1000}
-                    step="0.1"
-                />
-            </div>
-
-            <div class="dialog-field">
-                <label>Easing:</label>
-                <select bind:value={keypointEasing}>
-                    {#each easingNames as name}
-                        <option value={name}>{name}</option>
-                    {/each}
-                </select>
-            </div>
-
-            <div class="dialog-field">
-                <label>Values:</label>
-                <DeviceControls
-                    deviceType={selectedDevice.type}
-                    bind:values={keypointValues}
-                />
-            </div>
-
-            <div class="dialog-actions">
-                <button type="button" onclick={saveKeypoint}>Save</button>
-                <button type="button" onclick={closeKeypointDialog}>Cancel</button>
-            </div>
-        </form>
-    {/if}
-</dialog>
 
 <!-- Settings Dialog -->
 <dialog bind:this={settingsDialog} class="settings-dialog">
@@ -351,7 +385,7 @@
                 type="number"
                 bind:value={durationSeconds}
                 min="1"
-                step="0.1"
+                step="1"
             />
         </div>
 
@@ -363,8 +397,8 @@
         </div>
 
         <div class="dialog-actions">
-            <button type="button" onclick={saveSettings}>Save</button>
             <button type="button" onclick={() => settingsDialog?.close()}>Cancel</button>
+            <button type="button" onclick={saveSettings}>Save</button>
         </div>
     </form>
 </dialog>
@@ -374,16 +408,17 @@
         display: flex;
         flex-direction: column;
         height: 100%;
-        background: #f9f9f9;
+        background: #2a2a2a;
+        color: #e0e0e0;
     }
 
     .controls-bar {
         display: flex;
         align-items: center;
         gap: 15px;
-        padding: 15px;
-        background: #fff;
-        border-bottom: 1px solid #ddd;
+        padding: 12px 15px;
+        background: #1e1e1e;
+        border-bottom: 1px solid #404040;
     }
 
     .playback-controls {
@@ -392,13 +427,13 @@
     }
 
     .playback-controls button {
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         padding: 6px;
         border: none;
-        background: #007bff;
+        background: #0078d4;
         color: white;
-        border-radius: 6px;
+        border-radius: 4px;
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -406,174 +441,307 @@
     }
 
     .playback-controls button:hover {
-        background: #0056b3;
+        background: #106ebe;
     }
 
     .playback-controls :global(svg) {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
     }
 
     .time-display {
         font-family: var(--font-stack-mono);
         font-size: 11pt;
-        font-weight: 600;
-        color: #333;
+        font-weight: 500;
     }
 
     .settings-button {
         margin-left: auto;
         height: 32px;
         padding: 0 15px;
+        background: #333;
+        color: #e0e0e0;
+        border: 1px solid #555;
     }
 
-    .timeline-scrubber {
-        padding: 20px 15px;
-        background: #fff;
-        border-bottom: 1px solid #ddd;
-        cursor: pointer;
+    .settings-button:hover {
+        background: #444;
     }
 
-    .timeline-track {
-        position: relative;
-        height: 40px;
-        background: #e0e0e0;
-        border-radius: 4px;
-    }
-
-    .timeline-playhead {
-        position: absolute;
-        top: 0;
-        width: 3px;
-        height: 100%;
-        background: #007bff;
-        pointer-events: none;
-    }
-
-    .timeline-keypoint-marker {
-        position: absolute;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        width: 12px;
-        height: 12px;
-        background: #ffc107;
-        border: 2px solid #fff;
-        border-radius: 50%;
-        pointer-events: none;
-    }
-
-    .devices-container {
+    .timeline-editor {
+        display: flex;
         flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    /* Device Names Column */
+    .device-names {
+        width: 200px;
+        background: #252525;
+        border-right: 1px solid #404040;
+        display: flex;
+        flex-direction: column;
         overflow-y: auto;
-        padding: 15px;
+    }
+
+    .device-names-header {
+        height: 40px;
+        display: flex;
+        align-items: center;
+        padding: 0 15px;
+        font-weight: 600;
+        background: #1e1e1e;
+        border-bottom: 1px solid #404040;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .device-name-row {
+        height: 60px;
+        display: flex;
+        align-items: center;
+        padding: 0 15px;
+        border-bottom: 1px solid #333;
+        font-size: 10pt;
     }
 
     .empty-state {
+        padding: 40px 20px;
         text-align: center;
-        padding: 40px;
+        color: #777;
+        font-size: 9pt;
+    }
+
+    .empty-state p {
+        margin: 5px 0;
+    }
+
+    /* Timeline Tracks */
+    .timeline-tracks-container {
+        flex: 1;
+        overflow-x: auto;
+        overflow-y: auto;
+        background: #2a2a2a;
+        position: relative;
+    }
+
+    .timeline-tracks {
+        position: relative;
+        min-width: 100%;
+        height: 100%;
+    }
+
+    .time-ruler {
+        height: 40px;
+        position: sticky;
+        top: 0;
+        background: #1e1e1e;
+        border-bottom: 1px solid #404040;
+        z-index: 2;
+    }
+
+    .time-marker {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        border-left: 1px solid #404040;
+        padding-left: 4px;
+        padding-top: 4px;
+    }
+
+    .time-marker span {
+        font-size: 9pt;
         color: #999;
     }
 
-    .device-card {
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
+    .playhead {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #ff4444;
+        z-index: 10;
+        pointer-events: none;
     }
 
-    .device-header {
+    .playhead::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -5px;
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 8px solid #ff4444;
+    }
+
+    .device-track {
+        height: 60px;
+        border-bottom: 1px solid #333;
+        position: relative;
+        cursor: crosshair;
+    }
+
+    .device-track:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .empty-tracks {
+        height: 60px;
+        border-bottom: 1px solid #333;
+    }
+
+    .keypoint {
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 14px;
+        height: 14px;
+        background: #0078d4;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        cursor: pointer;
+        z-index: 5;
+        transition: all 0.15s ease;
+    }
+
+    .keypoint:hover {
+        width: 18px;
+        height: 18px;
+        background: #106ebe;
+    }
+
+    .keypoint.selected {
+        background: #ffa500;
+        border-color: #ffd700;
+        box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
+    }
+
+    /* Right Panel */
+    .right-panel {
+        width: 0;
+        background: #252525;
+        border-left: 1px solid #404040;
+        overflow: hidden;
+        transition: width 0.3s ease;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .right-panel.open {
+        width: 320px;
+    }
+
+    .panel-header {
         display: flex;
         align-items: center;
-        gap: 10px;
-        margin-bottom: 15px;
+        justify-content: space-between;
+        padding: 15px;
+        border-bottom: 1px solid #404040;
+        background: #1e1e1e;
     }
 
-    .device-header h3 {
+    .panel-header h3 {
         margin: 0;
         font-size: 11pt;
         font-weight: 600;
     }
 
-    .device-type {
-        font-size: 9pt;
-        color: #666;
-        padding: 4px 8px;
-        background: #f0f0f0;
+    .close-btn {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        background: transparent;
+        border: none;
+        color: #999;
+        font-size: 24px;
+        line-height: 1;
+        cursor: pointer;
         border-radius: 4px;
     }
 
-    .add-keypoint-button {
-        margin-left: auto;
-        height: 28px;
-        padding: 0 12px;
-        font-size: 9pt;
+    .close-btn:hover {
+        background: #333;
+        color: #fff;
     }
 
-    .keypoints-list {
+    .panel-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+    }
+
+    .panel-field {
+        margin-bottom: 20px;
+    }
+
+    .panel-field label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 9pt;
+        font-weight: 600;
+        color: #aaa;
+    }
+
+    .device-info,
+    .time-info {
+        display: block;
+        padding: 8px 12px;
+        background: #1e1e1e;
+        border-radius: 4px;
+        font-size: 10pt;
+    }
+
+    .panel-field select {
+        width: 100%;
+        padding: 8px 12px;
+        background: #1e1e1e;
+        color: #e0e0e0;
+        border: 1px solid #404040;
+        border-radius: 4px;
+        font-size: 10pt;
+    }
+
+    .delete-btn {
+        width: 100%;
+        padding: 10px;
+        background: #c53030;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 10pt;
+        font-weight: 600;
         margin-top: 10px;
     }
 
-    .keypoints-list h4 {
-        margin: 0 0 10px 0;
-        font-size: 10pt;
-        color: #555;
+    .delete-btn:hover {
+        background: #9b2c2c;
     }
 
-    .keypoint-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 8px;
-        background: #f5f5f5;
-        border-radius: 4px;
-        margin-bottom: 6px;
-    }
-
-    .keypoint-time {
-        font-family: var(--font-stack-mono);
-        font-size: 10pt;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .keypoint-easing {
-        font-size: 9pt;
-        color: #666;
-    }
-
-    .keypoint-item button {
-        height: 24px;
-        padding: 0 10px;
-        font-size: 9pt;
-        margin-left: auto;
-    }
-
-    .keypoint-item button:first-of-type {
-        margin-left: auto;
-    }
-
-    .no-keypoints {
-        font-size: 9pt;
-        color: #999;
-        margin: 10px 0 0 0;
-    }
-
-    .keypoint-dialog,
+    /* Settings Dialog */
     .settings-dialog {
-        border: 1px solid #ddd;
+        border: none;
         border-radius: 8px;
         padding: 0;
-        max-width: 500px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        max-width: 400px;
+        width: 90%;
+        background: #2a2a2a;
+        color: #e0e0e0;
     }
 
-    .keypoint-dialog form,
+    .settings-dialog::backdrop {
+        background: rgba(0, 0, 0, 0.7);
+    }
+
     .settings-dialog form {
         padding: 20px;
     }
 
-    .keypoint-dialog h3,
     .settings-dialog h3 {
         margin: 0 0 20px 0;
         font-size: 12pt;
@@ -585,24 +753,21 @@
 
     .dialog-field label {
         display: block;
-        font-size: 9pt;
-        font-weight: 600;
-        color: #555;
-        margin-bottom: 5px;
+        margin-bottom: 6px;
+        font-size: 10pt;
     }
 
-    .dialog-field input[type="number"],
-    .dialog-field select {
+    .dialog-field input[type="number"] {
         width: 100%;
-        height: 32px;
-        padding: 0 10px;
-        border: 1px solid #ddd;
+        padding: 8px 12px;
+        background: #1e1e1e;
+        color: #e0e0e0;
+        border: 1px solid #404040;
         border-radius: 4px;
         font-size: 10pt;
     }
 
     .dialog-field input[type="checkbox"] {
-        width: auto;
         margin-right: 8px;
     }
 
@@ -611,12 +776,23 @@
         gap: 10px;
         justify-content: flex-end;
         margin-top: 20px;
-        padding-top: 15px;
-        border-top: 1px solid #ddd;
     }
 
     .dialog-actions button {
-        height: 32px;
-        padding: 0 15px;
+        padding: 8px 20px;
+        border-radius: 4px;
+        font-size: 10pt;
+    }
+
+    .dialog-actions button[type="button"]:first-child {
+        background: #333;
+        color: #e0e0e0;
+        border: 1px solid #555;
+    }
+
+    .dialog-actions button[type="button"]:last-child {
+        background: #0078d4;
+        color: white;
+        border: none;
     }
 </style>
