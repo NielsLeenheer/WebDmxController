@@ -48,9 +48,24 @@
         onAddDevice={handleAddDevice}
     />
 
-    {#if view === 'universe'}
-        <UniverseView {dmxController} />
-    {:else if view === 'devices'}
+    <div class="view-container" class:hidden={view !== 'devices'}>
         <DevicesView {dmxController} bind:this={devicesViewRef} bind:selectedType />
-    {/if}
+    </div>
+
+    <div class="view-container" class:hidden={view !== 'universe'}>
+        <UniverseView {dmxController} />
+    </div>
 </main>
+
+<style>
+    .view-container {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .view-container.hidden {
+        display: none;
+    }
+</style>
