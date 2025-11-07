@@ -126,19 +126,16 @@
         return { devices: [], nextId: 1 };
     }
 
-    // Initialize nextId
-    let nextId = $state(1);
+    // Initialize nextId - must be calculated from devices after loading
+    const initialState = devices.length === 0 ? loadFromLocalStorage() : { devices, nextId: null };
 
-    // Load initial state from localStorage
     if (devices.length === 0) {
-        const initialState = loadFromLocalStorage();
         devices = initialState.devices;
-        nextId = initialState.nextId;
-    } else {
-        // If devices are already loaded (from parent), calculate nextId
-        const maxId = devices.reduce((max, d) => Math.max(max, d.id), 0);
-        nextId = maxId + 1;
     }
+
+    // Always calculate nextId from current devices to ensure uniqueness
+    const maxId = devices.length > 0 ? Math.max(...devices.map(d => d.id)) : 0;
+    let nextId = $state(Math.max(maxId + 1, initialState.nextId || 1));
 
     // Save to localStorage whenever devices change
     $effect(() => {
@@ -205,7 +202,7 @@
     export function addDevice(type = selectedType) {
         const startChannel = getNextFreeChannel();
         const device = new Device(nextId++, type, startChannel);
-        devices.push(device);
+        devices = [...devices, device];
     }
 
     export function clearAllDeviceValues() {
