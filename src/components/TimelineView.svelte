@@ -8,6 +8,7 @@
     import { Timeline, Keypoint } from '../lib/timeline.js';
     import { getEasingNames } from '../lib/easing.js';
     import { getMappedChannels } from '../lib/channelMapping.js';
+    import { getDeviceColor } from '../lib/colorUtils.js';
 
     let {
         dmxController = null,
@@ -37,6 +38,23 @@
         if (!sourceDevice) return [];
 
         return getMappedChannels(sourceDevice.type, device.type);
+    }
+
+    // Get the current color for a device
+    // Shows keypoint color if editing that device, otherwise shows color at playhead
+    function getDeviceCurrentColor(device) {
+        // Reference currentTime and keypointValues to make this reactive
+        currentTime;
+        keypointValues;
+
+        // If editing this device's keypoint, show keypoint color
+        if (selectedDevice && selectedDevice.id === device.id && selectedKeypoint) {
+            return getDeviceColor(device.type, keypointValues);
+        }
+
+        // Otherwise show color at current playhead position
+        const values = timeline.getDeviceValuesAtTime(device.id, currentTime, device.defaultValues);
+        return getDeviceColor(device.type, values);
     }
 
     // Load timeline from localStorage
@@ -379,7 +397,11 @@
             {:else}
                 {#each timelineDevices as device}
                     <div class="device-name-row">
-                        {device.name}
+                        <div
+                            class="color-preview"
+                            style="background-color: {getDeviceCurrentColor(device)}"
+                        ></div>
+                        <span>{device.name}</span>
                     </div>
                 {/each}
             {/if}
@@ -609,6 +631,15 @@
         padding: 0 15px;
         border-bottom: 1px solid #e0e0e0;
         font-size: 10pt;
+        gap: 10px;
+    }
+
+    .device-name-row .color-preview {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        flex-shrink: 0;
     }
 
     .empty-state {
@@ -728,6 +759,7 @@
         cursor: grabbing;
         z-index: 15;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        transition: none; /* Remove transition during drag for direct response */
     }
 
     /* Right Panel */

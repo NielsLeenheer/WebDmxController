@@ -2,6 +2,7 @@
     import { Icon } from 'svelte-icon';
     import { DEVICE_TYPES, Device } from '../lib/devices.js';
     import { canLinkDevices, applyLinkedValues, getMappedChannels } from '../lib/channelMapping.js';
+    import { getDeviceColor } from '../lib/colorUtils.js';
     import DeviceControls from './DeviceControls.svelte';
     import disconnectIcon from '../assets/icons/disconnect.svg?raw';
     import settingsIcon from '../assets/icons/settings.svg?raw';
@@ -321,6 +322,10 @@
         {#each devices as device (device.id)}
             <div class="device-card">
                 <div class="device-header">
+                    <div
+                        class="color-preview"
+                        style="background-color: {getDeviceColor(device.type, device.defaultValues)}"
+                    ></div>
                     <h3>{device.name}</h3>
                     <span class="channel-info">
                         Ch {device.startChannel + 1}-{device.startChannel + DEVICE_TYPES[device.type].channels}
@@ -443,10 +448,17 @@
 
     .device-header {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         margin-bottom: 15px;
         gap: 8px;
-        margin-top: -0.4em;
+    }
+
+    .color-preview {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        flex-shrink: 0;
     }
 
     .device-header h3 {
