@@ -7,7 +7,7 @@
         devices = []
     } = $props();
 
-    let styleContent = $state(`/* CSS Animation Mode
+    const initialStyleContent = `/* CSS Animation Mode
 
 Target devices using #device-{id} selectors.
 
@@ -46,7 +46,7 @@ Example animations:
 [id^="device-"] {
     animation: rainbow 5s linear infinite;
 }
-`);
+`;
 
     let animationFrameId;
     let isActive = false;
@@ -55,6 +55,7 @@ Example animations:
     // Create a style element for the user's CSS
     let styleElement;
     let animationTargetsContainer;
+    let cssEditorElement;
 
     function updateDMXFromCSS() {
         if (!dmxController || !isActive) return;
@@ -185,13 +186,18 @@ Example animations:
     }
 
     function handleStyleInput(event) {
-        styleContent = event.target.textContent;
-        updateStyleElement();
+        // Read the content from the contenteditable element
+        const newContent = event.target.textContent;
+        // Update the style element directly without updating state
+        // This prevents cursor position reset
+        if (styleElement) {
+            styleElement.textContent = newContent;
+        }
     }
 
-    function updateStyleElement() {
+    function updateStyleElement(content) {
         if (styleElement) {
-            styleElement.textContent = styleContent;
+            styleElement.textContent = content;
         }
     }
 
@@ -215,7 +221,12 @@ Example animations:
         styleElement = document.createElement('style');
         styleElement.id = 'css-animation-styles';
         document.head.appendChild(styleElement);
-        updateStyleElement();
+
+        // Set initial content in the editor
+        if (cssEditorElement) {
+            cssEditorElement.textContent = initialStyleContent;
+        }
+        updateStyleElement(initialStyleContent);
 
         // Initialize preview colors
         devices.forEach(device => {
@@ -269,7 +280,8 @@ Example animations:
             contenteditable="true"
             oninput={handleStyleInput}
             spellcheck="false"
-        >{styleContent}</pre>
+            bind:this={cssEditorElement}
+        ></pre>
     </div>
 </div>
 
