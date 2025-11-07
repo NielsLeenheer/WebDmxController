@@ -126,13 +126,18 @@
         return { devices: [], nextId: 1 };
     }
 
-    // Initialize devices from localStorage if empty
+    // Initialize nextId
     let nextId = $state(1);
 
+    // Load initial state from localStorage
     if (devices.length === 0) {
         const initialState = loadFromLocalStorage();
         devices = initialState.devices;
         nextId = initialState.nextId;
+    } else {
+        // If devices are already loaded (from parent), calculate nextId
+        const maxId = devices.reduce((max, d) => Math.max(max, d.id), 0);
+        nextId = maxId + 1;
     }
 
     // Save to localStorage whenever devices change

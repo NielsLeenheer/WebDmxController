@@ -57,12 +57,23 @@
 
     // Get gradient segments for a device track
     function getGradientSegments(device) {
+        // Safety checks
+        if (!device || !device.defaultValues || !device.type) {
+            return [];
+        }
+
         const keypoints = getDeviceKeypoints(device);
         const segments = [];
 
         // Determine starting value
         const keypointAtZero = keypoints.find(kp => kp.time === 0);
         const startingValues = keypointAtZero ? keypointAtZero.values : device.defaultValues;
+
+        // Ensure we have valid starting values
+        if (!startingValues || startingValues.length === 0) {
+            return [];
+        }
+
         const startingColor = getDeviceColor(device.type, startingValues);
 
         if (keypoints.length === 0) {
