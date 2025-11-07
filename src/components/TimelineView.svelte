@@ -55,6 +55,65 @@
         return getDeviceColor(device.type, keypoint.values);
     }
 
+    // Get gradient segments for a device track
+    function getGradientSegments(device) {
+        const keypoints = getDeviceKeypoints(device);
+        const segments = [];
+
+        // Determine starting value
+        const keypointAtZero = keypoints.find(kp => kp.time === 0);
+        const startingValues = keypointAtZero ? keypointAtZero.values : device.defaultValues;
+        const startingColor = getDeviceColor(device.type, startingValues);
+
+        if (keypoints.length === 0) {
+            // No keypoints - solid color across entire timeline
+            segments.push({
+                left: 0,
+                width: timelineWidth,
+                gradient: startingColor
+            });
+        } else {
+            const firstKeypoint = keypoints[0];
+            const lastKeypoint = keypoints[keypoints.length - 1];
+
+            // Segment from start to first keypoint
+            if (firstKeypoint.time > 0) {
+                const firstColor = getKeypointColor(firstKeypoint, device);
+                segments.push({
+                    left: 0,
+                    width: (firstKeypoint.time / timelineDuration) * timelineWidth,
+                    gradient: `linear-gradient(to right, ${startingColor}, ${firstColor})`
+                });
+            }
+
+            // Segments between keypoints
+            for (let i = 0; i < keypoints.length - 1; i++) {
+                const kp1 = keypoints[i];
+                const kp2 = keypoints[i + 1];
+                const color1 = getKeypointColor(kp1, device);
+                const color2 = getKeypointColor(kp2, device);
+
+                segments.push({
+                    left: (kp1.time / timelineDuration) * timelineWidth,
+                    width: ((kp2.time - kp1.time) / timelineDuration) * timelineWidth,
+                    gradient: `linear-gradient(to right, ${color1}, ${color2})`
+                });
+            }
+
+            // Segment from last keypoint to end
+            if (lastKeypoint.time < timelineDuration) {
+                const lastColor = getKeypointColor(lastKeypoint, device);
+                segments.push({
+                    left: (lastKeypoint.time / timelineDuration) * timelineWidth,
+                    width: ((timelineDuration - lastKeypoint.time) / timelineDuration) * timelineWidth,
+                    gradient: `linear-gradient(to right, ${lastColor}, ${startingColor})`
+                });
+            }
+        }
+
+        return segments;
+    }
+
     // Load timeline from localStorage
     function loadTimeline() {
         try {
@@ -493,6 +552,15 @@
                             class="device-track"
                             onclick={(e) => handleTrackClick(e, device)}
                         >
+                            <!-- Gradient segments showing color transitions -->
+                            {#each getGradientSegments(device) as segment}
+                                <div
+                                    class="gradient-segment"
+                                    style="left: {segment.left}px; width: {segment.width}px; background: {segment.gradient}"
+                                ></div>
+                            {/each}
+
+                            <!-- Keypoints -->
                             {#each getDeviceKeypoints(device) as keypoint}
                                 <div
                                     id="keypoint-{device.id}-{keypoint.time}"
@@ -823,6 +891,17 @@
 
     .device-track:hover {
         background: rgba(0, 0, 0, 0.02);
+    }
+
+    .gradient-segment {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        height: 8px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        pointer-events: none;
+        z-index: 1;
     }
 
     .empty-tracks {
