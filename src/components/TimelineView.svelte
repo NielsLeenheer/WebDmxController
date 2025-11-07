@@ -75,6 +75,8 @@
     // Reactive state for playhead position and timeline changes
     let currentTime = $state(timeline.currentTime);
     let timelineVersion = $state(0); // Increment to force keypoint re-renders
+    let isPlaying = $state(timeline.playing);
+    let timelineDuration = $state(timeline.duration);
 
     // Keypoint editing state
     let selectedKeypoint = $state(null);
@@ -100,7 +102,7 @@
 
     // Timeline display settings
     const pixelsPerSecond = 100; // How many pixels represent 1 second
-    const timelineWidth = $derived((timeline.duration / 1000) * pixelsPerSecond);
+    const timelineWidth = $derived((timelineDuration / 1000) * pixelsPerSecond);
 
     // Save timeline to localStorage whenever it changes
     $effect(() => {
@@ -168,11 +170,13 @@
             timeline.play();
             startAnimationLoop();
         }
+        isPlaying = timeline.playing;
     }
 
     function handleStop() {
         timeline.stop();
         currentTime = timeline.currentTime;
+        isPlaying = timeline.playing;
         stopAnimationLoop();
         updateDMXFromTimeline();
     }
@@ -181,7 +185,7 @@
     function handleTimelineClick(e) {
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;
-        const clickedTime = (x / timelineWidth) * timeline.duration;
+        const clickedTime = (x / timelineWidth) * timelineDuration;
         timeline.seek(clickedTime);
         currentTime = timeline.currentTime;
         updateDMXFromTimeline();
@@ -213,7 +217,7 @@
 
         const rect = rulerElement.getBoundingClientRect();
         const x = e.clientX - rect.left;
-        const newTime = Math.max(0, Math.min(timeline.duration, (x / timelineWidth) * timeline.duration));
+        const newTime = Math.max(0, Math.min(timelineDuration, (x / timelineWidth) * timelineDuration));
 
         timeline.seek(newTime);
         currentTime = timeline.currentTime;
@@ -227,7 +231,7 @@
 
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;
-        const clickedTime = (x / timelineWidth) * timeline.duration;
+        const clickedTime = (x / timelineWidth) * timelineDuration;
 
         // Create new keypoint at clicked position
         const keypoint = new Keypoint(
@@ -306,12 +310,12 @@
 
     // Calculate keypoint position
     function getKeypointPosition(keypoint) {
-        return (keypoint.time / timeline.duration) * timelineWidth;
+        return (keypoint.time / timelineDuration) * timelineWidth;
     }
 
     // Calculate playhead position
     function getPlayheadPosition() {
-        return (currentTime / timeline.duration) * timelineWidth;
+        return (currentTime / timelineDuration) * timelineWidth;
     }
 
     // Keypoint dragging
@@ -332,11 +336,11 @@
         if (!draggingKeypoint) return;
 
         const deltaX = e.clientX - dragStartX;
-        const deltaTime = (deltaX / timelineWidth) * timeline.duration;
+        const deltaTime = (deltaX / timelineWidth) * timelineDuration;
         let newTime = Math.round(dragStartTime + deltaTime);
 
         // Clamp to timeline duration
-        newTime = Math.max(0, Math.min(timeline.duration, newTime));
+        newTime = Math.max(0, Math.min(timelineDuration, newTime));
 
         // Find the device for this keypoint
         const device = timelineDevices.find(d => d.id === draggingKeypoint.deviceId);
@@ -378,6 +382,7 @@
     function saveSettings() {
         timeline.duration = Math.max(1, durationSeconds) * 1000;
         timeline.loop = loop;
+        timelineDuration = timeline.duration; // Update reactive state
 
         // Update currentTime if it exceeds new duration
         if (timeline.currentTime > timeline.duration) {
@@ -394,6 +399,8 @@
         if (confirm('Clear all keypoints? This cannot be undone.')) {
             timeline = new Timeline(30000, true);
             currentTime = 0;
+            timelineDuration = timeline.duration;
+            isPlaying = timeline.playing;
             timelineVersion++;
             closeKeypointEditor();
         }
@@ -411,8 +418,8 @@
     <!-- Playback Controls -->
     <div class="controls-bar">
         <div class="playback-controls">
-            <button onclick={handlePlayPause} title={timeline.playing ? "Pause" : "Play"}>
-                <Icon data={timeline.playing ? pauseIcon : playIcon} />
+            <button onclick={handlePlayPause} title={isPlaying ? "Pause" : "Play"}>
+                <Icon data={isPlaying ? pauseIcon : playIcon} />
             </button>
             <button onclick={handleStop} title="Stop">
                 <Icon data={stopIcon} />
@@ -420,7 +427,7 @@
         </div>
 
         <div class="time-display">
-            {formatTime(currentTime)} / {formatTime(timeline.duration)}
+            {formatTime(currentTime)} / {formatTime(timelineDuration)}
         </div>
 
         <button class="settings-button" onclick={openSettingsDialog}>
@@ -459,7 +466,7 @@
             <div class="timeline-tracks" style="width: {timelineWidth}px">
                 <!-- Time ruler -->
                 <div class="time-ruler" onmousedown={handleRulerMouseDown}>
-                    {#each Array(Math.ceil(timeline.duration / 1000)) as _, index}
+                    {#each Array(Math.ceil(timelineDuration / 1000)) as _, index}
                         <div class="time-marker" style="left: {index * pixelsPerSecond}px">
                             <span>{index}s</span>
                         </div>
@@ -582,6 +589,7 @@
         height: 100%;
         background: #f9f9f9;
         color: #333;
+        user-select: none; /* Prevent text selection during dragging */
     }
 
     .controls-bar {
