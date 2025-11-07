@@ -73,6 +73,7 @@
     let animationFrameId = $state(null);
 
     // Reactive state for playhead position and timeline changes
+    // Initialize from loaded timeline to ensure state is synced
     let currentTime = $state(timeline.currentTime);
     let timelineVersion = $state(0); // Increment to force keypoint re-renders
     let isPlaying = $state(timeline.playing);
@@ -106,6 +107,10 @@
 
     // Save timeline to localStorage whenever it changes
     $effect(() => {
+        // Watch timelineVersion and timelineDuration to detect changes
+        timelineVersion;
+        timelineDuration;
+
         try {
             const data = timeline.toJSON();
             localStorage.setItem('dmx-timeline', JSON.stringify(data));
@@ -476,6 +481,9 @@
                 <!-- Playhead -->
                 <div class="playhead" style="left: {getPlayheadPosition()}px"></div>
 
+                <!-- End marker -->
+                <div class="timeline-end" style="left: {timelineWidth}px"></div>
+
                 <!-- Device tracks -->
                 {#if timelineDevices.length === 0}
                     <div class="empty-tracks"></div>
@@ -783,6 +791,27 @@
         border-left: 6px solid transparent;
         border-right: 6px solid transparent;
         border-top: 8px solid #ff4444;
+    }
+
+    .timeline-end {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #333;
+        z-index: 9;
+        pointer-events: none;
+    }
+
+    .timeline-end::after {
+        content: 'END';
+        position: absolute;
+        top: 8px;
+        left: 4px;
+        font-size: 8pt;
+        font-weight: 600;
+        color: #666;
+        white-space: nowrap;
     }
 
     .device-track {
