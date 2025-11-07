@@ -1,0 +1,391 @@
+<script>
+    import { onMount, onDestroy } from 'svelte';
+    import { getDeviceColor } from '../lib/colorUtils.js';
+
+    let {
+        dmxController,
+        devices = []
+    } = $props();
+
+    let styleContent = $state(`/* CSS Animation Mode
+
+Target devices using #device-{id} selectors.
+
+Supported properties:
+- color: Maps to RGB(W) channels, opacity alpha to W channel
+- opacity: Maps to dimmer channel
+- translate: x → pan, y → tilt (for moving heads)
+
+Example animations:
+*/
+
+@keyframes rainbow {
+    0%   { color: rgb(255, 0, 0); }
+    16%  { color: rgb(255, 127, 0); }
+    33%  { color: rgb(255, 255, 0); }
+    50%  { color: rgb(0, 255, 0); }
+    66%  { color: rgb(0, 0, 255); }
+    83%  { color: rgb(75, 0, 130); }
+    100% { color: rgb(148, 0, 211); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+}
+
+@keyframes pan-tilt {
+    0%   { translate: 0% 0%; }
+    25%  { translate: 100% 0%; }
+    50%  { translate: 100% 100%; }
+    75%  { translate: 0% 100%; }
+    100% { translate: 0% 0%; }
+}
+
+/* Apply animations to all devices */
+[id^="device-"] {
+    animation: rainbow 5s linear infinite;
+}
+`);
+
+    let animationFrameId;
+    let isActive = false;
+    let previewColors = $state({});
+
+    // Create a style element for the user's CSS
+    let styleElement;
+    let animationTargetsContainer;
+
+    function updateDMXFromCSS() {
+        if (!dmxController || !isActive) return;
+
+        devices.forEach(device => {
+            const element = document.getElementById(`device-${device.id}`);
+            if (!element) return;
+
+            const computedStyle = window.getComputedStyle(element);
+            const newValues = [...device.defaultValues];
+
+            // Parse CSS color property → DMX RGB(W)
+            const color = computedStyle.color;
+            if (color && color !== 'rgba(0, 0, 0, 0)') {
+                const rgba = parseColor(color);
+                if (rgba) {
+                    // Map to device channels based on type
+                    if (device.type === 'RGB') {
+                        newValues[0] = rgba.r;
+                        newValues[1] = rgba.g;
+                        newValues[2] = rgba.b;
+                    } else if (device.type === 'RGBA') {
+                        newValues[0] = rgba.r;
+                        newValues[1] = rgba.g;
+                        newValues[2] = rgba.b;
+                        newValues[3] = rgba.a;
+                    } else if (device.type === 'RGBW') {
+                        newValues[0] = rgba.r;
+                        newValues[1] = rgba.g;
+                        newValues[2] = rgba.b;
+                        newValues[3] = rgba.a; // Use alpha for white channel
+                    } else if (device.type === 'MOVING_HEAD') {
+                        // Moving head: pan, tilt, dimmer, r, g, b, w
+                        newValues[3] = rgba.r;
+                        newValues[4] = rgba.g;
+                        newValues[5] = rgba.b;
+                        newValues[6] = rgba.a; // white channel
+                    }
+
+                    // Update preview color
+                    previewColors[device.id] = `rgba(${rgba.r}, ${rgba.g}, ${rgba.b}, ${rgba.a / 255})`;
+                }
+            }
+
+            // Parse CSS opacity → DMX dimmer
+            const opacity = parseFloat(computedStyle.opacity);
+            if (!isNaN(opacity)) {
+                const dimmerValue = Math.round(opacity * 255);
+                if (device.type === 'DIMMER') {
+                    newValues[0] = dimmerValue;
+                } else if (device.type === 'MOVING_HEAD') {
+                    newValues[2] = dimmerValue; // Dimmer channel
+                }
+            }
+
+            // Parse CSS translate → DMX pan/tilt (for moving heads)
+            if (device.type === 'MOVING_HEAD') {
+                const transform = computedStyle.transform;
+                if (transform && transform !== 'none') {
+                    const translate = parseTransform(transform);
+                    if (translate) {
+                        // Map -100% to 100% range to 0-255
+                        newValues[0] = Math.round(((translate.x + 100) / 200) * 255); // Pan
+                        newValues[1] = Math.round(((translate.y + 100) / 200) * 255); // Tilt
+                    }
+                }
+
+                // Also try the translate property directly
+                const translateProp = computedStyle.translate;
+                if (translateProp && translateProp !== 'none') {
+                    const parts = translateProp.split(' ');
+                    if (parts.length >= 2) {
+                        const x = parsePercentage(parts[0]);
+                        const y = parsePercentage(parts[1]);
+                        if (x !== null) newValues[0] = Math.round(((x + 100) / 200) * 255);
+                        if (y !== null) newValues[1] = Math.round(((y + 100) / 200) * 255);
+                    }
+                }
+            }
+
+            // Update DMX controller
+            updateDeviceToDMX(device, newValues);
+        });
+
+        animationFrameId = requestAnimationFrame(updateDMXFromCSS);
+    }
+
+    function parseColor(colorStr) {
+        // Parse rgba(r, g, b, a) or rgb(r, g, b)
+        const match = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+        if (match) {
+            return {
+                r: parseInt(match[1]),
+                g: parseInt(match[2]),
+                b: parseInt(match[3]),
+                a: match[4] ? Math.round(parseFloat(match[4]) * 255) : 255
+            };
+        }
+        return null;
+    }
+
+    function parseTransform(transformStr) {
+        // Parse matrix(a, b, c, d, tx, ty)
+        const match = transformStr.match(/matrix\([^,]+,\s*[^,]+,\s*[^,]+,\s*[^,]+,\s*([^,]+),\s*([^)]+)\)/);
+        if (match) {
+            return {
+                x: parseFloat(match[1]),
+                y: parseFloat(match[2])
+            };
+        }
+        return null;
+    }
+
+    function parsePercentage(str) {
+        if (str.endsWith('%')) {
+            return parseFloat(str);
+        }
+        return null;
+    }
+
+    function updateDeviceToDMX(device, values) {
+        if (!dmxController) return;
+
+        for (let i = 0; i < values.length; i++) {
+            const channel = device.startChannel + i;
+            dmxController.setChannel(channel, values[i]);
+        }
+    }
+
+    function handleStyleInput(event) {
+        styleContent = event.target.textContent;
+        updateStyleElement();
+    }
+
+    function updateStyleElement() {
+        if (styleElement) {
+            styleElement.textContent = styleContent;
+        }
+    }
+
+    function startAnimation() {
+        isActive = true;
+        if (!animationFrameId) {
+            updateDMXFromCSS();
+        }
+    }
+
+    function stopAnimation() {
+        isActive = false;
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+    }
+
+    onMount(() => {
+        // Create style element for user CSS
+        styleElement = document.createElement('style');
+        styleElement.id = 'css-animation-styles';
+        document.head.appendChild(styleElement);
+        updateStyleElement();
+
+        // Initialize preview colors
+        devices.forEach(device => {
+            previewColors[device.id] = getDeviceColor(device.type, device.defaultValues);
+        });
+
+        // Start animation loop
+        startAnimation();
+    });
+
+    onDestroy(() => {
+        stopAnimation();
+        if (styleElement && styleElement.parentNode) {
+            styleElement.parentNode.removeChild(styleElement);
+        }
+    });
+</script>
+
+<div class="css-view">
+    <div class="left-column">
+        <h3>Animation Targets</h3>
+        <div class="device-list">
+            {#each devices as device (device.id)}
+                <div class="device-item">
+                    <div class="device-preview" style="background-color: {previewColors[device.id] || getDeviceColor(device.type, device.defaultValues)}"></div>
+                    <div class="device-info">
+                        <div class="device-name">{device.name}</div>
+                        <div class="device-id">#device-{device.id}</div>
+                        <div class="device-type">{device.type}</div>
+                    </div>
+                </div>
+            {/each}
+        </div>
+
+        <!-- Off-screen animation targets -->
+        <div class="animation-targets" bind:this={animationTargetsContainer}>
+            {#each devices as device (device.id)}
+                <div
+                    id="device-{device.id}"
+                    class="animation-target"
+                    data-device-id={device.id}
+                ></div>
+            {/each}
+        </div>
+    </div>
+
+    <div class="right-column">
+        <h3>CSS Editor</h3>
+        <pre
+            class="css-editor"
+            contenteditable="true"
+            oninput={handleStyleInput}
+            spellcheck="false"
+        >{styleContent}</pre>
+    </div>
+</div>
+
+<style>
+    .css-view {
+        display: flex;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .left-column {
+        width: 350px;
+        border-right: 1px solid #ddd;
+        display: flex;
+        flex-direction: column;
+        background: #f9f9f9;
+    }
+
+    .right-column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    h3 {
+        margin: 0;
+        padding: 15px 20px;
+        background: #f5f5f5;
+        border-bottom: 1px solid #ddd;
+        font-size: 12pt;
+        font-weight: 600;
+    }
+
+    .device-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+    }
+
+    .device-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        margin-bottom: 10px;
+    }
+
+    .device-preview {
+        width: 50px;
+        height: 50px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+    }
+
+    .device-info {
+        flex: 1;
+    }
+
+    .device-name {
+        font-weight: 600;
+        font-size: 11pt;
+        margin-bottom: 4px;
+    }
+
+    .device-id {
+        font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+        font-size: 9pt;
+        color: #0066cc;
+        margin-bottom: 2px;
+    }
+
+    .device-type {
+        font-size: 9pt;
+        color: #666;
+    }
+
+    .animation-targets {
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        pointer-events: none;
+    }
+
+    .animation-target {
+        width: 100px;
+        height: 100px;
+        opacity: 0;
+    }
+
+    .css-editor {
+        flex: 1;
+        margin: 0;
+        padding: 20px;
+        background: #1e1e1e;
+        color: #d4d4d4;
+        font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+        font-size: 11pt;
+        line-height: 1.6;
+        overflow: auto;
+        border: none;
+        outline: none;
+        white-space: pre;
+        tab-size: 4;
+    }
+
+    .css-editor:focus {
+        outline: none;
+    }
+
+    /* CSS syntax highlighting via basic styling */
+    .css-editor::selection {
+        background: #264f78;
+    }
+</style>

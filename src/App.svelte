@@ -6,6 +6,7 @@
     import UniverseView from './components/UniverseView.svelte';
     import DevicesView from './components/DevicesView.svelte';
     import TimelineView from './components/TimelineView.svelte';
+    import CSSView from './components/CSSView.svelte';
 
     let view = $state('devices');
     let connected = $state(false);
@@ -71,6 +72,10 @@
 
     <div class="view-container" class:hidden={view !== 'timeline'}>
         <TimelineView {dmxController} {devices} />
+    </div>
+
+    <div class="view-container" class:hidden={view !== 'css'}>
+        <CSSView {dmxController} {devices} />
     </div>
 </main>
 
