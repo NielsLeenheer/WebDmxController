@@ -40,19 +40,12 @@
         return getMappedChannels(sourceDevice.type, device.type);
     }
 
-    // Get the current color for a device
-    // Shows keypoint color if editing that device, otherwise shows color at playhead
+    // Get the current color for a device at playhead position
     function getDeviceCurrentColor(device) {
-        // Reference currentTime and keypointValues to make this reactive
+        // Reference currentTime to make this reactive
         currentTime;
-        keypointValues;
 
-        // If editing this device's keypoint, show keypoint color
-        if (selectedDevice && selectedDevice.id === device.id && selectedKeypoint) {
-            return getDeviceColor(device.type, keypointValues);
-        }
-
-        // Otherwise show color at current playhead position
+        // Always show color at current playhead position
         const values = timeline.getDeviceValuesAtTime(device.id, currentTime, device.defaultValues);
         return getDeviceColor(device.type, values);
     }
@@ -259,8 +252,10 @@
         keypointEasing = keypoint.easing;
         anchoredKeypointId = `keypoint-${device.id}-${keypoint.time}`;
 
-        // Show dialog as non-modal
-        keypointDialog?.show();
+        // Show dialog as non-modal after a brief delay to ensure keypoint is rendered
+        requestAnimationFrame(() => {
+            keypointDialog?.show();
+        });
     }
 
     // Close keypoint editor dialog
