@@ -696,24 +696,23 @@
     .playback-controls button {
         width: 32px;
         height: 32px;
-        padding: 6px;
+        padding: 0;
         border: none;
-        background: #0078d4;
-        color: white;
-        border-radius: 4px;
+        background: none;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
+        transition: opacity 0.2s;
     }
 
     .playback-controls button:hover {
-        background: #106ebe;
+        opacity: 0.7;
     }
 
     .playback-controls :global(svg) {
-        width: 18px;
-        height: 18px;
+        width: 100%;
+        height: 100%;
     }
 
     .time-display {
