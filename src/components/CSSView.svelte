@@ -51,6 +51,8 @@ Example animations:
     let animationFrameId;
     let isActive = false;
     let previewColors = $state({});
+    let deviceOpacities = $state({});
+    let devicePanTilt = $state({});
 
     // Create a style element for the user's CSS
     let styleElement;
@@ -100,9 +102,13 @@ Example animations:
                 }
             }
 
+            // Track opacity for preview
+            let opacityValue = 1;
+
             // Parse CSS opacity → DMX dimmer
             const opacity = parseFloat(computedStyle.opacity);
             if (!isNaN(opacity)) {
+                opacityValue = opacity;
                 const dimmerValue = Math.round(opacity * 255);
                 if (device.type === 'DIMMER') {
                     newValues[0] = dimmerValue;
@@ -110,6 +116,9 @@ Example animations:
                     newValues[2] = dimmerValue; // Dimmer channel
                 }
             }
+
+            // Store opacity for preview
+            deviceOpacities[device.id] = opacityValue;
 
             // Parse CSS translate → DMX pan/tilt (for moving heads)
             if (device.type === 'MOVING_HEAD') {
@@ -134,6 +143,12 @@ Example animations:
                         if (y !== null) newValues[1] = Math.round(((y + 100) / 200) * 255);
                     }
                 }
+
+                // Store pan/tilt for preview visualization
+                devicePanTilt[device.id] = {
+                    pan: newValues[0],
+                    tilt: newValues[1]
+                };
             }
 
             // Update DMX controller
@@ -231,6 +246,13 @@ Example animations:
         // Initialize preview colors
         devices.forEach(device => {
             previewColors[device.id] = getDeviceColor(device.type, device.defaultValues);
+            deviceOpacities[device.id] = 1;
+            if (device.type === 'MOVING_HEAD') {
+                devicePanTilt[device.id] = {
+                    pan: device.defaultValues[0] || 127,
+                    tilt: device.defaultValues[1] || 127
+                };
+            }
         });
 
         // Start animation loop
@@ -251,7 +273,19 @@ Example animations:
         <div class="device-list">
             {#each devices as device (device.id)}
                 <div class="device-item">
-                    <div class="device-preview" style="background-color: {previewColors[device.id] || getDeviceColor(device.type, device.defaultValues)}"></div>
+                    <div class="device-preview-container">
+                        <div
+                            class="device-preview"
+                            style="background-color: {previewColors[device.id] || getDeviceColor(device.type, device.defaultValues)}; opacity: {deviceOpacities[device.id] || 1}"
+                        >
+                            {#if device.type === 'MOVING_HEAD' && devicePanTilt[device.id]}
+                                {@const panTilt = devicePanTilt[device.id]}
+                                {@const dotX = (panTilt.pan / 255) * 100}
+                                {@const dotY = (1 - panTilt.tilt / 255) * 100}
+                                <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
+                            {/if}
+                        </div>
+                    </div>
                     <div class="device-info">
                         <div class="device-name">{device.name}</div>
                         <div class="device-id">#device-{device.id}</div>
@@ -325,20 +359,39 @@ Example animations:
     .device-item {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 12px;
+        gap: 15px;
+        padding: 15px;
         background: white;
         border: 1px solid #ddd;
         border-radius: 6px;
         margin-bottom: 10px;
     }
 
+    .device-preview-container {
+        flex-shrink: 0;
+    }
+
     .device-preview {
-        width: 50px;
-        height: 50px;
-        border-radius: 4px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+        position: relative;
+        width: 80px;
+        height: 80px;
+        border-radius: 6px;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .pan-tilt-indicator {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        background: #2196F3;
+        border: 2px solid white;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+        z-index: 10;
     }
 
     .device-info {
