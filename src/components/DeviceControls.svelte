@@ -63,9 +63,50 @@
         return channelOffset;
     }
 
-    // Generate gradient background for slider based on color
-    function getSliderGradient(color) {
-        return `linear-gradient(to right, #000000 0%, ${color} 100%)`;
+    // Generate gradient background for slider based on control name
+    function getSliderGradient(controlName) {
+        switch (controlName) {
+            case 'Red':
+                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,0,0) 100%)';
+            case 'Green':
+                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(0,255,0) 100%)';
+            case 'Blue':
+                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(0,0,255) 100%)';
+            case 'Amber':
+                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,191,0) 100%)';
+            case 'White':
+                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,255,255) 100%)';
+            case 'Dimmer':
+            case 'Intensity':
+                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,255,255) 100%)';
+            case 'Output':
+                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(200,200,200) 100%)';
+            default:
+                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(128,128,128) 100%)';
+        }
+    }
+
+    // Get thumb color based on control name and current value
+    function getThumbColor(controlName, value) {
+        switch (controlName) {
+            case 'Red':
+                return `rgb(${value}, 0, 0)`;
+            case 'Green':
+                return `rgb(0, ${value}, 0)`;
+            case 'Blue':
+                return `rgb(0, 0, ${value})`;
+            case 'Amber':
+                return `rgb(${value}, ${Math.round(value * 0.749)}, 0)`;
+            case 'White':
+                return `rgb(${value}, ${value}, ${value})`;
+            case 'Dimmer':
+            case 'Intensity':
+                return `rgb(${value}, ${value}, ${value})`;
+            case 'Output':
+                return `rgb(${Math.round(value * 0.784)}, ${Math.round(value * 0.784)}, ${Math.round(value * 0.784)})`;
+            default:
+                return `rgb(${Math.round(value * 0.5)}, ${Math.round(value * 0.5)}, ${Math.round(value * 0.5)})`;
+        }
     }
 </script>
 
@@ -119,7 +160,7 @@
                         max="255"
                         value={values[channelIndex]}
                         oninput={(e) => !channelDisabled && handleSliderChange(channelIndex, parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient(control.color)}"
+                        style="--slider-gradient: {getSliderGradient(control.name)}; --thumb-color: {getThumbColor(control.name, values[channelIndex])}"
                         disabled={channelDisabled}
                         class="color-slider"
                     />
@@ -168,8 +209,8 @@
         -webkit-appearance: none;
         appearance: none;
         width: 100%;
-        height: 24px;
-        border-radius: 12px;
+        height: 7px;
+        border-radius: 3.5px;
         background: var(--slider-gradient);
         border: 1px solid rgba(0, 0, 0, 0.15);
         cursor: pointer;
@@ -185,10 +226,10 @@
     .color-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--thumb-color, #888);
         border: 2px solid white;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         cursor: pointer;
@@ -200,10 +241,10 @@
 
     /* Firefox thumb */
     .color-slider::-moz-range-thumb {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--thumb-color, #888);
         border: 2px solid white;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         cursor: pointer;
