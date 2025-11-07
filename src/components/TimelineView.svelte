@@ -57,6 +57,11 @@
         return getDeviceColor(device.type, values);
     }
 
+    // Get color for a specific keypoint
+    function getKeypointColor(keypoint, device) {
+        return getDeviceColor(device.type, keypoint.values);
+    }
+
     // Load timeline from localStorage
     function loadTimeline() {
         try {
@@ -84,14 +89,16 @@
     let keypointValues = $state([]);
     let keypointEasing = $state('linear');
     let easingNames = getEasingNames();
+    let keypointDialog = $state(null);
+    let anchoredKeypointId = $state(null);
 
     // Keypoint dragging state
     let draggingKeypoint = $state(null);
     let dragStartX = $state(0);
     let dragStartTime = $state(0);
 
-    // Right panel state
-    let rightPanelOpen = $state(false);
+    // Playhead dragging state
+    let draggingPlayhead = $state(false);
 
     // Timeline settings dialog
     let settingsDialog = $state(null);
@@ -161,13 +168,13 @@
     }
 
     // Playback controls
-    function handlePlay() {
-        timeline.play();
-        startAnimationLoop();
-    }
-
-    function handlePause() {
-        timeline.pause();
+    function handlePlayPause() {
+        if (timeline.playing) {
+            timeline.pause();
+        } else {
+            timeline.play();
+            startAnimationLoop();
+        }
     }
 
     function handleStop() {
@@ -183,6 +190,39 @@
         const x = e.clientX - rect.left;
         const clickedTime = (x / timelineWidth) * timeline.duration;
         timeline.seek(clickedTime);
+        currentTime = timeline.currentTime;
+        updateDMXFromTimeline();
+    }
+
+    // Time ruler click/drag to move playhead
+    function handleRulerMouseDown(e) {
+        draggingPlayhead = true;
+        movePlayheadToPosition(e);
+        document.addEventListener('mousemove', handleRulerMouseMove);
+        document.addEventListener('mouseup', handleRulerMouseUp);
+    }
+
+    function handleRulerMouseMove(e) {
+        if (draggingPlayhead) {
+            movePlayheadToPosition(e);
+        }
+    }
+
+    function handleRulerMouseUp() {
+        draggingPlayhead = false;
+        document.removeEventListener('mousemove', handleRulerMouseMove);
+        document.removeEventListener('mouseup', handleRulerMouseUp);
+    }
+
+    function movePlayheadToPosition(e) {
+        const rulerElement = document.querySelector('.time-ruler');
+        if (!rulerElement) return;
+
+        const rect = rulerElement.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const newTime = Math.max(0, Math.min(timeline.duration, (x / timelineWidth) * timeline.duration));
+
+        timeline.seek(newTime);
         currentTime = timeline.currentTime;
         updateDMXFromTimeline();
     }
@@ -211,13 +251,24 @@
         openKeypointEditor(device, keypoint);
     }
 
-    // Open keypoint in right panel
+    // Open keypoint editor dialog
     function openKeypointEditor(device, keypoint) {
         selectedKeypoint = keypoint;
         selectedDevice = device;
         keypointValues = [...keypoint.values];
         keypointEasing = keypoint.easing;
-        rightPanelOpen = true;
+        anchoredKeypointId = `keypoint-${device.id}-${keypoint.time}`;
+
+        // Show dialog as non-modal
+        keypointDialog?.show();
+    }
+
+    // Close keypoint editor dialog
+    function closeKeypointEditor() {
+        keypointDialog?.close();
+        selectedKeypoint = null;
+        selectedDevice = null;
+        anchoredKeypointId = null;
     }
 
     // Save keypoint changes
@@ -246,16 +297,9 @@
         if (confirm('Delete this keypoint?')) {
             timeline.removeKeypoint(selectedKeypoint);
             timelineVersion++; // Force re-render
-            closeRightPanel();
+            closeKeypointEditor();
             updateDMXFromTimeline();
         }
-    }
-
-    // Close right panel
-    function closeRightPanel() {
-        rightPanelOpen = false;
-        selectedKeypoint = null;
-        selectedDevice = null;
     }
 
     // Get keypoints for a device
@@ -346,7 +390,18 @@
             currentTime = timeline.currentTime;
         }
 
+        timelineVersion++; // Force update of time ruler
         settingsDialog?.close();
+    }
+
+    // Clear timeline
+    function clearTimeline() {
+        if (confirm('Clear all keypoints? This cannot be undone.')) {
+            timeline = new Timeline(30000, true);
+            currentTime = 0;
+            timelineVersion++;
+            closeKeypointEditor();
+        }
     }
 
     // Cleanup on unmount
@@ -361,15 +416,9 @@
     <!-- Playback Controls -->
     <div class="controls-bar">
         <div class="playback-controls">
-            {#if !timeline.playing}
-                <button onclick={handlePlay} title="Play">
-                    <Icon data={playIcon} />
-                </button>
-            {:else}
-                <button onclick={handlePause} title="Pause">
-                    <Icon data={pauseIcon} />
-                </button>
-            {/if}
+            <button onclick={handlePlayPause} title={timeline.playing ? "Pause" : "Play"}>
+                <Icon data={timeline.playing ? pauseIcon : playIcon} />
+            </button>
             <button onclick={handleStop} title="Stop">
                 <Icon data={stopIcon} />
             </button>
@@ -381,6 +430,9 @@
 
         <button class="settings-button" onclick={openSettingsDialog}>
             Settings
+        </button>
+        <button class="clear-button" onclick={clearTimeline}>
+            Clear
         </button>
     </div>
 
@@ -411,7 +463,7 @@
         <div class="timeline-tracks-container">
             <div class="timeline-tracks" style="width: {timelineWidth}px">
                 <!-- Time ruler -->
-                <div class="time-ruler">
+                <div class="time-ruler" onmousedown={handleRulerMouseDown}>
                     {#each Array(Math.ceil(timeline.duration / 1000)) as _, index}
                         <div class="time-marker" style="left: {index * pixelsPerSecond}px">
                             <span>{index}s</span>
@@ -433,10 +485,11 @@
                         >
                             {#each getDeviceKeypoints(device) as keypoint}
                                 <div
+                                    id="keypoint-{device.id}-{keypoint.time}"
                                     class="keypoint"
                                     class:selected={selectedKeypoint === keypoint}
                                     class:dragging={draggingKeypoint === keypoint}
-                                    style="left: {getKeypointPosition(keypoint)}px"
+                                    style="left: {getKeypointPosition(keypoint)}px; --keypoint-color: {getKeypointColor(keypoint, device)}; anchor-name: --keypoint-{device.id}-{keypoint.time}"
                                     onmousedown={(e) => handleKeypointMouseDown(e, keypoint, device)}
                                     onclick={(e) => {
                                         e.stopPropagation();
@@ -453,52 +506,50 @@
             </div>
         </div>
 
-        <!-- Right Panel (collapsible) -->
-        <div class="right-panel" class:open={rightPanelOpen}>
-            {#if rightPanelOpen && selectedKeypoint && selectedDevice}
-                <div class="panel-header">
-                    <h3>Keypoint Settings</h3>
-                    <button class="close-btn" onclick={closeRightPanel}>×</button>
-                </div>
-
-                <div class="panel-content">
-                    <div class="panel-field">
-                        <label>Device:</label>
-                        <span class="device-info">{selectedDevice.name}</span>
-                    </div>
-
-                    <div class="panel-field">
-                        <label>Time:</label>
-                        <span class="time-info">{formatTime(selectedKeypoint.time)}</span>
-                    </div>
-
-                    <div class="panel-field">
-                        <label>Easing:</label>
-                        <select bind:value={keypointEasing} onchange={saveKeypointChanges}>
-                            {#each easingNames as name}
-                                <option value={name}>{name}</option>
-                            {/each}
-                        </select>
-                    </div>
-
-                    <div class="panel-field">
-                        <label>Values:</label>
-                        <DeviceControls
-                            deviceType={selectedDevice.type}
-                            bind:values={keypointValues}
-                            onChange={saveKeypointChanges}
-                            disabledChannels={getDisabledChannelsForDevice(selectedDevice)}
-                        />
-                    </div>
-
-                    <button class="delete-btn" onclick={deleteCurrentKeypoint}>
-                        Delete Keypoint
-                    </button>
-                </div>
-            {/if}
-        </div>
     </div>
 </div>
+
+<!-- Keypoint Editor Dialog (non-modal with anchor positioning) -->
+{#if selectedKeypoint && selectedDevice && anchoredKeypointId}
+<dialog bind:this={keypointDialog} class="keypoint-dialog" style="position-anchor: --{anchoredKeypointId}">
+    <div class="dialog-header">
+        <div class="dialog-title">
+            <div
+                class="color-preview-large"
+                style="background-color: {getDeviceColor(selectedDevice.type, keypointValues)}"
+            ></div>
+            <span>{selectedDevice.name}</span>
+        </div>
+        <button class="close-btn" onclick={closeKeypointEditor}>×</button>
+    </div>
+
+    <div class="dialog-time">
+        {formatTime(selectedKeypoint.time)}
+    </div>
+
+    <div class="dialog-content">
+        <div class="dialog-field">
+            <label>Easing:</label>
+            <select bind:value={keypointEasing} onchange={saveKeypointChanges}>
+                {#each easingNames as name}
+                    <option value={name}>{name}</option>
+                {/each}
+            </select>
+        </div>
+
+        <DeviceControls
+            deviceType={selectedDevice.type}
+            bind:values={keypointValues}
+            onChange={saveKeypointChanges}
+            disabledChannels={getDisabledChannelsForDevice(selectedDevice)}
+        />
+
+        <button class="delete-btn" onclick={deleteCurrentKeypoint}>
+            Delete Keypoint
+        </button>
+    </div>
+</dialog>
+{/if}
 
 <!-- Settings Dialog -->
 <dialog bind:this={settingsDialog} class="settings-dialog">
@@ -581,17 +632,34 @@
         font-weight: 500;
     }
 
-    .settings-button {
-        margin-left: auto;
+    .settings-button,
+    .clear-button {
         height: 32px;
         padding: 0 15px;
         background: #f0f0f0;
         color: #333;
         border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 10pt;
     }
 
-    .settings-button:hover {
+    .settings-button {
+        margin-left: auto;
+    }
+
+    .settings-button:hover,
+    .clear-button:hover {
         background: #e0e0e0;
+    }
+
+    .clear-button {
+        background: #ffe0e0;
+        border-color: #ffb0b0;
+    }
+
+    .clear-button:hover {
+        background: #ffd0d0;
     }
 
     .timeline-editor {
@@ -675,6 +743,7 @@
         background: #fff;
         border-bottom: 1px solid #ddd;
         z-index: 2;
+        cursor: pointer;
     }
 
     .time-marker {
@@ -733,64 +802,98 @@
         position: absolute;
         top: 50%;
         transform: translate(-50%, -50%);
-        width: 14px;
-        height: 14px;
-        background: #0078d4;
-        border: 2px solid #fff;
+        width: 16px;
+        height: 16px;
+        background: var(--keypoint-color, #0078d4);
+        border: 3px solid #fff;
         border-radius: 50%;
         cursor: pointer;
         z-index: 5;
         transition: all 0.15s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
     .keypoint:hover {
-        width: 18px;
-        height: 18px;
-        background: #106ebe;
+        width: 20px;
+        height: 20px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     }
 
     .keypoint.selected {
-        background: #ffa500;
         border-color: #ffd700;
-        box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        width: 20px;
+        height: 20px;
     }
 
     .keypoint.dragging {
         cursor: grabbing;
         z-index: 15;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
         transition: none; /* Remove transition during drag for direct response */
     }
 
-    /* Right Panel */
-    .right-panel {
+    /* Keypoint Editor Dialog */
+    .keypoint-dialog {
+        position: fixed;
+        position-anchor: var(--position-anchor);
+        top: anchor(bottom);
+        left: anchor(center);
+        translate: -50% 8px;
+        margin: 0;
+        padding: 0;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        min-width: 280px;
+        max-width: 320px;
+        z-index: 100;
+    }
+
+    .keypoint-dialog::backdrop {
+        background: transparent;
+    }
+
+    /* Tooltip arrow pointing up to keypoint */
+    .keypoint-dialog::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: 50%;
+        transform: translateX(-50%);
         width: 0;
-        background: #f5f5f5;
-        border-left: 1px solid #ddd;
-        overflow: hidden;
-        transition: width 0.3s ease;
-        display: flex;
-        flex-direction: column;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 8px solid #fff;
+        filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
     }
 
-    .right-panel.open {
-        width: 320px;
-    }
-
-    .panel-header {
+    .dialog-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: 15px;
-        border-bottom: 1px solid #ddd;
-        background: #fff;
+        border-bottom: 1px solid #e0e0e0;
     }
 
-    .panel-header h3 {
-        margin: 0;
+    .dialog-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
         font-size: 11pt;
         font-weight: 600;
         color: #333;
+    }
+
+    .color-preview-large {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        flex-shrink: 0;
     }
 
     .close-btn {
@@ -799,29 +902,39 @@
         padding: 0;
         background: transparent;
         border: none;
-        color: #666;
-        font-size: 24px;
+        color: #999;
+        font-size: 20px;
         line-height: 1;
         cursor: pointer;
         border-radius: 4px;
+        flex-shrink: 0;
     }
 
     .close-btn:hover {
-        background: #e0e0e0;
+        background: #f0f0f0;
         color: #333;
     }
 
-    .panel-content {
-        flex: 1;
-        overflow-y: auto;
+    .dialog-time {
+        padding: 8px 15px;
+        background: #f9f9f9;
+        border-bottom: 1px solid #e0e0e0;
+        font-family: var(--font-stack-mono);
+        font-size: 10pt;
+        color: #666;
+    }
+
+    .dialog-content {
         padding: 15px;
+        max-height: 400px;
+        overflow-y: auto;
     }
 
-    .panel-field {
-        margin-bottom: 20px;
+    .dialog-field {
+        margin-bottom: 15px;
     }
 
-    .panel-field label {
+    .dialog-field label {
         display: block;
         margin-bottom: 6px;
         font-size: 9pt;
@@ -829,18 +942,7 @@
         color: #555;
     }
 
-    .device-info,
-    .time-info {
-        display: block;
-        padding: 8px 12px;
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 10pt;
-        color: #333;
-    }
-
-    .panel-field select {
+    .dialog-field select {
         width: 100%;
         padding: 8px 12px;
         background: #fff;

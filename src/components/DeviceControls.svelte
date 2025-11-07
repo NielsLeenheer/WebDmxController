@@ -25,6 +25,24 @@
         }
     }
 
+    function handleTextInputChange(channelIndex, inputValue, e) {
+        const numValue = parseInt(inputValue);
+        if (!isNaN(numValue) && numValue >= 0 && numValue <= 255) {
+            handleSliderChange(channelIndex, numValue);
+        } else if (inputValue === '') {
+            // Allow empty for easier editing
+            e.target.value = '';
+        } else {
+            // Invalid value, revert to current value
+            e.target.value = values[channelIndex];
+        }
+    }
+
+    function handleTextInput(e) {
+        // Only allow digits
+        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+    }
+
     function isChannelDisabled(channelIndex) {
         return disabledChannels.includes(channelIndex);
     }
@@ -43,6 +61,11 @@
         }
 
         return channelOffset;
+    }
+
+    // Generate gradient background for slider based on color
+    function getSliderGradient(color) {
+        return `linear-gradient(to right, #000000 0%, ${color} 100%)`;
     }
 </script>
 
@@ -63,24 +86,24 @@
                 </div>
                 <div class="xypad-inputs">
                     <input
-                        type="number"
-                        min="0"
-                        max="255"
+                        type="text"
                         value={values[control.panIndex]}
-                        onchange={(e) => !panDisabled && handleXYPadChange(control.panIndex, control.tiltIndex, parseInt(e.target.value), values[control.tiltIndex])}
+                        oninput={handleTextInput}
+                        onchange={(e) => !panDisabled && handleTextInputChange(control.panIndex, e.target.value, e)}
                         class="value-input"
                         title="Pan"
                         disabled={panDisabled}
+                        maxlength="3"
                     />
                     <input
-                        type="number"
-                        min="0"
-                        max="255"
+                        type="text"
                         value={values[control.tiltIndex]}
-                        onchange={(e) => !tiltDisabled && handleXYPadChange(control.panIndex, control.tiltIndex, values[control.panIndex], parseInt(e.target.value))}
+                        oninput={handleTextInput}
+                        onchange={(e) => !tiltDisabled && handleTextInputChange(control.tiltIndex, e.target.value, e)}
                         class="value-input"
                         title="Tilt"
                         disabled={tiltDisabled}
+                        maxlength="3"
                     />
                 </div>
             </div>
@@ -89,23 +112,26 @@
             {@const channelDisabled = isChannelDisabled(channelIndex)}
             <div class="control">
                 <label>{control.name}</label>
+                <div class="slider-wrapper">
+                    <input
+                        type="range"
+                        min="0"
+                        max="255"
+                        value={values[channelIndex]}
+                        oninput={(e) => !channelDisabled && handleSliderChange(channelIndex, parseInt(e.target.value))}
+                        style="--slider-gradient: {getSliderGradient(control.color)}"
+                        disabled={channelDisabled}
+                        class="color-slider"
+                    />
+                </div>
                 <input
-                    type="range"
-                    min="0"
-                    max="255"
+                    type="text"
                     value={values[channelIndex]}
-                    oninput={(e) => !channelDisabled && handleSliderChange(channelIndex, parseInt(e.target.value))}
-                    style="accent-color: {control.color}"
-                    disabled={channelDisabled}
-                />
-                <input
-                    type="number"
-                    min="0"
-                    max="255"
-                    value={values[channelIndex]}
-                    onchange={(e) => !channelDisabled && handleSliderChange(channelIndex, parseInt(e.target.value))}
+                    oninput={handleTextInput}
+                    onchange={(e) => !channelDisabled && handleTextInputChange(channelIndex, e.target.value, e)}
                     class="value-input"
                     disabled={channelDisabled}
+                    maxlength="3"
                 />
             </div>
         {/if}
@@ -132,8 +158,65 @@
         color: #555;
     }
 
-    .control input[type="range"] {
+    .slider-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    /* Custom slider styles */
+    .color-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 24px;
+        border-radius: 12px;
+        background: var(--slider-gradient);
+        border: 1px solid rgba(0, 0, 0, 0.15);
         cursor: pointer;
+        outline: none;
+    }
+
+    .color-slider:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Webkit (Chrome, Safari) thumb */
+    .color-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+    }
+
+    .color-slider::-webkit-slider-thumb:hover {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Firefox thumb */
+    .color-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+    }
+
+    .color-slider::-moz-range-thumb:hover {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Firefox track */
+    .color-slider::-moz-range-track {
+        background: transparent;
+        border: none;
     }
 
     .value-input {
