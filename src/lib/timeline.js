@@ -98,20 +98,52 @@ export class Timeline {
      * Calculate interpolated values for a device at a specific time
      */
     getDeviceValuesAtTime(deviceId, time, defaultValues) {
-        const { before, after } = this.getSurroundingKeypoints(deviceId, time);
+        const deviceKeypoints = this.getDeviceKeypoints(deviceId);
 
-        // No keypoints for this device
-        if (!before && !after) {
+        // No keypoints for this device - use default values
+        if (deviceKeypoints.length === 0) {
             return defaultValues;
         }
 
-        // Before first keypoint
-        if (!before && after) {
-            return after.values;
+        // Determine starting/ending value (value at 00:00:00)
+        // If there's a keypoint at time 0, use that. Otherwise use defaultValues
+        const keypointAtZero = deviceKeypoints.find(kp => kp.time === 0);
+        const startingValue = keypointAtZero ? keypointAtZero.values : defaultValues;
+
+        const firstKeypoint = deviceKeypoints[0];
+        const lastKeypoint = deviceKeypoints[deviceKeypoints.length - 1];
+
+        // Before first keypoint - interpolate from starting value to first keypoint
+        if (time < firstKeypoint.time) {
+            const timeDiff = firstKeypoint.time - 0;
+            const t = time / timeDiff;
+
+            const interpolatedValues = startingValue.map((startValue, channelIndex) => {
+                const endValue = firstKeypoint.values[channelIndex];
+                return interpolate(startValue, endValue, t, firstKeypoint.easing);
+            });
+
+            return interpolatedValues;
         }
 
-        // After last keypoint
-        if (before && !after) {
+        // After last keypoint - interpolate from last keypoint back to starting value
+        if (time > lastKeypoint.time) {
+            const timeDiff = this.duration - lastKeypoint.time;
+            const t = (time - lastKeypoint.time) / timeDiff;
+
+            const interpolatedValues = lastKeypoint.values.map((startValue, channelIndex) => {
+                const endValue = startingValue[channelIndex];
+                return interpolate(startValue, endValue, t, 'linear'); // Use linear for return to start
+            });
+
+            return interpolatedValues;
+        }
+
+        // Between keypoints or exactly on a keypoint
+        const { before, after } = this.getSurroundingKeypoints(deviceId, time);
+
+        // Exactly on a keypoint
+        if (before && after && before === after) {
             return before.values;
         }
 
@@ -128,8 +160,8 @@ export class Timeline {
             return interpolatedValues;
         }
 
-        // Exactly on a keypoint
-        return before.values;
+        // Fallback (should not reach here)
+        return before ? before.values : startingValue;
     }
 
     /**

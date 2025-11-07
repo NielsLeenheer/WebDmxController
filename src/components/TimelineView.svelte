@@ -7,11 +7,37 @@
     import { DEVICE_TYPES } from '../lib/devices.js';
     import { Timeline, Keypoint } from '../lib/timeline.js';
     import { getEasingNames } from '../lib/easing.js';
+    import { getMappedChannels } from '../lib/channelMapping.js';
 
     let {
         dmxController = null,
         devices = []
     } = $props();
+
+    // Filter devices that should appear in timeline
+    // Exclude devices where ALL channels are linked
+    const timelineDevices = $derived(devices.filter(device => {
+        if (!device.linkedTo) return true; // Not linked, include it
+
+        const sourceDevice = devices.find(d => d.id === device.linkedTo);
+        if (!sourceDevice) return true; // Source not found, include it
+
+        const mappedChannels = getMappedChannels(sourceDevice.type, device.type);
+        const totalChannels = DEVICE_TYPES[device.type].channels;
+
+        // Include if not all channels are mapped (has some non-linked channels)
+        return mappedChannels.length < totalChannels;
+    }));
+
+    // Get disabled channels for a device (for use in right panel)
+    function getDisabledChannelsForDevice(device) {
+        if (!device.linkedTo) return [];
+
+        const sourceDevice = devices.find(d => d.id === device.linkedTo);
+        if (!sourceDevice) return [];
+
+        return getMappedChannels(sourceDevice.type, device.type);
+    }
 
     // Load timeline from localStorage
     function loadTimeline() {
@@ -40,6 +66,11 @@
     let keypointValues = $state([]);
     let keypointEasing = $state('linear');
     let easingNames = getEasingNames();
+
+    // Keypoint dragging state
+    let draggingKeypoint = $state(null);
+    let dragStartX = $state(0);
+    let dragStartTime = $state(0);
 
     // Right panel state
     let rightPanelOpen = $state(false);
@@ -226,6 +257,59 @@
         return (currentTime / timeline.duration) * timelineWidth;
     }
 
+    // Keypoint dragging
+    function handleKeypointMouseDown(e, keypoint, device) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        draggingKeypoint = keypoint;
+        dragStartX = e.clientX;
+        dragStartTime = keypoint.time;
+
+        // Add global mouse handlers
+        document.addEventListener('mousemove', handleKeypointMouseMove);
+        document.addEventListener('mouseup', handleKeypointMouseUp);
+    }
+
+    function handleKeypointMouseMove(e) {
+        if (!draggingKeypoint) return;
+
+        const deltaX = e.clientX - dragStartX;
+        const deltaTime = (deltaX / timelineWidth) * timeline.duration;
+        let newTime = Math.round(dragStartTime + deltaTime);
+
+        // Clamp to timeline duration
+        newTime = Math.max(0, Math.min(timeline.duration, newTime));
+
+        // Find the device for this keypoint
+        const device = timelineDevices.find(d => d.id === draggingKeypoint.deviceId);
+        if (!device) return;
+
+        // Create updated keypoint with new time
+        const updatedKeypoint = new Keypoint(
+            newTime,
+            draggingKeypoint.deviceId,
+            draggingKeypoint.values,
+            draggingKeypoint.easing
+        );
+
+        timeline.updateKeypoint(draggingKeypoint, updatedKeypoint);
+        draggingKeypoint = updatedKeypoint;
+
+        // Update selected keypoint if it's the one being dragged
+        if (selectedKeypoint === draggingKeypoint) {
+            selectedKeypoint = updatedKeypoint;
+        }
+
+        timelineVersion++;
+    }
+
+    function handleKeypointMouseUp(e) {
+        document.removeEventListener('mousemove', handleKeypointMouseMove);
+        document.removeEventListener('mouseup', handleKeypointMouseUp);
+        draggingKeypoint = null;
+    }
+
     // Open settings dialog
     function openSettingsDialog() {
         durationSeconds = timeline.duration / 1000;
@@ -287,13 +371,13 @@
         <!-- Device Names Column -->
         <div class="device-names">
             <div class="device-names-header">Devices</div>
-            {#if devices.length === 0}
+            {#if timelineDevices.length === 0}
                 <div class="empty-state">
                     <p>No devices</p>
                     <p>Add devices in the Devices tab</p>
                 </div>
             {:else}
-                {#each devices as device}
+                {#each timelineDevices as device}
                     <div class="device-name-row">
                         {device.name}
                     </div>
@@ -317,10 +401,10 @@
                 <div class="playhead" style="left: {getPlayheadPosition()}px"></div>
 
                 <!-- Device tracks -->
-                {#if devices.length === 0}
+                {#if timelineDevices.length === 0}
                     <div class="empty-tracks"></div>
                 {:else}
-                    {#each devices as device}
+                    {#each timelineDevices as device}
                         <div
                             class="device-track"
                             onclick={(e) => handleTrackClick(e, device)}
@@ -329,10 +413,14 @@
                                 <div
                                     class="keypoint"
                                     class:selected={selectedKeypoint === keypoint}
+                                    class:dragging={draggingKeypoint === keypoint}
                                     style="left: {getKeypointPosition(keypoint)}px"
+                                    onmousedown={(e) => handleKeypointMouseDown(e, keypoint, device)}
                                     onclick={(e) => {
                                         e.stopPropagation();
-                                        openKeypointEditor(device, keypoint);
+                                        if (!draggingKeypoint) {
+                                            openKeypointEditor(device, keypoint);
+                                        }
                                     }}
                                     title="{formatTime(keypoint.time)} - {keypoint.easing}"
                                 ></div>
@@ -377,6 +465,7 @@
                             deviceType={selectedDevice.type}
                             bind:values={keypointValues}
                             onChange={saveKeypointChanges}
+                            disabledChannels={getDisabledChannelsForDevice(selectedDevice)}
                         />
                     </div>
 
@@ -423,8 +512,8 @@
         display: flex;
         flex-direction: column;
         height: 100%;
-        background: #2a2a2a;
-        color: #e0e0e0;
+        background: #f9f9f9;
+        color: #333;
     }
 
     .controls-bar {
@@ -432,8 +521,8 @@
         align-items: center;
         gap: 15px;
         padding: 12px 15px;
-        background: #1e1e1e;
-        border-bottom: 1px solid #404040;
+        background: #fff;
+        border-bottom: 1px solid #ddd;
     }
 
     .playback-controls {
@@ -474,13 +563,13 @@
         margin-left: auto;
         height: 32px;
         padding: 0 15px;
-        background: #333;
-        color: #e0e0e0;
-        border: 1px solid #555;
+        background: #f0f0f0;
+        color: #333;
+        border: 1px solid #ccc;
     }
 
     .settings-button:hover {
-        background: #444;
+        background: #e0e0e0;
     }
 
     .timeline-editor {
@@ -493,8 +582,8 @@
     /* Device Names Column */
     .device-names {
         width: 200px;
-        background: #252525;
-        border-right: 1px solid #404040;
+        background: #f5f5f5;
+        border-right: 1px solid #ddd;
         display: flex;
         flex-direction: column;
         overflow-y: auto;
@@ -506,8 +595,8 @@
         align-items: center;
         padding: 0 15px;
         font-weight: 600;
-        background: #1e1e1e;
-        border-bottom: 1px solid #404040;
+        background: #fff;
+        border-bottom: 1px solid #ddd;
         position: sticky;
         top: 0;
         z-index: 2;
@@ -518,7 +607,7 @@
         display: flex;
         align-items: center;
         padding: 0 15px;
-        border-bottom: 1px solid #333;
+        border-bottom: 1px solid #e0e0e0;
         font-size: 10pt;
     }
 
@@ -538,7 +627,7 @@
         flex: 1;
         overflow-x: auto;
         overflow-y: auto;
-        background: #2a2a2a;
+        background: #fafafa;
         position: relative;
     }
 
@@ -552,8 +641,8 @@
         height: 40px;
         position: sticky;
         top: 0;
-        background: #1e1e1e;
-        border-bottom: 1px solid #404040;
+        background: #fff;
+        border-bottom: 1px solid #ddd;
         z-index: 2;
     }
 
@@ -561,14 +650,14 @@
         position: absolute;
         top: 0;
         height: 100%;
-        border-left: 1px solid #404040;
+        border-left: 1px solid #e0e0e0;
         padding-left: 4px;
         padding-top: 4px;
     }
 
     .time-marker span {
         font-size: 9pt;
-        color: #999;
+        color: #666;
     }
 
     .playhead {
@@ -595,18 +684,18 @@
 
     .device-track {
         height: 60px;
-        border-bottom: 1px solid #333;
+        border-bottom: 1px solid #e0e0e0;
         position: relative;
         cursor: crosshair;
     }
 
     .device-track:hover {
-        background: rgba(255, 255, 255, 0.03);
+        background: rgba(0, 0, 0, 0.02);
     }
 
     .empty-tracks {
         height: 60px;
-        border-bottom: 1px solid #333;
+        border-bottom: 1px solid #e0e0e0;
     }
 
     .keypoint {
@@ -635,11 +724,17 @@
         box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
     }
 
+    .keypoint.dragging {
+        cursor: grabbing;
+        z-index: 15;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
     /* Right Panel */
     .right-panel {
         width: 0;
-        background: #252525;
-        border-left: 1px solid #404040;
+        background: #f5f5f5;
+        border-left: 1px solid #ddd;
         overflow: hidden;
         transition: width 0.3s ease;
         display: flex;
@@ -655,14 +750,15 @@
         align-items: center;
         justify-content: space-between;
         padding: 15px;
-        border-bottom: 1px solid #404040;
-        background: #1e1e1e;
+        border-bottom: 1px solid #ddd;
+        background: #fff;
     }
 
     .panel-header h3 {
         margin: 0;
         font-size: 11pt;
         font-weight: 600;
+        color: #333;
     }
 
     .close-btn {
@@ -671,7 +767,7 @@
         padding: 0;
         background: transparent;
         border: none;
-        color: #999;
+        color: #666;
         font-size: 24px;
         line-height: 1;
         cursor: pointer;
@@ -679,8 +775,8 @@
     }
 
     .close-btn:hover {
-        background: #333;
-        color: #fff;
+        background: #e0e0e0;
+        color: #333;
     }
 
     .panel-content {
@@ -698,24 +794,26 @@
         margin-bottom: 6px;
         font-size: 9pt;
         font-weight: 600;
-        color: #aaa;
+        color: #555;
     }
 
     .device-info,
     .time-info {
         display: block;
         padding: 8px 12px;
-        background: #1e1e1e;
+        background: #fff;
+        border: 1px solid #ddd;
         border-radius: 4px;
         font-size: 10pt;
+        color: #333;
     }
 
     .panel-field select {
         width: 100%;
         padding: 8px 12px;
-        background: #1e1e1e;
-        color: #e0e0e0;
-        border: 1px solid #404040;
+        background: #fff;
+        color: #333;
+        border: 1px solid #ddd;
         border-radius: 4px;
         font-size: 10pt;
     }
@@ -742,15 +840,15 @@
         border: none;
         border-radius: 8px;
         padding: 0;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         max-width: 400px;
         width: 90%;
-        background: #2a2a2a;
-        color: #e0e0e0;
+        background: #fff;
+        color: #333;
     }
 
     .settings-dialog::backdrop {
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.4);
     }
 
     .settings-dialog form {
@@ -760,6 +858,7 @@
     .settings-dialog h3 {
         margin: 0 0 20px 0;
         font-size: 12pt;
+        font-weight: 600;
     }
 
     .dialog-field {
@@ -770,14 +869,15 @@
         display: block;
         margin-bottom: 6px;
         font-size: 10pt;
+        color: #555;
     }
 
     .dialog-field input[type="number"] {
         width: 100%;
         padding: 8px 12px;
-        background: #1e1e1e;
-        color: #e0e0e0;
-        border: 1px solid #404040;
+        background: #fff;
+        color: #333;
+        border: 1px solid #ddd;
         border-radius: 4px;
         font-size: 10pt;
     }
@@ -797,17 +897,26 @@
         padding: 8px 20px;
         border-radius: 4px;
         font-size: 10pt;
+        cursor: pointer;
     }
 
     .dialog-actions button[type="button"]:first-child {
-        background: #333;
-        color: #e0e0e0;
-        border: 1px solid #555;
+        background: #f0f0f0;
+        color: #333;
+        border: 1px solid #ccc;
+    }
+
+    .dialog-actions button[type="button"]:first-child:hover {
+        background: #e0e0e0;
     }
 
     .dialog-actions button[type="button"]:last-child {
         background: #0078d4;
         color: white;
         border: none;
+    }
+
+    .dialog-actions button[type="button"]:last-child:hover {
+        background: #106ebe;
     }
 </style>
