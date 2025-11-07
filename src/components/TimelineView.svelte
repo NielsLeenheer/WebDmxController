@@ -30,6 +30,10 @@
     let timeline = $state(loadTimeline());
     let animationFrameId = $state(null);
 
+    // Reactive state for playhead position and timeline changes
+    let currentTime = $state(timeline.currentTime);
+    let timelineVersion = $state(0); // Increment to force keypoint re-renders
+
     // Keypoint editing state
     let selectedKeypoint = $state(null);
     let selectedDevice = $state(null);
@@ -74,6 +78,7 @@
 
         function animate() {
             if (timeline.update()) {
+                currentTime = timeline.currentTime; // Update reactive state
                 updateDMXFromTimeline();
             }
             animationFrameId = requestAnimationFrame(animate);
@@ -118,6 +123,7 @@
 
     function handleStop() {
         timeline.stop();
+        currentTime = timeline.currentTime;
         stopAnimationLoop();
         updateDMXFromTimeline();
     }
@@ -128,6 +134,7 @@
         const x = e.clientX - rect.left;
         const clickedTime = (x / timelineWidth) * timeline.duration;
         timeline.seek(clickedTime);
+        currentTime = timeline.currentTime;
         updateDMXFromTimeline();
     }
 
@@ -149,7 +156,7 @@
         );
 
         timeline.addKeypoint(keypoint);
-        timeline = timeline;
+        timelineVersion++; // Force re-render
 
         // Open for editing
         openKeypointEditor(device, keypoint);
@@ -176,7 +183,7 @@
         );
 
         timeline.updateKeypoint(selectedKeypoint, updatedKeypoint);
-        timeline = timeline;
+        timelineVersion++; // Force re-render
 
         // Update selected keypoint reference
         selectedKeypoint = updatedKeypoint;
@@ -189,7 +196,7 @@
 
         if (confirm('Delete this keypoint?')) {
             timeline.removeKeypoint(selectedKeypoint);
-            timeline = timeline;
+            timelineVersion++; // Force re-render
             closeRightPanel();
             updateDMXFromTimeline();
         }
@@ -204,6 +211,8 @@
 
     // Get keypoints for a device
     function getDeviceKeypoints(device) {
+        // Reference timelineVersion to make this reactive
+        timelineVersion;
         return timeline.getDeviceKeypoints(device.id);
     }
 
@@ -214,7 +223,7 @@
 
     // Calculate playhead position
     function getPlayheadPosition() {
-        return (timeline.currentTime / timeline.duration) * timelineWidth;
+        return (currentTime / timeline.duration) * timelineWidth;
     }
 
     // Open settings dialog
@@ -228,7 +237,13 @@
     function saveSettings() {
         timeline.duration = Math.max(1, durationSeconds) * 1000;
         timeline.loop = loop;
-        timeline = timeline;
+
+        // Update currentTime if it exceeds new duration
+        if (timeline.currentTime > timeline.duration) {
+            timeline.currentTime = timeline.duration;
+            currentTime = timeline.currentTime;
+        }
+
         settingsDialog?.close();
     }
 
@@ -259,7 +274,7 @@
         </div>
 
         <div class="time-display">
-            {formatTime(timeline.currentTime)} / {formatTime(timeline.duration)}
+            {formatTime(currentTime)} / {formatTime(timeline.duration)}
         </div>
 
         <button class="settings-button" onclick={openSettingsDialog}>
