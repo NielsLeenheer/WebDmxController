@@ -93,6 +93,7 @@ Example animations:
     // Create a style element for the user's CSS
     let styleElement;
     let animationTargetsContainer;
+    let triggerClassesContainer; // Inner container that receives trigger classes
     let cssEditorElement;
 
     function updateDMXFromCSS() {
@@ -190,10 +191,10 @@ Example animations:
         // Update the style element directly without updating state
         // This prevents cursor position reset
         if (styleElement) {
-            // Apply CSS directly without @scope wrapper
-            // This allows selectors like ".button_0_down #device" to work
-            // where the class is on the container and #device is inside it
-            styleElement.textContent = newContent;
+            // Wrap user CSS in @scope to limit it to animation targets
+            // The trigger classes are on .trigger-classes inside .animation-targets
+            // So selectors like ".button_0_down #device" work because both are within the scope
+            styleElement.textContent = `@scope (.animation-targets) {\n${newContent}\n}`;
         }
 
         // Save to localStorage
@@ -204,8 +205,8 @@ Example animations:
 
     function updateStyleElement(content) {
         if (styleElement) {
-            // Apply CSS directly without @scope wrapper
-            styleElement.textContent = content;
+            // Wrap user CSS in @scope to limit it to animation targets
+            styleElement.textContent = `@scope (.animation-targets) {\n${content}\n}`;
         }
     }
 
@@ -407,15 +408,22 @@ Example animations:
         styleElement.id = 'css-animation-styles';
         document.head.appendChild(styleElement);
 
-        // Initialize CSS sampler with the animation targets container
-        if (cssSampler && animationTargetsContainer) {
-            cssSampler.initialize(animationTargetsContainer);
+        // Create inner trigger-classes container
+        if (animationTargetsContainer) {
+            triggerClassesContainer = document.createElement('div');
+            triggerClassesContainer.className = 'trigger-classes';
+            animationTargetsContainer.appendChild(triggerClassesContainer);
+        }
+
+        // Initialize CSS sampler with the inner container (where devices will be)
+        if (cssSampler && triggerClassesContainer) {
+            cssSampler.initialize(triggerClassesContainer);
             cssSampler.updateDevices(devices);
         }
 
-        // Set trigger manager container for input mappings
-        if (triggerManager && animationTargetsContainer) {
-            triggerManager.setContainer(animationTargetsContainer);
+        // Set trigger manager container to inner container (where classes go)
+        if (triggerManager && triggerClassesContainer) {
+            triggerManager.setContainer(triggerClassesContainer);
         }
 
         // Listen for mapping and animation changes to update CSS automatically
