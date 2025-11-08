@@ -109,6 +109,7 @@
 
         selectedAnimation.addKeyframe(time, defaultValues);
         animationLibrary.save();
+        refreshAnimationsList();
         animationVersion++;
 
         // Reselect to update reference
@@ -129,6 +130,7 @@
 
         selectedAnimation.keyframes.splice(index, 1);
         animationLibrary.save();
+        refreshAnimationsList();
         animationVersion++;
         selectedAnimation = animationLibrary.get(selectedAnimation.name);
         selectedKeyframeIndex = null;
@@ -151,6 +153,7 @@
         keyframe.values = [...editingKeyframeValues];
 
         animationLibrary.save();
+        refreshAnimationsList();
         animationVersion++;
         selectedAnimation = animationLibrary.get(selectedAnimation.name);
     }
@@ -213,6 +216,7 @@
         document.removeEventListener('mouseup', handleKeyframeMouseUp);
 
         animationLibrary.save();
+        refreshAnimationsList();
         selectedAnimation = animationLibrary.get(selectedAnimation.name);
 
         draggingKeyframe = null;
@@ -233,8 +237,17 @@
         }, 10);
     }
 
-    // Generate CSS for preview
-    let previewCSS = $derived(selectedAnimation ? selectedAnimation.toCSS() : '');
+    // Generate CSS for preview (reactive to animationVersion)
+    let previewCSS = $derived(() => {
+        animationVersion; // Make reactive to animationVersion
+        return selectedAnimation ? selectedAnimation.toCSS() : '';
+    });
+
+    // Get gradient segments (reactive to animationVersion)
+    let gradientSegments = $derived(() => {
+        animationVersion; // Make reactive to animationVersion
+        return selectedAnimation ? selectedAnimation.getGradientSegments(timelineWidth) : [];
+    });
 </script>
 
 <div class="animations-view">
@@ -297,7 +310,7 @@
                     onclick={handleTimelineClick}
                 >
                     <!-- Gradient segments showing color transitions -->
-                    {#each selectedAnimation.getGradientSegments(timelineWidth) as segment}
+                    {#each gradientSegments as segment}
                         <div
                             class="gradient-segment"
                             style="left: {segment.left}px; width: {segment.width}px; background: {segment.gradient}"
