@@ -397,6 +397,22 @@ export class TriggerManager {
 	}
 
 	/**
+	 * Add raw CSS class (for inputs without mappings)
+	 */
+	addRawClass(className) {
+		if (!this.container) return;
+		this.container.classList.add(className);
+	}
+
+	/**
+	 * Remove raw CSS class (for inputs without mappings)
+	 */
+	removeRawClass(className) {
+		if (!this.container) return;
+		this.container.classList.remove(className);
+	}
+
+	/**
 	 * Clear all active classes
 	 */
 	clearAll() {

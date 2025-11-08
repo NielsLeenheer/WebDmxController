@@ -72,9 +72,25 @@ export class InputController {
 	}
 
 	/**
+	 * Generate CSS class name from control ID
+	 */
+	_generateClassName(controlId, suffix) {
+		const controlPart = controlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+		return `${controlPart}_${suffix}`;
+	}
+
+	/**
 	 * Handle trigger event (button/note press)
 	 */
 	_handleTrigger(deviceId, controlId, velocity) {
+		// Always add raw "down" class for custom CSS, even without mappings
+		const downClass = this._generateClassName(controlId, 'down');
+		this.triggerManager.addRawClass(downClass);
+
+		// Also remove "up" class if it exists
+		const upClass = this._generateClassName(controlId, 'up');
+		this.triggerManager.removeRawClass(upClass);
+
 		// Find mappings for this input
 		const mappings = this.mappingLibrary.getByInput(deviceId, controlId);
 
@@ -91,6 +107,13 @@ export class InputController {
 	 * Handle release event (button/note release)
 	 */
 	_handleRelease(deviceId, controlId) {
+		// Always remove raw "down" class and add "up" class for custom CSS
+		const downClass = this._generateClassName(controlId, 'down');
+		this.triggerManager.removeRawClass(downClass);
+
+		const upClass = this._generateClassName(controlId, 'up');
+		this.triggerManager.addRawClass(upClass);
+
 		// Find mappings for this input
 		const mappings = this.mappingLibrary.getByInput(deviceId, controlId);
 
