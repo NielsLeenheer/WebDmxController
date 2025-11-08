@@ -96,19 +96,11 @@
         width: 100%;
         aspect-ratio: 1;
         background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
-        border: 2px solid #ccc;
+        border: 1px solid #ccc;
         border-radius: 6px;
         cursor: crosshair;
         user-select: none;
         touch-action: none;
-    }
-
-    .xy-pad:hover {
-        border-color: #999;
-    }
-
-    .xy-pad:active {
-        border-color: #2196F3;
     }
 
     .grid-line {
@@ -134,7 +126,7 @@
         width: 12px;
         height: 12px;
         background: #2196F3;
-        border: 2px solid white;
+        outline: 2px solid white;
         border-radius: 50%;
         transform: translate(-50%, -50%);
         pointer-events: none;
