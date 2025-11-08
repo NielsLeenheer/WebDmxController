@@ -47,10 +47,17 @@
     // Load animations from library
     function refreshAnimationsList() {
         animationsList = animationLibrary.getAll();
-        // If selected animation was deleted, clear selection
-        if (selectedAnimation && !animationsList.find(a => a.name === selectedAnimation.name)) {
-            selectedAnimation = null;
-            selectedKeyframeIndex = null;
+
+        // Update selectedAnimation reference to the refreshed copy
+        if (selectedAnimation) {
+            const refreshedAnimation = animationsList.find(a => a.name === selectedAnimation.name);
+            if (refreshedAnimation) {
+                selectedAnimation = refreshedAnimation;
+            } else {
+                // Animation was deleted
+                selectedAnimation = null;
+                selectedKeyframeIndex = null;
+            }
         }
     }
 
@@ -109,16 +116,10 @@
         const defaultValues = new Array(numChannels).fill(0);
 
         selectedAnimation.addKeyframe(time, defaultValues);
-
-        // Create new array reference to trigger reactivity
-        selectedAnimation.keyframes = [...selectedAnimation.keyframes];
+        animationVersion++;
 
         animationLibrary.save();
         refreshAnimationsList();
-        animationVersion++;
-
-        // Reselect to update reference
-        selectedAnimation = animationLibrary.get(selectedAnimation.name);
 
         // Select the new keyframe for editing
         const newKeyframeIndex = selectedAnimation.keyframes.findIndex(kf => Math.abs(kf.time - time) < 0.001);
@@ -133,14 +134,11 @@
             return;
         }
 
-        selectedAnimation.keyframes.splice(index, 1);
-        // Create new array reference to trigger reactivity
-        selectedAnimation.keyframes = [...selectedAnimation.keyframes];
+        selectedAnimation.keyframes = selectedAnimation.keyframes.filter((_, i) => i !== index);
+        animationVersion++;
 
         animationLibrary.save();
         refreshAnimationsList();
-        animationVersion++;
-        selectedAnimation = animationLibrary.get(selectedAnimation.name);
         selectedKeyframeIndex = null;
     }
 
@@ -160,10 +158,9 @@
         const keyframe = selectedAnimation.keyframes[selectedKeyframeIndex];
         keyframe.values = [...editingKeyframeValues];
 
+        animationVersion++;
         animationLibrary.save();
         refreshAnimationsList();
-        animationVersion++;
-        selectedAnimation = animationLibrary.get(selectedAnimation.name);
     }
 
     // Timeline interaction functions
@@ -232,7 +229,6 @@
 
         animationLibrary.save();
         refreshAnimationsList();
-        selectedAnimation = animationLibrary.get(selectedAnimation.name);
 
         draggingKeyframe = null;
     }

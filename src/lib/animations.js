@@ -68,8 +68,7 @@ export class Animation {
 	 */
 	addKeyframe(time, values) {
 		const keyframe = new Keyframe(time, this.deviceType, values);
-		this.keyframes.push(keyframe);
-		this.keyframes.sort((a, b) => a.time - b.time);
+		this.keyframes = [...this.keyframes, keyframe].sort((a, b) => a.time - b.time);
 		return keyframe;
 	}
 
