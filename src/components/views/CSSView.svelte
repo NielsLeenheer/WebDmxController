@@ -442,8 +442,8 @@ Example animations:
         startAnimation();
     });
 
-    // Track previous devices to detect additions
-    let previousDeviceIds = $state(new Set());
+    // Track previous devices to detect additions (use regular variable, not $state)
+    let previousDeviceIds = new Set();
 
     // Watch for device changes and update sampler + CSS
     $effect(() => {
@@ -464,6 +464,7 @@ Example animations:
                 }
             }
 
+            // Update tracking - this is safe because previousDeviceIds is not reactive
             previousDeviceIds = currentDeviceIds;
         }
     });
