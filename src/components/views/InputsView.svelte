@@ -1,5 +1,6 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
+    import { InputMapping } from '../../lib/mappings.js';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
 
@@ -61,12 +62,12 @@
             // Auto-save new input
             const name = formatInputName(device?.name || deviceId, controlId);
 
-            const inputMapping = {
+            const inputMapping = new InputMapping({
                 name,
                 mode: 'input',  // Mark as input-only (not a trigger mapping)
                 inputDeviceId: deviceId,
                 inputControlId: controlId
-            };
+            });
 
             mappingLibrary.add(inputMapping);
             refreshInputs();

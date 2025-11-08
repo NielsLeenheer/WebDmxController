@@ -1,5 +1,6 @@
 <script>
     import { onMount } from 'svelte';
+    import { InputMapping } from '../../lib/mappings.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
@@ -63,7 +64,7 @@
         if (!inputMapping) return;
 
         // Create trigger mapping
-        const trigger = {
+        const trigger = new InputMapping({
             name: `${inputMapping.name}_${newTriggerType}_${newTriggerAnimation}`,
             mode: 'trigger',
             triggerType: newTriggerType,
@@ -74,7 +75,7 @@
             duration: newTriggerDuration,
             easing: newTriggerEasing,
             iterations: newTriggerLooping ? 'infinite' : 1
-        };
+        });
 
         mappingLibrary.add(trigger);
         refreshData();
