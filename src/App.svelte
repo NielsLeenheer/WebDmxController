@@ -10,6 +10,7 @@
     import UniverseView from './components/views/UniverseView.svelte';
     import DevicesView from './components/views/DevicesView.svelte';
     import TimelineView from './components/views/TimelineView.svelte';
+    import AnimationsView from './components/views/AnimationsView.svelte';
     import CSSView from './components/views/CSSView.svelte';
 
     let view = $state('devices');
@@ -99,6 +100,14 @@
 
     <div class="view-container" class:hidden={view !== 'timeline'}>
         <TimelineView {dmxController} {devices} />
+    </div>
+
+    <div class="view-container" class:hidden={view !== 'animations'}>
+        <AnimationsView
+            {animationLibrary}
+            {cssGenerator}
+            {devices}
+        />
     </div>
 
     <div class="view-container" class:hidden={view !== 'css'}>
