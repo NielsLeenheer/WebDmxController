@@ -7,9 +7,19 @@
         devices = []
     } = $props();
 
+    // Generate CSS-safe ID from device name
+    function getDeviceId(device) {
+        return device.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '_')  // Replace non-alphanumeric with underscore
+            .replace(/_+/g, '_')          // Collapse multiple underscores
+            .replace(/^_|_$/g, '');       // Remove leading/trailing underscores
+    }
+
     const initialStyleContent = `/* CSS Animation Mode
 
-Target devices using #device-{id} selectors.
+Target devices using ID selectors based on device names.
+Example: "Moving Head (Basic) 9" becomes #moving_head_basic_9
 
 Supported properties:
 - color: Maps to RGB(W) channels, opacity alpha to W channel
@@ -42,8 +52,11 @@ Example animations:
     100% { translate: 0% 0%; }
 }
 
-/* Apply animations to all devices */
-[id^="device-"] {
+/* Apply animations to specific devices by name-based ID */
+/* Example: #moving_head_1 { animation: pan-tilt 10s linear infinite; } */
+
+/* Apply rainbow animation to all devices */
+* {
     animation: rainbow 5s linear infinite;
 }
 `;
@@ -63,7 +76,8 @@ Example animations:
         if (!dmxController || !isActive) return;
 
         devices.forEach(device => {
-            const element = document.getElementById(`device-${device.id}`);
+            const deviceId = getDeviceId(device);
+            const element = document.getElementById(deviceId);
             if (!element) return;
 
             const computedStyle = window.getComputedStyle(element);
@@ -288,7 +302,7 @@ Example animations:
                     </div>
                     <div class="device-info">
                         <div class="device-name">{device.name}</div>
-                        <div class="device-id">#device-{device.id}</div>
+                        <div class="device-id">#{getDeviceId(device)}</div>
                         <div class="device-type">{device.type}</div>
                     </div>
                 </div>
@@ -299,7 +313,7 @@ Example animations:
         <div class="animation-targets" bind:this={animationTargetsContainer}>
             {#each devices as device (device.id)}
                 <div
-                    id="device-{device.id}"
+                    id="{getDeviceId(device)}"
                     class="animation-target"
                     data-device-id={device.id}
                 ></div>
