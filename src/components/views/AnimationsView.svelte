@@ -1,4 +1,5 @@
 <script>
+    import { onMount } from 'svelte';
     import { Animation } from '../../lib/animations.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
@@ -41,8 +42,8 @@
         }
     }
 
-    // Initialize
-    $effect(() => {
+    // Initialize on mount
+    onMount(() => {
         refreshAnimationsList();
     });
 
