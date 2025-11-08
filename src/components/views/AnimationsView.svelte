@@ -368,7 +368,7 @@
 </div>
 
 <!-- New Animation Dialog -->
-<Dialog bind:this={newAnimationDialog}>
+<Dialog bind:dialogRef={newAnimationDialog}>
     <form method="dialog" onsubmit={(e) => { e.preventDefault(); createNewAnimation(); }}>
         <h3>Create New Animation</h3>
 
@@ -391,7 +391,7 @@
 </Dialog>
 
 <!-- Delete Confirmation Dialog -->
-<Dialog bind:this={deleteConfirmDialog}>
+<Dialog bind:dialogRef={deleteConfirmDialog}>
     <h3>Delete Animation</h3>
     <p>Are you sure you want to delete "{animationToDelete?.name}"?</p>
     <p class="warning">This cannot be undone.</p>
