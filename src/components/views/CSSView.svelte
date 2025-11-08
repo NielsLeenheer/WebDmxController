@@ -190,8 +190,10 @@ Example animations:
         // Update the style element directly without updating state
         // This prevents cursor position reset
         if (styleElement) {
-            // Wrap user CSS in @scope to limit it to animation targets only
-            styleElement.textContent = `@scope (.animation-targets) {\n${newContent}\n}`;
+            // Apply CSS directly without @scope wrapper
+            // This allows selectors like ".button_0_down #device" to work
+            // where the class is on the container and #device is inside it
+            styleElement.textContent = newContent;
         }
 
         // Save to localStorage
@@ -202,8 +204,8 @@ Example animations:
 
     function updateStyleElement(content) {
         if (styleElement) {
-            // Wrap user CSS in @scope to limit it to animation targets only
-            styleElement.textContent = `@scope (.animation-targets) {\n${content}\n}`;
+            // Apply CSS directly without @scope wrapper
+            styleElement.textContent = content;
         }
     }
 
