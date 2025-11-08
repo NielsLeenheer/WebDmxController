@@ -4,7 +4,12 @@
 
     let {
         dmxController,
-        devices = []
+        devices = [],
+        animationLibrary,
+        mappingLibrary,
+        cssGenerator,
+        cssSampler,
+        triggerManager
     } = $props();
 
     // Generate CSS-safe ID from device name
@@ -16,18 +21,29 @@
             .replace(/^_|_$/g, '');       // Remove leading/trailing underscores
     }
 
-    const initialStyleContent = `/* CSS Animation Mode
+    // Load CSS from localStorage or generate from libraries
+    function getInitialCSS() {
+        const saved = localStorage.getItem('dmx-css');
+        if (saved) {
+            return saved;
+        }
 
-Target devices using ID selectors based on device names.
-Example: "Moving Head (Basic) 9" becomes #moving_head_basic_9
+        // Generate from animation and mapping libraries if they have content
+        const generated = cssGenerator.generate(devices);
+        if (generated && generated.trim().length > 200) {
+            return generated;
+        }
 
-Note: Your CSS is automatically scoped to only affect animation targets.
-You can write CSS freely without worrying about affecting the rest of the page.
+        // Otherwise use default example CSS
+        return `/* CSS Animation Mode
+
+Target devices using ID selectors: #device-{deviceId}
 
 Supported properties:
-- color: Maps to RGB(W) channels, opacity alpha to W channel
+- color: Maps to RGB(W) channels
 - opacity: Maps to dimmer channel
 - translate: x → pan, y → tilt (for moving heads)
+- --smoke-output: For smoke machines (0-255)
 
 Example animations:
 */
@@ -55,14 +71,14 @@ Example animations:
     100% { translate: 0% 0%; }
 }
 
-/* Apply animations to specific devices by name-based ID */
-/* Example: #moving_head_1 { animation: pan-tilt 10s linear infinite; } */
-
 /* Apply rainbow animation to all devices */
 * {
     animation: rainbow 5s linear infinite;
 }
 `;
+    }
+
+    let currentCSS = $state(getInitialCSS());
 
     let animationFrameId;
     let isActive = false;
@@ -76,95 +92,41 @@ Example animations:
     let cssEditorElement;
 
     function updateDMXFromCSS() {
-        if (!dmxController || !isActive) return;
+        if (!dmxController || !isActive || !cssSampler) return;
+
+        // Sample all devices using the new cssSampler
+        const sampledValues = cssSampler.sampleAll(devices);
 
         devices.forEach(device => {
-            const deviceId = getDeviceId(device);
-            const element = document.getElementById(deviceId);
-            if (!element) return;
+            const channels = sampledValues.get(device.id);
+            if (!channels) return;
 
-            const computedStyle = window.getComputedStyle(element);
-            const newValues = [...device.defaultValues];
+            // Convert channel values to array based on device type
+            const newValues = device.getChannelValues();
 
-            // Parse CSS color property → DMX RGB(W)
-            const color = computedStyle.color;
-            if (color && color !== 'rgba(0, 0, 0, 0)') {
-                const rgba = parseColor(color);
-                if (rgba) {
-                    // Map to device channels based on type
-                    if (device.type === 'RGB') {
-                        newValues[0] = rgba.r;
-                        newValues[1] = rgba.g;
-                        newValues[2] = rgba.b;
-                    } else if (device.type === 'RGBA') {
-                        newValues[0] = rgba.r;
-                        newValues[1] = rgba.g;
-                        newValues[2] = rgba.b;
-                        newValues[3] = rgba.a;
-                    } else if (device.type === 'RGBW') {
-                        newValues[0] = rgba.r;
-                        newValues[1] = rgba.g;
-                        newValues[2] = rgba.b;
-                        newValues[3] = rgba.a; // Use alpha for white channel
-                    } else if (device.type === 'MOVING_HEAD') {
-                        // Moving head: pan, tilt, dimmer, r, g, b, w
-                        newValues[3] = rgba.r;
-                        newValues[4] = rgba.g;
-                        newValues[5] = rgba.b;
-                        newValues[6] = rgba.a; // white channel
-                    }
-
-                    // Update preview color
-                    previewColors[device.id] = `rgba(${rgba.r}, ${rgba.g}, ${rgba.b}, ${rgba.a / 255})`;
+            // Update values from sampled channels
+            for (const [channelName, value] of Object.entries(channels)) {
+                const channelIndex = Object.keys(channels).indexOf(channelName);
+                if (channelIndex !== -1 && channelIndex < newValues.length) {
+                    newValues[channelIndex] = value;
                 }
             }
 
-            // Track opacity for preview
-            let opacityValue = 1;
-
-            // Parse CSS opacity → DMX dimmer
-            const opacity = parseFloat(computedStyle.opacity);
-            if (!isNaN(opacity)) {
-                opacityValue = opacity;
-                const dimmerValue = Math.round(opacity * 255);
-                if (device.type === 'DIMMER') {
-                    newValues[0] = dimmerValue;
-                } else if (device.type === 'MOVING_HEAD') {
-                    newValues[2] = dimmerValue; // Dimmer channel
-                }
+            // Update preview colors based on sampled RGB values
+            if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
+                const alpha = channels.White !== undefined ? channels.White : 255;
+                previewColors[device.id] = `rgba(${channels.Red}, ${channels.Green}, ${channels.Blue}, ${alpha / 255})`;
+            } else if (channels.Intensity !== undefined) {
+                // Dimmer preview
+                const intensity = channels.Intensity / 255;
+                deviceOpacities[device.id] = intensity;
             }
 
-            // Store opacity for preview
-            deviceOpacities[device.id] = opacityValue;
-
-            // Parse CSS translate → DMX pan/tilt (for moving heads)
-            if (device.type === 'MOVING_HEAD') {
-                const transform = computedStyle.transform;
-                if (transform && transform !== 'none') {
-                    const translate = parseTransform(transform);
-                    if (translate) {
-                        // Map -100% to 100% range to 0-255
-                        newValues[0] = Math.round(((translate.x + 100) / 200) * 255); // Pan
-                        newValues[1] = Math.round(((translate.y + 100) / 200) * 255); // Tilt
-                    }
-                }
-
-                // Also try the translate property directly
-                const translateProp = computedStyle.translate;
-                if (translateProp && translateProp !== 'none') {
-                    const parts = translateProp.split(' ');
-                    if (parts.length >= 2) {
-                        const x = parsePercentage(parts[0]);
-                        const y = parsePercentage(parts[1]);
-                        if (x !== null) newValues[0] = Math.round(((x + 100) / 200) * 255);
-                        if (y !== null) newValues[1] = Math.round(((y + 100) / 200) * 255);
-                    }
-                }
-
-                // Store pan/tilt for preview visualization
+            // Update pan/tilt preview for moving heads
+            if (device.type === 'MOVING_HEAD' && channels.Pan !== undefined && channels.Tilt !== undefined) {
                 devicePanTilt[device.id] = {
-                    pan: newValues[0],
-                    tilt: newValues[1]
+                    pan: channels.Pan,
+                    tilt: channels.Tilt
                 };
             }
 
@@ -220,12 +182,17 @@ Example animations:
     function handleStyleInput(event) {
         // Read the content from the contenteditable element
         const newContent = event.target.textContent;
+
         // Update the style element directly without updating state
         // This prevents cursor position reset
         if (styleElement) {
             // Wrap user CSS in @scope to limit it to animation targets only
             styleElement.textContent = `@scope (.animation-targets) {\n${newContent}\n}`;
         }
+
+        // Save to localStorage
+        currentCSS = newContent;
+        localStorage.setItem('dmx-css', newContent);
     }
 
     function updateStyleElement(content) {
@@ -256,11 +223,22 @@ Example animations:
         styleElement.id = 'css-animation-styles';
         document.head.appendChild(styleElement);
 
+        // Initialize CSS sampler with the animation targets container
+        if (cssSampler && animationTargetsContainer) {
+            cssSampler.initialize(animationTargetsContainer);
+            cssSampler.updateDevices(devices);
+        }
+
+        // Set trigger manager container for input mappings
+        if (triggerManager && animationTargetsContainer) {
+            triggerManager.setContainer(animationTargetsContainer);
+        }
+
         // Set initial content in the editor
         if (cssEditorElement) {
-            cssEditorElement.textContent = initialStyleContent;
+            cssEditorElement.textContent = currentCSS;
         }
-        updateStyleElement(initialStyleContent);
+        updateStyleElement(currentCSS);
 
         // Initialize preview colors
         devices.forEach(device => {
@@ -276,6 +254,13 @@ Example animations:
 
         // Start animation loop
         startAnimation();
+    });
+
+    // Watch for device changes and update sampler
+    $effect(() => {
+        if (cssSampler && devices) {
+            cssSampler.updateDevices(devices);
+        }
     });
 
     onDestroy(() => {
@@ -305,22 +290,15 @@ Example animations:
                         </div>
                     </div>
                     <div class="device-info">
-                        <div class="device-id">#{getDeviceId(device)}</div>
+                        <div class="device-id">#device-{device.id}</div>
+                        <div class="device-name">{device.name}</div>
                     </div>
                 </div>
             {/each}
         </div>
 
-        <!-- Off-screen animation targets -->
-        <div class="animation-targets" bind:this={animationTargetsContainer}>
-            {#each devices as device (device.id)}
-                <div
-                    id="{getDeviceId(device)}"
-                    class="animation-target"
-                    data-device-id={device.id}
-                ></div>
-            {/each}
-        </div>
+        <!-- Off-screen animation targets (managed by cssSampler) -->
+        <div class="animation-targets" bind:this={animationTargetsContainer}></div>
     </div>
 
     <div class="right-column">
