@@ -288,7 +288,6 @@ Example animations:
 
 <div class="css-view">
     <div class="left-column">
-        <h3>Animation Targets</h3>
         <div class="device-list">
             {#each devices as device (device.id)}
                 <div class="device-item">
@@ -306,9 +305,7 @@ Example animations:
                         </div>
                     </div>
                     <div class="device-info">
-                        <div class="device-name">{device.name}</div>
                         <div class="device-id">#{getDeviceId(device)}</div>
-                        <div class="device-type">{device.type}</div>
                     </div>
                 </div>
             {/each}
@@ -327,7 +324,6 @@ Example animations:
     </div>
 
     <div class="right-column">
-        <h3>CSS Editor</h3>
         <pre
             class="css-editor"
             contenteditable="true"
@@ -346,7 +342,7 @@ Example animations:
     }
 
     .left-column {
-        width: 350px;
+        width: 250px;
         border-right: 1px solid #ddd;
         display: flex;
         flex-direction: column;
@@ -360,30 +356,18 @@ Example animations:
         overflow: hidden;
     }
 
-    h3 {
-        margin: 0;
-        padding: 15px 20px;
-        background: #f5f5f5;
-        border-bottom: 1px solid #ddd;
-        font-size: 12pt;
-        font-weight: 600;
-    }
-
     .device-list {
         flex: 1;
         overflow-y: auto;
-        padding: 15px;
+        padding-top: 15px;
     }
 
     .device-item {
         display: flex;
         align-items: center;
         gap: 15px;
-        padding: 15px;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        margin-bottom: 10px;
+        padding: 0 15px;
+        margin-bottom: 15px;
     }
 
     .device-preview-container {
@@ -392,20 +376,19 @@ Example animations:
 
     .device-preview {
         position: relative;
-        width: 80px;
-        height: 80px;
+        width: 50px;
+        height: 50px;
         border-radius: 6px;
-        border: 2px solid rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(0, 0, 0, 0.1);
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
     }
 
     .pan-tilt-indicator {
         position: absolute;
-        width: 14px;
-        height: 14px;
-        background: #2196F3;
-        border: 2px solid white;
+        width: 10px;
+        height: 10px;
+        background: transparent;
+        outline: 2px solid white;
         border-radius: 50%;
         transform: translate(-50%, -50%);
         pointer-events: none;
@@ -424,10 +407,8 @@ Example animations:
     }
 
     .device-id {
-        font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-        font-size: 9pt;
-        color: #0066cc;
-        margin-bottom: 2px;
+        font-family: var(--font-stack-mono);
+        font-size: 8pt;
     }
 
     .device-type {
@@ -452,10 +433,10 @@ Example animations:
         flex: 1;
         margin: 0;
         padding: 20px;
-        background: #1e1e1e;
-        color: #d4d4d4;
-        font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-        font-size: 11pt;
+        background: #fff;
+        color: #333;
+        font-family: var(--font-stack-mono);
+        font-size: 10pt;
         line-height: 1.6;
         overflow: auto;
         border: none;
