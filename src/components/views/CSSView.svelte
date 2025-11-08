@@ -21,6 +21,9 @@
 Target devices using ID selectors based on device names.
 Example: "Moving Head (Basic) 9" becomes #moving_head_basic_9
 
+Note: Your CSS is automatically scoped to only affect animation targets.
+You can write CSS freely without worrying about affecting the rest of the page.
+
 Supported properties:
 - color: Maps to RGB(W) channels, opacity alpha to W channel
 - opacity: Maps to dimmer channel
@@ -220,13 +223,15 @@ Example animations:
         // Update the style element directly without updating state
         // This prevents cursor position reset
         if (styleElement) {
-            styleElement.textContent = newContent;
+            // Wrap user CSS in @scope to limit it to animation targets only
+            styleElement.textContent = `@scope (.animation-targets) {\n${newContent}\n}`;
         }
     }
 
     function updateStyleElement(content) {
         if (styleElement) {
-            styleElement.textContent = content;
+            // Wrap user CSS in @scope to limit it to animation targets only
+            styleElement.textContent = `@scope (.animation-targets) {\n${content}\n}`;
         }
     }
 
