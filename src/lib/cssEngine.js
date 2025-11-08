@@ -96,14 +96,20 @@ export class CSSSampler {
 		// Create/update elements for current devices
 		for (const device of devices) {
 			let element = this.deviceElements.get(device.id);
+			const newCssId = device.cssId;
 
 			if (!element) {
 				element = document.createElement('div');
-				element.id = `device-${device.id}`;
+				element.id = newCssId;
 				element.className = 'dmx-device';
 				element.dataset.deviceType = device.type;
 				this.container.appendChild(element);
 				this.deviceElements.set(device.id, element);
+			} else {
+				// Update element ID if CSS ID changed
+				if (element.id !== newCssId) {
+					element.id = newCssId;
+				}
 			}
 
 			// Update data attributes

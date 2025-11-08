@@ -73,8 +73,13 @@ export class InputMapping {
 	_generateTriggerCSS(devices = []) {
 		if (!this.animationName) return '';
 
+		// Map device IDs to CSS IDs
 		const targetSelectors = this.targetDeviceIds
-			.map(id => `#device-${id}`)
+			.map(deviceId => {
+				const device = devices.find(d => d.id === deviceId);
+				return device ? `#${device.cssId}` : null;
+			})
+			.filter(selector => selector !== null)
 			.join(', ');
 
 		if (!targetSelectors) return '';

@@ -37,7 +37,8 @@
         // Otherwise use default example CSS
         return `/* CSS Animation Mode
 
-Target devices using ID selectors: #device-{deviceId}
+Target devices using ID selectors based on device names.
+Example: "Moving Head 1" becomes #moving_head_1
 
 Supported properties:
 - color: Maps to RGB(W) channels
@@ -290,7 +291,7 @@ Example animations:
                         </div>
                     </div>
                     <div class="device-info">
-                        <div class="device-id">#device-{device.id}</div>
+                        <div class="device-id">#{device.cssId}</div>
                         <div class="device-name">{device.name}</div>
                     </div>
                 </div>
