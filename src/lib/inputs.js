@@ -150,31 +150,72 @@ export class MIDIInputDevice extends InputDevice {
 /**
  * HID Input Device (WebHID API) - for Stream Deck, etc
  */
+/**
+ * HID Input Device (Stream Deck, game controllers, etc)
+ */
 export class HIDInputDevice extends InputDevice {
 	constructor(hidDevice, config = {}) {
 		super(hidDevice.productId.toString(), config.name || 'HID Device', 'hid');
 		this.hidDevice = hidDevice;
 		this.config = config; // Device-specific config (button count, layout, etc)
+		this.buttonStates = new Map(); // Track button states
 		this.hidDevice.oninputreport = this._handleInputReport.bind(this);
 	}
 
 	_handleInputReport(event) {
 		const { data, reportId } = event;
-
-		// Generic button handling - override with device-specific logic
-		// For Stream Deck: each byte typically represents button states
 		const bytes = new Uint8Array(data.buffer);
 
+		// Stream Deck detection: Check for common Stream Deck vendor/product IDs
+		const isStreamDeck = this.hidDevice.vendorId === 0x0fd9; // Elgato vendor ID
+
+		if (isStreamDeck) {
+			this._handleStreamDeckReport(bytes, reportId);
+		} else {
+			this._handleGenericReport(bytes, reportId);
+		}
+	}
+
+	_handleStreamDeckReport(bytes, reportId) {
+		// Stream Deck sends button states in the report
+		// Each button is typically one bit or one byte depending on the model
+
+		// For Stream Deck Original/MK.2: 15 buttons, each button is 1 byte
+		// For Stream Deck Mini: 6 buttons
+		// For Stream Deck XL: 32 buttons
+
+		for (let i = 0; i < bytes.length; i++) {
+			const buttonPressed = bytes[i] === 1;
+			const controlId = `button-${i}`;
+			const wasPressed = this.buttonStates.get(controlId) || false;
+
+			if (buttonPressed && !wasPressed) {
+				// Button pressed
+				this.buttonStates.set(controlId, true);
+				this._trigger(controlId, 127);
+			} else if (!buttonPressed && wasPressed) {
+				// Button released
+				this.buttonStates.set(controlId, false);
+				this._emit('release', { controlId });
+			}
+		}
+	}
+
+	_handleGenericReport(bytes, reportId) {
+		// Generic button handling for other HID devices
 		for (let i = 0; i < bytes.length; i++) {
 			const byte = bytes[i];
 			for (let bit = 0; bit < 8; bit++) {
 				const buttonIndex = i * 8 + bit;
 				const pressed = (byte >> bit) & 1;
 				const controlId = `button-${buttonIndex}`;
+				const wasPressed = this.buttonStates.get(controlId) || false;
 
-				if (pressed) {
-					this._trigger(controlId);
-				} else {
+				if (pressed && !wasPressed) {
+					this.buttonStates.set(controlId, true);
+					this._trigger(controlId, 127);
+				} else if (!pressed && wasPressed) {
+					this.buttonStates.set(controlId, false);
 					this._emit('release', { controlId });
 				}
 			}
@@ -195,6 +236,7 @@ export class HIDInputDevice extends InputDevice {
 			this.hidDevice.oninputreport = null;
 			this.hidDevice.close();
 		}
+		this.buttonStates.clear();
 	}
 }
 
@@ -403,6 +445,20 @@ export class InputDeviceManager {
 	 */
 	getAllDevices() {
 		return Array.from(this.devices.values());
+	}
+
+	/**
+	 * Alias for getAllDevices() - used by InputsView
+	 */
+	getInputDevices() {
+		return this.getAllDevices();
+	}
+
+	/**
+	 * Alias for getDevice() - used by InputsView
+	 */
+	getInputDevice(deviceId) {
+		return this.getDevice(deviceId);
 	}
 
 	/**
