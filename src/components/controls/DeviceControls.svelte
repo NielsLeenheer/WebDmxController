@@ -212,7 +212,6 @@
         height: 7px;
         border-radius: 3.5px;
         background: var(--slider-gradient);
-        border: 1px solid rgba(0, 0, 0, 0.15);
         cursor: pointer;
         outline: none;
     }
@@ -226,11 +225,11 @@
     .color-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 16px;
-        height: 16px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
         background: var(--thumb-color, #888);
-        border: 2px solid white;
+        outline: 2px solid white;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         cursor: pointer;
     }
@@ -241,11 +240,11 @@
 
     /* Firefox thumb */
     .color-slider::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
         background: var(--thumb-color, #888);
-        border: 2px solid white;
+        outline: 2px solid white;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         cursor: pointer;
     }
@@ -277,7 +276,7 @@
     }
 
     .control input:disabled {
-        opacity: 0.5;
+        opacity: 0.1;
         cursor: not-allowed;
     }
 
