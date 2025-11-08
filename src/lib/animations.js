@@ -1,25 +1,51 @@
 /**
  * Animation System
  *
- * Animations are DOM-based and device-agnostic. They define CSS keyframes
- * that are applied to device elements. The sampling system extracts values
- * based on what each device supports.
+ * Animations store device values (channel data) that can be mapped to CSS
+ * for preview and applied to devices for playback.
  */
+
+import { getDeviceColor } from './colorUtils.js';
 
 /**
  * Represents a single keyframe in an animation
  */
 class Keyframe {
-	constructor(time = 0, properties = {}) {
+	constructor(time = 0, deviceType = 'RGB', values = [0, 0, 0]) {
 		this.time = time; // 0-1 normalized time
-		this.properties = properties; // CSS properties: { color: 'rgb(255,0,0)', opacity: 0.5, etc }
+		this.deviceType = deviceType; // Device type (RGB, RGBA, RGBW, etc.)
+		this.values = [...values]; // Channel values (0-255)
 	}
 
 	/**
-	 * Convert keyframe properties to CSS string
+	 * Convert keyframe values to CSS properties
+	 */
+	getProperties() {
+		const color = getDeviceColor(this.deviceType, this.values);
+
+		// For moving heads, also generate transform for pan/tilt
+		if (this.deviceType === 'MOVING_HEAD') {
+			const pan = this.values[0] || 0;
+			const tilt = this.values[1] || 0;
+			// Convert 0-255 to percentage (-50% to 50%)
+			const panPercent = ((pan / 255) * 100) - 50;
+			const tiltPercent = ((tilt / 255) * 100) - 50;
+
+			return {
+				color,
+				transform: `translate(${panPercent}%, ${tiltPercent}%)`
+			};
+		}
+
+		return { color };
+	}
+
+	/**
+	 * Convert keyframe to CSS string
 	 */
 	toCSS() {
-		const props = Object.entries(this.properties)
+		const properties = this.getProperties();
+		const props = Object.entries(properties)
 			.map(([prop, value]) => `${prop}: ${value}`)
 			.join('; ');
 		return `${this.time * 100}% { ${props}; }`;
@@ -30,16 +56,17 @@ class Keyframe {
  * Reusable animation definition (like CSS @keyframes)
  */
 export class Animation {
-	constructor(name = 'animation', keyframes = []) {
+	constructor(name = 'animation', deviceType = 'RGB', keyframes = []) {
 		this.name = name;
+		this.deviceType = deviceType;
 		this.keyframes = keyframes; // Array of Keyframe objects
 	}
 
 	/**
 	 * Add a keyframe to the animation
 	 */
-	addKeyframe(time, properties) {
-		const keyframe = new Keyframe(time, properties);
+	addKeyframe(time, values) {
+		const keyframe = new Keyframe(time, this.deviceType, values);
 		this.keyframes.push(keyframe);
 		this.keyframes.sort((a, b) => a.time - b.time);
 		return keyframe;
@@ -71,43 +98,63 @@ export class Animation {
 	}
 
 	/**
-	 * Create Animation from CSS @keyframes string
+	 * Get color for a keyframe (for visualization)
 	 */
-	static fromCSS(name, cssText) {
-		const animation = new Animation(name);
+	getKeyframeColor(keyframe) {
+		return getDeviceColor(this.deviceType, keyframe.values);
+	}
 
-		// Parse keyframe rules (simplified parser)
-		// Matches: 0% { prop: value; } or from/to
-		const keyframeRegex = /(from|to|\d+%)\s*\{([^}]+)\}/g;
-		let match;
-
-		while ((match = keyframeRegex.exec(cssText)) !== null) {
-			const timeStr = match[1];
-			const propsStr = match[2];
-
-			// Convert from/to to percentages
-			let time;
-			if (timeStr === 'from') time = 0;
-			else if (timeStr === 'to') time = 1;
-			else time = parseFloat(timeStr) / 100;
-
-			// Parse properties
-			const properties = {};
-			const propPairs = propsStr.split(';').map(s => s.trim()).filter(s => s);
-
-			for (const pair of propPairs) {
-				const colonIndex = pair.indexOf(':');
-				if (colonIndex === -1) continue;
-
-				const prop = pair.substring(0, colonIndex).trim();
-				const value = pair.substring(colonIndex + 1).trim();
-				properties[prop] = value;
-			}
-
-			animation.addKeyframe(time, properties);
+	/**
+	 * Get gradient segments for timeline visualization
+	 */
+	getGradientSegments(timelineWidth = 1000) {
+		if (this.keyframes.length === 0) {
+			return [{
+				left: 0,
+				width: timelineWidth,
+				gradient: '#000000'
+			}];
 		}
 
-		return animation;
+		const segments = [];
+		const sortedKeyframes = [...this.keyframes].sort((a, b) => a.time - b.time);
+
+		// Segment from start (0%) to first keyframe
+		if (sortedKeyframes[0].time > 0) {
+			const firstColor = this.getKeyframeColor(sortedKeyframes[0]);
+			segments.push({
+				left: 0,
+				width: sortedKeyframes[0].time * timelineWidth,
+				gradient: `linear-gradient(to right, #000000, ${firstColor})`
+			});
+		}
+
+		// Segments between keyframes
+		for (let i = 0; i < sortedKeyframes.length - 1; i++) {
+			const kf1 = sortedKeyframes[i];
+			const kf2 = sortedKeyframes[i + 1];
+			const color1 = this.getKeyframeColor(kf1);
+			const color2 = this.getKeyframeColor(kf2);
+
+			segments.push({
+				left: kf1.time * timelineWidth,
+				width: (kf2.time - kf1.time) * timelineWidth,
+				gradient: `linear-gradient(to right, ${color1}, ${color2})`
+			});
+		}
+
+		// Segment from last keyframe to end (100%)
+		const lastKeyframe = sortedKeyframes[sortedKeyframes.length - 1];
+		if (lastKeyframe.time < 1) {
+			const lastColor = this.getKeyframeColor(lastKeyframe);
+			segments.push({
+				left: lastKeyframe.time * timelineWidth,
+				width: (1 - lastKeyframe.time) * timelineWidth,
+				gradient: `linear-gradient(to right, ${lastColor}, #000000)`
+			});
+		}
+
+		return segments;
 	}
 
 	/**
@@ -116,9 +163,11 @@ export class Animation {
 	toJSON() {
 		return {
 			name: this.name,
+			deviceType: this.deviceType,
 			keyframes: this.keyframes.map(kf => ({
 				time: kf.time,
-				properties: kf.properties
+				deviceType: kf.deviceType,
+				values: kf.values
 			}))
 		};
 	}
@@ -127,9 +176,18 @@ export class Animation {
 	 * Deserialize from JSON
 	 */
 	static fromJSON(json) {
-		const animation = new Animation(json.name);
+		const deviceType = json.deviceType || 'RGB'; // Default for backward compatibility
+		const animation = new Animation(json.name, deviceType);
+
 		for (const kf of json.keyframes) {
-			animation.addKeyframe(kf.time, kf.properties);
+			// Handle old format (properties) and new format (values)
+			if (kf.values) {
+				animation.addKeyframe(kf.time, kf.values);
+			} else if (kf.properties) {
+				// Legacy format - try to extract RGB from color property
+				const defaultValues = new Array(animation.deviceType === 'RGB' ? 3 : 4).fill(0);
+				animation.addKeyframe(kf.time, defaultValues);
+			}
 		}
 		return animation;
 	}

@@ -1,9 +1,11 @@
 <script>
     import { onMount } from 'svelte';
     import { Animation } from '../../lib/animations.js';
+    import { DEVICE_TYPES } from '../../lib/devices.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
+    import DeviceControls from '../controls/DeviceControls.svelte';
 
     let {
         animationLibrary,
@@ -23,14 +25,23 @@
     // Dialog states
     let newAnimationDialog = $state(null);
     let newAnimationName = $state('');
+    let newAnimationDeviceType = $state('RGB');
     let deleteConfirmDialog = $state(null);
     let animationToDelete = $state(null);
 
     // Keyframe editing
-    let editingKeyframeTime = $state(0);
-    let editingKeyframeColor = $state('#ffffff');
-    let editingKeyframeOpacity = $state('1');
-    let editingKeyframeTranslate = $state('0% 0%');
+    let editingKeyframeValues = $state([0, 0, 0]);
+
+    // Timeline settings
+    const timelineWidth = 800; // Fixed width for animation timeline (represents 0% to 100%)
+
+    // Keyframe dragging
+    let draggingKeyframe = $state(null);
+    let dragStartX = $state(0);
+    let dragStartTime = $state(0);
+
+    // Animation version for forcing re-renders
+    let animationVersion = $state(0);
 
     // Load animations from library
     function refreshAnimationsList() {
@@ -54,16 +65,21 @@
 
     function openNewAnimationDialog() {
         newAnimationName = '';
+        newAnimationDeviceType = 'RGB';
         newAnimationDialog?.showModal();
     }
 
     function createNewAnimation() {
         if (!newAnimationName.trim()) return;
 
-        const animation = new Animation(newAnimationName.trim());
-        // Add default keyframes
-        animation.addKeyframe(0, { color: 'rgb(255, 255, 255)' });
-        animation.addKeyframe(1, { color: 'rgb(255, 255, 255)' });
+        const deviceType = newAnimationDeviceType;
+        const numChannels = DEVICE_TYPES[deviceType].channels;
+        const defaultValues = new Array(numChannels).fill(0);
+
+        const animation = new Animation(newAnimationName.trim(), deviceType);
+        // Add default keyframes at start and end
+        animation.addKeyframe(0, [...defaultValues]);
+        animation.addKeyframe(1, [...defaultValues]);
 
         animationLibrary.add(animation);
         refreshAnimationsList();
@@ -85,36 +101,24 @@
         animationToDelete = null;
     }
 
-    function addKeyframe() {
+    function addKeyframeAtTime(time) {
         if (!selectedAnimation) return;
 
-        // Find a good time position (middle of largest gap)
-        const times = selectedAnimation.keyframes.map(kf => kf.time).sort((a, b) => a - b);
-        let newTime = 0.5;
+        const numChannels = DEVICE_TYPES[selectedAnimation.deviceType].channels;
+        const defaultValues = new Array(numChannels).fill(0);
 
-        if (times.length > 0) {
-            let maxGap = times[0];
-            newTime = maxGap / 2;
-
-            for (let i = 0; i < times.length - 1; i++) {
-                const gap = times[i + 1] - times[i];
-                if (gap > maxGap) {
-                    maxGap = gap;
-                    newTime = times[i] + gap / 2;
-                }
-            }
-
-            const lastGap = 1 - times[times.length - 1];
-            if (lastGap > maxGap) {
-                newTime = times[times.length - 1] + lastGap / 2;
-            }
-        }
-
-        selectedAnimation.addKeyframe(newTime, { color: 'rgb(255, 255, 255)' });
+        selectedAnimation.addKeyframe(time, defaultValues);
         animationLibrary.save();
-        refreshAnimationsList();
+        animationVersion++;
+
         // Reselect to update reference
         selectedAnimation = animationLibrary.get(selectedAnimation.name);
+
+        // Select the new keyframe for editing
+        const newKeyframeIndex = selectedAnimation.keyframes.findIndex(kf => kf.time === time);
+        if (newKeyframeIndex !== -1) {
+            selectKeyframe(newKeyframeIndex);
+        }
     }
 
     function deleteKeyframe(index) {
@@ -125,7 +129,7 @@
 
         selectedAnimation.keyframes.splice(index, 1);
         animationLibrary.save();
-        refreshAnimationsList();
+        animationVersion++;
         selectedAnimation = animationLibrary.get(selectedAnimation.name);
         selectedKeyframeIndex = null;
     }
@@ -137,40 +141,86 @@
         const keyframe = selectedAnimation.keyframes[index];
 
         // Load keyframe values into editor
-        editingKeyframeTime = keyframe.time;
-        editingKeyframeColor = keyframe.properties.color || '#ffffff';
-        editingKeyframeOpacity = keyframe.properties.opacity || '1';
-        editingKeyframeTranslate = keyframe.properties.translate || '0% 0%';
+        editingKeyframeValues = [...keyframe.values];
     }
 
-    function updateKeyframeTime() {
+    function updateKeyframeValues() {
         if (!selectedAnimation || selectedKeyframeIndex === null) return;
 
         const keyframe = selectedAnimation.keyframes[selectedKeyframeIndex];
-        keyframe.time = Math.max(0, Math.min(1, editingKeyframeTime));
+        keyframe.values = [...editingKeyframeValues];
+
+        animationLibrary.save();
+        animationVersion++;
+        selectedAnimation = animationLibrary.get(selectedAnimation.name);
+    }
+
+    // Timeline interaction functions
+    function handleTimelineClick(e) {
+        if (!selectedAnimation) return;
+
+        // Prevent if clicking on existing keyframe
+        if (e.target.classList.contains('timeline-keyframe-marker')) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const clickedTime = Math.max(0, Math.min(1, x / timelineWidth));
+
+        addKeyframeAtTime(clickedTime);
+    }
+
+    function handleKeyframeMouseDown(e, keyframe, index) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        draggingKeyframe = { keyframe, index };
+        dragStartX = e.clientX;
+        dragStartTime = keyframe.time;
+
+        document.addEventListener('mousemove', handleKeyframeMouseMove);
+        document.addEventListener('mouseup', handleKeyframeMouseUp);
+    }
+
+    function handleKeyframeMouseMove(e) {
+        if (!draggingKeyframe || !selectedAnimation) return;
+
+        const deltaX = e.clientX - dragStartX;
+        const deltaTime = deltaX / timelineWidth;
+        let newTime = dragStartTime + deltaTime;
+
+        // Clamp to 0-1 range
+        newTime = Math.max(0, Math.min(1, newTime));
+
+        // Update keyframe time
+        const keyframe = draggingKeyframe.keyframe;
+        keyframe.time = newTime;
 
         // Re-sort keyframes
         selectedAnimation.keyframes.sort((a, b) => a.time - b.time);
 
-        animationLibrary.save();
-        refreshAnimationsList();
-        selectedAnimation = animationLibrary.get(selectedAnimation.name);
+        // Find new index after sorting
+        const newIndex = selectedAnimation.keyframes.indexOf(keyframe);
+        selectedKeyframeIndex = newIndex;
+        draggingKeyframe.index = newIndex;
+
+        animationVersion++;
     }
 
-    function updateKeyframeProperty(property, value) {
-        if (!selectedAnimation || selectedKeyframeIndex === null) return;
+    function handleKeyframeMouseUp() {
+        if (!draggingKeyframe) return;
 
-        const keyframe = selectedAnimation.keyframes[selectedKeyframeIndex];
-
-        if (value === null || value === undefined || value === '') {
-            delete keyframe.properties[property];
-        } else {
-            keyframe.properties[property] = value;
-        }
+        document.removeEventListener('mousemove', handleKeyframeMouseMove);
+        document.removeEventListener('mouseup', handleKeyframeMouseUp);
 
         animationLibrary.save();
-        refreshAnimationsList();
         selectedAnimation = animationLibrary.get(selectedAnimation.name);
+
+        draggingKeyframe = null;
+    }
+
+    function getKeyframePosition(keyframe) {
+        animationVersion; // Make reactive
+        return keyframe.time * timelineWidth;
     }
 
     function previewAnimation() {
@@ -226,8 +276,8 @@
         {#if selectedAnimation}
             <div class="panel-header">
                 <h3>{selectedAnimation.name}</h3>
+                <div class="device-type-badge">{DEVICE_TYPES[selectedAnimation.deviceType].name}</div>
                 <div class="header-actions">
-                    <Button onclick={addKeyframe}>Add Keyframe</Button>
                     <Button onclick={previewAnimation}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M8 5v14l11-7z"/>
@@ -238,93 +288,53 @@
             </div>
 
             <div class="timeline-container">
-                <div class="timeline">
-                    <div class="timeline-track">
-                        {#each selectedAnimation.keyframes as keyframe, index}
-                            {@const percent = keyframe.time * 100}
-                            <div
-                                class="timeline-keyframe"
-                                class:selected={selectedKeyframeIndex === index}
-                                style="left: {percent}%"
-                                onclick={() => selectKeyframe(index)}
-                            >
-                                <div class="keyframe-marker"></div>
-                                <div class="keyframe-time">{(keyframe.time * 100).toFixed(0)}%</div>
-                            </div>
-                        {/each}
-                    </div>
+                <div class="timeline-instructions">
+                    Click on the timeline to add a keyframe
+                </div>
+                <div
+                    class="timeline"
+                    style="width: {timelineWidth}px"
+                    onclick={handleTimelineClick}
+                >
+                    <!-- Gradient segments showing color transitions -->
+                    {#each selectedAnimation.getGradientSegments(timelineWidth) as segment}
+                        <div
+                            class="gradient-segment"
+                            style="left: {segment.left}px; width: {segment.width}px; background: {segment.gradient}"
+                        ></div>
+                    {/each}
+
+                    <!-- Keyframe markers -->
+                    {#each selectedAnimation.keyframes as keyframe, index}
+                        <div
+                            class="timeline-keyframe-marker"
+                            class:selected={selectedKeyframeIndex === index}
+                            class:dragging={draggingKeyframe?.keyframe === keyframe}
+                            style="left: {getKeyframePosition(keyframe)}px; --keyframe-color: {selectedAnimation.getKeyframeColor(keyframe)}"
+                            onmousedown={(e) => handleKeyframeMouseDown(e, keyframe, index)}
+                            onclick={(e) => {
+                                e.stopPropagation();
+                                if (!draggingKeyframe) {
+                                    selectKeyframe(index);
+                                }
+                            }}
+                            title="{(keyframe.time * 100).toFixed(0)}%"
+                        >
+                            <div class="keyframe-time">{(keyframe.time * 100).toFixed(0)}%</div>
+                        </div>
+                    {/each}
                 </div>
             </div>
 
             {#if selectedKeyframeIndex !== null}
                 <div class="keyframe-editor">
-                    <h4>Keyframe Properties</h4>
+                    <h4>Keyframe at {(selectedAnimation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%</h4>
 
-                    <div class="property-group">
-                        <label for="keyframe-time">Time (0-1):</label>
-                        <input
-                            id="keyframe-time"
-                            type="number"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            bind:value={editingKeyframeTime}
-                            oninput={updateKeyframeTime}
-                        />
-                    </div>
-
-                    <div class="property-group">
-                        <label for="keyframe-color">Color:</label>
-                        <div class="color-input-group">
-                            <input
-                                id="keyframe-color"
-                                type="color"
-                                value={editingKeyframeColor}
-                                oninput={(e) => {
-                                    editingKeyframeColor = e.target.value;
-                                    const hex = e.target.value;
-                                    const r = parseInt(hex.slice(1, 3), 16);
-                                    const g = parseInt(hex.slice(3, 5), 16);
-                                    const b = parseInt(hex.slice(5, 7), 16);
-                                    updateKeyframeProperty('color', `rgb(${r}, ${g}, ${b})`);
-                                }}
-                            />
-                            <input
-                                type="text"
-                                value={editingKeyframeColor}
-                                oninput={(e) => {
-                                    editingKeyframeColor = e.target.value;
-                                    updateKeyframeProperty('color', e.target.value);
-                                }}
-                                placeholder="rgb(255, 255, 255)"
-                            />
-                        </div>
-                    </div>
-
-                    <div class="property-group">
-                        <label for="keyframe-opacity">Opacity (0-1):</label>
-                        <input
-                            id="keyframe-opacity"
-                            type="number"
-                            min="0"
-                            max="1"
-                            step="0.1"
-                            bind:value={editingKeyframeOpacity}
-                            oninput={(e) => updateKeyframeProperty('opacity', e.target.value)}
-                        />
-                    </div>
-
-                    <div class="property-group">
-                        <label for="keyframe-translate">Translate (pan/tilt):</label>
-                        <input
-                            id="keyframe-translate"
-                            type="text"
-                            bind:value={editingKeyframeTranslate}
-                            oninput={(e) => updateKeyframeProperty('translate', e.target.value)}
-                            placeholder="0% 0%"
-                        />
-                        <small>Format: x% y% (e.g., "50% 25%")</small>
-                    </div>
+                    <DeviceControls
+                        deviceType={selectedAnimation.deviceType}
+                        bind:values={editingKeyframeValues}
+                        onChange={updateKeyframeValues}
+                    />
 
                     <div class="property-actions">
                         <Button
@@ -336,7 +346,7 @@
                     </div>
                 </div>
             {:else}
-                <p class="empty-state">Select a keyframe to edit its properties</p>
+                <p class="empty-state">Select a keyframe to edit its values</p>
             {/if}
         {:else}
             <div class="empty-state-large">
@@ -382,6 +392,15 @@
                 placeholder="e.g., rainbow, pulse, sweep"
                 autofocus
             />
+        </div>
+
+        <div class="dialog-field">
+            <label for="device-type">Device Type:</label>
+            <select id="device-type" bind:value={newAnimationDeviceType}>
+                {#each Object.entries(DEVICE_TYPES) as [key, deviceType]}
+                    <option value={key}>{deviceType.name}</option>
+                {/each}
+            </select>
         </div>
 
         <div class="dialog-buttons">
@@ -500,9 +519,30 @@
         color: #666;
     }
 
+    .device-type-badge {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 9pt;
+        font-weight: 500;
+        margin-left: auto;
+        margin-right: 10px;
+    }
+
     .timeline-container {
         padding: 20px;
         border-bottom: 1px solid #ddd;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .timeline-instructions {
+        font-size: 9pt;
+        color: #888;
+        font-style: italic;
     }
 
     .timeline {
@@ -511,35 +551,58 @@
         background: #f5f5f5;
         border: 1px solid #ddd;
         border-radius: 4px;
+        cursor: crosshair;
+        overflow: visible;
     }
 
-    .timeline-track {
-        position: relative;
-        height: 100%;
+    .timeline:hover {
+        background: #f0f0f0;
     }
 
-    .timeline-keyframe {
+    .gradient-segment {
         position: absolute;
         top: 50%;
-        transform: translate(-50%, -50%);
-        cursor: pointer;
+        transform: translateY(-50%);
+        height: 20px;
+        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        pointer-events: none;
         z-index: 1;
     }
 
-    .keyframe-marker {
-        width: 12px;
-        height: 12px;
-        background: #2196f3;
-        border: 2px solid white;
-        border-radius: 50%;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        margin: 0 auto;
-    }
-
-    .timeline-keyframe.selected .keyframe-marker {
-        background: #ff9800;
+    .timeline-keyframe-marker {
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
         width: 16px;
         height: 16px;
+        background: var(--keyframe-color, #2196f3);
+        border: 3px solid white;
+        border-radius: 50%;
+        cursor: grab;
+        z-index: 5;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        transition: all 0.15s ease;
+    }
+
+    .timeline-keyframe-marker:hover {
+        width: 20px;
+        height: 20px;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .timeline-keyframe-marker.selected {
+        border-color: #ffd700;
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        width: 20px;
+        height: 20px;
+    }
+
+    .timeline-keyframe-marker.dragging {
+        cursor: grabbing;
+        z-index: 15;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        transition: none;
     }
 
     .keyframe-time {
@@ -547,10 +610,11 @@
         top: 100%;
         left: 50%;
         transform: translateX(-50%);
-        margin-top: 5px;
+        margin-top: 8px;
         font-size: 8pt;
         color: #666;
         white-space: nowrap;
+        font-weight: 500;
     }
 
     .keyframe-editor {
@@ -563,49 +627,6 @@
         font-size: 11pt;
     }
 
-    .property-group {
-        margin-bottom: 15px;
-    }
-
-    .property-group label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: 500;
-        font-size: 10pt;
-    }
-
-    .property-group input[type="number"],
-    .property-group input[type="text"] {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 10pt;
-    }
-
-    .color-input-group {
-        display: flex;
-        gap: 10px;
-    }
-
-    .color-input-group input[type="color"] {
-        width: 60px;
-        height: 38px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-
-    .color-input-group input[type="text"] {
-        flex: 1;
-    }
-
-    .property-group small {
-        display: block;
-        margin-top: 5px;
-        font-size: 9pt;
-        color: #888;
-    }
 
     .property-actions {
         margin-top: 20px;
@@ -689,7 +710,8 @@
         font-weight: 500;
     }
 
-    .dialog-field input {
+    .dialog-field input,
+    .dialog-field select {
         width: 100%;
         padding: 8px;
         border: 1px solid #ddd;
