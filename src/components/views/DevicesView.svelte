@@ -4,8 +4,10 @@
     import { canLinkDevices, applyLinkedValues, getMappedChannels } from '../../lib/channelMapping.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import DeviceControls from '../controls/DeviceControls.svelte';
+
     import disconnectIcon from '../../assets/icons/disconnect.svg?raw';
     import settingsIcon from '../../assets/icons/settings.svg?raw';
+    import linkedIcon from '../../assets/icons/linked.svg?raw';
 
     let { dmxController, selectedType = $bindable(), devices = $bindable([]) } = $props();
 
@@ -329,11 +331,8 @@
                         style="background-color: {getDeviceColor(device.type, device.defaultValues)}"
                     ></div>
                     <h3>{device.name}</h3>
-                    <span class="channel-info">
-                        Ch {device.startChannel + 1}-{device.startChannel + DEVICE_TYPES[device.type].channels}
-                    </span>
                     {#if device.isLinked()}
-                        <span class="link-indicator" title="Linked to another device">🔗</span>
+                        <Icon data={linkedIcon} />
                     {/if}
                     <button
                         class="settings-btn"
@@ -451,8 +450,13 @@
     .device-header {
         display: flex;
         align-items: center;
-        margin-bottom: 15px;
         gap: 8px;
+        background: #e6e6e6;
+
+        margin: -15px -15px 12px -15px;
+        padding: 12px 15px;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
     }
 
     .color-preview {
@@ -465,19 +469,8 @@
 
     .device-header h3 {
         margin: 0;
-        font-size: 12pt;
-        color: #333;
-    }
-
-    .channel-info {
-        font-size: 8pt;
-        color: #888;
-        white-space: nowrap;
-    }
-
-    .link-indicator {
         font-size: 11pt;
-        line-height: 1;
+        color: #333;
     }
 
     .settings-btn,
