@@ -261,6 +261,12 @@
         animationVersion; // Make reactive to animationVersion
         return selectedAnimation ? selectedAnimation.getGradientSegments(timelineWidth) : [];
     });
+
+    // Get keyframes (reactive to animationVersion)
+    let displayKeyframes = $derived.by(() => {
+        animationVersion; // Make reactive to animationVersion
+        return selectedAnimation ? selectedAnimation.keyframes : [];
+    });
 </script>
 
 <div class="animations-view">
@@ -331,7 +337,7 @@
                     {/each}
 
                     <!-- Keyframe markers -->
-                    {#each selectedAnimation.keyframes as keyframe, index (keyframe.time + '-' + index)}
+                    {#each displayKeyframes as keyframe, index (keyframe.time + '-' + index)}
                         <div
                             class="timeline-keyframe-marker"
                             class:selected={selectedKeyframeIndex === index}
