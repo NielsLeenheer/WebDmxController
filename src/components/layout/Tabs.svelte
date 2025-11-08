@@ -24,12 +24,6 @@
         </label>
 
         <label>
-            <input type="radio" name="view" value="universe" bind:group={view}>
-            <Icon data={universeIcon} />
-            Universe
-        </label>
-
-        <label>
             <input type="radio" name="view" value="timeline" bind:group={view}>
             <Icon data={timelineIcon} />
             Timeline
@@ -39,6 +33,12 @@
             <input type="radio" name="view" value="css" bind:group={view}>
             <Icon data={cssIcon} />
             CSS
+        </label>
+
+        <label>
+            <input type="radio" name="view" value="universe" bind:group={view}>
+            <Icon data={universeIcon} />
+            Universe
         </label>
     </nav>
 
