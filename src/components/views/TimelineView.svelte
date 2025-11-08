@@ -1,14 +1,14 @@
 <script>
     import { Icon } from 'svelte-icon';
-    import playIcon from '../assets/icons/play.svg?raw';
-    import pauseIcon from '../assets/icons/pause.svg?raw';
-    import stopIcon from '../assets/icons/stop.svg?raw';
-    import DeviceControls from './DeviceControls.svelte';
-    import { DEVICE_TYPES } from '../lib/devices.js';
-    import { Timeline, Keypoint } from '../lib/timeline.js';
-    import { getEasingNames } from '../lib/easing.js';
-    import { getMappedChannels } from '../lib/channelMapping.js';
-    import { getDeviceColor } from '../lib/colorUtils.js';
+    import playIcon from '../../assets/icons/play.svg?raw';
+    import pauseIcon from '../../assets/icons/pause.svg?raw';
+    import stopIcon from '../../assets/icons/stop.svg?raw';
+    import DeviceControls from '../controls/DeviceControls.svelte';
+    import { DEVICE_TYPES } from '../../lib/devices.js';
+    import { Timeline, Keypoint } from '../../lib/timeline.js';
+    import { getEasingNames } from '../../lib/easing.js';
+    import { getMappedChannels } from '../../lib/channelMapping.js';
+    import { getDeviceColor } from '../../lib/colorUtils.js';
 
     let {
         dmxController = null,

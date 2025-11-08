@@ -1,5 +1,5 @@
 <script>
-    import { DEVICE_TYPES } from '../lib/devices.js';
+    import { DEVICE_TYPES } from '../../lib/devices.js';
     import XYPad from './XYPad.svelte';
 
     let {

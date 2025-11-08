@@ -1,12 +1,12 @@
 <script>
     import { DMXController } from './lib/dmx.js';
     import { DEVICE_TYPES } from './lib/devices.js';
-    import Header from './components/Header.svelte';
-    import Tabs from './components/Tabs.svelte';
-    import UniverseView from './components/UniverseView.svelte';
-    import DevicesView from './components/DevicesView.svelte';
-    import TimelineView from './components/TimelineView.svelte';
-    import CSSView from './components/CSSView.svelte';
+    import Header from './components/layout/Header.svelte';
+    import Tabs from './components/layout/Tabs.svelte';
+    import UniverseView from './components/views/UniverseView.svelte';
+    import DevicesView from './components/views/DevicesView.svelte';
+    import TimelineView from './components/views/TimelineView.svelte';
+    import CSSView from './components/views/CSSView.svelte';
 
     let view = $state('devices');
     let connected = $state(false);

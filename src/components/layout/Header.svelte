@@ -1,7 +1,7 @@
 <script>
     import { Icon } from 'svelte-icon';
-    import connectIcon from '../assets/icons/connect.svg?raw';
-    import disconnectIcon from '../assets/icons/disconnect.svg?raw';
+    import connectIcon from '../../assets/icons/connect.svg?raw';
+    import disconnectIcon from '../../assets/icons/disconnect.svg?raw';
 
     let { onconnect, ondisconnect, connected } = $props();
 </script>

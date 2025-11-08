@@ -1,11 +1,11 @@
 <script>
     import { Icon } from 'svelte-icon';
-    import { DEVICE_TYPES, Device } from '../lib/devices.js';
-    import { canLinkDevices, applyLinkedValues, getMappedChannels } from '../lib/channelMapping.js';
-    import { getDeviceColor } from '../lib/colorUtils.js';
-    import DeviceControls from './DeviceControls.svelte';
-    import disconnectIcon from '../assets/icons/disconnect.svg?raw';
-    import settingsIcon from '../assets/icons/settings.svg?raw';
+    import { DEVICE_TYPES, Device } from '../../lib/devices.js';
+    import { canLinkDevices, applyLinkedValues, getMappedChannels } from '../../lib/channelMapping.js';
+    import { getDeviceColor } from '../../lib/colorUtils.js';
+    import DeviceControls from '../controls/DeviceControls.svelte';
+    import disconnectIcon from '../../assets/icons/disconnect.svg?raw';
+    import settingsIcon from '../../assets/icons/settings.svg?raw';
 
     let { dmxController, selectedType = $bindable(), devices = $bindable([]) } = $props();
 

@@ -1,6 +1,6 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
-    import { getDeviceColor } from '../lib/colorUtils.js';
+    import { getDeviceColor } from '../../lib/colorUtils.js';
 
     let {
         dmxController,
