@@ -13,13 +13,14 @@ export class InputMapping {
 	constructor(config = {}) {
 		this.id = config.id || `mapping-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		this.name = config.name || 'Untitled Mapping';
-		this.mode = config.mode || 'trigger'; // 'trigger' or 'direct'
+		this.mode = config.mode || 'trigger'; // 'trigger', 'direct', or 'input'
 
 		// Input source
 		this.inputDeviceId = config.inputDeviceId || null;
 		this.inputControlId = config.inputControlId || null;
 
 		// Trigger mode settings
+		this.triggerType = config.triggerType || 'pressed'; // 'pressed', 'not-pressed', 'always'
 		this.animationName = config.animationName || null;
 		this.duration = config.duration || 1000; // ms
 		this.easing = config.easing || 'linear';
@@ -36,7 +37,7 @@ export class InputMapping {
 	}
 
 	/**
-	 * Generate CSS class name from input device/control
+	 * Generate CSS class name from input device/control and trigger type
 	 */
 	_generateClassName() {
 		if (!this.inputDeviceId || !this.inputControlId) {
@@ -44,10 +45,13 @@ export class InputMapping {
 		}
 
 		// Convert input IDs to valid CSS class names
-		const devicePart = this.inputDeviceId.replace(/[^a-zA-Z0-9-]/g, '-');
-		const controlPart = this.inputControlId.replace(/[^a-zA-Z0-9-]/g, '-');
+		const controlPart = this.inputControlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
 
-		return `${devicePart}-${controlPart}`;
+		// Add suffix based on trigger type
+		const suffix = this.triggerType === 'pressed' ? 'down' :
+		               this.triggerType === 'not-pressed' ? 'up' : 'always';
+
+		return `${controlPart}_${suffix}`;
 	}
 
 	/**
@@ -131,6 +135,7 @@ export class InputMapping {
 			mode: this.mode,
 			inputDeviceId: this.inputDeviceId,
 			inputControlId: this.inputControlId,
+			triggerType: this.triggerType,
 			animationName: this.animationName,
 			duration: this.duration,
 			easing: this.easing,
@@ -265,6 +270,8 @@ export class MappingLibrary {
 export class TriggerManager {
 	constructor() {
 		this.activeClasses = new Set();
+		this.notPressedClasses = new Set(); // Track not-pressed triggers
+		this.alwaysClasses = new Set(); // Track always triggers
 		this.container = null; // Will be set to the container element
 	}
 
@@ -273,40 +280,86 @@ export class TriggerManager {
 	 */
 	setContainer(element) {
 		this.container = element;
+
+		// Apply all not-pressed and always classes to the container
+		for (const className of this.notPressedClasses) {
+			element.classList.add(className);
+		}
+		for (const className of this.alwaysClasses) {
+			element.classList.add(className);
+		}
 	}
 
 	/**
-	 * Trigger a mapping (add CSS class)
+	 * Register a trigger mapping
+	 */
+	register(mapping) {
+		if (mapping.mode !== 'trigger') return;
+
+		// For not-pressed and always types, add to permanent sets
+		if (mapping.triggerType === 'not-pressed') {
+			this.notPressedClasses.add(mapping.cssClassName);
+			if (this.container) {
+				this.container.classList.add(mapping.cssClassName);
+			}
+		} else if (mapping.triggerType === 'always') {
+			this.alwaysClasses.add(mapping.cssClassName);
+			if (this.container) {
+				this.container.classList.add(mapping.cssClassName);
+			}
+		}
+	}
+
+	/**
+	 * Unregister a trigger mapping
+	 */
+	unregister(mapping) {
+		if (mapping.mode !== 'trigger') return;
+
+		this.notPressedClasses.delete(mapping.cssClassName);
+		this.alwaysClasses.delete(mapping.cssClassName);
+
+		if (this.container) {
+			this.container.classList.remove(mapping.cssClassName);
+		}
+	}
+
+	/**
+	 * Trigger a mapping when input is pressed
 	 */
 	trigger(mapping) {
 		if (!this.container || mapping.mode !== 'trigger') return;
 
 		const className = mapping.cssClassName;
 
-		// Add the class
-		this.container.classList.add(className);
-		this.activeClasses.add(className);
-
-		// If not infinite, remove after duration
-		if (mapping.iterations !== 'infinite') {
-			const totalDuration = mapping.duration * (mapping.iterations || 1);
-
-			setTimeout(() => {
-				this.container.classList.remove(className);
-				this.activeClasses.delete(className);
-			}, totalDuration);
+		if (mapping.triggerType === 'pressed') {
+			// Pressed: Add class when triggered
+			this.container.classList.add(className);
+			this.activeClasses.add(className);
+		} else if (mapping.triggerType === 'not-pressed') {
+			// Not-pressed: Remove class when triggered (pressed)
+			this.container.classList.remove(className);
 		}
+		// 'always' type is always on, no action needed on trigger
 	}
 
 	/**
-	 * Release a mapping (remove CSS class) - for button releases
+	 * Release a mapping when input is released
 	 */
 	release(mapping) {
 		if (!this.container || mapping.mode !== 'trigger') return;
 
 		const className = mapping.cssClassName;
-		this.container.classList.remove(className);
-		this.activeClasses.delete(className);
+
+		if (mapping.triggerType === 'pressed') {
+			// Pressed: Remove class when released
+			this.container.classList.remove(className);
+			this.activeClasses.delete(className);
+		} else if (mapping.triggerType === 'not-pressed') {
+			// Not-pressed: Add class back when released
+			this.container.classList.add(className);
+		}
+		// 'always' type is always on, no action needed on release
 	}
 
 	/**

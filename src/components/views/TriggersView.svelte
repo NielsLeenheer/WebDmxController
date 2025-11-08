@@ -1,311 +1,206 @@
 <script>
-    import { onMount, onDestroy } from 'svelte';
+    import { onMount } from 'svelte';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
 
     let {
-        inputController,
-        mappingLibrary
+        mappingLibrary,
+        animationLibrary,
+        devices = []
     } = $props();
 
     // Icons
+    const plusIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>';
     const trashIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
-    const keyboardIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>';
-    const midiIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>';
 
-    let isListening = $state(false);
-    let detectedTriggers = $state([]);
-    let configureDialog = $state(null);
-    let configuringTrigger = $state(null);
-    let triggerName = $state('');
-    let savedMappings = $state([]);
+    let availableInputs = $state([]);
+    let availableAnimations = $state([]);
+    let triggers = $state([]);
 
-    // Event handlers
-    let inputEventHandlers = [];
+    let newTriggerDialog = $state(null);
+    let newTriggerInput = $state(null);
+    let newTriggerType = $state('pressed');
+    let newTriggerDevice = $state(null);
+    let newTriggerAnimation = $state(null);
+    let newTriggerDuration = $state(1000);
+    let newTriggerLooping = $state(false);
+    let newTriggerEasing = $state('linear');
 
-    function startListening() {
-        isListening = true;
-        detectedTriggers = [];
+    const TRIGGER_TYPES = [
+        { value: 'pressed', label: 'Pressed', description: 'Trigger when key/button is pressed down' },
+        { value: 'not-pressed', label: 'Not Pressed', description: 'Active when key/button is NOT pressed' },
+        { value: 'always', label: 'Always', description: 'Infinite loop animation' }
+    ];
 
-        // Listen for raw input events
-        const triggerHandler = ({ mapping, velocity }) => {
-            if (!isListening) return;
-            // Ignore if this is a mapped trigger
-        };
+    const EASING_FUNCTIONS = [
+        'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out',
+        'cubic-bezier(0.4, 0.0, 0.2, 1)', // Material Design
+        'cubic-bezier(0.68, -0.55, 0.265, 1.55)' // Back easing
+    ];
 
-        const rawInputHandler = (event) => {
-            if (!isListening) return;
-
-            const { deviceId, controlId, type, device } = event;
-
-            // Check if this trigger already exists in detected list
-            const existing = detectedTriggers.find(
-                t => t.deviceId === deviceId && t.controlId === controlId
-            );
-
-            if (!existing) {
-                const trigger = {
-                    id: `${deviceId}-${controlId}`,
-                    deviceId,
-                    controlId,
-                    deviceName: device?.name || deviceId,
-                    deviceType: device?.type || 'unknown',
-                    type,
-                    timestamp: Date.now()
-                };
-
-                detectedTriggers = [...detectedTriggers, trigger];
-            }
-        };
-
-        // Listen to input controller for raw inputs
-        const devices = inputController.getInputDevices();
-        for (const device of devices) {
-            const handler = (eventData) => {
-                rawInputHandler({
-                    deviceId: device.id,
-                    controlId: eventData.controlId,
-                    type: eventData.velocity !== undefined ? 'trigger' : 'change',
-                    device
-                });
-            };
-
-            device.on('trigger', handler);
-            device.on('change', handler);
-
-            inputEventHandlers.push({ device, event: 'trigger', handler });
-            inputEventHandlers.push({ device, event: 'change', handler });
-        }
-
-        inputController.on('deviceadded', handleDeviceAdded);
+    function refreshData() {
+        availableInputs = mappingLibrary.getAll().filter(m => m.mode === 'input');
+        availableAnimations = animationLibrary.getAll();
+        triggers = mappingLibrary.getAll().filter(m => m.mode === 'trigger');
     }
 
-    function handleDeviceAdded(device) {
-        if (!isListening) return;
-
-        const handler = (eventData) => {
-            const rawInputHandler = (event) => {
-                if (!isListening) return;
-
-                const { deviceId, controlId, type, device } = event;
-
-                const existing = detectedTriggers.find(
-                    t => t.deviceId === deviceId && t.controlId === controlId
-                );
-
-                if (!existing) {
-                    const trigger = {
-                        id: `${deviceId}-${controlId}`,
-                        deviceId,
-                        controlId,
-                        deviceName: device?.name || deviceId,
-                        deviceType: device?.type || 'unknown',
-                        type,
-                        timestamp: Date.now()
-                    };
-
-                    detectedTriggers = [...detectedTriggers, trigger];
-                }
-            };
-
-            rawInputHandler({
-                deviceId: device.id,
-                controlId: eventData.controlId,
-                type: eventData.velocity !== undefined ? 'trigger' : 'change',
-                device
-            });
-        };
-
-        device.on('trigger', handler);
-        device.on('change', handler);
-
-        inputEventHandlers.push({ device, event: 'trigger', handler });
-        inputEventHandlers.push({ device, event: 'change', handler });
+    function openNewTriggerDialog() {
+        newTriggerInput = availableInputs[0]?.id || null;
+        newTriggerType = 'pressed';
+        newTriggerDevice = devices[0]?.id || null;
+        newTriggerAnimation = availableAnimations[0]?.name || null;
+        newTriggerDuration = 1000;
+        newTriggerLooping = false;
+        newTriggerEasing = 'linear';
+        newTriggerDialog?.showModal();
     }
 
-    function stopListening() {
-        isListening = false;
+    function createTrigger() {
+        if (!newTriggerInput || !newTriggerDevice || !newTriggerAnimation) return;
 
-        // Remove all event handlers
-        for (const { device, event, handler } of inputEventHandlers) {
-            device.off(event, handler);
-        }
-        inputEventHandlers = [];
+        const inputMapping = mappingLibrary.get(newTriggerInput);
+        if (!inputMapping) return;
 
-        inputController.off('deviceadded', handleDeviceAdded);
-    }
-
-    function configureTrigger(trigger) {
-        configuringTrigger = trigger;
-        triggerName = formatTriggerName(trigger);
-        configureDialog?.showModal();
-    }
-
-    function formatTriggerName(trigger) {
-        const devicePart = trigger.deviceName.replace(/\s+/g, '_');
-        const controlPart = trigger.controlId.replace(/[^a-zA-Z0-9]/g, '_');
-        return `${devicePart}_${controlPart}`;
-    }
-
-    function saveTrigger() {
-        if (!configuringTrigger || !triggerName.trim()) return;
-
-        // Create a new mapping
-        const mapping = {
-            name: triggerName.trim(),
+        // Create trigger mapping
+        const trigger = {
+            name: `${inputMapping.name}_${newTriggerType}_${newTriggerAnimation}`,
             mode: 'trigger',
-            inputDeviceId: configuringTrigger.deviceId,
-            inputControlId: configuringTrigger.controlId,
-            animationName: null,
-            duration: 1000,
-            easing: 'linear',
-            iterations: 1,
-            targetDeviceIds: []
+            triggerType: newTriggerType,
+            inputDeviceId: inputMapping.inputDeviceId,
+            inputControlId: inputMapping.inputControlId,
+            animationName: newTriggerAnimation,
+            targetDeviceIds: [newTriggerDevice],
+            duration: newTriggerDuration,
+            easing: newTriggerEasing,
+            iterations: newTriggerLooping ? 'infinite' : 1
         };
 
-        mappingLibrary.add(mapping);
-        refreshMappings();
-
-        // Remove from detected triggers
-        detectedTriggers = detectedTriggers.filter(t => t.id !== configuringTrigger.id);
-
-        configureDialog?.close();
-        configuringTrigger = null;
-        triggerName = '';
+        mappingLibrary.add(trigger);
+        refreshData();
+        newTriggerDialog?.close();
     }
 
-    function removeTrigger(trigger) {
-        detectedTriggers = detectedTriggers.filter(t => t.id !== trigger.id);
+    function deleteTrigger(triggerId) {
+        mappingLibrary.remove(triggerId);
+        refreshData();
     }
 
-    function deleteMapping(mappingId) {
-        mappingLibrary.remove(mappingId);
-        refreshMappings();
+    function getInputName(inputDeviceId, inputControlId) {
+        const input = availableInputs.find(
+            i => i.inputDeviceId === inputDeviceId && i.inputControlId === inputControlId
+        );
+        return input?.name || `${inputDeviceId}_${inputControlId}`;
     }
 
-    function refreshMappings() {
-        savedMappings = mappingLibrary.getAll();
+    function getDeviceName(deviceId) {
+        const device = devices.find(d => d.id === deviceId);
+        return device?.name || deviceId;
     }
 
-    function getTriggerIcon(deviceType) {
-        switch (deviceType) {
-            case 'keyboard':
-                return keyboardIcon;
-            case 'midi':
-                return midiIcon;
-            default:
-                return midiIcon;
-        }
+    function getTriggerTypeLabel(type) {
+        const typeInfo = TRIGGER_TYPES.find(t => t.value === type);
+        return typeInfo?.label || type;
+    }
+
+    function getTriggerClassName(trigger) {
+        // Generate CSS class name for this trigger
+        const controlId = trigger.inputControlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+        const suffix = trigger.triggerType === 'pressed' ? 'down' :
+                       trigger.triggerType === 'not-pressed' ? 'up' : 'always';
+        return `${controlId}_${suffix}`;
     }
 
     onMount(() => {
-        refreshMappings();
-    });
-
-    onDestroy(() => {
-        stopListening();
+        refreshData();
     });
 </script>
 
 <div class="triggers-view">
     <div class="left-panel">
         <div class="panel-header">
-            <h3>Listen for Inputs</h3>
+            <h3>Create Trigger</h3>
+            <IconButton
+                icon={plusIcon}
+                onclick={openNewTriggerDialog}
+                title="Create new trigger"
+                disabled={availableInputs.length === 0 || availableAnimations.length === 0 || devices.length === 0}
+            />
         </div>
 
-        <div class="listen-section">
-            <p class="instructions">
-                Press any MIDI button, keyboard key, or move any MIDI control to detect it.
-            </p>
-
-            {#if isListening}
-                <Button onclick={stopListening} primary>
-                    Stop Listening
-                </Button>
-            {:else}
-                <Button onclick={startListening} primary>
-                    Start Listening
-                </Button>
+        <div class="info-section">
+            {#if availableInputs.length === 0}
+                <p class="warning">No inputs available. Go to the Inputs tab to detect and save inputs first.</p>
+            {/if}
+            {#if availableAnimations.length === 0}
+                <p class="warning">No animations available. Go to the Animations tab to create animations first.</p>
+            {/if}
+            {#if devices.length === 0}
+                <p class="warning">No devices available. Go to the Devices tab to add devices first.</p>
             {/if}
 
-            {#if isListening}
-                <div class="listening-indicator">
-                    <div class="pulse-dot"></div>
-                    Listening for inputs...
-                </div>
-            {/if}
-        </div>
-
-        {#if detectedTriggers.length > 0}
-            <div class="detected-triggers">
-                <h4>Detected Triggers</h4>
-                <div class="trigger-list">
-                    {#each detectedTriggers as trigger (trigger.id)}
-                        <div class="trigger-item">
-                            <div class="trigger-icon">
-                                {@html getTriggerIcon(trigger.deviceType)}
-                            </div>
-                            <div class="trigger-info">
-                                <div class="trigger-device">{trigger.deviceName}</div>
-                                <div class="trigger-control">{trigger.controlId}</div>
-                            </div>
-                            <div class="trigger-actions">
-                                <Button onclick={() => configureTrigger(trigger)} size="small">
-                                    Configure
-                                </Button>
-                                <IconButton
-                                    icon={trashIcon}
-                                    onclick={() => removeTrigger(trigger)}
-                                    size="small"
-                                    title="Remove"
-                                />
-                            </div>
+            {#if availableInputs.length > 0 && availableAnimations.length > 0 && devices.length > 0}
+                <div class="trigger-types">
+                    <h4>Trigger Types</h4>
+                    {#each TRIGGER_TYPES as type}
+                        <div class="type-info">
+                            <strong>{type.label}:</strong>
+                            <span>{type.description}</span>
                         </div>
                     {/each}
                 </div>
-            </div>
-        {/if}
+            {/if}
+        </div>
     </div>
 
     <div class="right-panel">
         <div class="panel-header">
-            <h3>Saved Triggers</h3>
+            <h3>Triggers</h3>
         </div>
 
-        <div class="mappings-list">
-            {#if savedMappings.length === 0}
-                <p class="empty-state">No triggers configured yet. Start listening to detect inputs!</p>
+        <div class="triggers-list">
+            {#if triggers.length === 0}
+                <p class="empty-state">No triggers created yet. Click the + button to create one!</p>
             {:else}
-                {#each savedMappings as mapping (mapping.id)}
-                    <div class="mapping-item">
-                        <div class="mapping-icon">
-                            {@html getTriggerIcon(
-                                inputController.getInputDevice(mapping.inputDeviceId)?.type || 'unknown'
-                            )}
-                        </div>
-                        <div class="mapping-info">
-                            <div class="mapping-name">{mapping.name}</div>
-                            <div class="mapping-details">
-                                {#if inputController.getInputDevice(mapping.inputDeviceId)}
-                                    {inputController.getInputDevice(mapping.inputDeviceId).name}
-                                {:else}
-                                    {mapping.inputDeviceId}
-                                {/if}
-                                &rarr; {mapping.inputControlId}
-                            </div>
-                            {#if mapping.animationName}
-                                <div class="mapping-animation">Animation: {mapping.animationName}</div>
-                            {:else}
-                                <div class="mapping-warning">No animation assigned</div>
-                            {/if}
-                        </div>
-                        <div class="mapping-actions">
+                {#each triggers as trigger (trigger.id)}
+                    <div class="trigger-item">
+                        <div class="trigger-header">
+                            <div class="trigger-name">{trigger.name}</div>
                             <IconButton
                                 icon={trashIcon}
-                                onclick={() => deleteMapping(mapping.id)}
+                                onclick={() => deleteTrigger(trigger.id)}
                                 title="Delete trigger"
                             />
+                        </div>
+                        <div class="trigger-details">
+                            <div class="detail-row">
+                                <span class="label">Input:</span>
+                                <span class="value">{getInputName(trigger.inputDeviceId, trigger.inputControlId)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Type:</span>
+                                <span class="value type-{trigger.triggerType}">{getTriggerTypeLabel(trigger.triggerType)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Device:</span>
+                                <span class="value">{trigger.targetDeviceIds.map(id => getDeviceName(id)).join(', ')}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Animation:</span>
+                                <span class="value">{trigger.animationName}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Duration:</span>
+                                <span class="value">{trigger.duration}ms</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Loop:</span>
+                                <span class="value">{trigger.iterations === 'infinite' ? 'Yes' : 'No'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">CSS Class:</span>
+                                <span class="value css-class">.{getTriggerClassName(trigger)}</span>
+                            </div>
                         </div>
                     </div>
                 {/each}
@@ -314,32 +209,80 @@
     </div>
 </div>
 
-<!-- Configure Trigger Dialog -->
-<Dialog bind:dialogRef={configureDialog}>
-    <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveTrigger(); }}>
-        <h3>Configure Trigger</h3>
-
-        {#if configuringTrigger}
-            <div class="dialog-info">
-                <p><strong>Device:</strong> {configuringTrigger.deviceName}</p>
-                <p><strong>Control:</strong> {configuringTrigger.controlId}</p>
-            </div>
-        {/if}
+<!-- New Trigger Dialog -->
+<Dialog bind:dialogRef={newTriggerDialog}>
+    <form method="dialog" onsubmit={(e) => { e.preventDefault(); createTrigger(); }}>
+        <h3>Create New Trigger</h3>
 
         <div class="dialog-field">
-            <label for="trigger-name">Trigger Name:</label>
+            <label for="trigger-input">Input:</label>
+            <select id="trigger-input" bind:value={newTriggerInput}>
+                {#each availableInputs as input}
+                    <option value={input.id}>{input.name}</option>
+                {/each}
+            </select>
+        </div>
+
+        <div class="dialog-field">
+            <label for="trigger-type">Trigger Type:</label>
+            <select id="trigger-type" bind:value={newTriggerType}>
+                {#each TRIGGER_TYPES as type}
+                    <option value={type.value}>{type.label} - {type.description}</option>
+                {/each}
+            </select>
+        </div>
+
+        <div class="dialog-field">
+            <label for="trigger-device">Device:</label>
+            <select id="trigger-device" bind:value={newTriggerDevice}>
+                {#each devices as device}
+                    <option value={device.id}>{device.name}</option>
+                {/each}
+            </select>
+        </div>
+
+        <div class="dialog-field">
+            <label for="trigger-animation">Animation:</label>
+            <select id="trigger-animation" bind:value={newTriggerAnimation}>
+                {#each availableAnimations as animation}
+                    <option value={animation.name}>{animation.name}</option>
+                {/each}
+            </select>
+        </div>
+
+        <div class="dialog-field">
+            <label for="trigger-duration">Duration (ms):</label>
             <input
-                id="trigger-name"
-                type="text"
-                bind:value={triggerName}
-                placeholder="e.g., play_button"
-                autofocus
+                id="trigger-duration"
+                type="number"
+                bind:value={newTriggerDuration}
+                min="100"
+                step="100"
             />
         </div>
 
+        <div class="dialog-field">
+            <label for="trigger-easing">Easing:</label>
+            <select id="trigger-easing" bind:value={newTriggerEasing}>
+                {#each EASING_FUNCTIONS as easing}
+                    <option value={easing}>{easing}</option>
+                {/each}
+            </select>
+        </div>
+
+        <div class="dialog-field checkbox-field">
+            <label>
+                <input
+                    type="checkbox"
+                    bind:checked={newTriggerLooping}
+                />
+                Loop animation infinitely
+            </label>
+        </div>
+
         <div class="dialog-buttons">
-            <Button type="button" onclick={() => configureDialog?.close()}>Cancel</Button>
-            <Button type="submit" primary>Save Trigger</Button>
+            <Button type="button" onclick={() => newTriggerDialog?.close()}>Cancel</Button>
+            <Button type="submit" primary>Create Trigger</Button>
         </div>
     </form>
 </Dialog>
@@ -352,7 +295,7 @@
     }
 
     .left-panel {
-        width: 400px;
+        width: 350px;
         border-right: 1px solid #ddd;
         display: flex;
         flex-direction: column;
@@ -369,6 +312,9 @@
     .panel-header {
         padding: 15px;
         border-bottom: 1px solid #ddd;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
 
     .panel-header h3 {
@@ -376,189 +322,126 @@
         font-size: 12pt;
     }
 
-    .listen-section {
-        padding: 20px;
-        border-bottom: 1px solid #ddd;
-    }
-
-    .instructions {
-        margin: 0 0 15px 0;
-        font-size: 10pt;
-        color: #666;
-        line-height: 1.5;
-    }
-
-    .listening-indicator {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 15px;
-        padding: 12px;
-        background: #e3f2fd;
-        border-radius: 4px;
-        color: #1976d2;
-        font-weight: 500;
-        font-size: 10pt;
-    }
-
-    .pulse-dot {
-        width: 12px;
-        height: 12px;
-        background: #2196f3;
-        border-radius: 50%;
-        animation: pulse 1.5s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-        0%, 100% {
-            opacity: 1;
-            transform: scale(1);
-        }
-        50% {
-            opacity: 0.5;
-            transform: scale(0.8);
-        }
-    }
-
-    .detected-triggers {
+    .info-section {
         flex: 1;
         overflow-y: auto;
-        padding: 15px;
+        padding: 20px;
     }
 
-    .detected-triggers h4 {
-        margin: 0 0 10px 0;
-        font-size: 11pt;
-        color: #333;
-    }
-
-    .trigger-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .trigger-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
+    .warning {
         padding: 12px;
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 4px;
+        color: #856404;
+        font-size: 10pt;
+        line-height: 1.5;
+        margin-bottom: 15px;
+    }
+
+    .trigger-types {
+        margin-top: 20px;
+    }
+
+    .trigger-types h4 {
+        margin: 0 0 12px 0;
+        font-size: 11pt;
+    }
+
+    .type-info {
+        padding: 10px;
         background: white;
         border: 1px solid #ddd;
         border-radius: 4px;
-        animation: slideIn 0.2s ease-out;
-    }
-
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateX(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-
-    .trigger-icon {
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #e3f2fd;
-        border-radius: 4px;
-        color: #2196f3;
-    }
-
-    .trigger-icon :global(svg) {
-        width: 20px;
-        height: 20px;
-    }
-
-    .trigger-info {
-        flex: 1;
-    }
-
-    .trigger-device {
-        font-weight: 600;
-        font-size: 10pt;
-        margin-bottom: 2px;
-    }
-
-    .trigger-control {
+        margin-bottom: 8px;
         font-size: 9pt;
+        line-height: 1.5;
+    }
+
+    .type-info strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #333;
+    }
+
+    .type-info span {
         color: #666;
-        font-family: var(--font-stack-mono);
     }
 
-    .trigger-actions {
-        display: flex;
-        gap: 8px;
-    }
-
-    .mappings-list {
+    .triggers-list {
         flex: 1;
         overflow-y: auto;
         padding: 15px;
     }
 
-    .mapping-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-        margin-bottom: 8px;
+    .trigger-item {
         background: #f9f9f9;
         border: 1px solid #ddd;
         border-radius: 4px;
+        margin-bottom: 12px;
+        overflow: hidden;
     }
 
-    .mapping-icon {
-        width: 32px;
-        height: 32px;
+    .trigger-header {
         display: flex;
         align-items: center;
-        justify-content: center;
-        background: #e8f5e9;
-        border-radius: 4px;
-        color: #4caf50;
+        justify-content: space-between;
+        padding: 12px;
+        background: white;
+        border-bottom: 1px solid #ddd;
     }
 
-    .mapping-icon :global(svg) {
-        width: 20px;
-        height: 20px;
-    }
-
-    .mapping-info {
-        flex: 1;
-    }
-
-    .mapping-name {
+    .trigger-name {
         font-weight: 600;
-        font-size: 10pt;
-        margin-bottom: 4px;
+        font-size: 11pt;
     }
 
-    .mapping-details {
-        font-size: 9pt;
-        color: #666;
-        margin-bottom: 4px;
+    .trigger-details {
+        padding: 12px;
     }
 
-    .mapping-animation {
-        font-size: 9pt;
-        color: #4caf50;
-    }
-
-    .mapping-warning {
-        font-size: 9pt;
-        color: #ff9800;
-    }
-
-    .mapping-actions {
+    .detail-row {
         display: flex;
-        gap: 8px;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 9pt;
+        border-bottom: 1px solid #eee;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-row .label {
+        color: #666;
+        font-weight: 500;
+    }
+
+    .detail-row .value {
+        color: #333;
+        text-align: right;
+    }
+
+    .detail-row .value.type-pressed {
+        color: #4caf50;
+        font-weight: 600;
+    }
+
+    .detail-row .value.type-not-pressed {
+        color: #ff9800;
+        font-weight: 600;
+    }
+
+    .detail-row .value.type-always {
+        color: #2196f3;
+        font-weight: 600;
+    }
+
+    .detail-row .value.css-class {
+        font-family: var(--font-stack-mono);
+        background: #f5f5f5;
+        padding: 2px 6px;
+        border-radius: 3px;
     }
 
     .empty-state {
@@ -566,18 +449,6 @@
         color: #999;
         font-size: 10pt;
         padding: 40px 20px;
-    }
-
-    .dialog-info {
-        margin-bottom: 20px;
-        padding: 12px;
-        background: #f5f5f5;
-        border-radius: 4px;
-        font-size: 10pt;
-    }
-
-    .dialog-info p {
-        margin: 4px 0;
     }
 
     .dialog-field {
@@ -588,14 +459,28 @@
         display: block;
         margin-bottom: 5px;
         font-weight: 500;
+        font-size: 10pt;
     }
 
-    .dialog-field input {
+    .dialog-field input,
+    .dialog-field select {
         width: 100%;
         padding: 8px;
         border: 1px solid #ddd;
         border-radius: 4px;
         font-size: 10pt;
+    }
+
+    .checkbox-field label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+    }
+
+    .checkbox-field input[type="checkbox"] {
+        width: auto;
+        margin: 0;
     }
 
     .dialog-buttons {

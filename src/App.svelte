@@ -11,6 +11,7 @@
     import DevicesView from './components/views/DevicesView.svelte';
     import TimelineView from './components/views/TimelineView.svelte';
     import AnimationsView from './components/views/AnimationsView.svelte';
+    import InputsView from './components/views/InputsView.svelte';
     import TriggersView from './components/views/TriggersView.svelte';
     import CSSView from './components/views/CSSView.svelte';
 
@@ -111,10 +112,18 @@
         />
     </div>
 
-    <div class="view-container" class:hidden={view !== 'triggers'}>
-        <TriggersView
+    <div class="view-container" class:hidden={view !== 'inputs'}>
+        <InputsView
             {inputController}
             {mappingLibrary}
+        />
+    </div>
+
+    <div class="view-container" class:hidden={view !== 'triggers'}>
+        <TriggersView
+            {mappingLibrary}
+            {animationLibrary}
+            {devices}
         />
     </div>
 
