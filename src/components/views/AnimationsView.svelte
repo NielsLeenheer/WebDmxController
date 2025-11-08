@@ -39,6 +39,7 @@
     let draggingKeyframe = $state(null);
     let dragStartX = $state(0);
     let dragStartTime = $state(0);
+    let hasActuallyDragged = $state(false);
 
     // Animation version for forcing re-renders
     let animationVersion = $state(0);
@@ -179,6 +180,7 @@
         draggingKeyframe = { keyframe, index };
         dragStartX = e.clientX;
         dragStartTime = keyframe.time;
+        hasActuallyDragged = false;
 
         document.addEventListener('mousemove', handleKeyframeMouseMove);
         document.addEventListener('mouseup', handleKeyframeMouseUp);
@@ -188,6 +190,12 @@
         if (!draggingKeyframe || !selectedAnimation) return;
 
         const deltaX = e.clientX - dragStartX;
+
+        // Only start dragging if we've moved more than 3 pixels
+        if (Math.abs(deltaX) > 3) {
+            hasActuallyDragged = true;
+        }
+
         const deltaTime = deltaX / timelineWidth;
         let newTime = dragStartTime + deltaTime;
 
@@ -327,7 +335,8 @@
                             onmousedown={(e) => handleKeyframeMouseDown(e, keyframe, index)}
                             onclick={(e) => {
                                 e.stopPropagation();
-                                if (!draggingKeyframe) {
+                                // Only select if we didn't just drag
+                                if (!hasActuallyDragged) {
                                     selectKeyframe(index);
                                 }
                             }}

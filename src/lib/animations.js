@@ -48,7 +48,8 @@ class Keyframe {
 		const props = Object.entries(properties)
 			.map(([prop, value]) => `${prop}: ${value}`)
 			.join('; ');
-		return `${this.time * 100}% { ${props}; }`;
+		const percent = Math.round(this.time * 100);
+		return `${percent}% { ${props}; }`;
 	}
 }
 
