@@ -33,7 +33,8 @@
     let editingKeyframeValues = $state([0, 0, 0]);
 
     // Timeline settings
-    const timelineWidth = 800; // Fixed width for animation timeline (represents 0% to 100%)
+    let timelineElement = $state(null);
+    let timelineWidth = $state(800); // Dynamic width for animation timeline (represents 0% to 100%)
 
     // Keyframe dragging
     let draggingKeyframe = $state(null);
@@ -325,7 +326,8 @@
                 </div>
                 <div
                     class="timeline"
-                    style="width: {timelineWidth}px"
+                    bind:this={timelineElement}
+                    bind:clientWidth={timelineWidth}
                     onclick={handleTimelineClick}
                 >
                     <!-- Gradient segments showing color transitions -->
@@ -568,7 +570,7 @@
         border-bottom: 1px solid #ddd;
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: stretch;
         gap: 10px;
     }
 
@@ -576,10 +578,13 @@
         font-size: 9pt;
         color: #888;
         font-style: italic;
+        text-align: center;
     }
 
     .timeline {
         position: relative;
+        width: 100%;
+        max-width: 100%;
         height: 60px;
         background: #f5f5f5;
         border: 1px solid #ddd;
