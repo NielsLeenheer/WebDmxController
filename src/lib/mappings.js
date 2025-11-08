@@ -162,7 +162,38 @@ export class InputMapping {
 export class MappingLibrary {
 	constructor() {
 		this.mappings = new Map(); // id -> InputMapping
+		this.listeners = new Map(); // event -> Set of callbacks
 		this.load();
+	}
+
+	/**
+	 * Add event listener
+	 */
+	on(event, callback) {
+		if (!this.listeners.has(event)) {
+			this.listeners.set(event, new Set());
+		}
+		this.listeners.get(event).add(callback);
+	}
+
+	/**
+	 * Remove event listener
+	 */
+	off(event, callback) {
+		if (this.listeners.has(event)) {
+			this.listeners.get(event).delete(callback);
+		}
+	}
+
+	/**
+	 * Emit event
+	 */
+	_emit(event, data) {
+		if (!this.listeners.has(event)) return;
+		const callbacks = this.listeners.get(event);
+		for (const callback of callbacks) {
+			callback(data);
+		}
 	}
 
 	/**
@@ -171,6 +202,7 @@ export class MappingLibrary {
 	add(mapping) {
 		this.mappings.set(mapping.id, mapping);
 		this.save();
+		this._emit('changed', { type: 'add', mapping });
 		return mapping;
 	}
 
@@ -178,8 +210,10 @@ export class MappingLibrary {
 	 * Remove a mapping
 	 */
 	remove(id) {
+		const mapping = this.mappings.get(id);
 		this.mappings.delete(id);
 		this.save();
+		this._emit('changed', { type: 'remove', mapping, id });
 	}
 
 	/**

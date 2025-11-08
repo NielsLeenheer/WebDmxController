@@ -53,7 +53,7 @@ export class CSSGenerator {
 		// Input mappings (trigger mode)
 		const mappingsCSS = this.mappingLibrary.toCSS(devices);
 		if (mappingsCSS) {
-			parts.push('/* === Input Mappings === */');
+			parts.push('/* === Triggers === */');
 			parts.push(mappingsCSS);
 			parts.push('');
 		}
@@ -88,6 +88,11 @@ export class CSSGenerator {
 	_generateDeviceDefaults(device) {
 		const deviceType = DEVICE_TYPES[device.type];
 		if (!deviceType) return null;
+
+		// Skip default values for linked devices
+		if (device.isLinked && device.isLinked()) {
+			return null;
+		}
 
 		const props = [];
 

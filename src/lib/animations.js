@@ -199,7 +199,38 @@ export class Animation {
 export class AnimationLibrary {
 	constructor() {
 		this.animations = new Map(); // name -> Animation
+		this.listeners = new Map(); // event -> Set of callbacks
 		this.load();
+	}
+
+	/**
+	 * Add event listener
+	 */
+	on(event, callback) {
+		if (!this.listeners.has(event)) {
+			this.listeners.set(event, new Set());
+		}
+		this.listeners.get(event).add(callback);
+	}
+
+	/**
+	 * Remove event listener
+	 */
+	off(event, callback) {
+		if (this.listeners.has(event)) {
+			this.listeners.get(event).delete(callback);
+		}
+	}
+
+	/**
+	 * Emit event
+	 */
+	_emit(event, data) {
+		if (!this.listeners.has(event)) return;
+		const callbacks = this.listeners.get(event);
+		for (const callback of callbacks) {
+			callback(data);
+		}
 	}
 
 	/**
@@ -208,14 +239,17 @@ export class AnimationLibrary {
 	add(animation) {
 		this.animations.set(animation.name, animation);
 		this.save();
+		this._emit('changed', { type: 'add', animation });
 	}
 
 	/**
 	 * Remove an animation
 	 */
 	remove(name) {
+		const animation = this.animations.get(name);
 		this.animations.delete(name);
 		this.save();
+		this._emit('changed', { type: 'remove', animation, name });
 	}
 
 	/**

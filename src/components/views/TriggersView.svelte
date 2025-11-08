@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { InputMapping } from '../../lib/mappings.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
@@ -44,6 +44,10 @@
         availableInputs = mappingLibrary.getAll().filter(m => m.mode === 'input');
         availableAnimations = animationLibrary.getAll();
         triggers = mappingLibrary.getAll().filter(m => m.mode === 'trigger');
+    }
+
+    function handleMappingChange() {
+        refreshData();
     }
 
     function openNewTriggerDialog() {
@@ -114,6 +118,11 @@
 
     onMount(() => {
         refreshData();
+        mappingLibrary.on('changed', handleMappingChange);
+    });
+
+    onDestroy(() => {
+        mappingLibrary.off('changed', handleMappingChange);
     });
 </script>
 
