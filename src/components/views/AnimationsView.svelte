@@ -238,13 +238,13 @@
     }
 
     // Generate CSS for preview (reactive to animationVersion)
-    let previewCSS = $derived(() => {
+    let previewCSS = $derived.by(() => {
         animationVersion; // Make reactive to animationVersion
         return selectedAnimation ? selectedAnimation.toCSS() : '';
     });
 
     // Get gradient segments (reactive to animationVersion)
-    let gradientSegments = $derived(() => {
+    let gradientSegments = $derived.by(() => {
         animationVersion; // Make reactive to animationVersion
         return selectedAnimation ? selectedAnimation.getGradientSegments(timelineWidth) : [];
     });
