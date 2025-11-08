@@ -116,10 +116,12 @@
         const defaultValues = new Array(numChannels).fill(0);
 
         selectedAnimation.addKeyframe(time, defaultValues);
+
+        // Force Svelte to detect the change by reassigning
+        selectedAnimation = selectedAnimation;
         animationVersion++;
 
         animationLibrary.save();
-        refreshAnimationsList();
 
         // Select the new keyframe for editing
         const newKeyframeIndex = selectedAnimation.keyframes.findIndex(kf => Math.abs(kf.time - time) < 0.001);
@@ -135,10 +137,10 @@
         }
 
         selectedAnimation.keyframes = selectedAnimation.keyframes.filter((_, i) => i !== index);
+        selectedAnimation = selectedAnimation;
         animationVersion++;
 
         animationLibrary.save();
-        refreshAnimationsList();
         selectedKeyframeIndex = null;
     }
 
@@ -158,9 +160,9 @@
         const keyframe = selectedAnimation.keyframes[selectedKeyframeIndex];
         keyframe.values = [...editingKeyframeValues];
 
+        selectedAnimation = selectedAnimation;
         animationVersion++;
         animationLibrary.save();
-        refreshAnimationsList();
     }
 
     // Timeline interaction functions
@@ -212,6 +214,7 @@
 
         // Re-sort keyframes and create new array reference for reactivity
         selectedAnimation.keyframes = [...selectedAnimation.keyframes].sort((a, b) => a.time - b.time);
+        selectedAnimation = selectedAnimation;
 
         // Find new index after sorting
         const newIndex = selectedAnimation.keyframes.indexOf(keyframe);
@@ -228,7 +231,6 @@
         document.removeEventListener('mouseup', handleKeyframeMouseUp);
 
         animationLibrary.save();
-        refreshAnimationsList();
 
         draggingKeyframe = null;
     }
