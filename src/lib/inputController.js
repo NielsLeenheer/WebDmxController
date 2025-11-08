@@ -95,10 +95,13 @@ export class InputController {
 		const mappings = this.mappingLibrary.getByInput(deviceId, controlId);
 
 		for (const mapping of mappings) {
-			if (mapping.mode === 'trigger' && mapping.iterations === 'infinite') {
-				// Release infinite animations
-				this.triggerManager.release(mapping);
-				this._emit('release', { mapping });
+			if (mapping.mode === 'trigger') {
+				// Call release for all trigger types (pressed, not-pressed)
+				// Always triggers don't respond to release
+				if (mapping.triggerType !== 'always') {
+					this.triggerManager.release(mapping);
+					this._emit('release', { mapping });
+				}
 			}
 		}
 	}
