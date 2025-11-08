@@ -30,25 +30,29 @@
     let inputEventHandlers = [];
 
     async function connectStreamDeck() {
-        const device = await inputController.requestHIDDevice(STREAM_DECK_FILTERS);
-        if (device) {
-            // If listening mode is active, also listen to this new device
-            if (isListening) {
-                const handler = (eventData) => {
-                    handleRawInput({
-                        deviceId: device.id,
-                        controlId: eventData.controlId,
-                        type: eventData.velocity !== undefined ? 'trigger' : 'change',
-                        device
-                    });
-                };
+        try {
+            const device = await inputController.requestHIDDevice(STREAM_DECK_FILTERS);
+            if (device) {
+                // If listening mode is active, also listen to this new device
+                if (isListening) {
+                    const handler = (eventData) => {
+                        handleRawInput({
+                            deviceId: device.id,
+                            controlId: eventData.controlId,
+                            type: eventData.velocity !== undefined ? 'trigger' : 'change',
+                            device
+                        });
+                    };
 
-                device.on('trigger', handler);
-                device.on('change', handler);
+                    device.on('trigger', handler);
+                    device.on('change', handler);
 
-                inputEventHandlers.push({ device, event: 'trigger', handler });
-                inputEventHandlers.push({ device, event: 'change', handler });
+                    inputEventHandlers.push({ device, event: 'trigger', handler });
+                    inputEventHandlers.push({ device, event: 'change', handler });
+                }
             }
+        } catch (error) {
+            alert(`Failed to connect Stream Deck: ${error.message}\n\nPlease close the Elgato Stream Deck software and try again.`);
         }
     }
 

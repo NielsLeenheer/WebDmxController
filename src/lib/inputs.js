@@ -387,7 +387,16 @@ export class InputDeviceManager {
 			const devices = await navigator.hid.requestDevice({ filters });
 
 			for (const hidDevice of devices) {
-				await hidDevice.open();
+				// Check if device is already open
+				if (!hidDevice.opened) {
+					try {
+						await hidDevice.open();
+					} catch (openError) {
+						console.error('Failed to open HID device:', openError);
+						throw new Error(`Cannot open device. Make sure it's not being used by another application (like Elgato Stream Deck software). Error: ${openError.message}`);
+					}
+				}
+
 				const device = new HIDInputDevice(hidDevice);
 				this.devices.set(device.id, device);
 				this._emit('deviceadded', device);
@@ -395,8 +404,10 @@ export class InputDeviceManager {
 			}
 		} catch (e) {
 			console.error('Failed to request HID device:', e);
-			return null;
+			throw e; // Re-throw so the UI can display the error
 		}
+
+		return null;
 	}
 
 	/**
