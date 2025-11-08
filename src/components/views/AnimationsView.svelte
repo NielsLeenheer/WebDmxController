@@ -6,6 +6,7 @@
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
     import DeviceControls from '../controls/DeviceControls.svelte';
+    import AnimationPreview from '../animations/AnimationPreview.svelte';
 
     let {
         animationLibrary,
@@ -20,7 +21,6 @@
     let selectedAnimation = $state(null);
     let selectedKeyframeIndex = $state(null);
     let animationsList = $state([]);
-    let previewElement = $state(null);
 
     // Dialog states
     let newAnimationDialog = $state(null);
@@ -241,22 +241,6 @@
         return keyframe.time * timelineWidth;
     }
 
-    function previewAnimation() {
-        if (!selectedAnimation || !previewElement) return;
-
-        // Apply animation to preview element
-        previewElement.style.animation = 'none';
-        setTimeout(() => {
-            previewElement.style.animation = `${selectedAnimation.name} 3s linear infinite`;
-        }, 10);
-    }
-
-    // Generate CSS for preview (reactive to animationVersion)
-    let previewCSS = $derived.by(() => {
-        animationVersion; // Make reactive to animationVersion
-        return selectedAnimation ? selectedAnimation.toCSS() : '';
-    });
-
     // Get gradient segments (reactive to animationVersion)
     let gradientSegments = $derived.by(() => {
         animationVersion; // Make reactive to animationVersion
@@ -310,14 +294,6 @@
             <div class="panel-header">
                 <h3>{selectedAnimation.name}</h3>
                 <div class="device-type-badge">{DEVICE_TYPES[selectedAnimation.deviceType].name}</div>
-                <div class="header-actions">
-                    <Button onclick={previewAnimation}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8 5v14l11-7z"/>
-                        </svg>
-                        Preview
-                    </Button>
-                </div>
             </div>
 
             <div class="timeline-container">
@@ -398,14 +374,12 @@
         {#if selectedAnimation}
             <div class="preview-section">
                 <h4>Animation Preview</h4>
-                <div class="preview-container">
-                    <div class="preview-box" bind:this={previewElement}></div>
-                </div>
+                <AnimationPreview animation={selectedAnimation} animationVersion={animationVersion} />
             </div>
 
             <div class="css-section">
                 <h4>Generated CSS</h4>
-                <pre class="css-output">{previewCSS}</pre>
+                <pre class="css-output">{selectedAnimation.toCSS()}</pre>
             </div>
         {:else}
             <p class="empty-state">No animation selected</p>
@@ -457,13 +431,6 @@
     </div>
 </Dialog>
 
-<!-- Inject preview animation CSS -->
-{#if selectedAnimation}
-    <style>
-        {@html previewCSS}
-    </style>
-{/if}
-
 <style>
     .animations-view {
         display: flex;
@@ -508,11 +475,6 @@
         margin: 0;
         font-size: 12pt;
         flex: 1;
-    }
-
-    .header-actions {
-        display: flex;
-        gap: 10px;
     }
 
     .animations-list {
@@ -680,25 +642,6 @@
     .preview-section h4 {
         margin: 0 0 10px 0;
         font-size: 10pt;
-    }
-
-    .preview-container {
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        padding: 20px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 150px;
-    }
-
-    .preview-box {
-        width: 80px;
-        height: 80px;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 4px;
     }
 
     .css-section {

@@ -32,12 +32,12 @@ class Keyframe {
 			const tiltPercent = ((tilt / 255) * 100) - 50;
 
 			return {
-				'background-color': color,
+				color,
 				transform: `translate(${panPercent}%, ${tiltPercent}%)`
 			};
 		}
 
-		return { 'background-color': color };
+		return { color };
 	}
 
 	/**
