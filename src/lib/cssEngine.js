@@ -27,6 +27,21 @@ export class CSSGenerator {
 		parts.push('/* This stylesheet is auto-generated from your animations and input mappings */');
 		parts.push('/* You can edit this CSS and the changes will be reflected in the interface */\n');
 
+		// Default device values
+		if (devices.length > 0) {
+			parts.push('/* === Default Device Values === */');
+			parts.push('/* These selectors set the default state for each device */');
+
+			for (const device of devices) {
+				const deviceDefaults = this._generateDeviceDefaults(device);
+				if (deviceDefaults) {
+					parts.push(deviceDefaults);
+				}
+			}
+
+			parts.push('');
+		}
+
 		// Animations (@keyframes)
 		const animationsCSS = this.animationLibrary.toCSS();
 		if (animationsCSS) {
@@ -59,7 +74,73 @@ export class CSSGenerator {
 			parts.push('}\n');
 		}
 
+		// User customization section
+		parts.push('/* === Custom Styles === */');
+		parts.push('/* Add your custom CSS below to override device defaults and apply animations */');
+		parts.push('');
+
 		return parts.join('\n');
+	}
+
+	/**
+	 * Generate default CSS for a single device
+	 */
+	_generateDeviceDefaults(device) {
+		const deviceType = DEVICE_TYPES[device.type];
+		if (!deviceType) return null;
+
+		const props = [];
+
+		// Get default values from device
+		const defaultValues = device.defaultValues || [];
+
+		switch (device.type) {
+			case 'RGB':
+				const [r, g, b] = defaultValues;
+				props.push(`  color: rgb(${r || 0}, ${g || 0}, ${b || 0});`);
+				break;
+
+			case 'RGBA':
+				const [r2, g2, b2, a] = defaultValues;
+				props.push(`  color: rgb(${r2 || 0}, ${g2 || 0}, ${b2 || 0});`);
+				props.push(`  /* Amber channel: ${a || 0} */`);
+				break;
+
+			case 'RGBW':
+				const [r3, g3, b3, w] = defaultValues;
+				props.push(`  color: rgb(${r3 || 0}, ${g3 || 0}, ${b3 || 0});`);
+				props.push(`  /* White channel: ${w || 0} */`);
+				break;
+
+			case 'DIMMER':
+				const intensity = defaultValues[0] || 0;
+				props.push(`  opacity: ${(intensity / 255).toFixed(2)};`);
+				break;
+
+			case 'SMOKE':
+				const output = defaultValues[0] || 0;
+				props.push(`  --smoke-output: ${output};`);
+				break;
+
+			case 'MOVING_HEAD':
+				const [pan, tilt, dimmer, r4, g4, b4, w2] = defaultValues;
+				const panPercent = pan !== undefined ? Math.round((pan / 255) * 100 - 50) : 0;
+				const tiltPercent = tilt !== undefined ? Math.round((tilt / 255) * 100 - 50) : 0;
+				props.push(`  translate: ${panPercent}% ${tiltPercent}%;`);
+				props.push(`  opacity: ${dimmer !== undefined ? (dimmer / 255).toFixed(2) : '1'};`);
+				props.push(`  color: rgb(${r4 || 0}, ${g4 || 0}, ${b4 || 0});`);
+				if (w2 !== undefined) {
+					props.push(`  /* White channel: ${w2} */`);
+				}
+				break;
+
+			default:
+				return null;
+		}
+
+		if (props.length === 0) return null;
+
+		return `#${device.cssId} {\n${props.join('\n')}\n}`;
 	}
 }
 
