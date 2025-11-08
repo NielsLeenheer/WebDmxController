@@ -109,6 +109,10 @@
         const defaultValues = new Array(numChannels).fill(0);
 
         selectedAnimation.addKeyframe(time, defaultValues);
+
+        // Create new array reference to trigger reactivity
+        selectedAnimation.keyframes = [...selectedAnimation.keyframes];
+
         animationLibrary.save();
         refreshAnimationsList();
         animationVersion++;
@@ -117,7 +121,7 @@
         selectedAnimation = animationLibrary.get(selectedAnimation.name);
 
         // Select the new keyframe for editing
-        const newKeyframeIndex = selectedAnimation.keyframes.findIndex(kf => kf.time === time);
+        const newKeyframeIndex = selectedAnimation.keyframes.findIndex(kf => Math.abs(kf.time - time) < 0.001);
         if (newKeyframeIndex !== -1) {
             selectKeyframe(newKeyframeIndex);
         }
@@ -130,6 +134,9 @@
         }
 
         selectedAnimation.keyframes.splice(index, 1);
+        // Create new array reference to trigger reactivity
+        selectedAnimation.keyframes = [...selectedAnimation.keyframes];
+
         animationLibrary.save();
         refreshAnimationsList();
         animationVersion++;
@@ -206,8 +213,8 @@
         const keyframe = draggingKeyframe.keyframe;
         keyframe.time = newTime;
 
-        // Re-sort keyframes
-        selectedAnimation.keyframes.sort((a, b) => a.time - b.time);
+        // Re-sort keyframes and create new array reference for reactivity
+        selectedAnimation.keyframes = [...selectedAnimation.keyframes].sort((a, b) => a.time - b.time);
 
         // Find new index after sorting
         const newIndex = selectedAnimation.keyframes.indexOf(keyframe);
@@ -326,7 +333,7 @@
                     {/each}
 
                     <!-- Keyframe markers -->
-                    {#each selectedAnimation.keyframes as keyframe, index}
+                    {#each selectedAnimation.keyframes as keyframe, index (keyframe.time + '-' + index)}
                         <div
                             class="timeline-keyframe-marker"
                             class:selected={selectedKeyframeIndex === index}
