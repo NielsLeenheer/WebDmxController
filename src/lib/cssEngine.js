@@ -215,6 +215,9 @@ export class CSSSampler {
 			return null;
 		}
 
+		// Force reflow to ensure getComputedStyle picks up changes
+		element.offsetHeight; // Reading offsetHeight forces a reflow
+
 		const computed = window.getComputedStyle(element);
 		const channels = {};
 
@@ -227,6 +230,13 @@ export class CSSSampler {
 				computedColor: computed.color,
 				computedOpacity: computed.opacity
 			});
+		}
+
+		// TEMPORARY DEBUG: Log computed color every 60 frames
+		if (!this._sampleCount) this._sampleCount = 0;
+		this._sampleCount++;
+		if (this._sampleCount % 60 === 0) {
+			console.log(`[CSSSampler DEBUG] Device ${device.id} computed color:`, computed.color, 'opacity:', computed.opacity);
 		}
 
 		switch (device.type) {
