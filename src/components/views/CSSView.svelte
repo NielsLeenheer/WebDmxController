@@ -9,7 +9,8 @@
         mappingLibrary,
         cssGenerator,
         cssSampler,
-        triggerManager
+        triggerManager,
+        isActive = false
     } = $props();
 
     // Generate CSS-safe ID from device name
@@ -82,7 +83,6 @@ Example animations:
     let currentCSS = $state(getInitialCSS());
 
     let animationFrameId;
-    let isActive = false;
     let previewColors = $state({});
     let deviceOpacities = $state({});
     let devicePanTilt = $state({});
@@ -456,20 +456,6 @@ Example animations:
         localStorage.setItem('dmx-css', updatedCSS);
     }
 
-    function startAnimation() {
-        isActive = true;
-        // Animation loop is always running for preview updates
-    }
-
-    function stopAnimation() {
-        isActive = false;
-        // Stop animation loop completely when component is destroyed
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
-        }
-    }
-
     onMount(() => {
         // Create style element for user CSS
         styleElement = document.createElement('style');
@@ -517,9 +503,8 @@ Example animations:
         });
 
         // Start animation loop (for preview updates, always running)
-        // DMX output is controlled by isActive flag
+        // DMX output is controlled by isActive prop from parent
         if (!animationFrameId) {
-            isActive = true; // Start with DMX output active
             updateDMXFromCSS();
         }
     });
@@ -552,7 +537,12 @@ Example animations:
     });
 
     onDestroy(() => {
-        stopAnimation();
+        // Stop animation loop
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+
         if (styleElement && styleElement.parentNode) {
             styleElement.parentNode.removeChild(styleElement);
         }
