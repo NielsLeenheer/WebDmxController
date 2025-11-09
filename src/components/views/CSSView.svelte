@@ -95,9 +95,17 @@ Example animations:
     let animationTargetsContainer;
     let triggerClassesContainer; // Inner container that receives trigger classes
     let cssEditorElement;
+    let frameCount = 0; // Debug: track animation frames
 
     function updateDMXFromCSS() {
         if (!cssSampler) return;
+
+        frameCount++;
+
+        // Log every 60 frames (~1 second at 60fps) to avoid spam
+        if (frameCount % 60 === 0) {
+            console.log(`[CSSView] Animation loop running, frame ${frameCount}`);
+        }
 
         // Always sample to update preview, regardless of isActive state
         const sampledValues = cssSampler.sampleAll(devices);
@@ -120,7 +128,17 @@ Example animations:
             // ALWAYS update preview colors (even when not active)
             if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
                 const alpha = channels.White !== undefined ? channels.White : 255;
-                previewColors[device.id] = `rgba(${channels.Red}, ${channels.Green}, ${channels.Blue}, ${alpha / 255})`;
+                const newColor = `rgba(${channels.Red}, ${channels.Green}, ${channels.Blue}, ${alpha / 255})`;
+
+                // Log preview color updates
+                if (previewColors[device.id] !== newColor) {
+                    console.log(`[CSSView] Preview color updated for ${device.name}:`, {
+                        old: previewColors[device.id],
+                        new: newColor
+                    });
+                }
+
+                previewColors[device.id] = newColor;
             } else if (channels.Intensity !== undefined) {
                 // Dimmer preview
                 const intensity = channels.Intensity / 255;
