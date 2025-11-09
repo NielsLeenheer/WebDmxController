@@ -184,8 +184,8 @@ export class StreamDeckManager {
 	 */
 	async _setupStreamDeck(streamDeck) {
 		try {
-			// Open the device
-			await streamDeck.open();
+			// Note: requestStreamDecks() and getStreamDecks() return already-opened devices
+			// so we don't need to call streamDeck.open()
 
 			const serialNumber = streamDeck.serialNumber || `streamdeck-${streamDeck.PRODUCT_ID}`;
 
