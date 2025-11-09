@@ -171,7 +171,7 @@
                     >
                         <span class="toggle-slider"></span>
                     </button>
-                    <span class="toggle-label">{isOn ? 'ON' : 'OFF'}</span>
+                    <span class="toggle-label">{isOn ? 'PROBABLY' : 'NONE'}</span>
                 </div>
                 <input
                     type="text"
@@ -367,11 +367,11 @@
     }
 
     .toggle-switch.on {
-        background: #ff9800;
+        background: #4caf50;
     }
 
     .toggle-switch.on:hover {
-        background: #fb8c00;
+        background: #45a049;
     }
 
     .toggle-switch:disabled {
@@ -400,10 +400,10 @@
         font-size: 9pt;
         font-weight: 600;
         color: #666;
-        min-width: 2em;
+        min-width: 4em;
     }
 
     .toggle-switch.on + .toggle-label {
-        color: #ff9800;
+        color: #4caf50;
     }
 </style>
