@@ -10,6 +10,13 @@
     let anchorButtonRef = $state(null);
     let connectedDevices = $state([]);
 
+    // Filter devices by type
+    let streamDeckDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && d.id !== 'keyboard'));
+    let midiDevices = $derived(connectedDevices.filter(d => d.type === 'midi'));
+
+    // MIDI button should be disabled if we already have MIDI access
+    let hasMidiAccess = $derived(midiDevices.length > 0);
+
     function openDevicesDialog() {
         // Update list of connected devices
         if (inputController) {
@@ -24,6 +31,24 @@
 
     function closeDevicesDialog() {
         devicesDialog?.close();
+    }
+
+    // Light dismiss: close dialog when clicking outside
+    function handleDialogClick(event) {
+        const dialog = devicesDialog;
+        if (!dialog) return;
+
+        const rect = dialog.getBoundingClientRect();
+        const isInDialog = (
+            event.clientX >= rect.left &&
+            event.clientX <= rect.right &&
+            event.clientY >= rect.top &&
+            event.clientY <= rect.bottom
+        );
+
+        if (!isInDialog) {
+            closeDevicesDialog();
+        }
     }
 
     async function connectStreamDeck() {
@@ -72,30 +97,43 @@
     </button>
 </header>
 
-<!-- Devices Dialog (non-modal with anchor positioning) -->
+<!-- Devices Dialog (non-modal with anchor positioning and light dismiss) -->
 {#if anchorButtonRef}
-<dialog bind:this={devicesDialog} class="devices-dialog" style="position-anchor: --devices-button">
-    <div class="dialog-header">
-        <h3>Input Devices</h3>
-        <button class="close-btn" onclick={closeDevicesDialog}>×</button>
+<dialog
+    bind:this={devicesDialog}
+    class="devices-dialog"
+    style="position-anchor: --devices-button"
+    onclick={handleDialogClick}
+>
+    <!-- Stream Deck Section -->
+    <div class="device-section">
+        <button class="connect-device-btn" onclick={connectStreamDeck}>
+            Connect Stream Deck
+        </button>
+        {#if streamDeckDevices.length > 0}
+            <div class="device-list">
+                {#each streamDeckDevices as device (device.id)}
+                    <div class="device-item">
+                        <span class="device-name">{device.name}</span>
+                    </div>
+                {/each}
+            </div>
+        {/if}
     </div>
 
-    <div class="dialog-content">
-        <div class="connect-buttons">
-            <button class="connect-device-btn" onclick={connectStreamDeck}>
-                Connect Stream Deck
-            </button>
-            <button class="connect-device-btn" onclick={connectMIDI}>
-                Connect MIDI Device
-            </button>
-        </div>
-
-        {#if connectedDevices.length > 0}
-            <div class="devices-list">
-                <h4>Connected Devices</h4>
-                {#each connectedDevices as device (device.id)}
+    <!-- MIDI Section -->
+    <div class="device-section">
+        <button
+            class="connect-device-btn"
+            onclick={connectMIDI}
+            disabled={hasMidiAccess}
+        >
+            Connect MIDI Device
+        </button>
+        {#if midiDevices.length > 0}
+            <div class="device-list">
+                {#each midiDevices as device (device.id)}
                     <div class="device-item">
-                        <span class="device-type">{device.type.toUpperCase()}</span>
                         <span class="device-name">{device.name}</span>
                     </div>
                 {/each}
@@ -156,8 +194,8 @@
         border-radius: 8px;
         background: #fff;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        min-width: 300px;
-        max-width: 400px;
+        min-width: 280px;
+        max-width: 320px;
         z-index: 100;
     }
 
@@ -180,52 +218,16 @@
         filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
     }
 
-    .dialog-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+    .device-section {
         padding: 15px;
+    }
+
+    .device-section:not(:last-child) {
         border-bottom: 1px solid #e0e0e0;
     }
 
-    .dialog-header h3 {
-        margin: 0;
-        font-size: 11pt;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .close-btn {
-        width: 28px;
-        height: 28px;
-        padding: 0;
-        border: none;
-        background: transparent;
-        color: #999;
-        font-size: 20pt;
-        line-height: 1;
-        cursor: pointer;
-        border-radius: 4px;
-        transition: all 0.2s;
-    }
-
-    .close-btn:hover {
-        background: #f0f0f0;
-        color: #333;
-    }
-
-    .dialog-content {
-        padding: 15px;
-    }
-
-    .connect-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        margin-bottom: 15px;
-    }
-
     .connect-device-btn {
+        width: 100%;
         padding: 10px 15px;
         background: #0078d4;
         color: white;
@@ -234,46 +236,30 @@
         cursor: pointer;
         font-size: 10pt;
         font-weight: 500;
-        transition: background 0.2s;
+        transition: background 0.2s, opacity 0.2s;
     }
 
-    .connect-device-btn:hover {
+    .connect-device-btn:hover:not(:disabled) {
         background: #106ebe;
     }
 
-    .devices-list {
-        border-top: 1px solid #e0e0e0;
-        padding-top: 15px;
+    .connect-device-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 
-    .devices-list h4 {
-        margin: 0 0 10px 0;
-        font-size: 9pt;
-        font-weight: 600;
-        color: #666;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+    .device-list {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
     }
 
     .device-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
         padding: 8px 10px;
         background: #f9f9f9;
         border-radius: 4px;
-        margin-bottom: 6px;
         font-size: 9pt;
-    }
-
-    .device-type {
-        background: #e3f2fd;
-        color: #1976d2;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-weight: 600;
-        font-size: 8pt;
-        text-transform: uppercase;
     }
 
     .device-name {
