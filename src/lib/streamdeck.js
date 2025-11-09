@@ -198,21 +198,27 @@ export class StreamDeckManager {
 
 			// Set up button event listeners
 			streamDeck.on('down', (keyIndex) => {
-				// Ensure keyIndex is a number (handle both number and object cases)
-				let buttonIndex = typeof keyIndex === 'number' ? keyIndex : (keyIndex?.keyIndex ?? keyIndex);
+				// Debug: Log the received parameter to understand its structure
+				console.log('Stream Deck down event received:', keyIndex, 'typeof:', typeof keyIndex, 'keys:', Object.keys(keyIndex || {}));
 
-				// Debug: Log unexpected types
-				if (typeof buttonIndex !== 'number') {
-					console.warn('Stream Deck button index is not a number:', {
-						received: keyIndex,
-						type: typeof keyIndex,
-						buttonIndex,
-						typeOfButtonIndex: typeof buttonIndex
-					});
-					// Try to convert to number if it's a string
-					if (typeof buttonIndex === 'string') {
-						buttonIndex = parseInt(buttonIndex);
-					}
+				// Ensure keyIndex is a number (handle both number and object cases)
+				let buttonIndex;
+
+				if (typeof keyIndex === 'number') {
+					buttonIndex = keyIndex;
+				} else if (typeof keyIndex === 'object' && keyIndex !== null) {
+					// Try various common property names
+					buttonIndex = keyIndex.keyIndex ?? keyIndex.index ?? keyIndex.key ?? keyIndex.button;
+				} else if (typeof keyIndex === 'string') {
+					buttonIndex = parseInt(keyIndex);
+				} else {
+					buttonIndex = keyIndex;
+				}
+
+				// Debug: Log if we still don't have a number
+				if (typeof buttonIndex !== 'number' || isNaN(buttonIndex)) {
+					console.error('Could not extract button index from:', keyIndex);
+					return; // Skip this event
 				}
 
 				const buttonStates = this.buttonStates.get(serialNumber);
@@ -230,11 +236,22 @@ export class StreamDeckManager {
 
 			streamDeck.on('up', (keyIndex) => {
 				// Ensure keyIndex is a number (handle both number and object cases)
-				let buttonIndex = typeof keyIndex === 'number' ? keyIndex : (keyIndex?.keyIndex ?? keyIndex);
+				let buttonIndex;
 
-				// Try to convert to number if it's a string
-				if (typeof buttonIndex === 'string') {
-					buttonIndex = parseInt(buttonIndex);
+				if (typeof keyIndex === 'number') {
+					buttonIndex = keyIndex;
+				} else if (typeof keyIndex === 'object' && keyIndex !== null) {
+					// Try various common property names
+					buttonIndex = keyIndex.keyIndex ?? keyIndex.index ?? keyIndex.key ?? keyIndex.button;
+				} else if (typeof keyIndex === 'string') {
+					buttonIndex = parseInt(keyIndex);
+				} else {
+					buttonIndex = keyIndex;
+				}
+
+				// Skip if we couldn't extract a valid button index
+				if (typeof buttonIndex !== 'number' || isNaN(buttonIndex)) {
+					return;
 				}
 
 				const buttonStates = this.buttonStates.get(serialNumber);
