@@ -156,6 +156,7 @@ export class CSSSampler {
 	constructor() {
 		this.deviceElements = new Map(); // deviceId -> HTMLElement
 		this.container = null;
+		this.previousValues = new Map(); // deviceId -> previous channel values (for change detection)
 	}
 
 	/**
@@ -240,6 +241,39 @@ export class CSSSampler {
 				break;
 		}
 
+		// Log changes for debugging
+		const previous = this.previousValues.get(device.id);
+		if (previous) {
+			// Check if any values changed
+			let hasChanges = false;
+			const changes = {};
+
+			for (const [key, value] of Object.entries(channels)) {
+				if (previous[key] !== value) {
+					hasChanges = true;
+					changes[key] = { from: previous[key], to: value };
+				}
+			}
+
+			if (hasChanges) {
+				console.log(`[CSSSampler] Device ${device.id} (${device.name}) values changed:`, {
+					color: computed.color,
+					opacity: computed.opacity,
+					changes
+				});
+			}
+		} else {
+			// First sample for this device
+			console.log(`[CSSSampler] Initial sample for device ${device.id} (${device.name}):`, {
+				color: computed.color,
+				opacity: computed.opacity,
+				channels
+			});
+		}
+
+		// Store current values for next comparison
+		this.previousValues.set(device.id, { ...channels });
+
 		return channels;
 	}
 
@@ -260,16 +294,10 @@ export class CSSSampler {
 	}
 
 	/**
-	 * Sample RGB channels from color or background-color property
+	 * Sample RGB channels from color property
 	 */
 	_sampleRGB(computed) {
-		const colorValue = computed.backgroundColor &&
-		                   computed.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
-		                   computed.backgroundColor !== 'transparent'
-			? computed.backgroundColor
-			: computed.color;
-
-		const color = this._parseComputedColor(colorValue);
+		const color = this._parseComputedColor(computed.color);
 		return {
 			Red: color.r,
 			Green: color.g,
@@ -281,13 +309,7 @@ export class CSSSampler {
 	 * Sample RGBA channels
 	 */
 	_sampleRGBA(computed) {
-		const colorValue = computed.backgroundColor &&
-		                   computed.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
-		                   computed.backgroundColor !== 'transparent'
-			? computed.backgroundColor
-			: computed.color;
-
-		const color = this._parseComputedColor(colorValue);
+		const color = this._parseComputedColor(computed.color);
 		return {
 			Red: color.r,
 			Green: color.g,
@@ -300,13 +322,7 @@ export class CSSSampler {
 	 * Sample RGBW channels
 	 */
 	_sampleRGBW(computed) {
-		const colorValue = computed.backgroundColor &&
-		                   computed.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
-		                   computed.backgroundColor !== 'transparent'
-			? computed.backgroundColor
-			: computed.color;
-
-		const color = this._parseComputedColor(colorValue);
+		const color = this._parseComputedColor(computed.color);
 
 		// Calculate white channel from RGB (use minimum value)
 		const white = Math.min(color.r, color.g, color.b);
@@ -345,13 +361,7 @@ export class CSSSampler {
 	 * Sample moving head (pan/tilt from translate, colors, dimmer)
 	 */
 	_sampleMovingHead(computed) {
-		const colorValue = computed.backgroundColor &&
-		                   computed.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
-		                   computed.backgroundColor !== 'transparent'
-			? computed.backgroundColor
-			: computed.color;
-
-		const color = this._parseComputedColor(colorValue);
+		const color = this._parseComputedColor(computed.color);
 		const opacity = parseFloat(computed.opacity) || 1;
 
 		// Parse translate for pan/tilt
