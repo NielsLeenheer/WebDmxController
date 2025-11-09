@@ -109,7 +109,9 @@ export class CSSGenerator {
 			case 'RGBA':
 				const [r2, g2, b2, a] = defaultValues;
 				props.push(`  color: rgb(${r2 || 0}, ${g2 || 0}, ${b2 || 0});`);
-				props.push(`  /* Amber channel: ${a || 0} */`);
+				// Convert amber DMX value (0-255) to percentage (0-100%)
+				const amberPercent = Math.round(((a || 0) / 255) * 100);
+				props.push(`  --amber: ${amberPercent}%;`);
 				break;
 
 			case 'RGBW':
@@ -125,14 +127,18 @@ export class CSSGenerator {
 
 			case 'SMOKE':
 				const output = defaultValues[0] || 0;
-				props.push(`  --smoke-output: ${output};`);
+				// Convert DMX value (0-255) to percentage (0-100%)
+				const smokePercent = Math.round((output / 255) * 100);
+				props.push(`  --smoke: ${smokePercent}%;`);
 				break;
 
 			case 'MOVING_HEAD':
 				const [pan, tilt, dimmer, r4, g4, b4, w2] = defaultValues;
-				const panPercent = pan !== undefined ? Math.round((pan / 255) * 100 - 50) : 0;
-				const tiltPercent = tilt !== undefined ? Math.round((tilt / 255) * 100 - 50) : 0;
-				props.push(`  translate: ${panPercent}% ${tiltPercent}%;`);
+				// Convert DMX values (0-255) to percentages (0-100%)
+				const panPercent = pan !== undefined ? Math.round((pan / 255) * 100) : 50;
+				const tiltPercent = tilt !== undefined ? Math.round((tilt / 255) * 100) : 50;
+				props.push(`  --pan: ${panPercent}%;`);
+				props.push(`  --tilt: ${tiltPercent}%;`);
 				props.push(`  opacity: ${dimmer !== undefined ? (dimmer / 255).toFixed(2) : '1'};`);
 				props.push(`  color: rgb(${r4 || 0}, ${g4 || 0}, ${b4 || 0});`);
 				if (w2 !== undefined) {
@@ -301,11 +307,18 @@ export class CSSSampler {
 	 */
 	_sampleRGBA(computed) {
 		const color = this._parseComputedColor(computed.color);
+
+		// Parse --amber percentage to DMX value (0-100% -> 0-255)
+		const amber = computed.getPropertyValue('--amber') || '0%';
+		const amberMatch = amber.match(/(\d+(?:\.\d+)?)/);
+		const amberPercent = amberMatch ? parseFloat(amberMatch[1]) : 0;
+		const amberValue = Math.round(Math.max(0, Math.min(100, amberPercent)) * 255 / 100);
+
 		return {
 			Red: color.r,
 			Green: color.g,
 			Blue: color.b,
-			Amber: color.a * 255 // Use alpha for amber
+			Amber: amberValue
 		};
 	}
 
@@ -340,27 +353,40 @@ export class CSSSampler {
 	 * Sample smoke machine from custom property
 	 */
 	_sampleSmoke(computed) {
-		const output = computed.getPropertyValue('--smoke-output') || '0';
-		const value = parseFloat(output);
+		const smoke = computed.getPropertyValue('--smoke') || '0%';
+
+		// Parse percentage to DMX value (0-100% -> 0-255)
+		const smokeMatch = smoke.match(/(\d+(?:\.\d+)?)/);
+		const smokePercent = smokeMatch ? parseFloat(smokeMatch[1]) : 0;
+		const smokeValue = Math.round(Math.max(0, Math.min(100, smokePercent)) * 255 / 100);
 
 		return {
-			Output: Math.round(Math.max(0, Math.min(255, value)))
+			Output: smokeValue
 		};
 	}
 
 	/**
-	 * Sample moving head (pan/tilt from translate, colors, dimmer)
+	 * Sample moving head (pan/tilt from custom properties, colors, dimmer)
 	 */
 	_sampleMovingHead(computed) {
 		const color = this._parseComputedColor(computed.color);
 		const opacity = parseFloat(computed.opacity) || 1;
 
-		// Parse translate for pan/tilt
-		const translate = this._parseTranslate(computed.translate);
+		// Parse --pan and --tilt percentages to DMX values (0-100% -> 0-255)
+		const pan = computed.getPropertyValue('--pan') || '50%';
+		const tilt = computed.getPropertyValue('--tilt') || '50%';
+
+		const panMatch = pan.match(/(\d+(?:\.\d+)?)/);
+		const panPercent = panMatch ? parseFloat(panMatch[1]) : 50;
+		const panValue = Math.round(Math.max(0, Math.min(100, panPercent)) * 255 / 100);
+
+		const tiltMatch = tilt.match(/(\d+(?:\.\d+)?)/);
+		const tiltPercent = tiltMatch ? parseFloat(tiltMatch[1]) : 50;
+		const tiltValue = Math.round(Math.max(0, Math.min(100, tiltPercent)) * 255 / 100);
 
 		return {
-			Pan: translate.x,
-			Tilt: translate.y,
+			Pan: panValue,
+			Tilt: tiltValue,
 			Dimmer: Math.round(opacity * 255),
 			Red: color.r,
 			Green: color.g,

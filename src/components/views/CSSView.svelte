@@ -463,10 +463,28 @@ Example animations:
   initial-value: 0%;
 }
 
-@property --smoke-output {
-  syntax: "<number>";
+@property --smoke {
+  syntax: "<percentage>";
   inherits: false;
-  initial-value: 0;
+  initial-value: 0%;
+}
+
+@property --pan {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+
+@property --tilt {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+
+@property --amber {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
 }
 `;
         document.head.appendChild(propertyDefsElement);
