@@ -198,29 +198,54 @@ export class StreamDeckManager {
 
 			// Set up button event listeners
 			streamDeck.on('down', (keyIndex) => {
+				// Ensure keyIndex is a number (handle both number and object cases)
+				let buttonIndex = typeof keyIndex === 'number' ? keyIndex : (keyIndex?.keyIndex ?? keyIndex);
+
+				// Debug: Log unexpected types
+				if (typeof buttonIndex !== 'number') {
+					console.warn('Stream Deck button index is not a number:', {
+						received: keyIndex,
+						type: typeof keyIndex,
+						buttonIndex,
+						typeOfButtonIndex: typeof buttonIndex
+					});
+					// Try to convert to number if it's a string
+					if (typeof buttonIndex === 'string') {
+						buttonIndex = parseInt(buttonIndex);
+					}
+				}
+
 				const buttonStates = this.buttonStates.get(serialNumber);
-				if (buttonStates) {
-					buttonStates.set(keyIndex, true);
+				if (buttonStates && typeof buttonIndex === 'number') {
+					buttonStates.set(buttonIndex, true);
 				}
 
 				this._emit('buttondown', {
 					device: streamDeck,
 					serialNumber,
-					button: keyIndex,
+					button: buttonIndex,
 					model: streamDeck.PRODUCT_NAME || 'Stream Deck'
 				});
 			});
 
 			streamDeck.on('up', (keyIndex) => {
+				// Ensure keyIndex is a number (handle both number and object cases)
+				let buttonIndex = typeof keyIndex === 'number' ? keyIndex : (keyIndex?.keyIndex ?? keyIndex);
+
+				// Try to convert to number if it's a string
+				if (typeof buttonIndex === 'string') {
+					buttonIndex = parseInt(buttonIndex);
+				}
+
 				const buttonStates = this.buttonStates.get(serialNumber);
-				if (buttonStates) {
-					buttonStates.set(keyIndex, false);
+				if (buttonStates && typeof buttonIndex === 'number') {
+					buttonStates.set(buttonIndex, false);
 				}
 
 				this._emit('buttonup', {
 					device: streamDeck,
 					serialNumber,
-					button: keyIndex,
+					button: buttonIndex,
 					model: streamDeck.PRODUCT_NAME || 'Stream Deck'
 				});
 			});
