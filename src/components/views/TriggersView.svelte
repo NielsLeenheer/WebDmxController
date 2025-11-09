@@ -67,6 +67,16 @@
         const inputMapping = mappingLibrary.get(newTriggerInput);
         if (!inputMapping) return;
 
+        // Generate CSS class name from input name with state suffix
+        const baseClassName = inputMapping.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+        const suffix = newTriggerType === 'pressed' ? 'down' :
+                       newTriggerType === 'not-pressed' ? 'up' : 'always';
+        const cssClassName = `${baseClassName}-${suffix}`;
+
         // Create trigger mapping
         const trigger = new InputMapping({
             name: `${inputMapping.name}_${newTriggerType}_${newTriggerAnimation}`,
@@ -78,7 +88,8 @@
             targetDeviceIds: [newTriggerDevice],
             duration: newTriggerDuration,
             easing: newTriggerEasing,
-            iterations: newTriggerLooping ? 'infinite' : 1
+            iterations: newTriggerLooping ? 'infinite' : 1,
+            cssClassName: cssClassName
         });
 
         mappingLibrary.add(trigger);
@@ -109,20 +120,8 @@
     }
 
     function getTriggerClassName(trigger) {
-        // Generate CSS class name from input name
-        // Get the input to access its name
-        const input = availableInputs.find(
-            i => i.inputDeviceId === trigger.inputDeviceId && i.inputControlId === trigger.inputControlId
-        );
-
-        // Convert name to lowercase, replace spaces and special chars with dashes
-        const baseName = input?.name || `${trigger.inputDeviceId}_${trigger.inputControlId}`;
-        const className = baseName
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
-        return className;
+        // Return the CSS class name from the trigger mapping
+        return trigger.cssClassName;
     }
 
     onMount(() => {

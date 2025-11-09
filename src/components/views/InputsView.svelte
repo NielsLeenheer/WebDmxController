@@ -142,8 +142,8 @@
         if (controlId.startsWith('note-')) {
             const noteNumber = controlId.replace('note-', '');
             return `${deviceName} Note ${noteNumber}`;
-        } else if (controlId.startsWith('control-')) {
-            const controlNumber = controlId.replace('control-', '');
+        } else if (controlId.startsWith('control-') || controlId.startsWith('cc-')) {
+            const controlNumber = controlId.replace('control-', '').replace('cc-', '');
             return `${deviceName} Control ${controlNumber}`;
         } else if (controlId.startsWith('button-')) {
             const buttonNumber = controlId.replace('button-', '');

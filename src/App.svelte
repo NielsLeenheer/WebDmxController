@@ -136,6 +136,7 @@
             {cssGenerator}
             {cssSampler}
             {triggerManager}
+            {customPropertyManager}
             isActive={view === 'css'}
         />
     </div>

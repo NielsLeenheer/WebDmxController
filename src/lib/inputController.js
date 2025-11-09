@@ -146,6 +146,22 @@ export class InputController {
 		// Find mappings for this input
 		const mappings = this.mappingLibrary.getByInput(deviceId, controlId);
 
+		// Always set a custom property based on the input name (for use in CSS)
+		// Find the input mapping (mode='input') for this control
+		const inputMapping = mappings.find(m => m.mode === 'input');
+		if (inputMapping && inputMapping.name) {
+			// Generate CSS custom property name from input name
+			const propertyName = inputMapping.name
+				.toLowerCase()
+				.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+				.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+			// Convert value (0-1) to percentage
+			const percentage = Math.round(value * 100);
+			this.customPropertyManager.setProperty(propertyName, `${percentage}%`);
+		}
+
+		// Process direct mode mappings
 		for (const mapping of mappings) {
 			if (mapping.mode === 'direct') {
 				// Update CSS custom property

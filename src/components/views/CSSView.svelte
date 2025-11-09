@@ -10,6 +10,7 @@
         cssGenerator,
         cssSampler,
         triggerManager,
+        customPropertyManager,
         isActive = false
     } = $props();
 
@@ -86,6 +87,25 @@ Example animations:
     let previewColors = $state({});
     let deviceOpacities = $state({});
     let devicePanTilt = $state({});
+
+    // Get all trigger mappings for display
+    let triggerClasses = $derived(
+        mappingLibrary ? mappingLibrary.getAll().filter(m => m.mode === 'trigger') : []
+    );
+
+    // Get all custom properties for display
+    let customProperties = $state([]);
+
+    // Update custom properties list periodically
+    $effect(() => {
+        const interval = setInterval(() => {
+            if (customPropertyManager) {
+                customProperties = customPropertyManager.getAll();
+            }
+        }, 100); // Update 10 times per second
+
+        return () => clearInterval(interval);
+    });
 
     // Track if CSS is custom (edited by user)
     let isCustomCSS = $state(localStorage.getItem('dmx-css') !== null);
@@ -616,6 +636,34 @@ Example animations:
             {/each}
         </div>
 
+        <!-- Trigger Classes List -->
+        {#if triggerClasses.length > 0}
+            <div class="reference-section">
+                <h4>Trigger Classes</h4>
+                <div class="reference-list">
+                    {#each triggerClasses as trigger (trigger.id)}
+                        <div class="reference-item">
+                            <code>.{trigger.cssClassName}</code>
+                        </div>
+                    {/each}
+                </div>
+            </div>
+        {/if}
+
+        <!-- Custom Properties List -->
+        {#if customProperties.length > 0}
+            <div class="reference-section">
+                <h4>Custom Properties</h4>
+                <div class="reference-list">
+                    {#each customProperties as prop (prop.name)}
+                        <div class="reference-item">
+                            <code>{prop.name}: {prop.value}</code>
+                        </div>
+                    {/each}
+                </div>
+            </div>
+        {/if}
+
         <!-- Off-screen animation targets (managed by cssSampler) -->
         <div class="animation-targets" bind:this={animationTargetsContainer}></div>
     </div>
@@ -742,6 +790,41 @@ Example animations:
     .device-type {
         font-size: 9pt;
         color: #666;
+    }
+
+    .reference-section {
+        padding: 15px;
+        border-top: 1px solid #ddd;
+        background: #fff;
+    }
+
+    .reference-section h4 {
+        margin: 0 0 10px 0;
+        font-size: 10pt;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .reference-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .reference-item {
+        font-size: 9pt;
+    }
+
+    .reference-item code {
+        display: inline-block;
+        background: #f5f5f5;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-family: var(--font-stack-mono);
+        color: #007acc;
+        border: 1px solid #e0e0e0;
     }
 
     .animation-targets {

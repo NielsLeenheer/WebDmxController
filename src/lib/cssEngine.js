@@ -554,6 +554,13 @@ export class CustomPropertyManager {
 	}
 
 	/**
+	 * Get all properties
+	 */
+	getAll() {
+		return Array.from(this.properties.entries()).map(([name, value]) => ({ name, value }));
+	}
+
+	/**
 	 * Clear all properties
 	 */
 	clear() {
