@@ -59,7 +59,7 @@ export const DEVICE_TYPES = {
         name: 'Flamethrower',
         channels: 2,
         controls: [
-            { name: 'Safety', type: 'slider', color: '#ff9800' },
+            { name: 'Safety', type: 'toggle', offValue: 0, onValue: 125 },
             { name: 'Fuel', type: 'slider', color: '#ff5722' }
         ]
     }

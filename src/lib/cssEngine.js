@@ -163,8 +163,8 @@ export class CSSGenerator {
 
 			case 'FLAMETHROWER':
 				const [safety, fuel] = defaultValues;
-				// Safety: map 0 to "none", anything else to "probably"
-				const safetyValue = safety === 0 ? 'none' : 'probably';
+				// Safety: map 0 to "none", 125+ to "probably"
+				const safetyValue = safety >= 125 ? 'probably' : 'none';
 				// Fuel: convert to percentage (0-255 -> 0-100%)
 				const fuelPercent = Math.round((fuel / 255) * 100);
 				props.push(`  --safety: ${safetyValue};`);
@@ -446,7 +446,7 @@ export class CSSSampler {
 		const fuel = computed.getPropertyValue('--fuel') || '0%';
 
 		// Safety: parse "none" or "probably" to DMX values
-		const safetyValue = safety.trim() === 'probably' ? 255 : 0;
+		const safetyValue = safety.trim() === 'probably' ? 125 : 0;
 
 		// Fuel: parse percentage to DMX value (0-100% -> 0-255)
 		const fuelMatch = fuel.match(/(\d+(?:\.\d+)?)/);
