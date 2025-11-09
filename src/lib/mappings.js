@@ -19,6 +19,9 @@ export class InputMapping {
 		this.inputDeviceId = config.inputDeviceId || null;
 		this.inputControlId = config.inputControlId || null;
 
+		// Visual color for the input (shown in UI and on hardware)
+		this.color = config.color || this._generateRandomColor();
+
 		// Trigger mode settings
 		this.triggerType = config.triggerType || 'pressed'; // 'pressed', 'not-pressed', 'always'
 		this.animationName = config.animationName || null;
@@ -34,6 +37,16 @@ export class InputMapping {
 
 		// CSS class name for trigger mode (auto-generated from input)
 		this.cssClassName = config.cssClassName || this._generateClassName();
+	}
+
+	/**
+	 * Generate a random vibrant color
+	 */
+	_generateRandomColor() {
+		const hue = Math.floor(Math.random() * 360);
+		const saturation = 70 + Math.floor(Math.random() * 30); // 70-100%
+		const lightness = 50 + Math.floor(Math.random() * 20); // 50-70%
+		return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 	}
 
 	/**
@@ -135,6 +148,7 @@ export class InputMapping {
 			mode: this.mode,
 			inputDeviceId: this.inputDeviceId,
 			inputControlId: this.inputControlId,
+			color: this.color,
 			triggerType: this.triggerType,
 			animationName: this.animationName,
 			duration: this.duration,

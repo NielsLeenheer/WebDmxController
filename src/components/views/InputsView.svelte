@@ -82,6 +82,16 @@
 
             mappingLibrary.add(inputMapping);
             refreshInputs();
+
+            // If this is a Stream Deck button, set its color on the hardware
+            if (device?.type === 'hid' && controlId.startsWith('button-')) {
+                const buttonIndex = parseInt(controlId.replace('button-', ''));
+                const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
+                const serialNumber = device.hidDevice?.serialNumber || `streamdeck-${device.hidDevice?.productId}`;
+
+                // Set the button color on the device
+                streamDeckManager.setButtonColor(serialNumber, buttonIndex, inputMapping.color);
+            }
         }
     }
 
@@ -167,8 +177,44 @@
         }
     }
 
+    async function applyColorsToStreamDeck() {
+        // Apply colors to all Stream Deck buttons that have saved inputs
+        const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
+        const connectedDevices = streamDeckManager.getConnectedDevices();
+
+        for (const device of connectedDevices) {
+            const serialNumber = device.serialNumber || `streamdeck-${device.productId}`;
+
+            // Find all inputs for this Stream Deck
+            const streamDeckInputs = savedInputs.filter(input => {
+                const inputDevice = inputController.getInputDevice(input.inputDeviceId);
+                return inputDevice?.hidDevice?.serialNumber === device.serialNumber ||
+                       inputDevice?.hidDevice?.productId === device.productId;
+            });
+
+            // Apply colors to each button
+            for (const input of streamDeckInputs) {
+                if (input.inputControlId.startsWith('button-')) {
+                    const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
+                    await streamDeckManager.setButtonColor(serialNumber, buttonIndex, input.color);
+                }
+            }
+        }
+    }
+
     onMount(() => {
         refreshInputs();
+
+        // Apply colors when a Stream Deck connects
+        inputController.on('deviceadded', (device) => {
+            if (device.type === 'hid') {
+                // Small delay to ensure device is fully initialized
+                setTimeout(() => applyColorsToStreamDeck(), 500);
+            }
+        });
+
+        // Apply colors on initial load
+        setTimeout(() => applyColorsToStreamDeck(), 1000);
     });
 
     onDestroy(() => {
@@ -223,6 +269,7 @@
             {:else}
                 {#each savedInputs as input (input.id)}
                     <div class="input-item">
+                        <div class="input-color-badge" style="background-color: {input.color}"></div>
                         <div class="input-icon">
                             {@html getInputIcon(input.inputDeviceId)}
                         </div>
@@ -371,6 +418,14 @@
         border: 1px solid #ddd;
         border-radius: 4px;
         animation: slideIn 0.2s ease-out;
+    }
+
+    .input-color-badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        flex-shrink: 0;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     @keyframes slideIn {
