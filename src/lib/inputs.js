@@ -339,13 +339,14 @@ export class InputDeviceManager {
 	 * Setup Stream Deck event listeners
 	 */
 	_setupStreamDeckListeners() {
-		this.streamDeckManager.on('buttondown', ({ device, button, model }) => {
-			const deviceId = device.serialNumber || `streamdeck-${device.productId}`;
+		this.streamDeckManager.on('buttondown', ({ device, button, model, serialNumber }) => {
+			const deviceId = serialNumber;
 			let inputDevice = this.devices.get(deviceId);
 
 			if (!inputDevice) {
-				// Create a HIDInputDevice wrapper for this Stream Deck
-				inputDevice = new HIDInputDevice(device, { name: model || 'Stream Deck' });
+				// Create a wrapper InputDevice for this Stream Deck
+				inputDevice = new InputDevice(deviceId, model || 'Stream Deck', 'hid');
+				inputDevice.streamDeck = device; // Store reference to the StreamDeck instance
 				this.devices.set(deviceId, inputDevice);
 				this._emit('deviceadded', inputDevice);
 			}
@@ -355,8 +356,8 @@ export class InputDeviceManager {
 			inputDevice._trigger(controlId, 127);
 		});
 
-		this.streamDeckManager.on('buttonup', ({ device, button }) => {
-			const deviceId = device.serialNumber || `streamdeck-${device.productId}`;
+		this.streamDeckManager.on('buttonup', ({ serialNumber, button }) => {
+			const deviceId = serialNumber;
 			const inputDevice = this.devices.get(deviceId);
 
 			if (inputDevice) {

@@ -4,6 +4,8 @@
  * Provides easy integration with Elgato Stream Deck devices via WebHID API.
  */
 
+import { requestStreamDecks, getStreamDecks } from '@elgato-stream-deck/webhid';
+
 /**
  * Stream Deck device information
  */
@@ -89,7 +91,7 @@ export function getStreamDeckButtonCount(hidDevice) {
  */
 export class StreamDeckManager {
 	constructor() {
-		this.connectedDevices = new Map(); // serialNumber -> HIDDevice
+		this.connectedDevices = new Map(); // serialNumber -> StreamDeck instance
 		this.listeners = new Map(); // event -> Set of callbacks
 		this.buttonStates = new Map(); // serialNumber -> Map<buttonIndex, boolean>
 	}
@@ -133,12 +135,10 @@ export class StreamDeckManager {
 		}
 
 		try {
-			const devices = await navigator.hid.requestDevice({
-				filters: getStreamDeckFilters()
-			});
+			const devices = await requestStreamDecks();
 
-			for (const device of devices) {
-				await this.connectDevice(device);
+			for (const streamDeck of devices) {
+				await this._setupStreamDeck(streamDeck);
 			}
 
 			return devices[0] || null;
@@ -160,14 +160,13 @@ export class StreamDeckManager {
 		}
 
 		try {
-			const devices = await navigator.hid.getDevices();
-			const streamDecks = devices.filter(isStreamDeck);
+			const streamDecks = await getStreamDecks();
 
 			const reconnected = [];
-			for (const device of streamDecks) {
+			for (const streamDeck of streamDecks) {
 				try {
-					await this.connectDevice(device);
-					reconnected.push(device);
+					await this._setupStreamDeck(streamDeck);
+					reconnected.push(streamDeck);
 				} catch (error) {
 					console.warn('Failed to reconnect to Stream Deck:', error);
 				}
@@ -181,54 +180,77 @@ export class StreamDeckManager {
 	}
 
 	/**
-	 * Connect to a specific HID device
+	 * Setup a Stream Deck instance from the library
 	 */
-	async connectDevice(hidDevice) {
-		if (!isStreamDeck(hidDevice)) {
-			throw new Error('Not a Stream Deck device');
+	async _setupStreamDeck(streamDeck) {
+		try {
+			// Open the device
+			await streamDeck.open();
+
+			const serialNumber = streamDeck.serialNumber || `streamdeck-${streamDeck.PRODUCT_ID}`;
+
+			// Initialize button states
+			this.buttonStates.set(serialNumber, new Map());
+
+			// Set up button event listeners
+			streamDeck.on('down', (keyIndex) => {
+				const buttonStates = this.buttonStates.get(serialNumber);
+				if (buttonStates) {
+					buttonStates.set(keyIndex, true);
+				}
+
+				this._emit('buttondown', {
+					device: streamDeck,
+					serialNumber,
+					button: keyIndex,
+					model: streamDeck.PRODUCT_NAME || 'Stream Deck'
+				});
+			});
+
+			streamDeck.on('up', (keyIndex) => {
+				const buttonStates = this.buttonStates.get(serialNumber);
+				if (buttonStates) {
+					buttonStates.set(keyIndex, false);
+				}
+
+				this._emit('buttonup', {
+					device: streamDeck,
+					serialNumber,
+					button: keyIndex,
+					model: streamDeck.PRODUCT_NAME || 'Stream Deck'
+				});
+			});
+
+			// Set brightness to max
+			await streamDeck.setBrightness(100);
+
+			// Clear all buttons
+			await streamDeck.clearPanel();
+
+			this.connectedDevices.set(serialNumber, streamDeck);
+
+			this._emit('connected', {
+				device: streamDeck,
+				serialNumber,
+				model: streamDeck.PRODUCT_NAME || 'Stream Deck',
+				buttonCount: streamDeck.NUM_KEYS
+			});
+
+			return streamDeck;
+		} catch (error) {
+			console.error('Failed to setup Stream Deck:', error);
+			throw error;
 		}
-
-		// Open device if not already open
-		if (!hidDevice.opened) {
-			try {
-				await hidDevice.open();
-			} catch (error) {
-				throw new Error(`Cannot open Stream Deck. Make sure it's not being used by another application. ${error.message}`);
-			}
-		}
-
-		const serialNumber = hidDevice.serialNumber || `streamdeck-${hidDevice.productId}`;
-
-		// Initialize button states
-		this.buttonStates.set(serialNumber, new Map());
-
-		// Set up input report handler
-		hidDevice.oninputreport = (event) => {
-			this._handleInputReport(hidDevice, event);
-		};
-
-		this.connectedDevices.set(serialNumber, hidDevice);
-
-		this._emit('connected', {
-			device: hidDevice,
-			serialNumber,
-			model: getStreamDeckModel(hidDevice),
-			buttonCount: getStreamDeckButtonCount(hidDevice)
-		});
-
-		return hidDevice;
 	}
 
 	/**
 	 * Disconnect a device
 	 */
 	async disconnectDevice(serialNumber) {
-		const device = this.connectedDevices.get(serialNumber);
-		if (!device) return;
+		const streamDeck = this.connectedDevices.get(serialNumber);
+		if (!streamDeck) return;
 
-		if (device.opened) {
-			await device.close();
-		}
+		await streamDeck.close();
 
 		this.connectedDevices.delete(serialNumber);
 		this.buttonStates.delete(serialNumber);
@@ -237,62 +259,19 @@ export class StreamDeckManager {
 	}
 
 	/**
-	 * Handle input report from Stream Deck
-	 */
-	_handleInputReport(hidDevice, event) {
-		const { data, reportId } = event;
-		const bytes = new Uint8Array(data.buffer);
-		const serialNumber = hidDevice.serialNumber || `streamdeck-${hidDevice.productId}`;
-		const buttonStates = this.buttonStates.get(serialNumber);
-
-		if (!buttonStates) return;
-
-		// Stream Deck sends button states as bytes
-		// Each byte represents a button (1 = pressed, 0 = released)
-		for (let i = 0; i < bytes.length; i++) {
-			const buttonPressed = bytes[i] === 1;
-			const wasPressed = buttonStates.get(i) || false;
-
-			if (buttonPressed && !wasPressed) {
-				// Button pressed
-				buttonStates.set(i, true);
-				this._emit('buttondown', {
-					device: hidDevice,
-					serialNumber,
-					button: i,
-					model: getStreamDeckModel(hidDevice)
-				});
-			} else if (!buttonPressed && wasPressed) {
-				// Button released
-				buttonStates.set(i, false);
-				this._emit('buttonup', {
-					device: hidDevice,
-					serialNumber,
-					button: i,
-					model: getStreamDeckModel(hidDevice)
-				});
-			}
-		}
-	}
-
-	/**
 	 * Set button color on a Stream Deck device
 	 */
 	async setButtonColor(serialNumber, buttonIndex, color) {
-		const device = this.connectedDevices.get(serialNumber);
-		if (!device || !device.opened) return false;
+		const streamDeck = this.connectedDevices.get(serialNumber);
+		if (!streamDeck) return false;
 
 		try {
 			// Parse color to RGB
 			const rgb = this._parseColor(color);
 			if (!rgb) return false;
 
-			// Create image with solid color
-			const imageSize = this._getImageSize(device.productId);
-			const imageData = this._createSolidColorImage(rgb, imageSize);
-
-			// Send to device
-			await this._sendButtonImage(device, buttonIndex, imageData);
+			// Use the library's fillKeyColor method
+			await streamDeck.fillKeyColor(buttonIndex, rgb.r, rgb.g, rgb.b);
 			return true;
 		} catch (error) {
 			console.error('Failed to set button color:', error);
@@ -320,74 +299,6 @@ export class StreamDeckManager {
 			g: parseInt(match[2]),
 			b: parseInt(match[3])
 		};
-	}
-
-	/**
-	 * Get image size for Stream Deck model
-	 */
-	_getImageSize(productId) {
-		const sizes = {
-			0x0060: 72, // Original
-			0x006d: 72, // Original V2
-			0x0063: 80, // Mini
-			0x0090: 80, // Mini V2
-			0x006c: 96, // XL
-			0x008f: 96, // XL V2
-			0x0080: 72, // MK2
-			0x0084: 120, // Plus
-			0x009a: 200  // Neo
-		};
-		return sizes[productId] || 72;
-	}
-
-	/**
-	 * Create solid color image data
-	 */
-	_createSolidColorImage(rgb, size) {
-		// Create canvas
-		const canvas = document.createElement('canvas');
-		canvas.width = size;
-		canvas.height = size;
-		const ctx = canvas.getContext('2d');
-
-		// Fill with color
-		ctx.fillStyle = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
-		ctx.fillRect(0, 0, size, size);
-
-		// Get image data
-		const imageData = ctx.getImageData(0, 0, size, size);
-
-		// Convert to BGR (Stream Deck format)
-		const bgrData = new Uint8Array(size * size * 3);
-		for (let i = 0; i < imageData.data.length; i += 4) {
-			const pixelIndex = i / 4;
-			bgrData[pixelIndex * 3 + 0] = imageData.data[i + 2]; // B
-			bgrData[pixelIndex * 3 + 1] = imageData.data[i + 1]; // G
-			bgrData[pixelIndex * 3 + 2] = imageData.data[i + 0]; // R
-		}
-
-		return bgrData;
-	}
-
-	/**
-	 * Send button image to Stream Deck
-	 */
-	async _sendButtonImage(device, buttonIndex, imageData) {
-		// This is a simplified version
-		// Real Stream Deck protocol requires sending data in chunks with headers
-		// For now, we'll send a basic SET_BRIGHTNESS command to show we can communicate
-
-		// Set button brightness to max (0x05, 0x55, brightness 0-100)
-		const brightnessReport = new Uint8Array([0x05, 0x55, 0x64]); // 100% brightness
-		try {
-			await device.sendFeatureReport(0x05, brightnessReport);
-		} catch (error) {
-			// Silently fail - not all models support this
-		}
-
-		// Note: Full image sending requires implementing the Stream Deck's proprietary protocol
-		// which varies by model and is quite complex. For now, we just set brightness.
-		// A full implementation would need the @elgato-stream-deck/node protocol
 	}
 
 	/**

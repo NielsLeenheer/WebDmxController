@@ -87,7 +87,7 @@
             if (device?.type === 'hid' && controlId.startsWith('button-')) {
                 const buttonIndex = parseInt(controlId.replace('button-', ''));
                 const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
-                const serialNumber = device.hidDevice?.serialNumber || `streamdeck-${device.hidDevice?.productId}`;
+                const serialNumber = deviceId; // deviceId is the serialNumber for Stream Deck
 
                 // Set the button color on the device
                 streamDeckManager.setButtonColor(serialNumber, buttonIndex, inputMapping.color);
@@ -180,24 +180,18 @@
     async function applyColorsToStreamDeck() {
         // Apply colors to all Stream Deck buttons that have saved inputs
         const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
-        const connectedDevices = streamDeckManager.getConnectedDevices();
 
-        for (const device of connectedDevices) {
-            const serialNumber = device.serialNumber || `streamdeck-${device.productId}`;
+        // Find all Stream Deck inputs and apply their colors
+        for (const input of savedInputs) {
+            const inputDevice = inputController.getInputDevice(input.inputDeviceId);
 
-            // Find all inputs for this Stream Deck
-            const streamDeckInputs = savedInputs.filter(input => {
-                const inputDevice = inputController.getInputDevice(input.inputDeviceId);
-                return inputDevice?.hidDevice?.serialNumber === device.serialNumber ||
-                       inputDevice?.hidDevice?.productId === device.productId;
-            });
+            // Check if this is a Stream Deck device
+            if (inputDevice?.type === 'hid' && input.inputControlId.startsWith('button-')) {
+                const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
+                const serialNumber = input.inputDeviceId; // deviceId is the serialNumber
 
-            // Apply colors to each button
-            for (const input of streamDeckInputs) {
-                if (input.inputControlId.startsWith('button-')) {
-                    const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
-                    await streamDeckManager.setButtonColor(serialNumber, buttonIndex, input.color);
-                }
+                // Set the button color on the device
+                await streamDeckManager.setButtonColor(serialNumber, buttonIndex, input.color);
             }
         }
     }
