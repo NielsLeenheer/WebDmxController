@@ -73,7 +73,7 @@
             // Auto-save new input
             const name = formatInputName(device?.name || deviceId, controlId);
 
-            // Only assign colors to Stream Deck devices (not keyboard or other devices)
+            // Only Stream Deck devices support colors (not keyboard or MIDI)
             const supportsColor = device?.type === 'hid' && device.id !== 'keyboard';
 
             const inputMapping = new InputMapping({
@@ -88,7 +88,6 @@
             refreshInputs();
 
             // Set color on hardware for Stream Deck devices only
-            // MIDI will also support colors when available
             if (supportsColor && controlId.startsWith('button-')) {
                 const buttonIndex = parseInt(controlId.replace('button-', ''));
 
