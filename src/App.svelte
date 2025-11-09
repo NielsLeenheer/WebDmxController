@@ -71,6 +71,7 @@
     onconnect={handleConnect}
     ondisconnect={handleDisconnect}
     {connected}
+    {inputController}
 />
 
 <main>

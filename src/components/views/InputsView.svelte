@@ -24,16 +24,6 @@
     // Event handlers
     let inputEventHandlers = [];
 
-    async function connectStreamDeck() {
-        try {
-            await inputController.requestStreamDeck();
-            // Device events are now handled automatically via the StreamDeckManager
-            // No need to manually set up listeners - they're already connected
-        } catch (error) {
-            alert(`Failed to connect Stream Deck: ${error.message}\n\nPlease close the Elgato Stream Deck software and try again.`);
-        }
-    }
-
     function startListening() {
         isListening = true;
 
@@ -290,10 +280,6 @@
                         Start Listening
                     </Button>
                 {/if}
-
-                <Button onclick={connectStreamDeck}>
-                    Connect Stream Deck
-                </Button>
             </div>
 
             {#if isListening}
