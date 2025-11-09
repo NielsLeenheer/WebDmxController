@@ -97,6 +97,62 @@ Example animations:
     let cssEditorElement;
     let frameCount = 0; // Debug: track animation frames
 
+    /**
+     * Convert sampled channel object to device channel array
+     * Maps channel names to the correct array indices for each device type
+     */
+    function convertChannelsToArray(deviceType, channels) {
+        switch (deviceType) {
+            case 'RGB':
+                return [
+                    channels.Red || 0,
+                    channels.Green || 0,
+                    channels.Blue || 0
+                ];
+
+            case 'RGBA':
+                return [
+                    channels.Red || 0,
+                    channels.Green || 0,
+                    channels.Blue || 0,
+                    channels.Amber || 0
+                ];
+
+            case 'RGBW':
+                return [
+                    channels.Red || 0,
+                    channels.Green || 0,
+                    channels.Blue || 0,
+                    channels.White || 0
+                ];
+
+            case 'DIMMER':
+                return [
+                    channels.Intensity || 0
+                ];
+
+            case 'SMOKE':
+                return [
+                    channels.Output || 0
+                ];
+
+            case 'MOVING_HEAD':
+                return [
+                    channels.Pan || 127,
+                    channels.Tilt || 127,
+                    channels.Dimmer || 0,
+                    channels.Red || 0,
+                    channels.Green || 0,
+                    channels.Blue || 0,
+                    channels.White || 0
+                ];
+
+            default:
+                console.warn(`Unknown device type: ${deviceType}`);
+                return [];
+        }
+    }
+
     function updateDMXFromCSS() {
         if (!cssSampler) return;
 
@@ -114,16 +170,8 @@ Example animations:
             const channels = sampledValues.get(device.id);
             if (!channels) return;
 
-            // Convert channel values to array based on device type
-            const newValues = device.getChannelValues();
-
-            // Update values from sampled channels
-            for (const [channelName, value] of Object.entries(channels)) {
-                const channelIndex = Object.keys(channels).indexOf(channelName);
-                if (channelIndex !== -1 && channelIndex < newValues.length) {
-                    newValues[channelIndex] = value;
-                }
-            }
+            // Convert sampled channels to device channel array based on device type
+            const newValues = convertChannelsToArray(device.type, channels);
 
             // ALWAYS update preview colors (even when not active)
             if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
