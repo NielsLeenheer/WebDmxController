@@ -198,27 +198,23 @@ export class StreamDeckManager {
 
 			// Set up button event listeners
 			streamDeck.on('down', (keyIndex) => {
-				// Debug: Log the received parameter to understand its structure
-				console.log('Stream Deck down event received:', keyIndex, 'typeof:', typeof keyIndex, 'keys:', Object.keys(keyIndex || {}));
-
-				// Ensure keyIndex is a number (handle both number and object cases)
+				// Extract button index from the event parameter
+				// The library passes an object with properties: {type, row, column, index, hidIndex, ...}
 				let buttonIndex;
 
 				if (typeof keyIndex === 'number') {
 					buttonIndex = keyIndex;
 				} else if (typeof keyIndex === 'object' && keyIndex !== null) {
-					// Try various common property names
-					buttonIndex = keyIndex.keyIndex ?? keyIndex.index ?? keyIndex.key ?? keyIndex.button;
+					// Use the 'index' property from the event object
+					buttonIndex = keyIndex.index;
 				} else if (typeof keyIndex === 'string') {
 					buttonIndex = parseInt(keyIndex);
-				} else {
-					buttonIndex = keyIndex;
 				}
 
-				// Debug: Log if we still don't have a number
+				// Skip if we couldn't extract a valid button index
 				if (typeof buttonIndex !== 'number' || isNaN(buttonIndex)) {
-					console.error('Could not extract button index from:', keyIndex);
-					return; // Skip this event
+					console.warn('Could not extract button index from Stream Deck event:', keyIndex);
+					return;
 				}
 
 				const buttonStates = this.buttonStates.get(serialNumber);
@@ -235,18 +231,16 @@ export class StreamDeckManager {
 			});
 
 			streamDeck.on('up', (keyIndex) => {
-				// Ensure keyIndex is a number (handle both number and object cases)
+				// Extract button index from the event parameter
 				let buttonIndex;
 
 				if (typeof keyIndex === 'number') {
 					buttonIndex = keyIndex;
 				} else if (typeof keyIndex === 'object' && keyIndex !== null) {
-					// Try various common property names
-					buttonIndex = keyIndex.keyIndex ?? keyIndex.index ?? keyIndex.key ?? keyIndex.button;
+					// Use the 'index' property from the event object
+					buttonIndex = keyIndex.index;
 				} else if (typeof keyIndex === 'string') {
 					buttonIndex = parseInt(keyIndex);
-				} else {
-					buttonIndex = keyIndex;
 				}
 
 				// Skip if we couldn't extract a valid button index
@@ -333,6 +327,13 @@ export class StreamDeckManager {
 			console.error(`Failed to set button ${buttonIndex} color on ${serialNumber}:`, error);
 			return false;
 		}
+	}
+
+	/**
+	 * Clear button color (set to black) on a Stream Deck device
+	 */
+	async clearButtonColor(serialNumber, buttonIndex) {
+		return await this.setButtonColor(serialNumber, buttonIndex, '#000000');
 	}
 
 	/**

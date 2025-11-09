@@ -83,8 +83,9 @@
             mappingLibrary.add(inputMapping);
             refreshInputs();
 
-            // If this is a Stream Deck button, set its color on the hardware
-            if (device?.type === 'hid' && controlId.startsWith('button-')) {
+            // Set color on hardware for Stream Deck devices only (not keyboard)
+            // MIDI will also support colors when available
+            if (device?.type === 'hid' && device.id !== 'keyboard' && controlId.startsWith('button-')) {
                 const buttonIndex = parseInt(controlId.replace('button-', ''));
 
                 // Validate buttonIndex is a valid number
@@ -159,7 +160,24 @@
         editingName = '';
     }
 
-    function deleteInput(inputId) {
+    async function deleteInput(inputId) {
+        const input = mappingLibrary.get(inputId);
+        if (!input) return;
+
+        // If this is a Stream Deck button (not keyboard), clear its color (set to black)
+        const inputDevice = inputController.getInputDevice(input.inputDeviceId);
+        if (inputDevice?.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
+            const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
+
+            if (!isNaN(buttonIndex) && buttonIndex >= 0) {
+                const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
+                const serialNumber = input.inputDeviceId;
+
+                // Clear the button color (set to black)
+                await streamDeckManager.clearButtonColor(serialNumber, buttonIndex);
+            }
+        }
+
         mappingLibrary.remove(inputId);
         refreshInputs();
     }
@@ -193,12 +211,12 @@
             return;
         }
 
-        // Find all Stream Deck inputs and apply their colors
+        // Find all Stream Deck inputs and apply their colors (skip keyboard)
         for (const input of savedInputs) {
             const inputDevice = inputController.getInputDevice(input.inputDeviceId);
 
-            // Check if this is a Stream Deck device that's currently connected
-            if (inputDevice?.type === 'hid' && input.inputControlId.startsWith('button-')) {
+            // Check if this is a Stream Deck device that's currently connected (not keyboard)
+            if (inputDevice?.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
                 const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
 
                 // Validate buttonIndex is a valid number
@@ -279,7 +297,9 @@
             {:else}
                 {#each savedInputs as input (input.id)}
                     <div class="input-item">
-                        <div class="input-color-badge" style="background-color: {input.color}"></div>
+                        {#if inputController.getInputDevice(input.inputDeviceId)?.type === 'hid' && inputController.getInputDevice(input.inputDeviceId)?.id !== 'keyboard'}
+                            <div class="input-color-badge" style="background-color: {input.color}"></div>
+                        {/if}
                         <div class="input-icon">
                             {@html getInputIcon(input.inputDeviceId)}
                         </div>
