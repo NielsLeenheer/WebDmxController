@@ -3,6 +3,9 @@
     import listIcon from '../../assets/icons/list.svg?raw';
     import universeIcon from '../../assets/icons/universe.svg?raw';
     import timelineIcon from '../../assets/icons/timeline.svg?raw';
+    import animationsIcon from '../../assets/icons/animations.svg?raw';
+    import inputsIcon from '../../assets/icons/inputs.svg?raw';
+    import triggersIcon from '../../assets/icons/triggers.svg?raw';
     import cssIcon from '../../assets/icons/css.svg?raw';
 
     let {
@@ -27,6 +30,24 @@
             <input type="radio" name="view" value="timeline" bind:group={view}>
             <Icon data={timelineIcon} />
             Timeline
+        </label>
+
+        <label>
+            <input type="radio" name="view" value="animations" bind:group={view}>
+            <Icon data={animationsIcon} />
+            Animations
+        </label>
+
+        <label>
+            <input type="radio" name="view" value="inputs" bind:group={view}>
+            <Icon data={inputsIcon} />
+            Inputs
+        </label>
+
+        <label>
+            <input type="radio" name="view" value="triggers" bind:group={view}>
+            <Icon data={triggersIcon} />
+            Triggers
         </label>
 
         <label>

@@ -4,7 +4,12 @@
 
     let {
         dmxController,
-        devices = []
+        devices = [],
+        animationLibrary,
+        mappingLibrary,
+        cssGenerator,
+        cssSampler,
+        triggerManager
     } = $props();
 
     // Generate CSS-safe ID from device name
@@ -16,18 +21,30 @@
             .replace(/^_|_$/g, '');       // Remove leading/trailing underscores
     }
 
-    const initialStyleContent = `/* CSS Animation Mode
+    // Load CSS from localStorage or generate from libraries
+    function getInitialCSS() {
+        const saved = localStorage.getItem('dmx-css');
+        if (saved) {
+            return saved;
+        }
+
+        // Generate from animation and mapping libraries if they have content
+        const generated = cssGenerator.generate(devices);
+        if (generated && generated.trim().length > 200) {
+            return generated;
+        }
+
+        // Otherwise use default example CSS
+        return `/* CSS Animation Mode
 
 Target devices using ID selectors based on device names.
-Example: "Moving Head (Basic) 9" becomes #moving_head_basic_9
-
-Note: Your CSS is automatically scoped to only affect animation targets.
-You can write CSS freely without worrying about affecting the rest of the page.
+Example: "Moving Head 1" becomes #moving_head_1
 
 Supported properties:
-- color: Maps to RGB(W) channels, opacity alpha to W channel
+- color: Maps to RGB(W) channels
 - opacity: Maps to dimmer channel
 - translate: x → pan, y → tilt (for moving heads)
+- --smoke-output: For smoke machines (0-255)
 
 Example animations:
 */
@@ -55,14 +72,14 @@ Example animations:
     100% { translate: 0% 0%; }
 }
 
-/* Apply animations to specific devices by name-based ID */
-/* Example: #moving_head_1 { animation: pan-tilt 10s linear infinite; } */
-
 /* Apply rainbow animation to all devices */
 * {
     animation: rainbow 5s linear infinite;
 }
 `;
+    }
+
+    let currentCSS = $state(getInitialCSS());
 
     let animationFrameId;
     let isActive = false;
@@ -70,108 +87,79 @@ Example animations:
     let deviceOpacities = $state({});
     let devicePanTilt = $state({});
 
+    // Track if CSS is custom (edited by user)
+    let isCustomCSS = $state(localStorage.getItem('dmx-css') !== null);
+
     // Create a style element for the user's CSS
     let styleElement;
     let animationTargetsContainer;
+    let triggerClassesContainer; // Inner container that receives trigger classes
     let cssEditorElement;
+    let frameCount = 0; // Debug: track animation frames
 
     function updateDMXFromCSS() {
-        if (!dmxController || !isActive) return;
+        if (!cssSampler) return;
+
+        frameCount++;
+
+        // Log every 60 frames (~1 second at 60fps) to avoid spam
+        if (frameCount % 60 === 0) {
+            console.log(`[CSSView] Animation loop running, frame ${frameCount}`);
+        }
+
+        // Always sample to update preview, regardless of isActive state
+        const sampledValues = cssSampler.sampleAll(devices);
 
         devices.forEach(device => {
-            const deviceId = getDeviceId(device);
-            const element = document.getElementById(deviceId);
-            if (!element) return;
+            const channels = sampledValues.get(device.id);
+            if (!channels) return;
 
-            const computedStyle = window.getComputedStyle(element);
-            const newValues = [...device.defaultValues];
+            // Convert channel values to array based on device type
+            const newValues = device.getChannelValues();
 
-            // Parse CSS color property → DMX RGB(W)
-            const color = computedStyle.color;
-            if (color && color !== 'rgba(0, 0, 0, 0)') {
-                const rgba = parseColor(color);
-                if (rgba) {
-                    // Map to device channels based on type
-                    if (device.type === 'RGB') {
-                        newValues[0] = rgba.r;
-                        newValues[1] = rgba.g;
-                        newValues[2] = rgba.b;
-                    } else if (device.type === 'RGBA') {
-                        newValues[0] = rgba.r;
-                        newValues[1] = rgba.g;
-                        newValues[2] = rgba.b;
-                        newValues[3] = rgba.a;
-                    } else if (device.type === 'RGBW') {
-                        newValues[0] = rgba.r;
-                        newValues[1] = rgba.g;
-                        newValues[2] = rgba.b;
-                        newValues[3] = rgba.a; // Use alpha for white channel
-                    } else if (device.type === 'MOVING_HEAD') {
-                        // Moving head: pan, tilt, dimmer, r, g, b, w
-                        newValues[3] = rgba.r;
-                        newValues[4] = rgba.g;
-                        newValues[5] = rgba.b;
-                        newValues[6] = rgba.a; // white channel
-                    }
-
-                    // Update preview color
-                    previewColors[device.id] = `rgba(${rgba.r}, ${rgba.g}, ${rgba.b}, ${rgba.a / 255})`;
+            // Update values from sampled channels
+            for (const [channelName, value] of Object.entries(channels)) {
+                const channelIndex = Object.keys(channels).indexOf(channelName);
+                if (channelIndex !== -1 && channelIndex < newValues.length) {
+                    newValues[channelIndex] = value;
                 }
             }
 
-            // Track opacity for preview
-            let opacityValue = 1;
+            // ALWAYS update preview colors (even when not active)
+            if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
+                const alpha = channels.White !== undefined ? channels.White : 255;
+                const newColor = `rgba(${channels.Red}, ${channels.Green}, ${channels.Blue}, ${alpha / 255})`;
 
-            // Parse CSS opacity → DMX dimmer
-            const opacity = parseFloat(computedStyle.opacity);
-            if (!isNaN(opacity)) {
-                opacityValue = opacity;
-                const dimmerValue = Math.round(opacity * 255);
-                if (device.type === 'DIMMER') {
-                    newValues[0] = dimmerValue;
-                } else if (device.type === 'MOVING_HEAD') {
-                    newValues[2] = dimmerValue; // Dimmer channel
+                // Log preview color updates
+                if (previewColors[device.id] !== newColor) {
+                    console.log(`[CSSView] Preview color updated for ${device.name}:`, {
+                        old: previewColors[device.id],
+                        new: newColor
+                    });
                 }
+
+                previewColors[device.id] = newColor;
+            } else if (channels.Intensity !== undefined) {
+                // Dimmer preview
+                const intensity = channels.Intensity / 255;
+                deviceOpacities[device.id] = intensity;
             }
 
-            // Store opacity for preview
-            deviceOpacities[device.id] = opacityValue;
-
-            // Parse CSS translate → DMX pan/tilt (for moving heads)
-            if (device.type === 'MOVING_HEAD') {
-                const transform = computedStyle.transform;
-                if (transform && transform !== 'none') {
-                    const translate = parseTransform(transform);
-                    if (translate) {
-                        // Map -100% to 100% range to 0-255
-                        newValues[0] = Math.round(((translate.x + 100) / 200) * 255); // Pan
-                        newValues[1] = Math.round(((translate.y + 100) / 200) * 255); // Tilt
-                    }
-                }
-
-                // Also try the translate property directly
-                const translateProp = computedStyle.translate;
-                if (translateProp && translateProp !== 'none') {
-                    const parts = translateProp.split(' ');
-                    if (parts.length >= 2) {
-                        const x = parsePercentage(parts[0]);
-                        const y = parsePercentage(parts[1]);
-                        if (x !== null) newValues[0] = Math.round(((x + 100) / 200) * 255);
-                        if (y !== null) newValues[1] = Math.round(((y + 100) / 200) * 255);
-                    }
-                }
-
-                // Store pan/tilt for preview visualization
+            // Update pan/tilt preview for moving heads
+            if (device.type === 'MOVING_HEAD' && channels.Pan !== undefined && channels.Tilt !== undefined) {
                 devicePanTilt[device.id] = {
-                    pan: newValues[0],
-                    tilt: newValues[1]
+                    pan: channels.Pan,
+                    tilt: channels.Tilt
                 };
             }
 
-            // Update DMX controller
-            updateDeviceToDMX(device, newValues);
+            // Only update DMX hardware when active
+            if (dmxController && isActive) {
+                updateDeviceToDMX(device, newValues);
+            }
         });
 
+        // Continue animation loop
         animationFrameId = requestAnimationFrame(updateDMXFromCSS);
     }
 
@@ -220,30 +208,214 @@ Example animations:
     function handleStyleInput(event) {
         // Read the content from the contenteditable element
         const newContent = event.target.textContent;
+
         // Update the style element directly without updating state
         // This prevents cursor position reset
         if (styleElement) {
-            // Wrap user CSS in @scope to limit it to animation targets only
+            // Wrap user CSS in @scope to limit it to animation targets
+            // The trigger classes are on .trigger-classes inside .animation-targets
+            // So selectors like ".button_0_down #device" work because both are within the scope
             styleElement.textContent = `@scope (.animation-targets) {\n${newContent}\n}`;
         }
+
+        // Save to localStorage
+        currentCSS = newContent;
+        localStorage.setItem('dmx-css', newContent);
+        isCustomCSS = true;
     }
 
     function updateStyleElement(content) {
         if (styleElement) {
-            // Wrap user CSS in @scope to limit it to animation targets only
+            // Wrap user CSS in @scope to limit it to animation targets
             styleElement.textContent = `@scope (.animation-targets) {\n${content}\n}`;
         }
     }
 
+    function restoreDefaultCSS() {
+        if (!confirm('This will discard your custom CSS and generate a clean stylesheet from your devices, animations, and triggers. Continue?')) {
+            return;
+        }
+
+        // Clear localStorage
+        localStorage.removeItem('dmx-css');
+        isCustomCSS = false;
+
+        // Regenerate from libraries
+        const generated = cssGenerator.generate(devices);
+        currentCSS = generated;
+
+        // Update editor
+        if (cssEditorElement) {
+            cssEditorElement.textContent = generated;
+        }
+        updateStyleElement(generated);
+    }
+
+    // Smart CSS update: adds/removes specific sections without destroying custom CSS
+    function handleMappingChange(event) {
+        const { type, mapping } = event;
+
+        if (mapping.mode !== 'trigger') return; // Only handle triggers
+
+        if (type === 'add') {
+            // Add new trigger CSS at the end of the triggers section
+            const triggerCSS = mapping.toCSS(devices);
+            if (triggerCSS) {
+                insertTriggerCSS(triggerCSS);
+            }
+        } else if (type === 'remove') {
+            // Remove trigger CSS
+            removeTriggerCSS(mapping.cssClassName);
+        }
+    }
+
+    function handleAnimationChange(event) {
+        const { type, animation } = event;
+
+        if (type === 'add') {
+            // Add new animation CSS to the animations section
+            const animationCSS = animation.toCSS();
+            if (animationCSS) {
+                insertAnimationCSS(animationCSS);
+            }
+        } else if (type === 'remove') {
+            // Remove animation CSS
+            removeAnimationCSS(animation.name);
+        }
+    }
+
+    function insertTriggerCSS(triggerCSS) {
+        // Find the triggers section or append to end
+        let updatedCSS = currentCSS;
+
+        // Look for the "=== Triggers ===" section
+        const triggersHeaderRegex = /\/\*\s*===\s*Triggers\s*===\s*\*\//;
+        const match = updatedCSS.match(triggersHeaderRegex);
+
+        if (match) {
+            // Insert after the triggers header
+            const insertPos = match.index + match[0].length;
+            updatedCSS = updatedCSS.slice(0, insertPos) + '\n' + triggerCSS + '\n' + updatedCSS.slice(insertPos);
+        } else {
+            // No triggers section found, append at the end
+            updatedCSS += '\n\n/* === Triggers === */\n' + triggerCSS + '\n';
+        }
+
+        currentCSS = updatedCSS;
+        if (cssEditorElement) {
+            cssEditorElement.textContent = updatedCSS;
+        }
+        updateStyleElement(updatedCSS);
+        localStorage.setItem('dmx-css', updatedCSS);
+    }
+
+    function removeTriggerCSS(className) {
+        // Remove the CSS rule for this trigger class
+        const classRegex = new RegExp(`\\.${className}\\s+[^{]+\\{[^}]*\\}\\n?`, 'g');
+        let updatedCSS = currentCSS.replace(classRegex, '');
+
+        currentCSS = updatedCSS;
+        if (cssEditorElement) {
+            cssEditorElement.textContent = updatedCSS;
+        }
+        updateStyleElement(updatedCSS);
+        localStorage.setItem('dmx-css', updatedCSS);
+    }
+
+    function insertAnimationCSS(animationCSS) {
+        let updatedCSS = currentCSS;
+
+        // Look for the "=== Animations ===" section
+        const animationsHeaderRegex = /\/\*\s*===\s*Animations\s*===\s*\*\//;
+        const match = updatedCSS.match(animationsHeaderRegex);
+
+        if (match) {
+            // Insert after the animations header
+            const insertPos = match.index + match[0].length;
+            updatedCSS = updatedCSS.slice(0, insertPos) + '\n' + animationCSS + '\n' + updatedCSS.slice(insertPos);
+        } else {
+            // No animations section found, create it before triggers
+            const triggersHeaderRegex = /\/\*\s*===\s*Triggers\s*===\s*\*\//;
+            const triggersMatch = updatedCSS.match(triggersHeaderRegex);
+
+            if (triggersMatch) {
+                // Insert before triggers section
+                const insertPos = triggersMatch.index;
+                updatedCSS = updatedCSS.slice(0, insertPos) + '/* === Animations === */\n' + animationCSS + '\n\n' + updatedCSS.slice(insertPos);
+            } else {
+                // Append at the end
+                updatedCSS += '\n\n/* === Animations === */\n' + animationCSS + '\n';
+            }
+        }
+
+        currentCSS = updatedCSS;
+        if (cssEditorElement) {
+            cssEditorElement.textContent = updatedCSS;
+        }
+        updateStyleElement(updatedCSS);
+        localStorage.setItem('dmx-css', updatedCSS);
+    }
+
+    function removeAnimationCSS(animationName) {
+        // Remove the @keyframes rule for this animation
+        const keyframesRegex = new RegExp(`@keyframes\\s+${animationName}\\s*\\{[^}]*(?:\\{[^}]*\\}[^}]*)*\\}\\n?`, 'g');
+        let updatedCSS = currentCSS.replace(keyframesRegex, '');
+
+        currentCSS = updatedCSS;
+        if (cssEditorElement) {
+            cssEditorElement.textContent = updatedCSS;
+        }
+        updateStyleElement(updatedCSS);
+        localStorage.setItem('dmx-css', updatedCSS);
+    }
+
+    function insertDeviceCSS(deviceCSS) {
+        let updatedCSS = currentCSS;
+
+        // Look for the "=== Default Device Values ===" section
+        const devicesHeaderRegex = /\/\*\s*===\s*Default Device Values\s*===\s*\*\//;
+        const match = updatedCSS.match(devicesHeaderRegex);
+
+        if (match) {
+            // Find the end of the device defaults section (before animations or empty line)
+            const afterHeader = updatedCSS.slice(match.index + match[0].length);
+            const animationsMatch = afterHeader.match(/\/\*\s*===\s*Animations\s*===\s*\*\//);
+
+            if (animationsMatch) {
+                // Insert before animations section
+                const insertPos = match.index + match[0].length + animationsMatch.index;
+                updatedCSS = updatedCSS.slice(0, insertPos) + '\n' + deviceCSS + '\n' + updatedCSS.slice(insertPos);
+            } else {
+                // Insert after the header comment
+                const insertPos = match.index + match[0].length;
+                updatedCSS = updatedCSS.slice(0, insertPos) + '\n' + deviceCSS + '\n' + updatedCSS.slice(insertPos);
+            }
+        } else {
+            // No device defaults section, create it at the beginning
+            const headerEnd = updatedCSS.indexOf('*/') + 2;
+            if (headerEnd > 1) {
+                updatedCSS = updatedCSS.slice(0, headerEnd) + '\n\n/* === Default Device Values === */\n/* These selectors set the default state for each device */\n' + deviceCSS + '\n' + updatedCSS.slice(headerEnd);
+            } else {
+                updatedCSS = '/* === Default Device Values === */\n' + deviceCSS + '\n\n' + updatedCSS;
+            }
+        }
+
+        currentCSS = updatedCSS;
+        if (cssEditorElement) {
+            cssEditorElement.textContent = updatedCSS;
+        }
+        updateStyleElement(updatedCSS);
+        localStorage.setItem('dmx-css', updatedCSS);
+    }
+
     function startAnimation() {
         isActive = true;
-        if (!animationFrameId) {
-            updateDMXFromCSS();
-        }
+        // Animation loop is always running for preview updates
     }
 
     function stopAnimation() {
         isActive = false;
+        // Stop animation loop completely when component is destroyed
         if (animationFrameId) {
             cancelAnimationFrame(animationFrameId);
             animationFrameId = null;
@@ -256,11 +428,33 @@ Example animations:
         styleElement.id = 'css-animation-styles';
         document.head.appendChild(styleElement);
 
+        // Create inner trigger-classes container
+        if (animationTargetsContainer) {
+            triggerClassesContainer = document.createElement('div');
+            triggerClassesContainer.className = 'trigger-classes';
+            animationTargetsContainer.appendChild(triggerClassesContainer);
+        }
+
+        // Initialize CSS sampler with the inner container (where devices will be)
+        if (cssSampler && triggerClassesContainer) {
+            cssSampler.initialize(triggerClassesContainer);
+            cssSampler.updateDevices(devices);
+        }
+
+        // Set trigger manager container to inner container (where classes go)
+        if (triggerManager && triggerClassesContainer) {
+            triggerManager.setContainer(triggerClassesContainer);
+        }
+
+        // Listen for mapping and animation changes to update CSS automatically
+        mappingLibrary.on('changed', handleMappingChange);
+        animationLibrary.on('changed', handleAnimationChange);
+
         // Set initial content in the editor
         if (cssEditorElement) {
-            cssEditorElement.textContent = initialStyleContent;
+            cssEditorElement.textContent = currentCSS;
         }
-        updateStyleElement(initialStyleContent);
+        updateStyleElement(currentCSS);
 
         // Initialize preview colors
         devices.forEach(device => {
@@ -274,8 +468,39 @@ Example animations:
             }
         });
 
-        // Start animation loop
-        startAnimation();
+        // Start animation loop (for preview updates, always running)
+        // DMX output is controlled by isActive flag
+        if (!animationFrameId) {
+            isActive = true; // Start with DMX output active
+            updateDMXFromCSS();
+        }
+    });
+
+    // Track previous devices to detect additions (use regular variable, not $state)
+    let previousDeviceIds = new Set();
+
+    // Watch for device changes and update sampler + CSS
+    $effect(() => {
+        if (cssSampler && devices) {
+            cssSampler.updateDevices(devices);
+
+            // Detect new devices and add their default CSS
+            const currentDeviceIds = new Set(devices.map(d => d.id));
+            const newDevices = devices.filter(d => !previousDeviceIds.has(d.id));
+
+            if (newDevices.length > 0 && previousDeviceIds.size > 0) {
+                // Only insert CSS if we're not on initial load
+                for (const device of newDevices) {
+                    const deviceCSS = cssGenerator._generateDeviceDefaults(device);
+                    if (deviceCSS) {
+                        insertDeviceCSS(deviceCSS);
+                    }
+                }
+            }
+
+            // Update tracking - this is safe because previousDeviceIds is not reactive
+            previousDeviceIds = currentDeviceIds;
+        }
     });
 
     onDestroy(() => {
@@ -283,6 +508,8 @@ Example animations:
         if (styleElement && styleElement.parentNode) {
             styleElement.parentNode.removeChild(styleElement);
         }
+        mappingLibrary.off('changed', handleMappingChange);
+        animationLibrary.off('changed', handleAnimationChange);
     });
 </script>
 
@@ -305,25 +532,23 @@ Example animations:
                         </div>
                     </div>
                     <div class="device-info">
-                        <div class="device-id">#{getDeviceId(device)}</div>
+                        <div class="device-id">#{device.cssId}</div>
+                        <div class="device-name">{device.name}</div>
                     </div>
                 </div>
             {/each}
         </div>
 
-        <!-- Off-screen animation targets -->
-        <div class="animation-targets" bind:this={animationTargetsContainer}>
-            {#each devices as device (device.id)}
-                <div
-                    id="{getDeviceId(device)}"
-                    class="animation-target"
-                    data-device-id={device.id}
-                ></div>
-            {/each}
-        </div>
+        <!-- Off-screen animation targets (managed by cssSampler) -->
+        <div class="animation-targets" bind:this={animationTargetsContainer}></div>
     </div>
 
     <div class="right-column">
+        <div class="css-toolbar">
+            <button class="restore-button" onclick={restoreDefaultCSS}>
+                Restore Default CSS
+            </button>
+        </div>
         <pre
             class="css-editor"
             contenteditable="true"
@@ -354,6 +579,32 @@ Example animations:
         display: flex;
         flex-direction: column;
         overflow: hidden;
+    }
+
+    .css-toolbar {
+        padding: 10px 15px;
+        border-bottom: 1px solid #ddd;
+        background: #f9f9f9;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .restore-button {
+        padding: 6px 12px;
+        border: 1px solid #007acc;
+        background: white;
+        color: #007acc;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 9pt;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .restore-button:hover {
+        background: #007acc;
+        color: white;
     }
 
     .device-list {

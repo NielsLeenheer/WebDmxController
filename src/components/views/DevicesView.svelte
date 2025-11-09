@@ -33,6 +33,16 @@
         selectedLinkTarget = null;
     }
 
+    // Generate CSS ID preview from current dialog name
+    function getPreviewCssId() {
+        const name = dialogName.trim() || editingDevice?.name || '';
+        return name
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_|_$/g, '');
+    }
+
     function saveDeviceSettings() {
         if (!editingDevice) return;
 
@@ -113,7 +123,7 @@
                 const data = JSON.parse(saved);
                 // Reconstruct Device objects
                 const loadedDevices = data.devices.map(d => {
-                    const device = new Device(d.id, d.type, d.startChannel, d.name, d.linkedTo);
+                    const device = new Device(d.id, d.type, d.startChannel, d.name, d.linkedTo, d.cssId);
                     device.defaultValues = d.defaultValues || new Array(DEVICE_TYPES[d.type].channels).fill(0);
                     return device;
                 });
@@ -369,6 +379,7 @@
                         bind:value={dialogName}
                         placeholder="Device name"
                     />
+                    <small class="css-id-preview">CSS ID: #{getPreviewCssId()}</small>
                 </div>
 
                 <div class="dialog-input-group">
@@ -591,6 +602,11 @@
         margin-top: 6px;
         font-size: 9pt;
         color: #888;
+    }
+
+    .css-id-preview {
+        font-family: var(--font-stack-mono);
+        color: #666;
     }
 
     .dialog-buttons {
