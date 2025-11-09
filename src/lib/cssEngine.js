@@ -25,29 +25,8 @@ export class CSSGenerator {
 		// Header comment
 		parts.push('/* DMX Controller - Generated CSS */');
 		parts.push('/* This stylesheet is auto-generated from your animations and input mappings */');
-		parts.push('/* You can edit this CSS and the changes will be reflected in the interface */\n');
-
-		// CSS Custom Property Definitions
-		parts.push('/* === CSS Custom Property Definitions === */');
-		parts.push('/* Define custom properties with specific syntax for type safety */\n');
-
-		parts.push('@property --safety {');
-		parts.push('  syntax: "none | probably";');
-		parts.push('  inherits: false;');
-		parts.push('  initial-value: none;');
-		parts.push('}\n');
-
-		parts.push('@property --fuel {');
-		parts.push('  syntax: "<percentage>";');
-		parts.push('  inherits: false;');
-		parts.push('  initial-value: 0%;');
-		parts.push('}\n');
-
-		parts.push('@property --smoke-output {');
-		parts.push('  syntax: "<number>";');
-		parts.push('  inherits: false;');
-		parts.push('  initial-value: 0;');
-		parts.push('}\n');
+		parts.push('/* You can edit this CSS and the changes will be reflected in the interface */');
+		parts.push('/* Note: @property definitions are in a separate, non-editable include */\n');
 
 		// Default device values
 		if (devices.length > 0) {
