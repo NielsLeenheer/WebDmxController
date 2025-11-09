@@ -27,16 +27,8 @@ export class InputController {
 		// Initialize custom properties
 		this.customPropertyManager.initialize();
 
-		// Initialize MIDI
-		await this.inputDeviceManager.initMIDI();
-
-		// Auto-reconnect Stream Deck devices
-		await this.inputDeviceManager.autoReconnectStreamDecks();
-
-		// Enable keyboard by default
-		this.inputDeviceManager.enableKeyboard();
-
-		// Listen for device changes
+		// IMPORTANT: Set up device listeners BEFORE initializing devices
+		// Otherwise auto-reconnected devices won't have their listeners attached
 		this.inputDeviceManager.on('deviceadded', (device) => {
 			this._setupDeviceListeners(device);
 			this._emit('deviceadded', device);
@@ -45,6 +37,15 @@ export class InputController {
 		this.inputDeviceManager.on('deviceremoved', (device) => {
 			this._emit('deviceremoved', device);
 		});
+
+		// Initialize MIDI
+		await this.inputDeviceManager.initMIDI();
+
+		// Auto-reconnect Stream Deck devices
+		await this.inputDeviceManager.autoReconnectStreamDecks();
+
+		// Enable keyboard by default
+		this.inputDeviceManager.enableKeyboard();
 	}
 
 	/**
