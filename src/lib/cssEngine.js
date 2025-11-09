@@ -210,10 +210,24 @@ export class CSSSampler {
 	 */
 	sampleDevice(device) {
 		const element = this.deviceElements.get(device.id);
-		if (!element) return null;
+		if (!element) {
+			console.warn(`[CSSSampler] No element found for device ${device.id}`);
+			return null;
+		}
 
 		const computed = window.getComputedStyle(element);
 		const channels = {};
+
+		// Log element info for debugging (only first sample)
+		if (!this.previousValues.has(device.id)) {
+			console.log(`[CSSSampler] Sampling device ${device.id} (${device.name}):`, {
+				elementId: element.id,
+				className: element.className,
+				parentClass: element.parentElement?.className,
+				computedColor: computed.color,
+				computedOpacity: computed.opacity
+			});
+		}
 
 		switch (device.type) {
 			case DEVICE_TYPES.RGB:
