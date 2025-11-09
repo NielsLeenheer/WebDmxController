@@ -139,6 +139,12 @@ export class CSSGenerator {
 				}
 				break;
 
+			case 'FLAMETHROWER':
+				const [safety, fuel] = defaultValues;
+				props.push(`  --flamethrower-safety: ${safety || 0};`);
+				props.push(`  --flamethrower-fuel: ${fuel || 0};`);
+				break;
+
 			default:
 				return null;
 		}
@@ -262,6 +268,10 @@ export class CSSSampler {
 
 			case 'MOVING_HEAD':
 				Object.assign(channels, this._sampleMovingHead(computed));
+				break;
+
+			case 'FLAMETHROWER':
+				Object.assign(channels, this._sampleFlamethrower(computed));
 				break;
 		}
 
@@ -399,6 +409,19 @@ export class CSSSampler {
 			Green: color.g,
 			Blue: color.b,
 			White: Math.min(color.r, color.g, color.b)
+		};
+	}
+
+	/**
+	 * Sample flamethrower from custom properties
+	 */
+	_sampleFlamethrower(computed) {
+		const safety = computed.getPropertyValue('--flamethrower-safety') || '0';
+		const fuel = computed.getPropertyValue('--flamethrower-fuel') || '0';
+
+		return {
+			Safety: Math.round(Math.max(0, Math.min(255, parseFloat(safety)))),
+			Fuel: Math.round(Math.max(0, Math.min(255, parseFloat(fuel))))
 		};
 	}
 

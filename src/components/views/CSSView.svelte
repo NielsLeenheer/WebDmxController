@@ -147,6 +147,12 @@ Example animations:
                     channels.White || 0
                 ];
 
+            case 'FLAMETHROWER':
+                return [
+                    channels.Safety || 0,
+                    channels.Fuel || 0
+                ];
+
             default:
                 console.warn(`Unknown device type: ${deviceType}`);
                 return [];

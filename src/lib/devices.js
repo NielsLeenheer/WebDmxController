@@ -54,6 +54,14 @@ export const DEVICE_TYPES = {
             { name: 'Blue', type: 'slider', color: '#365fb4' },
             { name: 'White', type: 'slider', color: '#808080' }
         ]
+    },
+    FLAMETHROWER: {
+        name: 'Flamethrower',
+        channels: 2,
+        controls: [
+            { name: 'Safety', type: 'slider', color: '#ff9800' },
+            { name: 'Fuel', type: 'slider', color: '#ff5722' }
+        ]
     }
 };
 
