@@ -134,9 +134,11 @@ export class CSSGenerator {
 
 			case 'MOVING_HEAD':
 				const [pan, tilt, dimmer, r4, g4, b4, w2] = defaultValues;
-				// Convert DMX values (0-255) to percentages (0-100%)
-				const panPercent = pan !== undefined ? Math.round((pan / 255) * 100) : 50;
-				const tiltPercent = tilt !== undefined ? Math.round((tilt / 255) * 100) : 50;
+				// Convert DMX values to percentages
+			// Pan: 0-255 DMX -> -50% to 50% (0% = center)
+				const panPercent = pan !== undefined ? Math.round(((pan / 255) * 100) - 50) : 0;
+				// Tilt: 0-255 DMX -> 0% to 100%
+			const tiltPercent = tilt !== undefined ? Math.round((tilt / 255) * 100) : 0;
 				props.push(`  --pan: ${panPercent}%;`);
 				props.push(`  --tilt: ${tiltPercent}%;`);
 				props.push(`  opacity: ${dimmer !== undefined ? (dimmer / 255).toFixed(2) : '1'};`);
@@ -372,16 +374,18 @@ export class CSSSampler {
 		const color = this._parseComputedColor(computed.color);
 		const opacity = parseFloat(computed.opacity) || 1;
 
-		// Parse --pan and --tilt percentages to DMX values (0-100% -> 0-255)
-		const pan = computed.getPropertyValue('--pan') || '50%';
-		const tilt = computed.getPropertyValue('--tilt') || '50%';
+		// Parse --pan and --tilt percentages to DMX values
+		const pan = computed.getPropertyValue('--pan') || '0%';
+		const tilt = computed.getPropertyValue('--tilt') || '0%';
 
-		const panMatch = pan.match(/(\d+(?:\.\d+)?)/);
-		const panPercent = panMatch ? parseFloat(panMatch[1]) : 50;
-		const panValue = Math.round(Math.max(0, Math.min(100, panPercent)) * 255 / 100);
+		// Pan: -50% to 50% -> 0-255 DMX (0% = center = 127.5)
+		const panMatch = pan.match(/(-?\d+(?:\.\d+)?)/);
+		const panPercent = panMatch ? parseFloat(panMatch[1]) : 0;
+		const panValue = Math.round(((Math.max(-50, Math.min(50, panPercent)) + 50) / 100) * 255);
 
+		// Tilt: 0% to 100% -> 0-255 DMX
 		const tiltMatch = tilt.match(/(\d+(?:\.\d+)?)/);
-		const tiltPercent = tiltMatch ? parseFloat(tiltMatch[1]) : 50;
+		const tiltPercent = tiltMatch ? parseFloat(tiltMatch[1]) : 0;
 		const tiltValue = Math.round(Math.max(0, Math.min(100, tiltPercent)) * 255 / 100);
 
 		return {

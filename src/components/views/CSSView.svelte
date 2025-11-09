@@ -472,13 +472,13 @@ Example animations:
 @property --pan {
   syntax: "<percentage>";
   inherits: false;
-  initial-value: 50%;
+  initial-value: 0%;
 }
 
 @property --tilt {
   syntax: "<percentage>";
   inherits: false;
-  initial-value: 50%;
+  initial-value: 0%;
 }
 
 @property --amber {
