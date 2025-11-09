@@ -150,10 +150,8 @@ export class MIDIInputDevice extends InputDevice {
 }
 
 /**
- * HID Input Device (WebHID API) - for Stream Deck, etc
- */
-/**
- * HID Input Device (Stream Deck, game controllers, etc)
+ * Generic HID Input Device (game controllers, button boxes, etc)
+ * Uses bit-packed button state handling for generic devices
  */
 export class HIDInputDevice extends InputDevice {
 	constructor(hidDevice, config = {}) {
@@ -168,43 +166,7 @@ export class HIDInputDevice extends InputDevice {
 		const { data, reportId } = event;
 		const bytes = new Uint8Array(data.buffer);
 
-		// Stream Deck detection: Check for common Stream Deck vendor/product IDs
-		const isStreamDeck = this.hidDevice.vendorId === 0x0fd9; // Elgato vendor ID
-
-		if (isStreamDeck) {
-			this._handleStreamDeckReport(bytes, reportId);
-		} else {
-			this._handleGenericReport(bytes, reportId);
-		}
-	}
-
-	_handleStreamDeckReport(bytes, reportId) {
-		// Stream Deck sends button states in the report
-		// Each button is typically one bit or one byte depending on the model
-
-		// For Stream Deck Original/MK.2: 15 buttons, each button is 1 byte
-		// For Stream Deck Mini: 6 buttons
-		// For Stream Deck XL: 32 buttons
-
-		for (let i = 0; i < bytes.length; i++) {
-			const buttonPressed = bytes[i] === 1;
-			const controlId = `button-${i}`;
-			const wasPressed = this.buttonStates.get(controlId) || false;
-
-			if (buttonPressed && !wasPressed) {
-				// Button pressed
-				this.buttonStates.set(controlId, true);
-				this._trigger(controlId, 127);
-			} else if (!buttonPressed && wasPressed) {
-				// Button released
-				this.buttonStates.set(controlId, false);
-				this._emit('release', { controlId });
-			}
-		}
-	}
-
-	_handleGenericReport(bytes, reportId) {
-		// Generic button handling for other HID devices
+		// Generic bit-packed button handling
 		for (let i = 0; i < bytes.length; i++) {
 			const byte = bytes[i];
 			for (let bit = 0; bit < 8; bit++) {
@@ -225,7 +187,7 @@ export class HIDInputDevice extends InputDevice {
 	}
 
 	/**
-	 * Send output report (e.g., to update button LEDs on Stream Deck)
+	 * Send output report (e.g., to update button LEDs)
 	 */
 	async sendOutput(reportId, data) {
 		if (this.hidDevice && this.hidDevice.opened) {
@@ -339,21 +301,26 @@ export class InputDeviceManager {
 	 * Setup Stream Deck event listeners
 	 */
 	_setupStreamDeckListeners() {
+		this.streamDeckManager.on('connected', ({ device, model, serialNumber }) => {
+			console.log(`Stream Deck connected: ${model}`);
+
+			// Create InputDevice wrapper immediately when Stream Deck connects
+			const deviceId = serialNumber;
+			const inputDevice = new InputDevice(deviceId, model || 'Stream Deck', 'hid');
+			inputDevice.streamDeck = device; // Store reference to the StreamDeck instance
+			this.devices.set(deviceId, inputDevice);
+			this._emit('deviceadded', inputDevice);
+		});
+
 		this.streamDeckManager.on('buttondown', ({ device, button, model, serialNumber }) => {
 			const deviceId = serialNumber;
-			let inputDevice = this.devices.get(deviceId);
+			const inputDevice = this.devices.get(deviceId);
 
-			if (!inputDevice) {
-				// Create a wrapper InputDevice for this Stream Deck
-				inputDevice = new InputDevice(deviceId, model || 'Stream Deck', 'hid');
-				inputDevice.streamDeck = device; // Store reference to the StreamDeck instance
-				this.devices.set(deviceId, inputDevice);
-				this._emit('deviceadded', inputDevice);
+			if (inputDevice) {
+				// Trigger the button via the input device
+				const controlId = `button-${button}`;
+				inputDevice._trigger(controlId, 127);
 			}
-
-			// Trigger the button via the input device
-			const controlId = `button-${button}`;
-			inputDevice._trigger(controlId, 127);
 		});
 
 		this.streamDeckManager.on('buttonup', ({ serialNumber, button }) => {
@@ -364,10 +331,6 @@ export class InputDeviceManager {
 				const controlId = `button-${button}`;
 				inputDevice._emit('release', { controlId });
 			}
-		});
-
-		this.streamDeckManager.on('connected', ({ device, model }) => {
-			console.log(`Stream Deck connected: ${model}`);
 		});
 
 		this.streamDeckManager.on('disconnected', ({ serialNumber }) => {
