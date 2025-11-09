@@ -109,11 +109,20 @@
     }
 
     function getTriggerClassName(trigger) {
-        // Generate CSS class name for this trigger
-        const controlId = trigger.inputControlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-        const suffix = trigger.triggerType === 'pressed' ? 'down' :
-                       trigger.triggerType === 'not-pressed' ? 'up' : 'always';
-        return `${controlId}_${suffix}`;
+        // Generate CSS class name from input name
+        // Get the input to access its name
+        const input = availableInputs.find(
+            i => i.inputDeviceId === trigger.inputDeviceId && i.inputControlId === trigger.inputControlId
+        );
+
+        // Convert name to lowercase, replace spaces and special chars with dashes
+        const baseName = input?.name || `${trigger.inputDeviceId}_${trigger.inputControlId}`;
+        const className = baseName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+        return className;
     }
 
     onMount(() => {

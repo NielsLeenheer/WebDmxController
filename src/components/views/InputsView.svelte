@@ -138,9 +138,25 @@
     }
 
     function formatInputName(deviceName, controlId) {
-        const devicePart = deviceName.replace(/\s+/g, '_').toLowerCase();
-        const controlPart = controlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-        return `${devicePart}_${controlPart}`;
+        // Parse the controlId to determine the type
+        if (controlId.startsWith('note-')) {
+            const noteNumber = controlId.replace('note-', '');
+            return `${deviceName} Note ${noteNumber}`;
+        } else if (controlId.startsWith('control-')) {
+            const controlNumber = controlId.replace('control-', '');
+            return `${deviceName} Control ${controlNumber}`;
+        } else if (controlId.startsWith('button-')) {
+            const buttonNumber = controlId.replace('button-', '');
+            return `${deviceName} Button ${buttonNumber}`;
+        } else if (controlId.startsWith('key-')) {
+            // Extract just the key letter from KeyQ -> Q
+            const keyCode = controlId.replace('key-', '');
+            const key = keyCode.replace('Key', '').replace('Digit', '') || keyCode;
+            return `Keyboard ${key}`;
+        } else {
+            // Fallback for unknown control types
+            return `${deviceName} ${controlId}`;
+        }
     }
 
     function startEditing(input) {
