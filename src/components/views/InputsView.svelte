@@ -89,8 +89,10 @@
                 const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
                 const serialNumber = deviceId; // deviceId is the serialNumber for Stream Deck
 
-                // Set the button color on the device
-                streamDeckManager.setButtonColor(serialNumber, buttonIndex, inputMapping.color);
+                // Set the button color on the device (async, but don't wait)
+                streamDeckManager.setButtonColor(serialNumber, buttonIndex, inputMapping.color).catch(err => {
+                    console.warn(`Could not set button ${buttonIndex} color:`, err);
+                });
             }
         }
     }
@@ -180,17 +182,23 @@
     async function applyColorsToStreamDeck() {
         // Apply colors to all Stream Deck buttons that have saved inputs
         const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
+        const connectedDevices = streamDeckManager.getConnectedDevices();
+
+        if (connectedDevices.length === 0) {
+            // No Stream Deck connected, skip color application
+            return;
+        }
 
         // Find all Stream Deck inputs and apply their colors
         for (const input of savedInputs) {
             const inputDevice = inputController.getInputDevice(input.inputDeviceId);
 
-            // Check if this is a Stream Deck device
+            // Check if this is a Stream Deck device that's currently connected
             if (inputDevice?.type === 'hid' && input.inputControlId.startsWith('button-')) {
                 const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
                 const serialNumber = input.inputDeviceId; // deviceId is the serialNumber
 
-                // Set the button color on the device
+                // Set the button color on the device (will silently fail if button doesn't exist)
                 await streamDeckManager.setButtonColor(serialNumber, buttonIndex, input.color);
             }
         }

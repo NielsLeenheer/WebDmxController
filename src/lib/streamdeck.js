@@ -263,7 +263,17 @@ export class StreamDeckManager {
 	 */
 	async setButtonColor(serialNumber, buttonIndex, color) {
 		const streamDeck = this.connectedDevices.get(serialNumber);
-		if (!streamDeck) return false;
+		if (!streamDeck) {
+			// Device not connected
+			return false;
+		}
+
+		// Validate button index is within range for this device
+		const buttonCount = streamDeck.NUM_KEYS || 15;
+		if (buttonIndex < 0 || buttonIndex >= buttonCount) {
+			// Button index out of range for this device
+			return false;
+		}
 
 		try {
 			// Parse color to RGB
@@ -274,7 +284,7 @@ export class StreamDeckManager {
 			await streamDeck.fillKeyColor(buttonIndex, rgb.r, rgb.g, rgb.b);
 			return true;
 		} catch (error) {
-			console.error('Failed to set button color:', error);
+			console.error(`Failed to set button ${buttonIndex} color on ${serialNumber}:`, error);
 			return false;
 		}
 	}
