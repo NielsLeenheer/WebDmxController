@@ -73,19 +73,23 @@
             // Auto-save new input
             const name = formatInputName(device?.name || deviceId, controlId);
 
+            // Only assign colors to Stream Deck devices (not keyboard or other devices)
+            const supportsColor = device?.type === 'hid' && device.id !== 'keyboard';
+
             const inputMapping = new InputMapping({
                 name,
                 mode: 'input',  // Mark as input-only (not a trigger mapping)
                 inputDeviceId: deviceId,
-                inputControlId: controlId
+                inputControlId: controlId,
+                color: supportsColor ? undefined : null  // undefined = generate color, null = no color
             });
 
             mappingLibrary.add(inputMapping);
             refreshInputs();
 
-            // Set color on hardware for Stream Deck devices only (not keyboard)
+            // Set color on hardware for Stream Deck devices only
             // MIDI will also support colors when available
-            if (device?.type === 'hid' && device.id !== 'keyboard' && controlId.startsWith('button-')) {
+            if (supportsColor && controlId.startsWith('button-')) {
                 const buttonIndex = parseInt(controlId.replace('button-', ''));
 
                 // Validate buttonIndex is a valid number
@@ -297,7 +301,7 @@
             {:else}
                 {#each savedInputs as input (input.id)}
                     <div class="input-item">
-                        {#if inputController.getInputDevice(input.inputDeviceId)?.type === 'hid' && inputController.getInputDevice(input.inputDeviceId)?.id !== 'keyboard'}
+                        {#if input.color}
                             <div class="input-color-badge" style="background-color: {input.color}"></div>
                         {/if}
                         <div class="input-icon">

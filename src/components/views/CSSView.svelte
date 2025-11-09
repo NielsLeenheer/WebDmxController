@@ -97,9 +97,9 @@ Example animations:
     let cssEditorElement;
 
     function updateDMXFromCSS() {
-        if (!dmxController || !isActive || !cssSampler) return;
+        if (!cssSampler) return;
 
-        // Sample all devices using the new cssSampler
+        // Always sample to update preview, regardless of isActive state
         const sampledValues = cssSampler.sampleAll(devices);
 
         devices.forEach(device => {
@@ -117,7 +117,7 @@ Example animations:
                 }
             }
 
-            // Update preview colors based on sampled RGB values
+            // ALWAYS update preview colors (even when not active)
             if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
                 const alpha = channels.White !== undefined ? channels.White : 255;
                 previewColors[device.id] = `rgba(${channels.Red}, ${channels.Green}, ${channels.Blue}, ${alpha / 255})`;
@@ -135,10 +135,13 @@ Example animations:
                 };
             }
 
-            // Update DMX controller
-            updateDeviceToDMX(device, newValues);
+            // Only update DMX hardware when active
+            if (dmxController && isActive) {
+                updateDeviceToDMX(device, newValues);
+            }
         });
 
+        // Continue animation loop
         animationFrameId = requestAnimationFrame(updateDMXFromCSS);
     }
 
@@ -389,13 +392,12 @@ Example animations:
 
     function startAnimation() {
         isActive = true;
-        if (!animationFrameId) {
-            updateDMXFromCSS();
-        }
+        // Animation loop is always running for preview updates
     }
 
     function stopAnimation() {
         isActive = false;
+        // Stop animation loop completely when component is destroyed
         if (animationFrameId) {
             cancelAnimationFrame(animationFrameId);
             animationFrameId = null;
@@ -448,8 +450,12 @@ Example animations:
             }
         });
 
-        // Start animation loop
-        startAnimation();
+        // Start animation loop (for preview updates, always running)
+        // DMX output is controlled by isActive flag
+        if (!animationFrameId) {
+            isActive = true; // Start with DMX output active
+            updateDMXFromCSS();
+        }
     });
 
     // Track previous devices to detect additions (use regular variable, not $state)
