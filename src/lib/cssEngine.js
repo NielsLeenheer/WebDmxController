@@ -253,24 +253,6 @@ export class CSSSampler {
 		const computed = window.getComputedStyle(element);
 		const channels = {};
 
-		// Log element info for debugging (only first sample)
-		if (!this.previousValues.has(device.id)) {
-			console.log(`[CSSSampler] Sampling device ${device.id} (${device.name}):`, {
-				elementId: element.id,
-				className: element.className,
-				parentClass: element.parentElement?.className,
-				computedColor: computed.color,
-				computedOpacity: computed.opacity
-			});
-		}
-
-		// TEMPORARY DEBUG: Log computed color every 60 frames
-		if (!this._sampleCount) this._sampleCount = 0;
-		this._sampleCount++;
-		if (this._sampleCount % 60 === 0) {
-			console.log(`[CSSSampler DEBUG] Device ${device.id} computed color:`, computed.color, 'opacity:', computed.opacity);
-		}
-
 		switch (device.type) {
 			case 'RGB':
 				Object.assign(channels, this._sampleRGB(computed));
@@ -299,36 +281,6 @@ export class CSSSampler {
 			case 'FLAMETHROWER':
 				Object.assign(channels, this._sampleFlamethrower(computed));
 				break;
-		}
-
-		// Log changes for debugging
-		const previous = this.previousValues.get(device.id);
-		if (previous) {
-			// Check if any values changed
-			let hasChanges = false;
-			const changes = {};
-
-			for (const [key, value] of Object.entries(channels)) {
-				if (previous[key] !== value) {
-					hasChanges = true;
-					changes[key] = { from: previous[key], to: value };
-				}
-			}
-
-			if (hasChanges) {
-				console.log(`[CSSSampler] Device ${device.id} (${device.name}) values changed:`, {
-					color: computed.color,
-					opacity: computed.opacity,
-					changes
-				});
-			}
-		} else {
-			// First sample for this device
-			console.log(`[CSSSampler] Initial sample for device ${device.id} (${device.name}):`, {
-				color: computed.color,
-				opacity: computed.opacity,
-				channels
-			});
 		}
 
 		// Store current values for next comparison
