@@ -187,11 +187,14 @@ export class StreamDeckManager {
 			// Note: requestStreamDecks() and getStreamDecks() return already-opened devices
 			// so we don't need to call streamDeck.open()
 
-			// Generate a unique serial number for this device
-			// Try multiple properties and fallback to a generated ID
+			// Generate a consistent serial number for this device
+			// Use PRODUCT_NAME + MODEL to create a stable identifier across reloads
+			// This ensures saved inputs can be matched to the same device after reload
 			const serialNumber = streamDeck.serialNumber
 				|| streamDeck.SERIAL_NUMBER
-				|| `streamdeck-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+				|| `${streamDeck.PRODUCT_NAME || 'StreamDeck'}-${streamDeck.MODEL || streamDeck.PRODUCT_ID || 'unknown'}`.replace(/\s+/g, '-').toLowerCase();
+
+			console.log('Stream Deck serial number:', serialNumber, 'Product:', streamDeck.PRODUCT_NAME, 'Model:', streamDeck.MODEL);
 
 			// Initialize button states
 			this.buttonStates.set(serialNumber, new Map());

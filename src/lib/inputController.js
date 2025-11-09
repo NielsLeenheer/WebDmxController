@@ -87,22 +87,25 @@ export class InputController {
 	 * Handle trigger event (button/note press)
 	 */
 	_handleTrigger(deviceId, controlId, velocity) {
-		// Always add raw "down" class for custom CSS, even without mappings
-		const downClass = this._generateClassName(controlId, 'down');
-		this.triggerManager.addRawClass(downClass);
-
-		// Also remove "up" class if it exists
-		const upClass = this._generateClassName(controlId, 'up');
-		this.triggerManager.removeRawClass(upClass);
-
 		// Find mappings for this input
 		const mappings = this.mappingLibrary.getByInput(deviceId, controlId);
 
-		for (const mapping of mappings) {
-			if (mapping.mode === 'trigger') {
-				// Trigger animation via CSS class
-				this.triggerManager.trigger(mapping);
-				this._emit('trigger', { mapping, velocity });
+		// Only add CSS classes if this input has defined mappings
+		if (mappings.length > 0) {
+			// Add raw "down" class for custom CSS
+			const downClass = this._generateClassName(controlId, 'down');
+			this.triggerManager.addRawClass(downClass);
+
+			// Also remove "up" class if it exists
+			const upClass = this._generateClassName(controlId, 'up');
+			this.triggerManager.removeRawClass(upClass);
+
+			for (const mapping of mappings) {
+				if (mapping.mode === 'trigger') {
+					// Trigger animation via CSS class
+					this.triggerManager.trigger(mapping);
+					this._emit('trigger', { mapping, velocity });
+				}
 			}
 		}
 	}
@@ -111,23 +114,26 @@ export class InputController {
 	 * Handle release event (button/note release)
 	 */
 	_handleRelease(deviceId, controlId) {
-		// Always remove raw "down" class and add "up" class for custom CSS
-		const downClass = this._generateClassName(controlId, 'down');
-		this.triggerManager.removeRawClass(downClass);
-
-		const upClass = this._generateClassName(controlId, 'up');
-		this.triggerManager.addRawClass(upClass);
-
 		// Find mappings for this input
 		const mappings = this.mappingLibrary.getByInput(deviceId, controlId);
 
-		for (const mapping of mappings) {
-			if (mapping.mode === 'trigger') {
-				// Call release for all trigger types (pressed, not-pressed)
-				// Always triggers don't respond to release
-				if (mapping.triggerType !== 'always') {
-					this.triggerManager.release(mapping);
-					this._emit('release', { mapping });
+		// Only update CSS classes if this input has defined mappings
+		if (mappings.length > 0) {
+			// Remove raw "down" class and add "up" class for custom CSS
+			const downClass = this._generateClassName(controlId, 'down');
+			this.triggerManager.removeRawClass(downClass);
+
+			const upClass = this._generateClassName(controlId, 'up');
+			this.triggerManager.addRawClass(upClass);
+
+			for (const mapping of mappings) {
+				if (mapping.mode === 'trigger') {
+					// Call release for all trigger types (pressed, not-pressed)
+					// Always triggers don't respond to release
+					if (mapping.triggerType !== 'always') {
+						this.triggerManager.release(mapping);
+						this._emit('release', { mapping });
+					}
 				}
 			}
 		}
