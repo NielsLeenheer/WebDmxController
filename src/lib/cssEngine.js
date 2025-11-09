@@ -27,6 +27,28 @@ export class CSSGenerator {
 		parts.push('/* This stylesheet is auto-generated from your animations and input mappings */');
 		parts.push('/* You can edit this CSS and the changes will be reflected in the interface */\n');
 
+		// CSS Custom Property Definitions
+		parts.push('/* === CSS Custom Property Definitions === */');
+		parts.push('/* Define custom properties with specific syntax for type safety */\n');
+
+		parts.push('@property --safety {');
+		parts.push('  syntax: "none | probably";');
+		parts.push('  inherits: false;');
+		parts.push('  initial-value: none;');
+		parts.push('}\n');
+
+		parts.push('@property --fuel {');
+		parts.push('  syntax: "<percentage>";');
+		parts.push('  inherits: false;');
+		parts.push('  initial-value: 0%;');
+		parts.push('}\n');
+
+		parts.push('@property --smoke-output {');
+		parts.push('  syntax: "<number>";');
+		parts.push('  inherits: false;');
+		parts.push('  initial-value: 0;');
+		parts.push('}\n');
+
 		// Default device values
 		if (devices.length > 0) {
 			parts.push('/* === Default Device Values === */');
@@ -141,8 +163,12 @@ export class CSSGenerator {
 
 			case 'FLAMETHROWER':
 				const [safety, fuel] = defaultValues;
-				props.push(`  --flamethrower-safety: ${safety || 0};`);
-				props.push(`  --flamethrower-fuel: ${fuel || 0};`);
+				// Safety: map 0 to "none", anything else to "probably"
+				const safetyValue = safety === 0 ? 'none' : 'probably';
+				// Fuel: convert to percentage (0-255 -> 0-100%)
+				const fuelPercent = Math.round((fuel / 255) * 100);
+				props.push(`  --safety: ${safetyValue};`);
+				props.push(`  --fuel: ${fuelPercent}%;`);
 				break;
 
 			default:
@@ -416,12 +442,20 @@ export class CSSSampler {
 	 * Sample flamethrower from custom properties
 	 */
 	_sampleFlamethrower(computed) {
-		const safety = computed.getPropertyValue('--flamethrower-safety') || '0';
-		const fuel = computed.getPropertyValue('--flamethrower-fuel') || '0';
+		const safety = computed.getPropertyValue('--safety') || 'none';
+		const fuel = computed.getPropertyValue('--fuel') || '0%';
+
+		// Safety: parse "none" or "probably" to DMX values
+		const safetyValue = safety.trim() === 'probably' ? 255 : 0;
+
+		// Fuel: parse percentage to DMX value (0-100% -> 0-255)
+		const fuelMatch = fuel.match(/(\d+(?:\.\d+)?)/);
+		const fuelPercent = fuelMatch ? parseFloat(fuelMatch[1]) : 0;
+		const fuelValue = Math.round(Math.max(0, Math.min(100, fuelPercent)) * 255 / 100);
 
 		return {
-			Safety: Math.round(Math.max(0, Math.min(255, parseFloat(safety)))),
-			Fuel: Math.round(Math.max(0, Math.min(255, parseFloat(fuel))))
+			Safety: safetyValue,
+			Fuel: fuelValue
 		};
 	}
 

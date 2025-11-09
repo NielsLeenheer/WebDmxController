@@ -463,6 +463,31 @@ Example animations:
     }
 
     onMount(() => {
+        // Create style element for @property definitions (must be at document level)
+        const propertyDefsElement = document.createElement('style');
+        propertyDefsElement.id = 'css-property-definitions';
+        propertyDefsElement.textContent = `
+/* CSS Custom Property Definitions */
+@property --safety {
+  syntax: "none | probably";
+  inherits: false;
+  initial-value: none;
+}
+
+@property --fuel {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@property --smoke-output {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+`;
+        document.head.appendChild(propertyDefsElement);
+
         // Create style element for user CSS
         styleElement = document.createElement('style');
         styleElement.id = 'css-animation-styles';
@@ -549,9 +574,16 @@ Example animations:
             animationFrameId = null;
         }
 
+        // Remove style elements
         if (styleElement && styleElement.parentNode) {
             styleElement.parentNode.removeChild(styleElement);
         }
+
+        const propertyDefsElement = document.getElementById('css-property-definitions');
+        if (propertyDefsElement && propertyDefsElement.parentNode) {
+            propertyDefsElement.parentNode.removeChild(propertyDefsElement);
+        }
+
         mappingLibrary.off('changed', handleMappingChange);
         animationLibrary.off('changed', handleAnimationChange);
     });
