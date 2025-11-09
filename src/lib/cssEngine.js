@@ -240,27 +240,27 @@ export class CSSSampler {
 		}
 
 		switch (device.type) {
-			case DEVICE_TYPES.RGB:
+			case 'RGB':
 				Object.assign(channels, this._sampleRGB(computed));
 				break;
 
-			case DEVICE_TYPES.RGBA:
+			case 'RGBA':
 				Object.assign(channels, this._sampleRGBA(computed));
 				break;
 
-			case DEVICE_TYPES.RGBW:
+			case 'RGBW':
 				Object.assign(channels, this._sampleRGBW(computed));
 				break;
 
-			case DEVICE_TYPES.DIMMER:
+			case 'DIMMER':
 				Object.assign(channels, this._sampleDimmer(computed));
 				break;
 
-			case DEVICE_TYPES.SMOKE:
+			case 'SMOKE':
 				Object.assign(channels, this._sampleSmoke(computed));
 				break;
 
-			case DEVICE_TYPES.MOVING_HEAD:
+			case 'MOVING_HEAD':
 				Object.assign(channels, this._sampleMovingHead(computed));
 				break;
 		}
