@@ -260,10 +260,28 @@ export class CSSSampler {
 	}
 
 	/**
+	 * Get the effective color from computed styles
+	 * Prefers background-color over color (text color)
+	 */
+	_getEffectiveColor(computed) {
+		// Check background-color first (users often set this for lighting effects)
+		const bgColor = computed.backgroundColor || computed['background-color'];
+
+		// If background-color is not transparent, use it
+		if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+			return bgColor;
+		}
+
+		// Fall back to color property
+		return computed.color;
+	}
+
+	/**
 	 * Sample RGB channels from color property
 	 */
 	_sampleRGB(computed) {
-		const color = this._parseColor(computed.color);
+		const colorValue = this._getEffectiveColor(computed);
+		const color = this._parseColor(colorValue);
 		return {
 			Red: color.r,
 			Green: color.g,
@@ -275,7 +293,8 @@ export class CSSSampler {
 	 * Sample RGBA channels
 	 */
 	_sampleRGBA(computed) {
-		const color = this._parseColor(computed.color);
+		const colorValue = this._getEffectiveColor(computed);
+		const color = this._parseColor(colorValue);
 		return {
 			Red: color.r,
 			Green: color.g,
@@ -288,7 +307,8 @@ export class CSSSampler {
 	 * Sample RGBW channels
 	 */
 	_sampleRGBW(computed) {
-		const color = this._parseColor(computed.color);
+		const colorValue = this._getEffectiveColor(computed);
+		const color = this._parseColor(colorValue);
 
 		// Calculate white channel from RGB (use minimum value)
 		const white = Math.min(color.r, color.g, color.b);
@@ -327,7 +347,8 @@ export class CSSSampler {
 	 * Sample moving head (pan/tilt from translate, colors, dimmer)
 	 */
 	_sampleMovingHead(computed) {
-		const color = this._parseColor(computed.color);
+		const colorValue = this._getEffectiveColor(computed);
+		const color = this._parseColor(colorValue);
 		const opacity = parseFloat(computed.opacity) || 1;
 
 		// Parse translate for pan/tilt
