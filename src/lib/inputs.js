@@ -5,6 +5,8 @@
  * their controls as normalized values for mapping to DMX.
  */
 
+import { StreamDeckManager, getStreamDeckFilters, isStreamDeck, getStreamDeckModel } from './streamdeck.js';
+
 /**
  * Base class for all input devices
  */
@@ -329,6 +331,48 @@ export class InputDeviceManager {
 		this.devices = new Map(); // deviceId -> InputDevice
 		this.midiAccess = null;
 		this.keyboardDevice = null;
+		this.streamDeckManager = new StreamDeckManager();
+		this._setupStreamDeckListeners();
+	}
+
+	/**
+	 * Setup Stream Deck event listeners
+	 */
+	_setupStreamDeckListeners() {
+		this.streamDeckManager.on('buttondown', ({ device, button, model }) => {
+			const deviceId = device.serialNumber || `streamdeck-${device.productId}`;
+			let inputDevice = this.devices.get(deviceId);
+
+			if (!inputDevice) {
+				// Create a HIDInputDevice wrapper for this Stream Deck
+				inputDevice = new HIDInputDevice(device, { name: model || 'Stream Deck' });
+				this.devices.set(deviceId, inputDevice);
+				this._emit('deviceadded', inputDevice);
+			}
+
+			// Trigger the button via the input device
+			const controlId = `button-${button}`;
+			inputDevice._trigger(controlId, 127);
+		});
+
+		this.streamDeckManager.on('buttonup', ({ device, button }) => {
+			const deviceId = device.serialNumber || `streamdeck-${device.productId}`;
+			const inputDevice = this.devices.get(deviceId);
+
+			if (inputDevice) {
+				const controlId = `button-${button}`;
+				inputDevice._emit('release', { controlId });
+			}
+		});
+
+		this.streamDeckManager.on('connected', ({ device, model }) => {
+			console.log(`Stream Deck connected: ${model}`);
+		});
+
+		this.streamDeckManager.on('disconnected', ({ serialNumber }) => {
+			console.log(`Stream Deck disconnected`);
+			this.removeDevice(serialNumber);
+		});
 	}
 
 	/**
@@ -375,7 +419,33 @@ export class InputDeviceManager {
 	}
 
 	/**
-	 * Request HID device
+	 * Request Stream Deck device
+	 */
+	async requestStreamDeck() {
+		try {
+			return await this.streamDeckManager.requestDevice();
+		} catch (error) {
+			console.error('Failed to request Stream Deck:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Auto-reconnect to previously authorized Stream Deck devices
+	 */
+	async autoReconnectStreamDecks() {
+		try {
+			const devices = await this.streamDeckManager.autoReconnect();
+			console.log(`Auto-reconnected ${devices.length} Stream Deck(s)`);
+			return devices;
+		} catch (error) {
+			console.error('Failed to auto-reconnect Stream Decks:', error);
+			return [];
+		}
+	}
+
+	/**
+	 * Request generic HID device (for non-Stream Deck devices)
 	 */
 	async requestHIDDevice(filters = []) {
 		if (!navigator.hid) {
@@ -387,13 +457,18 @@ export class InputDeviceManager {
 			const devices = await navigator.hid.requestDevice({ filters });
 
 			for (const hidDevice of devices) {
+				// Check if this is a Stream Deck - use StreamDeckManager instead
+				if (isStreamDeck(hidDevice)) {
+					return await this.streamDeckManager.connectDevice(hidDevice);
+				}
+
 				// Check if device is already open
 				if (!hidDevice.opened) {
 					try {
 						await hidDevice.open();
 					} catch (openError) {
 						console.error('Failed to open HID device:', openError);
-						throw new Error(`Cannot open device. Make sure it's not being used by another application (like Elgato Stream Deck software). Error: ${openError.message}`);
+						throw new Error(`Cannot open device. Make sure it's not being used by another application. Error: ${openError.message}`);
 					}
 				}
 

@@ -30,6 +30,9 @@ export class InputController {
 		// Initialize MIDI
 		await this.inputDeviceManager.initMIDI();
 
+		// Auto-reconnect Stream Deck devices
+		await this.inputDeviceManager.autoReconnectStreamDecks();
+
 		// Enable keyboard by default
 		this.inputDeviceManager.enableKeyboard();
 
@@ -146,6 +149,13 @@ export class InputController {
 				this._emit('valuechange', { mapping, value, propertyValue });
 			}
 		}
+	}
+
+	/**
+	 * Request Stream Deck device
+	 */
+	async requestStreamDeck() {
+		return await this.inputDeviceManager.requestStreamDeck();
 	}
 
 	/**
