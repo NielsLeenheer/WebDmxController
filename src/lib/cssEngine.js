@@ -260,28 +260,16 @@ export class CSSSampler {
 	}
 
 	/**
-	 * Get the effective color from computed styles
-	 * Prefers background-color over color (text color)
-	 */
-	_getEffectiveColor(computed) {
-		// Check background-color first (users often set this for lighting effects)
-		const bgColor = computed.backgroundColor || computed['background-color'];
-
-		// If background-color is not transparent, use it
-		if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-			return bgColor;
-		}
-
-		// Fall back to color property
-		return computed.color;
-	}
-
-	/**
-	 * Sample RGB channels from color property
+	 * Sample RGB channels from color or background-color property
 	 */
 	_sampleRGB(computed) {
-		const colorValue = this._getEffectiveColor(computed);
-		const color = this._parseColor(colorValue);
+		const colorValue = computed.backgroundColor &&
+		                   computed.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+		                   computed.backgroundColor !== 'transparent'
+			? computed.backgroundColor
+			: computed.color;
+
+		const color = this._parseComputedColor(colorValue);
 		return {
 			Red: color.r,
 			Green: color.g,
@@ -293,8 +281,13 @@ export class CSSSampler {
 	 * Sample RGBA channels
 	 */
 	_sampleRGBA(computed) {
-		const colorValue = this._getEffectiveColor(computed);
-		const color = this._parseColor(colorValue);
+		const colorValue = computed.backgroundColor &&
+		                   computed.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+		                   computed.backgroundColor !== 'transparent'
+			? computed.backgroundColor
+			: computed.color;
+
+		const color = this._parseComputedColor(colorValue);
 		return {
 			Red: color.r,
 			Green: color.g,
@@ -307,8 +300,13 @@ export class CSSSampler {
 	 * Sample RGBW channels
 	 */
 	_sampleRGBW(computed) {
-		const colorValue = this._getEffectiveColor(computed);
-		const color = this._parseColor(colorValue);
+		const colorValue = computed.backgroundColor &&
+		                   computed.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+		                   computed.backgroundColor !== 'transparent'
+			? computed.backgroundColor
+			: computed.color;
+
+		const color = this._parseComputedColor(colorValue);
 
 		// Calculate white channel from RGB (use minimum value)
 		const white = Math.min(color.r, color.g, color.b);
@@ -347,8 +345,13 @@ export class CSSSampler {
 	 * Sample moving head (pan/tilt from translate, colors, dimmer)
 	 */
 	_sampleMovingHead(computed) {
-		const colorValue = this._getEffectiveColor(computed);
-		const color = this._parseColor(colorValue);
+		const colorValue = computed.backgroundColor &&
+		                   computed.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+		                   computed.backgroundColor !== 'transparent'
+			? computed.backgroundColor
+			: computed.color;
+
+		const color = this._parseComputedColor(colorValue);
 		const opacity = parseFloat(computed.opacity) || 1;
 
 		// Parse translate for pan/tilt
@@ -366,18 +369,13 @@ export class CSSSampler {
 	}
 
 	/**
-	 * Parse CSS color to RGB values (0-255)
+	 * Parse computed CSS color (already normalized by browser to rgb/rgba format)
+	 * The browser converts all color formats (hex, hsl, named, etc.) to rgb() or rgba()
 	 */
-	_parseColor(colorString) {
-		// Handle rgb(), rgba(), hex, named colors
-		const div = document.createElement('div');
-		div.style.color = colorString;
-		document.body.appendChild(div);
-		const computed = window.getComputedStyle(div).color;
-		document.body.removeChild(div);
-
+	_parseComputedColor(colorString) {
+		// getComputedStyle always returns colors in rgb() or rgba() format
 		// Parse rgb(r, g, b) or rgba(r, g, b, a)
-		const match = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+		const match = colorString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
 
 		if (match) {
 			return {
@@ -388,6 +386,7 @@ export class CSSSampler {
 			};
 		}
 
+		// Fallback to black if parsing fails
 		return { r: 0, g: 0, b: 0, a: 1 };
 	}
 
