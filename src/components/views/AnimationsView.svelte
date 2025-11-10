@@ -18,6 +18,8 @@
     const plusIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>';
     const trashIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
 
+    import removeIcon from '../../assets/icons/remove.svg?raw';
+
     let selectedAnimation = $state(null);
     let selectedKeyframeIndex = $state(null);
     let animationsList = $state([]);
@@ -31,6 +33,8 @@
 
     // Keyframe editing
     let editingKeyframeValues = $state([0, 0, 0]);
+    let editDialog = $state(null);
+    let editButtonRef = $state(null);
 
     // Timeline settings
     let timelineElement = $state(null);
@@ -145,7 +149,7 @@
         selectedKeyframeIndex = null;
     }
 
-    function selectKeyframe(index) {
+    function selectKeyframe(index, buttonElement = null) {
         if (!selectedAnimation) return;
 
         selectedKeyframeIndex = index;
@@ -153,6 +157,24 @@
 
         // Load keyframe values into editor
         editingKeyframeValues = [...keyframe.values];
+        editButtonRef = buttonElement;
+
+        // Show dialog after a brief delay to ensure keyframe is rendered
+        requestAnimationFrame(() => {
+            editDialog?.showModal();
+        });
+    }
+
+    function closeEditDialog() {
+        editDialog?.close();
+        selectedKeyframeIndex = null;
+        editButtonRef = null;
+    }
+
+    function handleEditDialogClick(event) {
+        if (event.target === editDialog) {
+            closeEditDialog();
+        }
     }
 
     function updateKeyframeValues() {
@@ -164,6 +186,20 @@
         selectedAnimation = selectedAnimation;
         animationVersion++;
         animationLibrary.save();
+    }
+
+    function confirmDeleteKeyframe() {
+        if (!selectedAnimation || selectedKeyframeIndex === null) return;
+
+        if (selectedAnimation.keyframes.length <= 2) {
+            alert('Animation must have at least 2 keyframes');
+            return;
+        }
+
+        if (confirm(`Delete keyframe at ${(selectedAnimation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%?`)) {
+            deleteKeyframe(selectedKeyframeIndex);
+            closeEditDialog();
+        }
     }
 
     // Timeline interaction functions
@@ -314,16 +350,17 @@
                     <!-- Keyframe markers -->
                     {#each displayKeyframes as keyframe, index (keyframe.time + '-' + index)}
                         <div
+                            id="keyframe-{selectedAnimation.name}-{index}"
                             class="timeline-keyframe-marker"
                             class:selected={selectedKeyframeIndex === index}
                             class:dragging={draggingKeyframe?.keyframe === keyframe}
-                            style="left: {getKeyframePosition(keyframe)}px; --keyframe-color: {selectedAnimation.getKeyframeColor(keyframe)}"
+                            style="left: {getKeyframePosition(keyframe)}px; --keyframe-color: {selectedAnimation.getKeyframeColor(keyframe)}; anchor-name: --keyframe-{selectedAnimation.name}-{index}"
                             onmousedown={(e) => handleKeyframeMouseDown(e, keyframe, index)}
                             onclick={(e) => {
                                 e.stopPropagation();
                                 // Only select if we didn't just drag
                                 if (!hasActuallyDragged) {
-                                    selectKeyframe(index);
+                                    selectKeyframe(index, e.currentTarget);
                                 }
                             }}
                             title="{(keyframe.time * 100).toFixed(0)}%"
@@ -333,29 +370,6 @@
                     {/each}
                 </div>
             </div>
-
-            {#if selectedKeyframeIndex !== null}
-                <div class="keyframe-editor">
-                    <h4>Keyframe at {(selectedAnimation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%</h4>
-
-                    <DeviceControls
-                        deviceType={selectedAnimation.deviceType}
-                        bind:values={editingKeyframeValues}
-                        onChange={updateKeyframeValues}
-                    />
-
-                    <div class="property-actions">
-                        <Button
-                            onclick={() => deleteKeyframe(selectedKeyframeIndex)}
-                            disabled={selectedAnimation.keyframes.length <= 2}
-                        >
-                            Delete Keyframe
-                        </Button>
-                    </div>
-                </div>
-            {:else}
-                <p class="empty-state">Select a keyframe to edit its values</p>
-            {/if}
         {:else}
             <div class="empty-state-large">
                 <p>Select an animation to edit, or create a new one</p>
@@ -427,6 +441,45 @@
         <Button onclick={deleteAnimation} primary>Delete</Button>
     </div>
 </Dialog>
+
+<!-- Keyframe Edit Dialog -->
+{#if editButtonRef && selectedAnimation && selectedKeyframeIndex !== null}
+<dialog
+    bind:this={editDialog}
+    class="keyframe-edit-dialog"
+    style="position-anchor: --keyframe-{selectedAnimation.name}-{selectedKeyframeIndex}"
+    onclick={handleEditDialogClick}
+>
+    <div class="dialog-header">
+        <div class="dialog-title">
+            Keyframe at {(selectedAnimation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%
+        </div>
+    </div>
+
+    <div class="dialog-content">
+        <DeviceControls
+            deviceType={selectedAnimation.deviceType}
+            bind:values={editingKeyframeValues}
+            onChange={updateKeyframeValues}
+        />
+
+        <div class="dialog-actions">
+            <button
+                type="button"
+                class="delete-btn"
+                onclick={confirmDeleteKeyframe}
+                title="Delete keyframe"
+                disabled={selectedAnimation.keyframes.length <= 2}
+            >
+                {@html removeIcon}
+            </button>
+            <div class="action-buttons">
+                <Button onclick={closeEditDialog} variant="secondary">Close</Button>
+            </div>
+        </div>
+    </div>
+</dialog>
+{/if}
 
 <style>
     .animations-view {
@@ -531,6 +584,7 @@
         flex-direction: column;
         align-items: stretch;
         gap: 10px;
+        overflow: visible;
     }
 
     .timeline {
@@ -539,7 +593,6 @@
         max-width: 100%;
         height: 60px;
         cursor: crosshair;
-        overflow: visible;
     }
 
     .gradient-segment {
@@ -692,5 +745,101 @@
     .warning {
         color: #f44336;
         font-size: 10pt;
+    }
+
+    /* Keyframe Edit Dialog */
+    .keyframe-edit-dialog {
+        position: fixed;
+        position-anchor: var(--position-anchor);
+        top: anchor(bottom);
+        left: anchor(center);
+        translate: -50% 8px;
+        margin: 0;
+        padding: 0;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        min-width: 300px;
+        max-width: 400px;
+        overflow: visible;
+    }
+
+    .keyframe-edit-dialog::backdrop {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    /* Dialog arrow pointing up */
+    .keyframe-edit-dialog::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 8px solid #fff;
+        filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
+    }
+
+    .keyframe-edit-dialog .dialog-header {
+        padding: 15px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .keyframe-edit-dialog .dialog-title {
+        font-size: 11pt;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .keyframe-edit-dialog .dialog-content {
+        padding: 15px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .keyframe-edit-dialog .dialog-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e0e0e0;
+    }
+
+    .keyframe-edit-dialog .delete-btn {
+        padding: 8px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        color: #d13438;
+        transition: background 0.2s;
+    }
+
+    .keyframe-edit-dialog .delete-btn:hover:not(:disabled) {
+        background: #ffe0e0;
+    }
+
+    .keyframe-edit-dialog .delete-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .keyframe-edit-dialog .delete-btn :global(svg) {
+        width: 20px;
+        height: 20px;
+    }
+
+    .keyframe-edit-dialog .action-buttons {
+        display: flex;
+        gap: 8px;
     }
 </style>

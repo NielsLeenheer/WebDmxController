@@ -2,7 +2,6 @@
     import { Icon } from 'svelte-icon';
     import listIcon from '../../assets/icons/list.svg?raw';
     import universeIcon from '../../assets/icons/universe.svg?raw';
-    import timelineIcon from '../../assets/icons/timeline.svg?raw';
     import animationsIcon from '../../assets/icons/animations.svg?raw';
     import inputsIcon from '../../assets/icons/inputs.svg?raw';
     import triggersIcon from '../../assets/icons/triggers.svg?raw';
@@ -24,12 +23,6 @@
             <input type="radio" name="view" value="devices" bind:group={view}>
             <Icon data={listIcon} />
             Devices
-        </label>
-
-        <label>
-            <input type="radio" name="view" value="timeline" bind:group={view}>
-            <Icon data={timelineIcon} />
-            Timeline
         </label>
 
         <label>

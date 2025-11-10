@@ -9,7 +9,6 @@
     import Tabs from './components/layout/Tabs.svelte';
     import UniverseView from './components/views/UniverseView.svelte';
     import DevicesView from './components/views/DevicesView.svelte';
-    import TimelineView from './components/views/TimelineView.svelte';
     import AnimationsView from './components/views/AnimationsView.svelte';
     import InputsView from './components/views/InputsView.svelte';
     import TriggersView from './components/views/TriggersView.svelte';
@@ -99,10 +98,6 @@
 
     <div class="view-container" class:hidden={view !== 'universe'}>
         <UniverseView {dmxController} />
-    </div>
-
-    <div class="view-container" class:hidden={view !== 'timeline'}>
-        <TimelineView {dmxController} {devices} />
     </div>
 
     <div class="view-container" class:hidden={view !== 'animations'}>
