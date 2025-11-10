@@ -6,18 +6,20 @@
      * @prop {boolean} disabled - Whether button is disabled
      * @prop {Function} onclick - Click handler
      * @prop {string} type - Button type attribute
+     * @prop {boolean} pulsating - Whether button should have pulsating animation
      */
     let {
         variant = 'primary',
         disabled = false,
         onclick = null,
         type = 'button',
+        pulsating = false,
         children
     } = $props();
 </script>
 
 <button
-    class="button {variant}"
+    class="button {variant} {pulsating ? 'pulsating' : ''}"
     {disabled}
     {onclick}
     {type}
@@ -81,5 +83,22 @@
 
     .button.danger:active:not(:disabled) {
         background: #7d1f22;
+    }
+
+    .button.pulsating {
+        animation: glowingRing 2s ease-in-out infinite !important;
+    }
+
+    @keyframes glowingRing {
+        0%, 100% {
+            box-shadow:
+                0 0 0 0 0 rgba(33, 150, 243, 0);
+        }
+        50% {
+            box-shadow:
+                0 0 10px 8px rgba(33, 150, 243, 0.4),
+                0 0 20px 16px rgba(33, 150, 243, 0.2),
+                0 0 30px 0 rgba(33, 150, 243, 0.3);
+        }
     }
 </style>
