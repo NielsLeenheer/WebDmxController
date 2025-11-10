@@ -225,7 +225,8 @@
 
     function refreshInputs() {
         // Only show input-mode mappings
-        savedInputs = mappingLibrary.getAll().filter(m => m.mode === 'input');
+        // Create a new array to trigger reactivity
+        savedInputs = [...mappingLibrary.getAll().filter(m => m.mode === 'input')];
     }
 
     function getInputIcon(inputId) {
