@@ -261,17 +261,15 @@
 
 <div class="inputs-view">
     <div class="listen-section">
-        <div class="button-wrapper {isListening ? 'pulsating' : ''}">
-            {#if isListening}
-                <Button onclick={stopListening} primary class="listen-button">
-                    Stop Listening
-                </Button>
-            {:else}
-                <Button onclick={startListening} primary class="listen-button">
-                    Start Listening
-                </Button>
-            {/if}
-        </div>
+        {#if isListening}
+            <Button onclick={stopListening} primary class="pulsating">
+                Stop Listening
+            </Button>
+        {:else}
+            <Button onclick={startListening} primary>
+                Start Listening
+            </Button>
+        {/if}
     </div>
 
     <div class="inputs-grid">
@@ -345,32 +343,25 @@
         justify-content: center;
     }
 
-    .button-wrapper {
-        display: flex;
-        justify-content: center;
-        position: relative;
-    }
-
-    .listen-button :global(button) {
+    .listen-section :global(button) {
         font-size: 11pt;
         padding: 12px 30px;
     }
 
-    .button-wrapper.pulsating :global(button) {
+    .listen-section :global(.pulsating button) {
         animation: glowingRing 2s ease-in-out infinite !important;
     }
 
     @keyframes glowingRing {
         0%, 100% {
             box-shadow:
-                0 0 0 0 rgba(33, 150, 243, 0.7),
-                0 0 0 0 rgba(33, 150, 243, 0.4);
+                0 0 0 0 0 rgba(33, 150, 243, 0);
         }
         50% {
             box-shadow:
-                0 0 0 8px rgba(33, 150, 243, 0.4),
-                0 0 0 16px rgba(33, 150, 243, 0.2),
-                0 0 20px rgba(33, 150, 243, 0.3);
+                0 0 10px 8px rgba(33, 150, 243, 0.4),
+                0 0 20px 16px rgba(33, 150, 243, 0.2),
+                0 0 30px 0 rgba(33, 150, 243, 0.3);
         }
     }
 
