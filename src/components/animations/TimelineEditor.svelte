@@ -154,8 +154,9 @@
     function handleTimelineClick(e) {
         if (!animation) return;
 
-        // Prevent if clicking on existing keyframe
-        if (e.target.classList.contains('timeline-keyframe-marker')) return;
+        // Prevent if clicking on existing keyframe or keyframe label
+        if (e.target.classList.contains('timeline-keyframe-marker') ||
+            e.target.classList.contains('keyframe-time')) return;
 
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -179,10 +180,14 @@
         // Select the new keyframe for editing
         const newKeyframeIndex = animation.keyframes.findIndex(kf => Math.abs(kf.time - roundedTime) < 0.001);
         if (newKeyframeIndex !== -1) {
-            // Wait for the DOM to update, then get the element reference and open dialog
+            // Wait for the DOM to update with double requestAnimationFrame to ensure render is complete
             requestAnimationFrame(() => {
-                const keypointElement = document.getElementById(`keyframe-${animation.name}-${newKeyframeIndex}`);
-                selectKeyframe(newKeyframeIndex, keypointElement);
+                requestAnimationFrame(() => {
+                    const keypointElement = document.getElementById(`keyframe-${animation.name}-${newKeyframeIndex}`);
+                    if (keypointElement) {
+                        selectKeyframe(newKeyframeIndex, keypointElement);
+                    }
+                });
             });
         }
     }
