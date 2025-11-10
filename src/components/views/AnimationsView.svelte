@@ -602,9 +602,10 @@
     .timeline-keyframe-marker {
         position: absolute;
         top: 50%;
-        transform: translate(-50%, -50%);
         width: 16px;
         height: 16px;
+        margin-left: -8px;
+        margin-top: -8px;
         background: var(--keyframe-color, #2196f3);
         border: 2px solid white;
         border-radius: 50%;
@@ -615,8 +616,7 @@
     }
 
     .timeline-keyframe-marker:hover {
-        width: 20px;
-        height: 20px;
+        border-width: 3px;
         box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
     }
 
