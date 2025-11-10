@@ -194,6 +194,7 @@
         min-width: 280px;
         max-width: 320px;
         z-index: 100;
+        overflow: visible;
     }
 
     .devices-dialog::backdrop {
