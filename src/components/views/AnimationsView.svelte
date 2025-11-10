@@ -446,7 +446,6 @@
     anchorId={`keyframe-${selectedAnimation.name}-${selectedKeyframeIndex}`}
     showArrow={true}
     lightDismiss={true}
-    alignment="left"
     onclose={closeEditDialog}
 >
     <div class="keyframe-editor-content">

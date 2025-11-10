@@ -90,7 +90,6 @@
     anchorId="devices-button"
     showArrow={true}
     lightDismiss={true}
-    alignment="center"
     onclose={closeDevicesDialog}
 >
     <!-- Stream Deck Section -->

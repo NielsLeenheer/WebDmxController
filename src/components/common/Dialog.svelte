@@ -9,7 +9,6 @@
      * @prop {string} anchorId - Anchor name (CSS anchor-name value)
      * @prop {boolean} showArrow - Show arrow pointing to anchor (default true for anchored)
      * @prop {boolean} lightDismiss - Enable light dismiss on backdrop click (default true for anchored)
-     * @prop {string} alignment - Anchor alignment: "center" (default) or "left"
      */
     let {
         title = null,
@@ -19,7 +18,6 @@
         anchorId = null,
         showArrow = true,
         lightDismiss = true,
-        alignment = "center",
         children
     } = $props();
 
@@ -40,8 +38,6 @@
     class="dialog"
     class:anchored
     class:show-arrow={showArrow && anchored}
-    class:align-center={anchored && alignment === "center"}
-    class:align-left={anchored && alignment === "left"}
     style={anchored && anchorId ? `position-anchor: --${anchorId}` : ''}
     onclick={handleClick}
 >
@@ -86,18 +82,10 @@
         margin: 0;
         min-width: 300px;
         max-width: 400px;
-    }
 
-    /* Center alignment (default) */
-    .dialog.align-center {
-        left: 50%;
-        translate: -50% var(--arrow-distance);
-    }
-
-    /* Left-aligned (for small circular markers) */
-    .dialog.align-left {
+        /* Center align to anchor */
         left: anchor(center);
-        translate: calc(-50% + 8px) var(--arrow-distance);
+        translate: -50% var(--arrow-distance);
     }
 
     .dialog.anchored::backdrop {
