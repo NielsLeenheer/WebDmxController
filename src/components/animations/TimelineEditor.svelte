@@ -7,6 +7,7 @@
     let {
         animation,
         animationLibrary,
+        animationVersion = 0,
         onUpdate = null
     } = $props();
 
@@ -26,11 +27,16 @@
     let dragStartTime = $state(0);
     let hasActuallyDragged = $state(false);
 
-    // Display keyframes (for rendering)
-    let displayKeyframes = $derived(animation ? [...animation.keyframes] : []);
+    // Display keyframes (for rendering) - reactive to animationVersion
+    let displayKeyframes = $derived.by(() => {
+        animationVersion; // Make reactive to version changes
+        return animation ? animation.keyframes : [];
+    });
 
-    // Gradient segments for visualization
+    // Gradient segments for visualization - reactive to animationVersion
     let gradientSegments = $derived.by(() => {
+        animationVersion; // Make reactive to version changes
+
         if (!animation || animation.keyframes.length < 2) return [];
 
         const segments = [];
@@ -57,6 +63,7 @@
     });
 
     function getKeyframePosition(keyframe) {
+        animationVersion; // Make reactive to version changes
         return keyframe.time * timelineWidth;
     }
 
@@ -239,7 +246,7 @@
         {/each}
 
         <!-- Keyframe markers -->
-        {#each displayKeyframes as keyframe, index (keyframe.time + '-' + index)}
+        {#each displayKeyframes as keyframe, index (keyframe.time + '-' + index + '-' + animationVersion)}
             <div
                 id="keyframe-{animation.name}-{index}"
                 class="timeline-keyframe-marker"

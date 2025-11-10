@@ -144,6 +144,7 @@
             <TimelineEditor
                 animation={selectedAnimation}
                 animationLibrary={animationLibrary}
+                animationVersion={animationVersion}
                 onUpdate={handleAnimationUpdate}
             />
         {:else}
