@@ -228,17 +228,7 @@
         // Create a new array with new object references to trigger reactivity
         savedInputs = mappingLibrary.getAll()
             .filter(m => m.mode === 'input')
-            .map(m => {
-                // Migration: populate inputDeviceName if missing
-                if (!m.inputDeviceName && m.inputDeviceId) {
-                    const device = inputController.getInputDevice(m.inputDeviceId);
-                    if (device) {
-                        m.inputDeviceName = device.name;
-                        mappingLibrary.save(); // Save the migration
-                    }
-                }
-                return { ...m }; // Create new object reference
-            });
+            .map(m => ({ ...m }));
     }
 
     function getInputIcon(inputId) {
