@@ -26,7 +26,11 @@
         dialogName = device.name;
         dialogChannel = device.startChannel + 1;
         selectedLinkTarget = device.linkedTo || null;
-        settingsDialog?.showModal();
+
+        // Wait for Dialog to mount before showing
+        requestAnimationFrame(() => {
+            settingsDialog?.showModal();
+        });
     }
 
     function closeSettingsDialog() {
