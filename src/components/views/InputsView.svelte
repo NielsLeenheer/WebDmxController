@@ -292,11 +292,11 @@
 <div class="inputs-view">
     <div class="listen-section">
         {#if isListening}
-            <Button onclick={stopListening} primary pulsating={true}>
+            <Button onclick={stopListening} variant="primary" pulsating={true}>
                 Stop Listening
             </Button>
         {:else}
-            <Button onclick={startListening} primary>
+            <Button onclick={startListening} variant="primary">
                 Start Listening
             </Button>
         {/if}
@@ -391,11 +391,6 @@
         padding: 20px;
         display: flex;
         justify-content: center;
-    }
-
-    .listen-section :global(button) {
-        font-size: 11pt;
-        padding: 12px 30px;
     }
 
     .inputs-grid {

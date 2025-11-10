@@ -54,16 +54,16 @@
 
 
     .button.primary {
-        background: #0078d4;
-        color: white;
+        background: #bbdefb;
+        color: #1976d2;
     }
 
     .button.primary:hover:not(:disabled) {
-        background: #106ebe;
+        background: #acd2f1;
     }
 
     .button.primary:active:not(:disabled) {
-        background: #005a9e;
+        background: #95bede;
     }
 
     .button.secondary {
@@ -103,9 +103,9 @@
         }
         50% {
             box-shadow:
-                0 0 10px 8px rgba(33, 150, 243, 0.2),
-                0 0 20px 16px rgba(33, 150, 243, 0.1),
-                0 0 30px 0 rgba(33, 150, 243, 0.15);
+                0 0 10px 8px rgba(33, 150, 243, 0.1),
+                0 0 20px 16px rgba(33, 150, 243, 0.05),
+                0 0 30px 0 rgba(33, 150, 243, 0.075);
         }
     }
 </style>
