@@ -8,9 +8,9 @@
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
 
-    import disconnectIcon from '../../assets/icons/disconnect.svg?raw';
     import settingsIcon from '../../assets/icons/settings.svg?raw';
     import linkedIcon from '../../assets/icons/linked.svg?raw';
+    import removeIcon from '../../assets/icons/remove.svg?raw';
 
     let { dmxController, selectedType = $bindable(), devices = $bindable([]) } = $props();
 
@@ -432,8 +432,8 @@
 
         <div class="dialog-buttons">
             <Button onclick={confirmRemoveDevice} variant="secondary">
-                {@html disconnectIcon}
-                Remove
+                {@html removeIcon}
+                Delete
             </Button>
             <div class="dialog-buttons-right">
                 <Button onclick={closeSettingsDialog} variant="secondary">Cancel</Button>
