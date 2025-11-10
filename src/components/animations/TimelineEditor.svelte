@@ -327,18 +327,14 @@
         />
 
         <div class="keyframe-actions">
-            <button
-                type="button"
-                class="delete-btn"
+            <Button
                 onclick={confirmDeleteKeyframe}
-                title="Delete keyframe"
+                variant="secondary"
                 disabled={animation.keyframes.length <= 2}
             >
                 {@html removeIcon}
-            </button>
-            <div class="action-buttons">
-                <Button onclick={closeEditDialog} variant="secondary">Close</Button>
-            </div>
+                Delete
+            </Button>
         </div>
     </div>
 </Dialog>
@@ -427,44 +423,18 @@
     }
 
     .keyframe-actions {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 10px;
         margin-top: 15px;
         padding-top: 15px;
         border-top: 1px solid #e0e0e0;
     }
 
-    .delete-btn {
-        padding: 8px;
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 4px;
-        color: #d13438;
-        transition: background 0.2s;
+    .keyframe-actions :global(button) {
+        width: 100%;
     }
 
-    .delete-btn:hover:not(:disabled) {
-        background: #ffe0e0;
-    }
-
-    .delete-btn:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-
-    .delete-btn :global(svg) {
-        width: 20px;
-        height: 20px;
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 8px;
+    .keyframe-actions :global(svg) {
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
     }
 </style>
