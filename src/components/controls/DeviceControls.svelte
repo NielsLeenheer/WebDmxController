@@ -25,6 +25,13 @@
         }
     }
 
+    function handleToggleChange(channelIndex, control) {
+        // Toggle between off and on values
+        const currentValue = values[channelIndex];
+        const newValue = currentValue === control.onValue ? control.offValue : control.onValue;
+        handleSliderChange(channelIndex, newValue);
+    }
+
     function handleTextInputChange(channelIndex, inputValue, e) {
         const numValue = parseInt(inputValue);
         if (!isNaN(numValue) && numValue >= 0 && numValue <= 255) {
@@ -147,6 +154,34 @@
                         maxlength="3"
                     />
                 </div>
+            </div>
+        {:else if control.type === 'toggle'}
+            {@const channelIndex = getControlChannelIndex(controlIndex)}
+            {@const channelDisabled = isChannelDisabled(channelIndex)}
+            {@const isOn = values[channelIndex] === control.onValue}
+            <div class="control">
+                <label>{control.name}</label>
+                <div class="toggle-wrapper">
+                    <button
+                        class="toggle-switch"
+                        class:on={isOn}
+                        onclick={() => !channelDisabled && handleToggleChange(channelIndex, control)}
+                        disabled={channelDisabled}
+                        aria-label="{control.name} {isOn ? 'on' : 'off'}"
+                    >
+                        <span class="toggle-slider"></span>
+                    </button>
+                    <span class="toggle-label">{isOn ? 'PROBABLY' : 'NONE'}</span>
+                </div>
+                <input
+                    type="text"
+                    value={values[channelIndex]}
+                    oninput={handleTextInput}
+                    onchange={(e) => !channelDisabled && handleTextInputChange(channelIndex, e.target.value, e)}
+                    class="value-input"
+                    disabled={channelDisabled}
+                    maxlength="3"
+                />
             </div>
         {:else}
             {@const channelIndex = getControlChannelIndex(controlIndex)}
@@ -306,5 +341,69 @@
     .xypad-wrapper.disabled {
         opacity: 0.5;
         pointer-events: none;
+    }
+
+    /* Toggle switch styles */
+    .toggle-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .toggle-switch {
+        position: relative;
+        width: 44px;
+        height: 24px;
+        background: #ccc;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        padding: 0;
+    }
+
+    .toggle-switch:hover {
+        background: #b3b3b3;
+    }
+
+    .toggle-switch.on {
+        background: #4caf50;
+    }
+
+    .toggle-switch.on:hover {
+        background: #45a049;
+    }
+
+    .toggle-switch:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 20px;
+        height: 20px;
+        background: white;
+        border-radius: 50%;
+        transition: transform 0.3s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        display: block;
+    }
+
+    .toggle-switch.on .toggle-slider {
+        transform: translateX(20px);
+    }
+
+    .toggle-label {
+        font-size: 9pt;
+        font-weight: 600;
+        color: #666;
+        min-width: 4em;
+    }
+
+    .toggle-switch.on + .toggle-label {
+        color: #4caf50;
     }
 </style>

@@ -71,6 +71,7 @@
     onconnect={handleConnect}
     ondisconnect={handleDisconnect}
     {connected}
+    {inputController}
 />
 
 <main>
@@ -136,6 +137,8 @@
             {cssGenerator}
             {cssSampler}
             {triggerManager}
+            {customPropertyManager}
+            isActive={view === 'css'}
         />
     </div>
 </main>

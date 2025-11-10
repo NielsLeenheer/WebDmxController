@@ -25,7 +25,8 @@ export class CSSGenerator {
 		// Header comment
 		parts.push('/* DMX Controller - Generated CSS */');
 		parts.push('/* This stylesheet is auto-generated from your animations and input mappings */');
-		parts.push('/* You can edit this CSS and the changes will be reflected in the interface */\n');
+		parts.push('/* You can edit this CSS and the changes will be reflected in the interface */');
+		parts.push('/* Note: @property definitions are in a separate, non-editable include */\n');
 
 		// Default device values
 		if (devices.length > 0) {
@@ -108,7 +109,9 @@ export class CSSGenerator {
 			case 'RGBA':
 				const [r2, g2, b2, a] = defaultValues;
 				props.push(`  color: rgb(${r2 || 0}, ${g2 || 0}, ${b2 || 0});`);
-				props.push(`  /* Amber channel: ${a || 0} */`);
+				// Convert amber DMX value (0-255) to percentage (0-100%)
+				const amberPercent = Math.round(((a || 0) / 255) * 100);
+				props.push(`  --amber: ${amberPercent}%;`);
 				break;
 
 			case 'RGBW':
@@ -124,19 +127,35 @@ export class CSSGenerator {
 
 			case 'SMOKE':
 				const output = defaultValues[0] || 0;
-				props.push(`  --smoke-output: ${output};`);
+				// Convert DMX value (0-255) to percentage (0-100%)
+				const smokePercent = Math.round((output / 255) * 100);
+				props.push(`  --smoke: ${smokePercent}%;`);
 				break;
 
 			case 'MOVING_HEAD':
 				const [pan, tilt, dimmer, r4, g4, b4, w2] = defaultValues;
-				const panPercent = pan !== undefined ? Math.round((pan / 255) * 100 - 50) : 0;
-				const tiltPercent = tilt !== undefined ? Math.round((tilt / 255) * 100 - 50) : 0;
-				props.push(`  translate: ${panPercent}% ${tiltPercent}%;`);
+				// Convert DMX values to percentages
+			// Pan: 0-255 DMX -> -50% to 50% (0% = center)
+				const panPercent = pan !== undefined ? Math.round(((pan / 255) * 100) - 50) : 0;
+				// Tilt: 0-255 DMX -> 0% to 100%
+			const tiltPercent = tilt !== undefined ? Math.round((tilt / 255) * 100) : 0;
+				props.push(`  --pan: ${panPercent}%;`);
+				props.push(`  --tilt: ${tiltPercent}%;`);
 				props.push(`  opacity: ${dimmer !== undefined ? (dimmer / 255).toFixed(2) : '1'};`);
 				props.push(`  color: rgb(${r4 || 0}, ${g4 || 0}, ${b4 || 0});`);
 				if (w2 !== undefined) {
 					props.push(`  /* White channel: ${w2} */`);
 				}
+				break;
+
+			case 'FLAMETHROWER':
+				const [safety, fuel] = defaultValues;
+				// Safety: map 0 to "none", 125+ to "probably"
+				const safetyValue = safety >= 125 ? 'probably' : 'none';
+				// Fuel: convert to percentage (0-255 -> 0-100%)
+				const fuelPercent = Math.round((fuel / 255) * 100);
+				props.push(`  --safety: ${safetyValue};`);
+				props.push(`  --fuel: ${fuelPercent}%;`);
 				break;
 
 			default:
@@ -221,78 +240,34 @@ export class CSSSampler {
 		const computed = window.getComputedStyle(element);
 		const channels = {};
 
-		// Log element info for debugging (only first sample)
-		if (!this.previousValues.has(device.id)) {
-			console.log(`[CSSSampler] Sampling device ${device.id} (${device.name}):`, {
-				elementId: element.id,
-				className: element.className,
-				parentClass: element.parentElement?.className,
-				computedColor: computed.color,
-				computedOpacity: computed.opacity
-			});
-		}
-
-		// TEMPORARY DEBUG: Log computed color every 60 frames
-		if (!this._sampleCount) this._sampleCount = 0;
-		this._sampleCount++;
-		if (this._sampleCount % 60 === 0) {
-			console.log(`[CSSSampler DEBUG] Device ${device.id} computed color:`, computed.color, 'opacity:', computed.opacity);
-		}
-
 		switch (device.type) {
-			case DEVICE_TYPES.RGB:
+			case 'RGB':
 				Object.assign(channels, this._sampleRGB(computed));
 				break;
 
-			case DEVICE_TYPES.RGBA:
+			case 'RGBA':
 				Object.assign(channels, this._sampleRGBA(computed));
 				break;
 
-			case DEVICE_TYPES.RGBW:
+			case 'RGBW':
 				Object.assign(channels, this._sampleRGBW(computed));
 				break;
 
-			case DEVICE_TYPES.DIMMER:
+			case 'DIMMER':
 				Object.assign(channels, this._sampleDimmer(computed));
 				break;
 
-			case DEVICE_TYPES.SMOKE:
+			case 'SMOKE':
 				Object.assign(channels, this._sampleSmoke(computed));
 				break;
 
-			case DEVICE_TYPES.MOVING_HEAD:
+			case 'MOVING_HEAD':
 				Object.assign(channels, this._sampleMovingHead(computed));
 				break;
-		}
 
-		// Log changes for debugging
-		const previous = this.previousValues.get(device.id);
-		if (previous) {
-			// Check if any values changed
-			let hasChanges = false;
-			const changes = {};
-
-			for (const [key, value] of Object.entries(channels)) {
-				if (previous[key] !== value) {
-					hasChanges = true;
-					changes[key] = { from: previous[key], to: value };
-				}
-			}
-
-			if (hasChanges) {
-				console.log(`[CSSSampler] Device ${device.id} (${device.name}) values changed:`, {
-					color: computed.color,
-					opacity: computed.opacity,
-					changes
-				});
-			}
-		} else {
-			// First sample for this device
-			console.log(`[CSSSampler] Initial sample for device ${device.id} (${device.name}):`, {
-				color: computed.color,
-				opacity: computed.opacity,
-				channels
-			});
+			case 'FLAMETHROWER':
+				Object.assign(channels, this._sampleFlamethrower(computed));
+				break;
 		}
 
 		// Store current values for next comparison
@@ -334,11 +309,18 @@ export class CSSSampler {
 	 */
 	_sampleRGBA(computed) {
 		const color = this._parseComputedColor(computed.color);
+
+		// Parse --amber percentage to DMX value (0-100% -> 0-255)
+		const amber = computed.getPropertyValue('--amber') || '0%';
+		const amberMatch = amber.match(/(\d+(?:\.\d+)?)/);
+		const amberPercent = amberMatch ? parseFloat(amberMatch[1]) : 0;
+		const amberValue = Math.round(Math.max(0, Math.min(100, amberPercent)) * 255 / 100);
+
 		return {
 			Red: color.r,
 			Green: color.g,
 			Blue: color.b,
-			Amber: color.a * 255 // Use alpha for amber
+			Amber: amberValue
 		};
 	}
 
@@ -373,32 +355,68 @@ export class CSSSampler {
 	 * Sample smoke machine from custom property
 	 */
 	_sampleSmoke(computed) {
-		const output = computed.getPropertyValue('--smoke-output') || '0';
-		const value = parseFloat(output);
+		const smoke = computed.getPropertyValue('--smoke') || '0%';
+
+		// Parse percentage to DMX value (0-100% -> 0-255)
+		const smokeMatch = smoke.match(/(\d+(?:\.\d+)?)/);
+		const smokePercent = smokeMatch ? parseFloat(smokeMatch[1]) : 0;
+		const smokeValue = Math.round(Math.max(0, Math.min(100, smokePercent)) * 255 / 100);
 
 		return {
-			Output: Math.round(Math.max(0, Math.min(255, value)))
+			Output: smokeValue
 		};
 	}
 
 	/**
-	 * Sample moving head (pan/tilt from translate, colors, dimmer)
+	 * Sample moving head (pan/tilt from custom properties, colors, dimmer)
 	 */
 	_sampleMovingHead(computed) {
 		const color = this._parseComputedColor(computed.color);
 		const opacity = parseFloat(computed.opacity) || 1;
 
-		// Parse translate for pan/tilt
-		const translate = this._parseTranslate(computed.translate);
+		// Parse --pan and --tilt percentages to DMX values
+		const pan = computed.getPropertyValue('--pan') || '0%';
+		const tilt = computed.getPropertyValue('--tilt') || '0%';
+
+		// Pan: -50% to 50% -> 0-255 DMX (0% = center = 127.5)
+		const panMatch = pan.match(/(-?\d+(?:\.\d+)?)/);
+		const panPercent = panMatch ? parseFloat(panMatch[1]) : 0;
+		const panValue = Math.round(((Math.max(-50, Math.min(50, panPercent)) + 50) / 100) * 255);
+
+		// Tilt: 0% to 100% -> 0-255 DMX
+		const tiltMatch = tilt.match(/(\d+(?:\.\d+)?)/);
+		const tiltPercent = tiltMatch ? parseFloat(tiltMatch[1]) : 0;
+		const tiltValue = Math.round(Math.max(0, Math.min(100, tiltPercent)) * 255 / 100);
 
 		return {
-			Pan: translate.x,
-			Tilt: translate.y,
+			Pan: panValue,
+			Tilt: tiltValue,
 			Dimmer: Math.round(opacity * 255),
 			Red: color.r,
 			Green: color.g,
 			Blue: color.b,
 			White: Math.min(color.r, color.g, color.b)
+		};
+	}
+
+	/**
+	 * Sample flamethrower from custom properties
+	 */
+	_sampleFlamethrower(computed) {
+		const safety = computed.getPropertyValue('--safety') || 'none';
+		const fuel = computed.getPropertyValue('--fuel') || '0%';
+
+		// Safety: parse "none" or "probably" to DMX values
+		const safetyValue = safety.trim() === 'probably' ? 125 : 0;
+
+		// Fuel: parse percentage to DMX value (0-100% -> 0-255)
+		const fuelMatch = fuel.match(/(\d+(?:\.\d+)?)/);
+		const fuelPercent = fuelMatch ? parseFloat(fuelMatch[1]) : 0;
+		const fuelValue = Math.round(Math.max(0, Math.min(100, fuelPercent)) * 255 / 100);
+
+		return {
+			Safety: safetyValue,
+			Fuel: fuelValue
 		};
 	}
 
@@ -533,6 +551,13 @@ export class CustomPropertyManager {
 			.join('\n');
 
 		this.styleElement.textContent = `:root {\n${props}\n}`;
+	}
+
+	/**
+	 * Get all properties
+	 */
+	getAll() {
+		return Array.from(this.properties.entries()).map(([name, value]) => ({ name, value }));
 	}
 
 	/**

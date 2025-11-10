@@ -9,7 +9,9 @@
         mappingLibrary,
         cssGenerator,
         cssSampler,
-        triggerManager
+        triggerManager,
+        customPropertyManager,
+        isActive = false
     } = $props();
 
     // Generate CSS-safe ID from device name
@@ -82,10 +84,28 @@ Example animations:
     let currentCSS = $state(getInitialCSS());
 
     let animationFrameId;
-    let isActive = false;
     let previewColors = $state({});
     let deviceOpacities = $state({});
     let devicePanTilt = $state({});
+
+    // Get all trigger mappings for display
+    let triggerClasses = $derived(
+        mappingLibrary ? mappingLibrary.getAll().filter(m => m.mode === 'trigger') : []
+    );
+
+    // Get all custom properties for display
+    let customProperties = $state([]);
+
+    // Update custom properties list periodically
+    $effect(() => {
+        const interval = setInterval(() => {
+            if (customPropertyManager) {
+                customProperties = customPropertyManager.getAll();
+            }
+        }, 100); // Update 10 times per second
+
+        return () => clearInterval(interval);
+    });
 
     // Track if CSS is custom (edited by user)
     let isCustomCSS = $state(localStorage.getItem('dmx-css') !== null);
@@ -95,17 +115,71 @@ Example animations:
     let animationTargetsContainer;
     let triggerClassesContainer; // Inner container that receives trigger classes
     let cssEditorElement;
-    let frameCount = 0; // Debug: track animation frames
+
+    /**
+     * Convert sampled channel object to device channel array
+     * Maps channel names to the correct array indices for each device type
+     */
+    function convertChannelsToArray(deviceType, channels) {
+        switch (deviceType) {
+            case 'RGB':
+                return [
+                    channels.Red || 0,
+                    channels.Green || 0,
+                    channels.Blue || 0
+                ];
+
+            case 'RGBA':
+                return [
+                    channels.Red || 0,
+                    channels.Green || 0,
+                    channels.Blue || 0,
+                    channels.Amber || 0
+                ];
+
+            case 'RGBW':
+                return [
+                    channels.Red || 0,
+                    channels.Green || 0,
+                    channels.Blue || 0,
+                    channels.White || 0
+                ];
+
+            case 'DIMMER':
+                return [
+                    channels.Intensity || 0
+                ];
+
+            case 'SMOKE':
+                return [
+                    channels.Output || 0
+                ];
+
+            case 'MOVING_HEAD':
+                return [
+                    channels.Pan || 127,
+                    channels.Tilt || 127,
+                    channels.Dimmer || 0,
+                    channels.Red || 0,
+                    channels.Green || 0,
+                    channels.Blue || 0,
+                    channels.White || 0
+                ];
+
+            case 'FLAMETHROWER':
+                return [
+                    channels.Safety || 0,
+                    channels.Fuel || 0
+                ];
+
+            default:
+                console.warn(`Unknown device type: ${deviceType}`);
+                return [];
+        }
+    }
 
     function updateDMXFromCSS() {
         if (!cssSampler) return;
-
-        frameCount++;
-
-        // Log every 60 frames (~1 second at 60fps) to avoid spam
-        if (frameCount % 60 === 0) {
-            console.log(`[CSSView] Animation loop running, frame ${frameCount}`);
-        }
 
         // Always sample to update preview, regardless of isActive state
         const sampledValues = cssSampler.sampleAll(devices);
@@ -114,30 +188,13 @@ Example animations:
             const channels = sampledValues.get(device.id);
             if (!channels) return;
 
-            // Convert channel values to array based on device type
-            const newValues = device.getChannelValues();
-
-            // Update values from sampled channels
-            for (const [channelName, value] of Object.entries(channels)) {
-                const channelIndex = Object.keys(channels).indexOf(channelName);
-                if (channelIndex !== -1 && channelIndex < newValues.length) {
-                    newValues[channelIndex] = value;
-                }
-            }
+            // Convert sampled channels to device channel array based on device type
+            const newValues = convertChannelsToArray(device.type, channels);
 
             // ALWAYS update preview colors (even when not active)
             if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
                 const alpha = channels.White !== undefined ? channels.White : 255;
                 const newColor = `rgba(${channels.Red}, ${channels.Green}, ${channels.Blue}, ${alpha / 255})`;
-
-                // Log preview color updates
-                if (previewColors[device.id] !== newColor) {
-                    console.log(`[CSSView] Preview color updated for ${device.name}:`, {
-                        old: previewColors[device.id],
-                        new: newColor
-                    });
-                }
-
                 previewColors[device.id] = newColor;
             } else if (channels.Intensity !== undefined) {
                 // Dimmer preview
@@ -408,21 +465,50 @@ Example animations:
         localStorage.setItem('dmx-css', updatedCSS);
     }
 
-    function startAnimation() {
-        isActive = true;
-        // Animation loop is always running for preview updates
-    }
-
-    function stopAnimation() {
-        isActive = false;
-        // Stop animation loop completely when component is destroyed
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
-        }
-    }
-
     onMount(() => {
+        // Create style element for @property definitions (must be at document level)
+        const propertyDefsElement = document.createElement('style');
+        propertyDefsElement.id = 'css-property-definitions';
+        propertyDefsElement.textContent = `
+/* CSS Custom Property Definitions */
+@property --safety {
+  syntax: "none | probably";
+  inherits: false;
+  initial-value: none;
+}
+
+@property --fuel {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@property --smoke {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@property --pan {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@property --tilt {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@property --amber {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+`;
+        document.head.appendChild(propertyDefsElement);
+
         // Create style element for user CSS
         styleElement = document.createElement('style');
         styleElement.id = 'css-animation-styles';
@@ -469,9 +555,8 @@ Example animations:
         });
 
         // Start animation loop (for preview updates, always running)
-        // DMX output is controlled by isActive flag
+        // DMX output is controlled by isActive prop from parent
         if (!animationFrameId) {
-            isActive = true; // Start with DMX output active
             updateDMXFromCSS();
         }
     });
@@ -504,10 +589,22 @@ Example animations:
     });
 
     onDestroy(() => {
-        stopAnimation();
+        // Stop animation loop
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+
+        // Remove style elements
         if (styleElement && styleElement.parentNode) {
             styleElement.parentNode.removeChild(styleElement);
         }
+
+        const propertyDefsElement = document.getElementById('css-property-definitions');
+        if (propertyDefsElement && propertyDefsElement.parentNode) {
+            propertyDefsElement.parentNode.removeChild(propertyDefsElement);
+        }
+
         mappingLibrary.off('changed', handleMappingChange);
         animationLibrary.off('changed', handleAnimationChange);
     });
@@ -538,6 +635,34 @@ Example animations:
                 </div>
             {/each}
         </div>
+
+        <!-- Trigger Classes List -->
+        {#if triggerClasses.length > 0}
+            <div class="reference-section">
+                <h4>Trigger Classes</h4>
+                <div class="reference-list">
+                    {#each triggerClasses as trigger (trigger.id)}
+                        <div class="reference-item">
+                            <code>.{trigger.cssClassName}</code>
+                        </div>
+                    {/each}
+                </div>
+            </div>
+        {/if}
+
+        <!-- Custom Properties List -->
+        {#if customProperties.length > 0}
+            <div class="reference-section">
+                <h4>Custom Properties</h4>
+                <div class="reference-list">
+                    {#each customProperties as prop (prop.name)}
+                        <div class="reference-item">
+                            <code>{prop.name}: {prop.value}</code>
+                        </div>
+                    {/each}
+                </div>
+            </div>
+        {/if}
 
         <!-- Off-screen animation targets (managed by cssSampler) -->
         <div class="animation-targets" bind:this={animationTargetsContainer}></div>
@@ -665,6 +790,41 @@ Example animations:
     .device-type {
         font-size: 9pt;
         color: #666;
+    }
+
+    .reference-section {
+        padding: 15px;
+        border-top: 1px solid #ddd;
+        background: #fff;
+    }
+
+    .reference-section h4 {
+        margin: 0 0 10px 0;
+        font-size: 10pt;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .reference-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .reference-item {
+        font-size: 9pt;
+    }
+
+    .reference-item code {
+        display: inline-block;
+        background: #f5f5f5;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-family: var(--font-stack-mono);
+        color: #007acc;
+        border: 1px solid #e0e0e0;
     }
 
     .animation-targets {

@@ -24,16 +24,6 @@
     // Event handlers
     let inputEventHandlers = [];
 
-    async function connectStreamDeck() {
-        try {
-            await inputController.requestStreamDeck();
-            // Device events are now handled automatically via the StreamDeckManager
-            // No need to manually set up listeners - they're already connected
-        } catch (error) {
-            alert(`Failed to connect Stream Deck: ${error.message}\n\nPlease close the Elgato Stream Deck software and try again.`);
-        }
-    }
-
     function startListening() {
         isListening = true;
 
@@ -73,7 +63,7 @@
             // Auto-save new input
             const name = formatInputName(device?.name || deviceId, controlId);
 
-            // Only assign colors to Stream Deck devices (not keyboard or other devices)
+            // Only Stream Deck devices support colors (not keyboard or MIDI)
             const supportsColor = device?.type === 'hid' && device.id !== 'keyboard';
 
             const inputMapping = new InputMapping({
@@ -88,7 +78,6 @@
             refreshInputs();
 
             // Set color on hardware for Stream Deck devices only
-            // MIDI will also support colors when available
             if (supportsColor && controlId.startsWith('button-')) {
                 const buttonIndex = parseInt(controlId.replace('button-', ''));
 
@@ -138,9 +127,25 @@
     }
 
     function formatInputName(deviceName, controlId) {
-        const devicePart = deviceName.replace(/\s+/g, '_').toLowerCase();
-        const controlPart = controlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-        return `${devicePart}_${controlPart}`;
+        // Parse the controlId to determine the type
+        if (controlId.startsWith('note-')) {
+            const noteNumber = controlId.replace('note-', '');
+            return `${deviceName} Note ${noteNumber}`;
+        } else if (controlId.startsWith('control-') || controlId.startsWith('cc-')) {
+            const controlNumber = controlId.replace('control-', '').replace('cc-', '');
+            return `${deviceName} Control ${controlNumber}`;
+        } else if (controlId.startsWith('button-')) {
+            const buttonNumber = controlId.replace('button-', '');
+            return `${deviceName} Button ${buttonNumber}`;
+        } else if (controlId.startsWith('key-')) {
+            // Extract just the key letter from KeyQ -> Q
+            const keyCode = controlId.replace('key-', '');
+            const key = keyCode.replace('Key', '').replace('Digit', '') || keyCode;
+            return `Keyboard ${key}`;
+        } else {
+            // Fallback for unknown control types
+            return `${deviceName} ${controlId}`;
+        }
     }
 
     function startEditing(input) {
@@ -275,10 +280,6 @@
                         Start Listening
                     </Button>
                 {/if}
-
-                <Button onclick={connectStreamDeck}>
-                    Connect Stream Deck
-                </Button>
             </div>
 
             {#if isListening}
