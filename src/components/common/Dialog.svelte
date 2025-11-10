@@ -69,52 +69,35 @@
 
     /* Anchored dialog styles */
     .dialog.anchored {
-        --arrow-size: 0.8em;
-        --arrow-distance: 0.5em;
-
-        position: absolute;
-        z-index: 100;
+        position: fixed;
         position-anchor: var(--position-anchor);
-        position-area: top;
-        margin-top: var(--arrow-distance);
-        position-try: flip-block;
-        anchor-name: --dialog;
+        top: anchor(bottom);
+        left: anchor(center);
+        translate: -50% 8px;
+        margin: 0;
+        z-index: 100;
         min-width: 300px;
         max-width: 400px;
+        overflow: visible;
     }
 
     .dialog.anchored::backdrop {
         background: rgba(0, 0, 0, 0.3);
     }
 
-    /* Arrow pointing to anchor element */
+    /* Arrow pointing up to anchor element */
     .dialog.show-arrow::before {
         content: '';
-        position: fixed;
-        z-index: -1;
-        width: var(--arrow-size);
-        background: #fff;
-        border-radius: 2px;
-
-        /* Vertical position from dialog */
-        top: calc(anchor(--dialog top) - var(--arrow-distance));
-        bottom: calc(anchor(--dialog bottom) - var(--arrow-distance));
-
-        /* Horizontal position from anchor, clamped to dialog area */
-        left: calc(anchor(center) - var(--arrow-size) / 2);
-
-        /* This will hide either top or bottom of the shape during flip */
-        margin: inherit;
-
-        /* Arrow shape */
-        clip-path: polygon(
-            50% 0.15em,
-            100% var(--arrow-distance),
-            100% calc(100% - var(--arrow-distance)),
-            50% calc(100% - 0.15em),
-            0 calc(100% - var(--arrow-distance)),
-            0 var(--arrow-distance)
-        );
+        position: absolute;
+        top: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 8px solid #fff;
+        filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
     }
 
     .dialog-header {
