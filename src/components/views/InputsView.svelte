@@ -296,7 +296,7 @@
                 Stop Listening
             </Button>
         {:else}
-            <Button onclick={startListening} variant="primary">
+            <Button onclick={startListening} variant="secondary">
                 Start Listening
             </Button>
         {/if}

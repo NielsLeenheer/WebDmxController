@@ -351,7 +351,7 @@
                 <option value={key}>{type.name}</option>
             {/each}
         </select>
-        <Button onclick={() => addDevice(selectedType)} variant="primary">
+        <Button onclick={() => addDevice(selectedType)} variant="secondary">
             Add Device
         </Button>
     </div>
@@ -474,7 +474,7 @@
     }
 
     .add-device-section {
-        padding: 20px;
+        padding: 20px 20px 30px;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -483,11 +483,7 @@
 
     .add-device-section select {
         min-width: 200px;
-        padding: 8px 12px;
-        font-size: 10pt;
-        border: 2px solid #ccc;
-        border-radius: 4px;
-        background: white;
+        border: 2px solid #f0f0f0;
         cursor: pointer;
     }
 
