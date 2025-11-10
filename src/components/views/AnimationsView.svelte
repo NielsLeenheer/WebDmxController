@@ -297,9 +297,6 @@
             </div>
 
             <div class="timeline-container">
-                <div class="timeline-instructions">
-                    Click on the timeline to add a keyframe
-                </div>
                 <div
                     class="timeline"
                     bind:this={timelineElement}
@@ -536,36 +533,21 @@
         gap: 10px;
     }
 
-    .timeline-instructions {
-        font-size: 9pt;
-        color: #888;
-        font-style: italic;
-        text-align: center;
-    }
-
     .timeline {
         position: relative;
         width: 100%;
         max-width: 100%;
         height: 60px;
-        background: #f5f5f5;
-        border: 1px solid #ddd;
-        border-radius: 4px;
         cursor: crosshair;
         overflow: visible;
-    }
-
-    .timeline:hover {
-        background: #f0f0f0;
     }
 
     .gradient-segment {
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
-        height: 20px;
+        height: 8px;
         border-radius: 10px;
-        border: 1px solid rgba(0, 0, 0, 0.15);
         pointer-events: none;
         z-index: 1;
     }
