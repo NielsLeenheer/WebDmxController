@@ -131,7 +131,11 @@
         // Select the new keyframe for editing
         const newKeyframeIndex = selectedAnimation.keyframes.findIndex(kf => Math.abs(kf.time - time) < 0.001);
         if (newKeyframeIndex !== -1) {
-            selectKeyframe(newKeyframeIndex);
+            // Wait for the DOM to update, then get the element reference and open dialog
+            requestAnimationFrame(() => {
+                const keypointElement = document.getElementById(`keyframe-${selectedAnimation.name}-${newKeyframeIndex}`);
+                selectKeyframe(newKeyframeIndex, keypointElement);
+            });
         }
     }
 
@@ -348,11 +352,10 @@
                     {/each}
 
                     <!-- Keyframe markers -->
-                    {#each displayKeyframes as keyframe, index (keyframe.time + '-' + index)}
+                    {#each displayKeyframes as keyframe, index (keyframe.time + '-' + index + '-' + animationVersion)}
                         <div
                             id="keyframe-{selectedAnimation.name}-{index}"
                             class="timeline-keyframe-marker"
-                            class:selected={selectedKeyframeIndex === index}
                             class:dragging={draggingKeyframe?.keyframe === keyframe}
                             style="left: {getKeyframePosition(keyframe)}px; --keyframe-color: {selectedAnimation.getKeyframeColor(keyframe)}; anchor-name: --keyframe-{selectedAnimation.name}-{index}"
                             onmousedown={(e) => handleKeyframeMouseDown(e, keyframe, index)}
@@ -626,13 +629,6 @@
         box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
     }
 
-    .timeline-keyframe-marker.selected {
-        border-color: #ffd700;
-        box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
-        width: 20px;
-        height: 20px;
-    }
-
     .timeline-keyframe-marker.dragging {
         cursor: grabbing;
         z-index: 15;
@@ -752,8 +748,8 @@
         position: fixed;
         position-anchor: var(--position-anchor);
         top: anchor(bottom);
-        left: anchor(center);
-        translate: -50% 8px;
+        left: anchor(left);
+        translate: calc(-50% + 8px) 8px;
         margin: 0;
         padding: 0;
         border: 1px solid #ddd;
