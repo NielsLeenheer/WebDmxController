@@ -354,23 +354,10 @@
     .listen-button :global(button) {
         font-size: 11pt;
         padding: 12px 30px;
-        position: relative;
-        z-index: 1;
     }
 
-    /* Create glowing ring effect with pseudo-element */
-    .listen-button.pulsating::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 100%;
-        height: 100%;
-        border-radius: 4px;
-        animation: glowingRing 2s ease-in-out infinite;
-        pointer-events: none;
-        z-index: 0;
+    .listen-button.pulsating :global(button) {
+        animation: glowingRing 2s ease-in-out infinite !important;
     }
 
     @keyframes glowingRing {
@@ -381,8 +368,9 @@
         }
         50% {
             box-shadow:
-                0 0 0 6px rgba(33, 150, 243, 0.4),
-                0 0 0 12px rgba(33, 150, 243, 0.2);
+                0 0 0 8px rgba(33, 150, 243, 0.4),
+                0 0 0 16px rgba(33, 150, 243, 0.2),
+                0 0 20px rgba(33, 150, 243, 0.3);
         }
     }
 
