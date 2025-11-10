@@ -3,6 +3,7 @@
     import { InputMapping } from '../../lib/mappings.js';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
+    import Dialog from '../common/Dialog.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
 
     let {
@@ -186,12 +187,6 @@
         editButtonRef = null;
     }
 
-    function handleEditDialogClick(event) {
-        if (event.target === editDialog) {
-            closeEditDialog();
-        }
-    }
-
     async function confirmDelete() {
         if (!editingInput) return;
 
@@ -342,11 +337,13 @@
 
 <!-- Edit Dialog -->
 {#if editButtonRef && editingInput}
-<dialog
-    bind:this={editDialog}
-    class="edit-dialog"
-    style="position-anchor: --edit-button-{editingInput.id}"
-    onclick={handleEditDialogClick}
+<Dialog
+    bind:dialogRef={editDialog}
+    anchored={true}
+    anchorId="edit-button-{editingInput.id}"
+    showArrow={true}
+    lightDismiss={true}
+    onclose={closeEditDialog}
 >
     <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
         <div class="dialog-input-group">
@@ -379,7 +376,7 @@
             </div>
         </div>
     </form>
-</dialog>
+</Dialog>
 {/if}
 
 <style>
@@ -515,47 +512,7 @@
         height: 20px;
     }
 
-    /* Edit Dialog */
-    .edit-dialog {
-        position: fixed;
-        position-anchor: var(--position-anchor);
-        top: anchor(bottom);
-        left: anchor(center);
-        translate: -50% 8px;
-        margin: 0;
-        padding: 0;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        background: #fff;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        min-width: 300px;
-        max-width: 400px;
-        overflow: visible;
-    }
-
-    .edit-dialog::backdrop {
-        background: rgba(0, 0, 0, 0.3);
-    }
-
-    /* Dialog arrow pointing up */
-    .edit-dialog::before {
-        content: '';
-        position: absolute;
-        top: -8px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 8px solid transparent;
-        border-right: 8px solid transparent;
-        border-bottom: 8px solid #fff;
-        filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
-    }
-
-    .edit-dialog form {
-        padding: 20px;
-    }
-
+    /* Dialog content styles */
     .dialog-input-group {
         margin-bottom: 16px;
     }
