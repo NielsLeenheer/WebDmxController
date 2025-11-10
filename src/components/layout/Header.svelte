@@ -25,9 +25,9 @@
             connectedDevices = inputController.getInputDevices();
         }
 
-        // Show dialog as non-modal
+        // Show dialog as modal so backdrop clicks work for light dismiss
         requestAnimationFrame(() => {
-            devicesDialog?.show();
+            devicesDialog?.showModal();
         });
     }
 
