@@ -4,6 +4,9 @@
     import { canLinkDevices, applyLinkedValues, getMappedChannels } from '../../lib/channelMapping.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import DeviceControls from '../controls/DeviceControls.svelte';
+    import Dialog from '../common/Dialog.svelte';
+    import Button from '../common/Button.svelte';
+    import IconButton from '../common/IconButton.svelte';
 
     import disconnectIcon from '../../assets/icons/disconnect.svg?raw';
     import settingsIcon from '../../assets/icons/settings.svg?raw';
@@ -344,16 +347,18 @@
                     {#if device.isLinked()}
                         <Icon data={linkedIcon} />
                     {/if}
-                    <button
-                        class="settings-btn"
+                    <IconButton
+                        icon={settingsIcon}
                         onclick={() => openSettingsDialog(device)}
                         title="Device settings"
-                    >
-                        <Icon data={settingsIcon} />
-                    </button>
-                    <button class="remove-btn" onclick={() => removeDevice(device.id)}>
-                        <Icon data={disconnectIcon} />
-                    </button>
+                        size="small"
+                    />
+                    <IconButton
+                        icon={disconnectIcon}
+                        onclick={() => removeDevice(device.id)}
+                        title="Remove device"
+                        size="small"
+                    />
                 </div>
 
                 <DeviceControls
@@ -366,68 +371,71 @@
         {/each}
     </div>
 
-    <dialog bind:this={settingsDialog} class="settings-dialog">
-        {#if editingDevice}
-            <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveDeviceSettings(); }}>
-                <h3>Device Settings</h3>
+{#if editingDevice}
+<Dialog
+    bind:dialogRef={settingsDialog}
+    title="Device Settings"
+    onclose={closeSettingsDialog}
+>
+    <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveDeviceSettings(); }}>
+        <div class="dialog-input-group">
+            <label for="name-input">Name:</label>
+            <input
+                id="name-input"
+                type="text"
+                bind:value={dialogName}
+                placeholder="Device name"
+            />
+            <small class="css-id-preview">CSS ID: #{getPreviewCssId()}</small>
+        </div>
 
-                <div class="dialog-input-group">
-                    <label for="name-input">Name:</label>
-                    <input
-                        id="name-input"
-                        type="text"
-                        bind:value={dialogName}
-                        placeholder="Device name"
-                    />
-                    <small class="css-id-preview">CSS ID: #{getPreviewCssId()}</small>
-                </div>
+        <div class="dialog-input-group">
+            <label for="channel-input">Starting channel (1-512):</label>
+            <input
+                id="channel-input"
+                type="number"
+                min="1"
+                max="512"
+                bind:value={dialogChannel}
+                class:valid={isChannelValid(editingDevice, dialogChannel - 1)}
+                class:invalid={!isChannelValid(editingDevice, dialogChannel - 1)}
+            />
+            <small class="channel-range">
+                Device uses {DEVICE_TYPES[editingDevice.type].channels} channels
+                (Ch {dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1})
+            </small>
+        </div>
 
-                <div class="dialog-input-group">
-                    <label for="channel-input">Starting channel (1-512):</label>
-                    <input
-                        id="channel-input"
-                        type="number"
-                        min="1"
-                        max="512"
-                        bind:value={dialogChannel}
-                        class:valid={isChannelValid(editingDevice, dialogChannel - 1)}
-                        class:invalid={!isChannelValid(editingDevice, dialogChannel - 1)}
-                    />
-                    <small class="channel-range">
-                        Device uses {DEVICE_TYPES[editingDevice.type].channels} channels
-                        (Ch {dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1})
-                    </small>
-                </div>
+        <div class="dialog-input-group">
+            <label for="link-select">Link to device:</label>
+            {#if getLinkableDevices(editingDevice).length > 0 || editingDevice.isLinked()}
+                <select id="link-select" bind:value={selectedLinkTarget}>
+                    <option value={null}>None</option>
+                    {#each getLinkableDevices(editingDevice) as linkableDevice}
+                        <option value={linkableDevice.id}>
+                            {linkableDevice.name} ({DEVICE_TYPES[linkableDevice.type].name})
+                        </option>
+                    {/each}
+                </select>
+                <small class="link-help">Link this device to follow another device's values</small>
+            {:else}
+                <p class="no-devices">No compatible devices available to link</p>
+            {/if}
+        </div>
 
-                <div class="dialog-input-group">
-                    <label for="link-select">Link to device:</label>
-                    {#if getLinkableDevices(editingDevice).length > 0 || editingDevice.isLinked()}
-                        <select id="link-select" bind:value={selectedLinkTarget}>
-                            <option value={null}>None</option>
-                            {#each getLinkableDevices(editingDevice) as linkableDevice}
-                                <option value={linkableDevice.id}>
-                                    {linkableDevice.name} ({DEVICE_TYPES[linkableDevice.type].name})
-                                </option>
-                            {/each}
-                        </select>
-                        <small class="link-help">Link this device to follow another device's values</small>
-                    {:else}
-                        <p class="no-devices">No compatible devices available to link</p>
-                    {/if}
-                </div>
-
-                <div class="dialog-buttons">
-                    <button type="button" onclick={closeSettingsDialog}>Cancel</button>
-                    <button
-                        type="submit"
-                        disabled={!isChannelValid(editingDevice, dialogChannel - 1)}
-                    >
-                        Save
-                    </button>
-                </div>
-            </form>
-        {/if}
-    </dialog>
+        <div class="dialog-buttons">
+            <Button onclick={closeSettingsDialog} variant="secondary">Cancel</Button>
+            <Button
+                type="submit"
+                variant="primary"
+                disabled={!isChannelValid(editingDevice, dialogChannel - 1)}
+            >
+                Save
+            </Button>
+        </div>
+    </form>
+</Dialog>
+{/if}
 </div>
 
 <style>
@@ -484,60 +492,12 @@
         color: #333;
     }
 
-    .settings-btn,
-    .remove-btn {
-        margin: 0;
-        padding: 2px;
-        width: 20px;
-        height: 20px;
-        background: transparent;
-        border: none;
-        line-height: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        filter: grayscale(100%);
-        transition: filter 0.2s ease;
-        cursor: pointer;
-    }
-
-    .settings-btn {
+    .device-header :global(.icon-button) {
         margin-left: auto;
     }
 
-    .settings-btn :global(svg),
-    .remove-btn :global(svg) {
-        width: 100%;
-        height: 100%;
-    }
-
-    .settings-btn:hover,
-    .remove-btn:hover {
-        filter: grayscale(0%);
-    }
-
-    /* Dialog styles */
-    .settings-dialog {
-        border: none;
-        border-radius: 8px;
-        padding: 0;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        max-width: 450px;
-        width: 90%;
-    }
-
-    .settings-dialog::backdrop {
-        background: rgba(0, 0, 0, 0.5);
-    }
-
-    .settings-dialog form {
-        padding: 20px;
-    }
-
-    .settings-dialog h3 {
-        margin: 0 0 20px 0;
-        font-size: 14pt;
-        color: #333;
+    .device-header :global(.icon-button:last-child) {
+        margin-left: 0;
     }
 
     .dialog-input-group {
@@ -613,32 +573,7 @@
         display: flex;
         gap: 10px;
         justify-content: flex-end;
-    }
-
-    .dialog-buttons button {
-        margin: 0;
-        padding: 8px 20px;
-        font-size: 10pt;
-        cursor: pointer;
-    }
-
-    .dialog-buttons button[type="button"] {
-        background: #f5f5f5;
-        color: #333;
-    }
-
-    .dialog-buttons button[type="button"]:hover {
-        background: #e0e0e0;
-    }
-
-    .dialog-buttons button[type="submit"] {
-        background-color: #bbdefb;
-        color: #1976d2;
-    }
-
-    .dialog-buttons button[type="submit"]:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
+        margin-top: 20px;
     }
 
     .no-devices {
