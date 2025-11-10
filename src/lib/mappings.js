@@ -18,9 +18,11 @@ export class InputMapping {
 		// Input source
 		this.inputDeviceId = config.inputDeviceId || null;
 		this.inputControlId = config.inputControlId || null;
+		this.inputDeviceName = config.inputDeviceName || null; // Store device name for display
 
 		// Visual color for the input (shown in UI and on hardware)
-		this.color = config.color || this._generateRandomColor();
+		// If color is explicitly set (even to null), use it. Otherwise generate a random color.
+		this.color = 'color' in config ? config.color : this._generateRandomColor();
 
 		// Trigger mode settings
 		this.triggerType = config.triggerType || 'pressed'; // 'pressed', 'not-pressed', 'always'

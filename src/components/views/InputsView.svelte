@@ -73,6 +73,7 @@
                 mode: 'input',  // Mark as input-only (not a trigger mapping)
                 inputDeviceId: deviceId,
                 inputControlId: controlId,
+                inputDeviceName: device?.name || deviceId, // Store device name for display
                 color: supportsColor ? undefined : null  // undefined = generate color, null = no color
             });
 
@@ -163,9 +164,13 @@
     function saveEdit() {
         if (!editingInput || !editingName.trim()) return;
 
-        editingInput.name = editingName.trim();
-        mappingLibrary.save();
-        refreshInputs();
+        // Get the mapping from the library and update it
+        const mapping = mappingLibrary.get(editingInput.id);
+        if (mapping) {
+            mapping.name = editingName.trim();
+            mappingLibrary.save();
+            refreshInputs();
+        }
 
         closeEditDialog();
     }
@@ -313,11 +318,7 @@
                     <div class="input-header">
                         <div class="input-name">{input.name}</div>
                         <div class="input-device-name">
-                            {#if inputController.getInputDevice(input.inputDeviceId)}
-                                {inputController.getInputDevice(input.inputDeviceId).name}
-                            {:else}
-                                {input.inputDeviceId}
-                            {/if}
+                            {input.inputDeviceName || input.inputDeviceId}
                         </div>
                     </div>
                     <div class="input-actions">
