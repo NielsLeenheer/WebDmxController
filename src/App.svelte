@@ -17,7 +17,6 @@
     let view = $state('devices');
     let connected = $state(false);
     let dmxController = $state(new DMXController());
-    let selectedType = $state('RGB');
     let devicesViewRef = $state(null);
     let devices = $state([]);
 
@@ -49,12 +48,6 @@
         connected = false;
     }
 
-    function handleAddDevice() {
-        if (devicesViewRef?.addDevice) {
-            devicesViewRef.addDevice(selectedType);
-        }
-    }
-
     function handleClearUniverse() {
         if (dmxController) {
             dmxController.clearUniverse();
@@ -76,22 +69,13 @@
 <main>
     <Tabs
         bind:view
-        showAddDevice={true}
-        deviceTypes={DEVICE_TYPES}
-        bind:selectedType
-        onAddDevice={handleAddDevice}
         onClearUniverse={handleClearUniverse}
     />
 
     <div class="view-container" class:hidden={view !== 'devices'}>
         <DevicesView
             {dmxController}
-            {animationLibrary}
-            {mappingLibrary}
-            {inputController}
-            {cssGenerator}
             bind:this={devicesViewRef}
-            bind:selectedType
             bind:devices
         />
     </div>

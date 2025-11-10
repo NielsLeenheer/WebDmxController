@@ -12,7 +12,10 @@
     import linkedIcon from '../../assets/icons/linked.svg?raw';
     import removeIcon from '../../assets/icons/remove.svg?raw';
 
-    let { dmxController, selectedType = $bindable(), devices = $bindable([]) } = $props();
+    let { dmxController, devices = $bindable([]) } = $props();
+
+    // Device type selection
+    let selectedType = $state('RGB');
 
     // Settings dialog state
     let settingsDialog = $state(null);
@@ -342,6 +345,17 @@
 </script>
 
 <div class="devices-container">
+    <div class="add-device-section">
+        <select bind:value={selectedType}>
+            {#each Object.entries(DEVICE_TYPES) as [key, type]}
+                <option value={key}>{type.name}</option>
+            {/each}
+        </select>
+        <Button onclick={() => addDevice(selectedType)} variant="primary">
+            Add Device
+        </Button>
+    </div>
+
     <div class="devices-list">
         {#if devices.length === 0}
             <div class="empty-state">
@@ -453,12 +467,39 @@
 
 <style>
     .devices-container {
-        flex: 1;
-        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .add-device-section {
         padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .add-device-section select {
+        min-width: 200px;
+        padding: 8px 12px;
+        font-size: 10pt;
+        border: 2px solid #ccc;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+    }
+
+    .add-device-section select:focus {
+        outline: none;
+        border-color: #2196F3;
     }
 
     .devices-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 20px 20px 20px;
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(20em, 1fr));
         gap: 15px;
