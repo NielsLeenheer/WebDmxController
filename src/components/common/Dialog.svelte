@@ -141,8 +141,8 @@
         padding: 20px;
     }
 
-    /* Remove padding for anchored dialogs (content handles its own padding) */
+    /* Smaller padding for anchored dialogs */
     .dialog.anchored .dialog-body {
-        padding: 0;
+        padding: 15px;
     }
 </style>

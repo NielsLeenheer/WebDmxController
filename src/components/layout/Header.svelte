@@ -172,11 +172,12 @@
 
     /* Device sections within dialog */
     .device-section {
-        padding: 15px;
     }
 
     .device-section:not(:last-child) {
         border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
     }
 
     .connect-device-btn {

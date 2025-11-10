@@ -449,9 +449,7 @@
     onclose={closeEditDialog}
 >
     <div class="keyframe-editor-content">
-        <div class="keyframe-title">
-            Keyframe at {(selectedAnimation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%
-        </div>
+        <h4>Keyframe at {(selectedAnimation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%</h4>
 
         <DeviceControls
             deviceType={selectedAnimation.deviceType}
@@ -741,12 +739,17 @@
         max-height: 500px;
         overflow-y: auto;
     }
-
-    .keyframe-title {
         font-size: 11pt;
         font-weight: 600;
         color: #333;
         margin-bottom: 15px;
+    }
+
+    .keyframe-editor-content h4 {
+        margin: 0 0 15px 0;
+        font-size: 11pt;
+        font-weight: 600;
+        color: #333;
     }
 
     .keyframe-actions {
