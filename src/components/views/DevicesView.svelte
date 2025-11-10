@@ -40,6 +40,15 @@
         selectedLinkTarget = null;
     }
 
+    function confirmRemoveDevice() {
+        if (!editingDevice) return;
+
+        if (confirm(`Are you sure you want to remove "${editingDevice.name}"?`)) {
+            removeDevice(editingDevice.id);
+            closeSettingsDialog();
+        }
+    }
+
     // Generate CSS ID preview from current dialog name
     function getPreviewCssId() {
         const name = dialogName.trim() || editingDevice?.name || '';
@@ -357,12 +366,6 @@
                         title="Device settings"
                         size="small"
                     />
-                    <IconButton
-                        icon={disconnectIcon}
-                        onclick={() => removeDevice(device.id)}
-                        title="Remove device"
-                        size="small"
-                    />
                 </div>
 
                 <DeviceControls
@@ -428,14 +431,20 @@
         </div>
 
         <div class="dialog-buttons">
-            <Button onclick={closeSettingsDialog} variant="secondary">Cancel</Button>
-            <Button
-                type="submit"
-                variant="primary"
-                disabled={!isChannelValid(editingDevice, dialogChannel - 1)}
-            >
-                Save
+            <Button onclick={confirmRemoveDevice} variant="secondary">
+                {@html disconnectIcon}
+                Remove
             </Button>
+            <div class="dialog-buttons-right">
+                <Button onclick={closeSettingsDialog} variant="secondary">Cancel</Button>
+                <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={!isChannelValid(editingDevice, dialogChannel - 1)}
+                >
+                    Save
+                </Button>
+            </div>
         </div>
     </form>
 </Dialog>
@@ -581,8 +590,20 @@
     .dialog-buttons {
         display: flex;
         gap: 10px;
-        justify-content: flex-end;
+        justify-content: space-between;
+        align-items: center;
         margin-top: 20px;
+    }
+
+    .dialog-buttons-right {
+        display: flex;
+        gap: 10px;
+    }
+
+    .dialog-buttons :global(svg) {
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
     }
 
     .no-devices {
