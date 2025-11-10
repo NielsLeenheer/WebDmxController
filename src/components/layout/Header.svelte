@@ -3,6 +3,8 @@
     import connectIcon from '../../assets/icons/connect.svg?raw';
     import disconnectIcon from '../../assets/icons/disconnect.svg?raw';
     import addIcon from '../../assets/icons/add.svg?raw';
+    import streamdeckIcon from '../../assets/icons/streamdeck.svg?raw';
+    import midiIcon from '../../assets/icons/midi.svg?raw';
 
     let { onconnect, ondisconnect, connected, inputController } = $props();
 
@@ -38,15 +40,8 @@
         const dialog = devicesDialog;
         if (!dialog) return;
 
-        const rect = dialog.getBoundingClientRect();
-        const isInDialog = (
-            event.clientX >= rect.left &&
-            event.clientX <= rect.right &&
-            event.clientY >= rect.top &&
-            event.clientY <= rect.bottom
-        );
-
-        if (!isInDialog) {
+        // Close dialog only if clicking on the dialog backdrop (not on dialog content)
+        if (event.target === dialog) {
             closeDevicesDialog();
         }
     }
@@ -108,6 +103,7 @@
     <!-- Stream Deck Section -->
     <div class="device-section">
         <button class="connect-device-btn" onclick={connectStreamDeck}>
+            <Icon data={streamdeckIcon} />
             Connect Stream Deck
         </button>
         {#if streamDeckDevices.length > 0}
@@ -128,6 +124,7 @@
             onclick={connectMIDI}
             disabled={hasMidiAccess}
         >
+            <Icon data={midiIcon} />
             Connect MIDI Device
         </button>
         {#if midiDevices.length > 0}
@@ -229,18 +226,26 @@
     .connect-device-btn {
         width: 100%;
         padding: 10px 15px;
-        background: #0078d4;
-        color: white;
+        background: #bbdefb;
+        color: #1976d2;
         border: none;
         border-radius: 4px;
         cursor: pointer;
         font-size: 10pt;
         font-weight: 500;
         transition: background 0.2s, opacity 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .connect-device-btn :global(svg) {
+        height: 75%;
+        margin-right: 3px;
     }
 
     .connect-device-btn:hover:not(:disabled) {
-        background: #106ebe;
+        background: #90caf9;
     }
 
     .connect-device-btn:disabled {

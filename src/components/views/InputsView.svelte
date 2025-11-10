@@ -260,207 +260,149 @@
 </script>
 
 <div class="inputs-view">
-    <div class="left-panel">
-        <div class="panel-header">
-            <h3>Listen for Inputs</h3>
-        </div>
-
-        <div class="listen-section">
-            <p class="instructions">
-                Press any MIDI button, keyboard key, Stream Deck button, or move any MIDI control to detect and save it automatically.
-            </p>
-
-            <div class="button-group">
-                {#if isListening}
-                    <Button onclick={stopListening} primary>
-                        Stop Listening
-                    </Button>
-                {:else}
-                    <Button onclick={startListening} primary>
-                        Start Listening
-                    </Button>
-                {/if}
-            </div>
-
+    <div class="listen-section">
+        <div class="button-wrapper">
             {#if isListening}
-                <div class="listening-indicator">
-                    <div class="pulse-dot"></div>
-                    Listening for inputs...
-                </div>
+                <Button onclick={stopListening} primary class="listen-button pulsating">
+                    Stop Listening
+                </Button>
+            {:else}
+                <Button onclick={startListening} primary class="listen-button">
+                    Start Listening
+                </Button>
             {/if}
         </div>
     </div>
 
-    <div class="right-panel">
-        <div class="panel-header">
-            <h3>Saved Inputs</h3>
-        </div>
-
-        <div class="inputs-list">
-            {#if savedInputs.length === 0}
-                <p class="empty-state">No inputs detected yet. Start listening to detect inputs!</p>
-            {:else}
-                {#each savedInputs as input (input.id)}
-                    <div class="input-item">
-                        {#if input.color}
-                            <div class="input-color-badge" style="background-color: {input.color}"></div>
+    <div class="inputs-grid">
+        {#if savedInputs.length === 0}
+            <div class="empty-state">
+                <p>No inputs detected yet. Start listening to detect inputs!</p>
+            </div>
+        {:else}
+            {#each savedInputs as input (input.id)}
+                <div class="input-card">
+                    {#if input.color}
+                        <div class="input-color-badge" style="background-color: {input.color}"></div>
+                    {/if}
+                    <div class="input-header">
+                        {#if editingInput?.id === input.id}
+                            <input
+                                type="text"
+                                bind:value={editingName}
+                                class="input-name-edit"
+                                onkeydown={(e) => {
+                                    if (e.key === 'Enter') saveEdit();
+                                    if (e.key === 'Escape') cancelEdit();
+                                }}
+                                autofocus
+                            />
+                        {:else}
+                            <div class="input-name">{input.name}</div>
                         {/if}
-                        <div class="input-icon">
-                            {@html getInputIcon(input.inputDeviceId)}
-                        </div>
-                        <div class="input-info">
-                            {#if editingInput?.id === input.id}
-                                <input
-                                    type="text"
-                                    bind:value={editingName}
-                                    class="input-name-edit"
-                                    onkeydown={(e) => {
-                                        if (e.key === 'Enter') saveEdit();
-                                        if (e.key === 'Escape') cancelEdit();
-                                    }}
-                                    autofocus
-                                />
+                        <div class="input-device-name">
+                            {#if inputController.getInputDevice(input.inputDeviceId)}
+                                {inputController.getInputDevice(input.inputDeviceId).name}
                             {:else}
-                                <div class="input-name">{input.name}</div>
-                            {/if}
-                            <div class="input-details">
-                                {#if inputController.getInputDevice(input.inputDeviceId)}
-                                    {inputController.getInputDevice(input.inputDeviceId).name}
-                                {:else}
-                                    {input.inputDeviceId}
-                                {/if}
-                                &rarr; {input.inputControlId}
-                            </div>
-                        </div>
-                        <div class="input-actions">
-                            {#if editingInput?.id === input.id}
-                                <Button onclick={saveEdit} size="small">Save</Button>
-                                <Button onclick={cancelEdit} size="small">Cancel</Button>
-                            {:else}
-                                <IconButton
-                                    icon={editIcon}
-                                    onclick={() => startEditing(input)}
-                                    title="Rename input"
-                                />
-                                <IconButton
-                                    icon={trashIcon}
-                                    onclick={() => deleteInput(input.id)}
-                                    title="Delete input"
-                                />
+                                {input.inputDeviceId}
                             {/if}
                         </div>
                     </div>
-                {/each}
-            {/if}
-        </div>
+                    <div class="input-actions">
+                        {#if editingInput?.id === input.id}
+                            <Button onclick={saveEdit} size="small">Save</Button>
+                            <Button onclick={cancelEdit} size="small">Cancel</Button>
+                        {:else}
+                            <IconButton
+                                icon={editIcon}
+                                onclick={() => startEditing(input)}
+                                title="Rename input"
+                            />
+                            <IconButton
+                                icon={trashIcon}
+                                onclick={() => deleteInput(input.id)}
+                                title="Delete input"
+                            />
+                        {/if}
+                    </div>
+                </div>
+            {/each}
+        {/if}
     </div>
 </div>
 
 <style>
     .inputs-view {
         display: flex;
+        flex-direction: column;
         height: 100%;
         overflow: hidden;
     }
 
-    .left-panel {
-        width: 350px;
-        border-right: 1px solid #ddd;
+    .listen-section {
+        padding: 20px;
         display: flex;
-        flex-direction: column;
-        background: #f9f9f9;
-    }
-
-    .right-panel {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
+        justify-content: center;
+        border-bottom: 1px solid #ddd;
         background: #fff;
     }
 
-    .panel-header {
-        padding: 15px;
-        border-bottom: 1px solid #ddd;
-    }
-
-    .panel-header h3 {
-        margin: 0;
-        font-size: 12pt;
-    }
-
-    .listen-section {
-        padding: 20px;
-    }
-
-    .instructions {
-        margin: 0 0 15px 0;
-        font-size: 10pt;
-        color: #666;
-        line-height: 1.5;
-    }
-
-    .button-group {
+    .button-wrapper {
         display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
+        justify-content: center;
     }
 
-    .listening-indicator {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 15px;
-        padding: 12px;
-        background: #e3f2fd;
-        border-radius: 4px;
-        color: #1976d2;
-        font-weight: 500;
-        font-size: 10pt;
+    .listen-button :global(button) {
+        font-size: 11pt;
+        padding: 12px 30px;
+        transition: box-shadow 0.3s ease;
     }
 
-    .pulse-dot {
-        width: 12px;
-        height: 12px;
-        background: #2196f3;
-        border-radius: 50%;
-        animation: pulse 1.5s ease-in-out infinite;
+    .listen-button.pulsating :global(button) {
+        animation: pulsatingShadow 2s ease-in-out infinite;
     }
 
-    @keyframes pulse {
+    @keyframes pulsatingShadow {
         0%, 100% {
-            opacity: 1;
-            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4);
         }
         50% {
-            opacity: 0.5;
-            transform: scale(0.8);
+            box-shadow: 0 0 20px 10px rgba(33, 150, 243, 0.6);
         }
     }
 
-    .inputs-list {
+    .inputs-grid {
         flex: 1;
         overflow-y: auto;
+        padding: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(15em, 1fr));
+        gap: 15px;
+        align-content: start;
+    }
+
+    .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        min-height: 50vh;
+        align-content: center;
+        color: #999;
+        font-size: 10pt;
+    }
+
+    .empty-state p {
+        margin: 0;
+    }
+
+    .input-card {
+        background: #f0f0f0;
+        border-radius: 8px;
         padding: 15px;
-    }
-
-    .input-item {
         display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-        margin-bottom: 8px;
-        background: #f9f9f9;
-        border: 1px solid #ddd;
-        border-radius: 4px;
+        flex-direction: column;
+        gap: 10px;
         animation: slideIn 0.2s ease-out;
-    }
-
-    .input-color-badge {
-        width: 32px;
-        height: 32px;
-        border-radius: 4px;
-        flex-shrink: 0;
-        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1);
+        position: relative;
     }
 
     @keyframes slideIn {
@@ -474,60 +416,50 @@
         }
     }
 
-    .input-icon {
+    .input-color-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
         width: 32px;
         height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #e3f2fd;
         border-radius: 4px;
-        color: #2196f3;
         flex-shrink: 0;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .input-icon :global(svg) {
-        width: 20px;
-        height: 20px;
-    }
-
-    .input-info {
-        flex: 1;
-        min-width: 0;
+    .input-header {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding-right: 40px; /* Space for color badge */
     }
 
     .input-name {
         font-weight: 600;
-        font-size: 10pt;
-        margin-bottom: 4px;
+        font-size: 11pt;
+        color: #333;
+        word-wrap: break-word;
     }
 
     .input-name-edit {
         width: 100%;
-        padding: 4px 8px;
-        border: 1px solid #2196f3;
+        padding: 6px 10px;
+        border: 2px solid #2196f3;
         border-radius: 4px;
-        font-size: 10pt;
+        font-size: 11pt;
         font-weight: 600;
-        margin-bottom: 4px;
+        box-sizing: border-box;
     }
 
-    .input-details {
+    .input-device-name {
         font-size: 9pt;
         color: #666;
-        font-family: var(--font-stack-mono);
     }
 
     .input-actions {
         display: flex;
         gap: 8px;
-        flex-shrink: 0;
-    }
-
-    .empty-state {
-        text-align: center;
-        color: #999;
-        font-size: 10pt;
-        padding: 40px 20px;
+        justify-content: flex-end;
+        margin-top: auto;
     }
 </style>
