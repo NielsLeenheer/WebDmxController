@@ -374,7 +374,7 @@
 {#if editingDevice}
 <Dialog
     bind:dialogRef={settingsDialog}
-    title="Device Settings"
+    title="Device"
     onclose={closeSettingsDialog}
 >
     <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveDeviceSettings(); }}>
@@ -386,7 +386,7 @@
                 bind:value={dialogName}
                 placeholder="Device name"
             />
-            <small class="css-id-preview">CSS ID: #{getPreviewCssId()}</small>
+            <small class="css-id-preview">#{getPreviewCssId()}</small>
         </div>
 
         <div class="dialog-input-group">
@@ -401,8 +401,8 @@
                 class:invalid={!isChannelValid(editingDevice, dialogChannel - 1)}
             />
             <small class="channel-range">
-                Device uses {DEVICE_TYPES[editingDevice.type].channels} channels
-                (Ch {dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1})
+                Device uses {DEVICE_TYPES[editingDevice.type].channels} channels:
+                {dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1}
             </small>
         </div>
 
@@ -522,6 +522,10 @@
         box-sizing: border-box;
     }
 
+    .dialog-input-group input[type="number"] {
+        width: 10ch;
+    }
+
     .dialog-input-group input:focus {
         outline: none;
         border-color: #2196F3;
@@ -565,6 +569,7 @@
     }
 
     .css-id-preview {
+        text-align: right;
         font-family: var(--font-stack-mono);
         color: #666;
     }
