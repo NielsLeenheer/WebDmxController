@@ -559,7 +559,7 @@
         width: 16px;
         height: 16px;
         background: var(--keyframe-color, #2196f3);
-        border: 3px solid white;
+        border: 2px solid white;
         border-radius: 50%;
         cursor: grab;
         z-index: 5;
