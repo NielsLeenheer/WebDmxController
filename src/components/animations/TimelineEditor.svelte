@@ -42,6 +42,18 @@
         const segments = [];
         const keyframes = animation.keyframes;
 
+        // Extend gradient from 0% if first keyframe is after the start
+        const firstKeyframe = keyframes[0];
+        if (firstKeyframe.time > 0) {
+            const color = animation.getKeyframeColor(firstKeyframe);
+            segments.push({
+                left: 0,
+                width: firstKeyframe.time * timelineWidth,
+                gradient: color // Solid color from start
+            });
+        }
+
+        // Create segments between keyframes
         for (let i = 0; i < keyframes.length - 1; i++) {
             const kf1 = keyframes[i];
             const kf2 = keyframes[i + 1];
@@ -56,6 +68,20 @@
                 left,
                 width,
                 gradient: `linear-gradient(to right, ${color1}, ${color2})`
+            });
+        }
+
+        // Extend gradient to 100% if last keyframe is before the end
+        const lastKeyframe = keyframes[keyframes.length - 1];
+        if (lastKeyframe.time < 1) {
+            const color = animation.getKeyframeColor(lastKeyframe);
+            const left = lastKeyframe.time * timelineWidth;
+            const width = (1 - lastKeyframe.time) * timelineWidth;
+
+            segments.push({
+                left,
+                width,
+                gradient: color // Solid color to the end
             });
         }
 
