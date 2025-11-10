@@ -29,7 +29,7 @@
 
 <style>
     .button {
-        padding: 8px 16px;
+        padding: 8px 12px;
         border: none;
         border-radius: 4px;
         font-family: system-ui;
@@ -45,6 +45,14 @@
         cursor: not-allowed;
     }
 
+    .button :global(svg) {
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
+    }
+
+
+
     .button.primary {
         background: #0078d4;
         color: white;
@@ -59,9 +67,8 @@
     }
 
     .button.secondary {
-        background: #f5f5f5;
+        background: #f0f0f0;
         color: #333;
-        border: 1px solid #ddd;
     }
 
     .button.secondary:hover:not(:disabled) {

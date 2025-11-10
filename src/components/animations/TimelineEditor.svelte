@@ -428,10 +428,6 @@
         border-top: 1px solid #e0e0e0;
     }
 
-    .keyframe-actions :global(button) {
-        width: 100%;
-    }
-
     .keyframe-actions :global(svg) {
         width: 16px;
         height: 16px;
