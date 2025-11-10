@@ -2,14 +2,24 @@
     /**
      * Reusable Dialog component
      *
-     * @prop {string} title - Dialog title
+     * @prop {string} title - Dialog title (optional for anchored dialogs)
      * @prop {Function} onclose - Close handler
      * @prop {boolean} open - Bind to control dialog state
+     * @prop {boolean} anchored - Enable anchored positioning
+     * @prop {string} anchorId - Anchor name (CSS anchor-name value)
+     * @prop {boolean} showArrow - Show arrow pointing to anchor (default true for anchored)
+     * @prop {boolean} lightDismiss - Enable light dismiss on backdrop click (default true for anchored)
+     * @prop {string} alignment - Anchor alignment: "center" (default) or "left"
      */
     let {
-        title,
+        title = null,
         onclose = null,
         dialogRef = $bindable(null),
+        anchored = false,
+        anchorId = null,
+        showArrow = true,
+        lightDismiss = true,
+        alignment = "center",
         children
     } = $props();
 
@@ -17,13 +27,30 @@
         dialogRef?.close();
         if (onclose) onclose();
     }
+
+    function handleClick(event) {
+        if (anchored && lightDismiss && event.target === dialogRef) {
+            handleClose();
+        }
+    }
 </script>
 
-<dialog bind:this={dialogRef} class="dialog">
-    <div class="dialog-header">
-        <h2>{title}</h2>
-        <button class="close-btn" onclick={handleClose}>×</button>
-    </div>
+<dialog
+    bind:this={dialogRef}
+    class="dialog"
+    class:anchored
+    class:show-arrow={showArrow && anchored}
+    class:align-center={anchored && alignment === "center"}
+    class:align-left={anchored && alignment === "left"}
+    style={anchored && anchorId ? `position-anchor: --${anchorId}` : ''}
+    onclick={handleClick}
+>
+    {#if title}
+        <div class="dialog-header">
+            <h2>{title}</h2>
+            <button class="close-btn" onclick={handleClose}>×</button>
+        </div>
+    {/if}
     <div class="dialog-body">
         {@render children()}
     </div>
@@ -42,6 +69,48 @@
 
     .dialog::backdrop {
         background: rgba(0, 0, 0, 0.5);
+    }
+
+    /* Anchored dialog styles */
+    .dialog.anchored {
+        position: fixed;
+        position-anchor: var(--position-anchor);
+        top: anchor(bottom);
+        margin: 0;
+        min-width: 300px;
+        max-width: 400px;
+        overflow: visible;
+    }
+
+    /* Center alignment (default) */
+    .dialog.align-center {
+        left: anchor(center);
+        translate: -50% 8px;
+    }
+
+    /* Left-aligned (for small circular markers) */
+    .dialog.align-left {
+        left: anchor(left);
+        translate: calc(-50% + 8px) 8px;
+    }
+
+    .dialog.anchored::backdrop {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    /* Arrow pointing up to anchor element */
+    .dialog.show-arrow::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 8px solid #fff;
+        filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
     }
 
     .dialog-header {
@@ -83,5 +152,10 @@
 
     .dialog-body {
         padding: 20px;
+    }
+
+    /* Remove padding for anchored dialogs (content handles its own padding) */
+    .dialog.anchored .dialog-body {
+        padding: 0;
     }
 </style>

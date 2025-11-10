@@ -5,6 +5,7 @@
     import addIcon from '../../assets/icons/add.svg?raw';
     import streamdeckIcon from '../../assets/icons/streamdeck.svg?raw';
     import midiIcon from '../../assets/icons/midi.svg?raw';
+    import Dialog from '../common/Dialog.svelte';
 
     let { onconnect, ondisconnect, connected, inputController } = $props();
 
@@ -33,17 +34,6 @@
 
     function closeDevicesDialog() {
         devicesDialog?.close();
-    }
-
-    // Light dismiss: close dialog when clicking outside
-    function handleDialogClick(event) {
-        const dialog = devicesDialog;
-        if (!dialog) return;
-
-        // Close dialog only if clicking on the dialog backdrop (not on dialog content)
-        if (event.target === dialog) {
-            closeDevicesDialog();
-        }
     }
 
     async function connectStreamDeck() {
@@ -92,13 +82,16 @@
     </button>
 </header>
 
-<!-- Devices Dialog (non-modal with anchor positioning and light dismiss) -->
+<!-- Devices Dialog (anchored with light dismiss) -->
 {#if anchorButtonRef}
-<dialog
-    bind:this={devicesDialog}
-    class="devices-dialog"
-    style="position-anchor: --devices-button"
-    onclick={handleDialogClick}
+<Dialog
+    bind:dialogRef={devicesDialog}
+    anchored={true}
+    anchorId="devices-button"
+    showArrow={true}
+    lightDismiss={true}
+    alignment="center"
+    onclose={closeDevicesDialog}
 >
     <!-- Stream Deck Section -->
     <div class="device-section">
@@ -137,7 +130,7 @@
             </div>
         {/if}
     </div>
-</dialog>
+</Dialog>
 {/if}
 
 <style>
@@ -178,44 +171,7 @@
         color: #333;
     }
 
-    /* Devices Dialog */
-    .devices-dialog {
-        position: fixed;
-        position-anchor: var(--position-anchor);
-        top: anchor(bottom);
-        left: anchor(center);
-        translate: -50% 8px;
-        margin: 0;
-        padding: 0;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        background: #fff;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        min-width: 280px;
-        max-width: 320px;
-        z-index: 100;
-        overflow: visible;
-    }
-
-    .devices-dialog::backdrop {
-        background: transparent;
-    }
-
-    /* Tooltip arrow pointing up */
-    .devices-dialog::before {
-        content: '';
-        position: absolute;
-        top: -8px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 8px solid transparent;
-        border-right: 8px solid transparent;
-        border-bottom: 8px solid #fff;
-        filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
-    }
-
+    /* Device sections within dialog */
     .device-section {
         padding: 15px;
     }

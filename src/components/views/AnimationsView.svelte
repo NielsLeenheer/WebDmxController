@@ -7,6 +7,7 @@
     import IconButton from '../common/IconButton.svelte';
     import DeviceControls from '../controls/DeviceControls.svelte';
     import AnimationPreview from '../animations/AnimationPreview.svelte';
+    import removeIcon from '../../assets/icons/remove.svg?raw';
 
     let {
         animationLibrary,
@@ -17,8 +18,6 @@
     // Icons
     const plusIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>';
     const trashIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
-
-    import removeIcon from '../../assets/icons/remove.svg?raw';
 
     let selectedAnimation = $state(null);
     let selectedKeyframeIndex = $state(null);
@@ -173,12 +172,6 @@
         editDialog?.close();
         selectedKeyframeIndex = null;
         editButtonRef = null;
-    }
-
-    function handleEditDialogClick(event) {
-        if (event.target === editDialog) {
-            closeEditDialog();
-        }
     }
 
     function updateKeyframeValues() {
@@ -447,26 +440,27 @@
 
 <!-- Keyframe Edit Dialog -->
 {#if editButtonRef && selectedAnimation && selectedKeyframeIndex !== null}
-<dialog
-    bind:this={editDialog}
-    class="keyframe-edit-dialog"
-    style="position-anchor: --keyframe-{selectedAnimation.name}-{selectedKeyframeIndex}"
-    onclick={handleEditDialogClick}
+<Dialog
+    bind:dialogRef={editDialog}
+    anchored={true}
+    anchorId={`keyframe-${selectedAnimation.name}-${selectedKeyframeIndex}`}
+    showArrow={true}
+    lightDismiss={true}
+    alignment="left"
+    onclose={closeEditDialog}
 >
-    <div class="dialog-header">
-        <div class="dialog-title">
+    <div class="keyframe-editor-content">
+        <div class="keyframe-title">
             Keyframe at {(selectedAnimation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%
         </div>
-    </div>
 
-    <div class="dialog-content">
         <DeviceControls
             deviceType={selectedAnimation.deviceType}
             bind:values={editingKeyframeValues}
             onChange={updateKeyframeValues}
         />
 
-        <div class="dialog-actions">
+        <div class="keyframe-actions">
             <button
                 type="button"
                 class="delete-btn"
@@ -481,7 +475,7 @@
             </div>
         </div>
     </div>
-</dialog>
+</Dialog>
 {/if}
 
 <style>
@@ -743,61 +737,20 @@
         font-size: 10pt;
     }
 
-    /* Keyframe Edit Dialog */
-    .keyframe-edit-dialog {
-        position: fixed;
-        position-anchor: var(--position-anchor);
-        top: anchor(bottom);
-        left: anchor(left);
-        translate: calc(-50% + 8px) 8px;
-        margin: 0;
-        padding: 0;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        background: #fff;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        min-width: 300px;
-        max-width: 400px;
-        overflow: visible;
-    }
-
-    .keyframe-edit-dialog::backdrop {
-        background: rgba(0, 0, 0, 0.3);
-    }
-
-    /* Dialog arrow pointing up */
-    .keyframe-edit-dialog::before {
-        content: '';
-        position: absolute;
-        top: -8px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 8px solid transparent;
-        border-right: 8px solid transparent;
-        border-bottom: 8px solid #fff;
-        filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
-    }
-
-    .keyframe-edit-dialog .dialog-header {
-        padding: 15px;
-        border-bottom: 1px solid #e0e0e0;
-    }
-
-    .keyframe-edit-dialog .dialog-title {
-        font-size: 11pt;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .keyframe-edit-dialog .dialog-content {
-        padding: 15px;
+    /* Keyframe Editor Content */
+    .keyframe-editor-content {
         max-height: 500px;
         overflow-y: auto;
     }
 
-    .keyframe-edit-dialog .dialog-actions {
+    .keyframe-title {
+        font-size: 11pt;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 15px;
+    }
+
+    .keyframe-actions {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -807,7 +760,7 @@
         border-top: 1px solid #e0e0e0;
     }
 
-    .keyframe-edit-dialog .delete-btn {
+    .delete-btn {
         padding: 8px;
         background: transparent;
         border: none;
@@ -820,21 +773,21 @@
         transition: background 0.2s;
     }
 
-    .keyframe-edit-dialog .delete-btn:hover:not(:disabled) {
+    .delete-btn:hover:not(:disabled) {
         background: #ffe0e0;
     }
 
-    .keyframe-edit-dialog .delete-btn:disabled {
+    .delete-btn:disabled {
         opacity: 0.4;
         cursor: not-allowed;
     }
 
-    .keyframe-edit-dialog .delete-btn :global(svg) {
+    .delete-btn :global(svg) {
         width: 20px;
         height: 20px;
     }
 
-    .keyframe-edit-dialog .action-buttons {
+    .action-buttons {
         display: flex;
         gap: 8px;
     }
