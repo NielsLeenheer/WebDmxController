@@ -739,11 +739,6 @@
         max-height: 500px;
         overflow-y: auto;
     }
-        font-size: 11pt;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 15px;
-    }
 
     .keyframe-editor-content h4 {
         margin: 0 0 15px 0;
