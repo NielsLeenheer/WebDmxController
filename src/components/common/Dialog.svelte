@@ -79,13 +79,8 @@
         margin-top: var(--arrow-distance);
         position-try: flip-block;
         anchor-name: --dialog;
-        margin: 0;
         min-width: 300px;
         max-width: 400px;
-
-        /* Center align to anchor */
-        left: anchor(center);
-        translate: -50% var(--arrow-distance);
     }
 
     .dialog.anchored::backdrop {
