@@ -362,14 +362,10 @@
         </div>
 
         <div class="dialog-buttons">
-            <button
-                type="button"
-                class="delete-btn"
-                onclick={confirmDelete}
-                title="Delete input"
-            >
+            <Button onclick={confirmDelete} variant="secondary">
                 {@html removeIcon}
-            </button>
+                Delete
+            </Button>
             <div class="action-buttons">
                 <Button onclick={cancelEdit} variant="secondary">Cancel</Button>
                 <Button type="submit" variant="primary">Save</Button>
@@ -541,26 +537,10 @@
         gap: 10px;
     }
 
-    .delete-btn {
-        padding: 8px;
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 4px;
-        color: #d13438;
-        transition: background 0.2s;
-    }
-
-    .delete-btn:hover {
-        background: #ffe0e0;
-    }
-
-    .delete-btn :global(svg) {
-        width: 20px;
-        height: 20px;
+    .dialog-buttons :global(svg) {
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
     }
 
     .action-buttons {
