@@ -73,7 +73,7 @@
         position-anchor: var(--position-anchor);
         top: anchor(bottom);
         left: anchor(center);
-        translate: -50% 12px;
+        translate: -50% 16px;
         margin: 0;
         z-index: 100;
         min-width: 300px;
@@ -89,7 +89,7 @@
     .dialog.show-arrow::before {
         content: '';
         position: absolute;
-        top: -10px;
+        top: -8px;
         left: 50%;
         transform: translateX(-50%);
         width: 0;
