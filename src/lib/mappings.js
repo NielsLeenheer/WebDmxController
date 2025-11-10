@@ -150,6 +150,7 @@ export class InputMapping {
 			mode: this.mode,
 			inputDeviceId: this.inputDeviceId,
 			inputControlId: this.inputControlId,
+			inputDeviceName: this.inputDeviceName,
 			color: this.color,
 			triggerType: this.triggerType,
 			animationName: this.animationName,
