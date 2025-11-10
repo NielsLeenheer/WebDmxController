@@ -343,31 +343,35 @@
         padding: 20px;
         display: flex;
         justify-content: center;
-        border-bottom: 1px solid #ddd;
-        background: #fff;
     }
 
     .button-wrapper {
         display: flex;
         justify-content: center;
+        position: relative;
     }
 
     .listen-button :global(button) {
         font-size: 11pt;
         padding: 12px 30px;
-        transition: box-shadow 0.3s ease;
+        position: relative;
+        z-index: 1;
     }
 
     .listen-button.pulsating :global(button) {
-        animation: pulsatingShadow 2s ease-in-out infinite;
+        animation: glowingRing 2s ease-in-out infinite;
     }
 
-    @keyframes pulsatingShadow {
+    @keyframes glowingRing {
         0%, 100% {
-            box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4);
+            box-shadow:
+                0 0 0 0 rgba(33, 150, 243, 0.7),
+                0 0 0 0 rgba(33, 150, 243, 0.4);
         }
         50% {
-            box-shadow: 0 0 20px 10px rgba(33, 150, 243, 0.6);
+            box-shadow:
+                0 0 0 4px rgba(33, 150, 243, 0.3),
+                0 0 0 8px rgba(33, 150, 243, 0.1);
         }
     }
 
