@@ -261,9 +261,9 @@
 
 <div class="inputs-view">
     <div class="listen-section">
-        <div class="button-wrapper">
+        <div class="button-wrapper {isListening ? 'pulsating' : ''}">
             {#if isListening}
-                <Button onclick={stopListening} primary class="listen-button pulsating">
+                <Button onclick={stopListening} primary class="listen-button">
                     Stop Listening
                 </Button>
             {:else}
@@ -356,7 +356,7 @@
         padding: 12px 30px;
     }
 
-    .listen-button.pulsating :global(button) {
+    .button-wrapper.pulsating :global(button) {
         animation: glowingRing 2s ease-in-out infinite !important;
     }
 
