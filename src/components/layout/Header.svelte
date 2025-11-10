@@ -220,14 +220,15 @@
     }
 
     .device-section:not(:last-child) {
-        border-bottom: 1px solid #e0e0e0;
+        border-bottom: 1px solid #f0f0f0;
     }
 
     .connect-device-btn {
         width: 100%;
-        padding: 10px 15px;
-        background: #bbdefb;
-        color: #1976d2;
+        padding: 0px 10px;
+        height: 36px;
+        background: #eee;
+        color: #333;
         border: none;
         border-radius: 4px;
         cursor: pointer;
@@ -236,7 +237,6 @@
         transition: background 0.2s, opacity 0.2s;
         display: flex;
         align-items: center;
-        justify-content: center;
     }
 
     .connect-device-btn :global(svg) {
