@@ -6,7 +6,6 @@
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
     import TimelineEditor from '../animations/TimelineEditor.svelte';
-    import AnimationPreview from '../animations/AnimationPreview.svelte';
 
     let {
         animationLibrary,
@@ -153,26 +152,6 @@
             </div>
         {/if}
     </div>
-
-    <div class="right-panel">
-        <div class="panel-header">
-            <h3>Preview & CSS</h3>
-        </div>
-
-        {#if selectedAnimation}
-            <div class="preview-section">
-                <h4>Animation Preview</h4>
-                <AnimationPreview animation={selectedAnimation} animationVersion={animationVersion} />
-            </div>
-
-            <div class="css-section">
-                <h4>Generated CSS</h4>
-                <pre class="css-output">{selectedAnimation.toCSS()}</pre>
-            </div>
-        {:else}
-            <p class="empty-state">No animation selected</p>
-        {/if}
-    </div>
 </div>
 
 <!-- New Animation Dialog -->
@@ -241,15 +220,6 @@
         overflow: hidden;
     }
 
-    .right-panel {
-        width: 350px;
-        border-left: 1px solid #ddd;
-        display: flex;
-        flex-direction: column;
-        background: #f9f9f9;
-        overflow-y: auto;
-    }
-
     .panel-header {
         padding: 15px;
         border-bottom: 1px solid #ddd;
@@ -313,44 +283,6 @@
         font-weight: 500;
         margin-left: auto;
         margin-right: 10px;
-    }
-
-    .preview-section {
-        padding: 15px;
-        border-bottom: 1px solid #ddd;
-    }
-
-    .preview-section h4 {
-        margin: 0 0 10px 0;
-        font-size: 10pt;
-    }
-
-    .css-section {
-        padding: 15px;
-    }
-
-    .css-section h4 {
-        margin: 0 0 10px 0;
-        font-size: 10pt;
-    }
-
-    .css-output {
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        padding: 10px;
-        font-family: var(--font-stack-mono);
-        font-size: 9pt;
-        line-height: 1.5;
-        white-space: pre-wrap;
-        overflow-x: auto;
-    }
-
-    .empty-state {
-        padding: 20px;
-        text-align: center;
-        color: #999;
-        font-size: 10pt;
     }
 
     .empty-state-large {
