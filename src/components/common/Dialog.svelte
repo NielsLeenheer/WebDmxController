@@ -44,7 +44,6 @@
     {#if title}
         <div class="dialog-header">
             <h2>{title}</h2>
-            <button class="close-btn" onclick={handleClose}>×</button>
         </div>
     {/if}
     <div class="dialog-body">
@@ -104,37 +103,14 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 20px;
-        border-bottom: 1px solid #ddd;
+        padding: 16px 20px;
         background: #f5f5f5;
     }
 
     .dialog-header h2 {
         margin: 0;
-        font-size: 14pt;
+        font-size: 12pt;
         font-weight: 600;
-    }
-
-    .close-btn {
-        background: none;
-        border: none;
-        font-size: 24pt;
-        line-height: 1;
-        cursor: pointer;
-        color: #666;
-        padding: 0;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 4px;
-        transition: background-color 0.2s;
-    }
-
-    .close-btn:hover {
-        background: rgba(0, 0, 0, 0.1);
-        color: #333;
     }
 
     .dialog-body {
