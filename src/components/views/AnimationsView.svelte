@@ -14,7 +14,6 @@
     } = $props();
 
     // Icons
-    const plusIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>';
     const trashIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
 
     let selectedAnimation = $state(null);
@@ -99,15 +98,17 @@
 </script>
 
 <div class="animations-view">
-    <div class="left-panel">
-        <div class="panel-header">
-            <h3>Animations</h3>
-            <IconButton
-                icon={plusIcon}
-                onclick={openNewAnimationDialog}
-                title="Create new animation"
-            />
-        </div>
+    <div class="add-animation-section">
+        <Button onclick={openNewAnimationDialog} variant="secondary">
+            Add Animation
+        </Button>
+    </div>
+
+    <div class="panels-container">
+        <div class="left-panel">
+            <div class="panel-header">
+                <h3>Animations</h3>
+            </div>
 
         <div class="animations-list">
             {#if animationsList.length === 0}
@@ -151,6 +152,7 @@
                 <p>Select an animation to edit, or create a new one</p>
             </div>
         {/if}
+    </div>
     </div>
 </div>
 
@@ -201,7 +203,21 @@
 <style>
     .animations-view {
         display: flex;
+        flex-direction: column;
         height: 100%;
+        overflow: hidden;
+    }
+
+    .add-animation-section {
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .panels-container {
+        display: flex;
+        flex: 1;
         overflow: hidden;
     }
 
