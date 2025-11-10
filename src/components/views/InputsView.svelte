@@ -20,6 +20,8 @@
     let savedInputs = $state([]);
     let editingInput = $state(null);
     let editingName = $state('');
+    let editDialog = $state(null);
+    let editButtonRef = $state(null);
 
     // Event handlers
     let inputEventHandlers = [];
@@ -148,9 +150,14 @@
         }
     }
 
-    function startEditing(input) {
+    function startEditing(input, buttonElement) {
         editingInput = input;
         editingName = input.name;
+        editButtonRef = buttonElement;
+
+        requestAnimationFrame(() => {
+            editDialog?.showModal();
+        });
     }
 
     function saveEdit() {
@@ -160,13 +167,33 @@
         mappingLibrary.save();
         refreshInputs();
 
-        editingInput = null;
-        editingName = '';
+        closeEditDialog();
     }
 
     function cancelEdit() {
+        closeEditDialog();
+    }
+
+    function closeEditDialog() {
+        editDialog?.close();
         editingInput = null;
         editingName = '';
+        editButtonRef = null;
+    }
+
+    function handleEditDialogClick(event) {
+        if (event.target === editDialog) {
+            closeEditDialog();
+        }
+    }
+
+    async function confirmDelete() {
+        if (!editingInput) return;
+
+        if (confirm(`Are you sure you want to delete "${editingInput.name}"?`)) {
+            await deleteInput(editingInput.id);
+            closeEditDialog();
+        }
     }
 
     async function deleteInput(inputId) {
@@ -284,20 +311,7 @@
                         <div class="input-color-badge" style="background-color: {input.color}"></div>
                     {/if}
                     <div class="input-header">
-                        {#if editingInput?.id === input.id}
-                            <input
-                                type="text"
-                                bind:value={editingName}
-                                class="input-name-edit"
-                                onkeydown={(e) => {
-                                    if (e.key === 'Enter') saveEdit();
-                                    if (e.key === 'Escape') cancelEdit();
-                                }}
-                                autofocus
-                            />
-                        {:else}
-                            <div class="input-name">{input.name}</div>
-                        {/if}
+                        <div class="input-name">{input.name}</div>
                         <div class="input-device-name">
                             {#if inputController.getInputDevice(input.inputDeviceId)}
                                 {inputController.getInputDevice(input.inputDeviceId).name}
@@ -307,27 +321,64 @@
                         </div>
                     </div>
                     <div class="input-actions">
-                        {#if editingInput?.id === input.id}
-                            <Button onclick={saveEdit} size="small">Save</Button>
-                            <Button onclick={cancelEdit} size="small">Cancel</Button>
-                        {:else}
-                            <IconButton
-                                icon={editIcon}
-                                onclick={() => startEditing(input)}
-                                title="Rename input"
-                            />
-                            <IconButton
-                                icon={trashIcon}
-                                onclick={() => deleteInput(input.id)}
-                                title="Delete input"
-                            />
-                        {/if}
+                        <button
+                            class="edit-button-anchor"
+                            style="anchor-name: --edit-button-{input.id}"
+                            onclick={(e) => startEditing(input, e.currentTarget)}
+                            title="Rename input"
+                        >
+                            {@html editIcon}
+                        </button>
                     </div>
                 </div>
             {/each}
         {/if}
     </div>
 </div>
+
+<!-- Edit Dialog -->
+{#if editButtonRef && editingInput}
+<dialog
+    bind:this={editDialog}
+    class="edit-dialog"
+    style="position-anchor: --edit-button-{editingInput.id}"
+    onclick={handleEditDialogClick}
+>
+    <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+        <h3>Edit Input</h3>
+
+        <div class="dialog-input-group">
+            <label for="input-name">Name:</label>
+            <input
+                id="input-name"
+                type="text"
+                bind:value={editingName}
+                placeholder="Input name"
+                onkeydown={(e) => {
+                    if (e.key === 'Enter') saveEdit();
+                    if (e.key === 'Escape') cancelEdit();
+                }}
+                autofocus
+            />
+        </div>
+
+        <div class="dialog-buttons">
+            <button
+                type="button"
+                class="delete-btn"
+                onclick={confirmDelete}
+                title="Delete input"
+            >
+                {@html trashIcon}
+            </button>
+            <div class="action-buttons">
+                <Button onclick={cancelEdit} variant="secondary">Cancel</Button>
+                <Button type="submit" variant="primary">Save</Button>
+            </div>
+        </div>
+    </form>
+</dialog>
+{/if}
 
 <style>
     .inputs-view {
@@ -438,5 +489,134 @@
         gap: 8px;
         justify-content: flex-end;
         margin-top: auto;
+    }
+
+    .edit-button-anchor {
+        padding: 4px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        color: #666;
+        transition: background 0.2s;
+    }
+
+    .edit-button-anchor:hover {
+        background: #e0e0e0;
+    }
+
+    .edit-button-anchor :global(svg) {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* Edit Dialog */
+    .edit-dialog {
+        position: fixed;
+        position-anchor: var(--position-anchor);
+        top: anchor(bottom);
+        left: anchor(center);
+        translate: -50% 8px;
+        margin: 0;
+        padding: 0;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        min-width: 300px;
+        max-width: 400px;
+        overflow: visible;
+    }
+
+    .edit-dialog::backdrop {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    /* Dialog arrow pointing up */
+    .edit-dialog::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 8px solid #fff;
+        filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
+    }
+
+    .edit-dialog form {
+        padding: 20px;
+    }
+
+    .edit-dialog h3 {
+        margin: 0 0 16px 0;
+        font-size: 12pt;
+        color: #333;
+    }
+
+    .dialog-input-group {
+        margin-bottom: 20px;
+    }
+
+    .dialog-input-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 10pt;
+        font-weight: 500;
+        color: #555;
+    }
+
+    .dialog-input-group input {
+        width: 100%;
+        padding: 8px 12px;
+        font-size: 10pt;
+        border: 2px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    .dialog-input-group input:focus {
+        outline: none;
+        border-color: #2196f3;
+    }
+
+    .dialog-buttons {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .delete-btn {
+        padding: 8px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        color: #d13438;
+        transition: background 0.2s;
+    }
+
+    .delete-btn:hover {
+        background: #ffe0e0;
+    }
+
+    .delete-btn :global(svg) {
+        width: 20px;
+        height: 20px;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 8px;
     }
 </style>
