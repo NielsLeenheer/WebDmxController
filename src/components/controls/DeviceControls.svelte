@@ -171,7 +171,6 @@
                     >
                         <span class="toggle-slider"></span>
                     </button>
-                    <span class="toggle-label">{isOn ? 'PROBABLY' : 'NONE'}</span>
                 </div>
                 <input
                     type="text"
@@ -394,16 +393,5 @@
 
     .toggle-switch.on .toggle-slider {
         transform: translateX(20px);
-    }
-
-    .toggle-label {
-        font-size: 9pt;
-        font-weight: 600;
-        color: #666;
-        min-width: 4em;
-    }
-
-    .toggle-switch.on + .toggle-label {
-        color: #4caf50;
     }
 </style>
