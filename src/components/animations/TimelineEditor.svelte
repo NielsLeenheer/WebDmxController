@@ -154,23 +154,42 @@
     function handleTimelineClick(e) {
         if (!animation) return;
 
+        console.log('Timeline clicked:', e.target, e.target.className);
+
         // Prevent if clicking on existing keyframe or keyframe label
         if (e.target.classList.contains('timeline-keyframe-marker') ||
-            e.target.classList.contains('keyframe-time')) return;
+            e.target.classList.contains('keyframe-time')) {
+            console.log('Click on keyframe marker or label, ignoring');
+            return;
+        }
+
+        // Also check if clicking inside a keyframe marker (e.g., on the time label inside it)
+        const keyframeMarker = e.target.closest('.timeline-keyframe-marker');
+        if (keyframeMarker) {
+            console.log('Click inside keyframe marker, ignoring');
+            return;
+        }
 
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const time = Math.max(0, Math.min(1, x / timelineWidth));
+
+        console.log('Creating keyframe at time:', time);
 
         // Round to nearest 5%
         const roundedTime = Math.round(time * 20) / 20;
 
         // Check if keyframe already exists at this time
         const exists = animation.keyframes.some(kf => Math.abs(kf.time - roundedTime) < 0.001);
-        if (exists) return;
+        if (exists) {
+            console.log('Keyframe already exists at this position');
+            return;
+        }
 
         // Get interpolated values at this time
         const values = animation.getValuesAtTime(roundedTime);
+
+        console.log('Adding keyframe with values:', values);
 
         // Add new keyframe
         animation.addKeyframe(roundedTime, values);
@@ -179,13 +198,18 @@
 
         // Select the new keyframe for editing
         const newKeyframeIndex = animation.keyframes.findIndex(kf => Math.abs(kf.time - roundedTime) < 0.001);
+        console.log('New keyframe index:', newKeyframeIndex);
+
         if (newKeyframeIndex !== -1) {
             // Wait for the DOM to update with double requestAnimationFrame to ensure render is complete
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     const keypointElement = document.getElementById(`keyframe-${animation.name}-${newKeyframeIndex}`);
+                    console.log('Found keyframe element:', keypointElement);
                     if (keypointElement) {
                         selectKeyframe(newKeyframeIndex, keypointElement);
+                    } else {
+                        console.error('Could not find keyframe element with id:', `keyframe-${animation.name}-${newKeyframeIndex}`);
                     }
                 });
             });
