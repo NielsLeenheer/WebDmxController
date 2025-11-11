@@ -6,6 +6,8 @@
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
     import TimelineEditor from '../animations/TimelineEditor.svelte';
+    import removeIcon from '../../assets/icons/remove.svg?raw';
+    import settingsIcon from '../../assets/icons/settings.svg?raw';
 
     let {
         animationLibrary,
@@ -13,18 +15,17 @@
         devices = []
     } = $props();
 
-    // Icons
-    const trashIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
-
-    let selectedAnimation = $state(null);
     let animationsList = $state([]);
 
     // Dialog states
     let newAnimationDialog = $state(null);
     let newAnimationName = $state('');
     let newAnimationDeviceType = $state('RGB');
-    let deleteConfirmDialog = $state(null);
-    let animationToDelete = $state(null);
+
+    // Edit dialog states
+    let editDialog = $state(null);
+    let editingAnimation = $state(null);
+    let editingName = $state('');
 
     // Animation version for forcing re-renders
     let animationVersion = $state(0);
@@ -33,14 +34,14 @@
     function refreshAnimationsList() {
         animationsList = animationLibrary.getAll();
 
-        // Update selectedAnimation reference to the refreshed copy
-        if (selectedAnimation) {
-            const refreshedAnimation = animationsList.find(a => a.name === selectedAnimation.name);
+        // Update editingAnimation reference to the refreshed copy
+        if (editingAnimation) {
+            const refreshedAnimation = animationsList.find(a => a.name === editingAnimation.name);
             if (refreshedAnimation) {
-                selectedAnimation = refreshedAnimation;
+                editingAnimation = refreshedAnimation;
             } else {
                 // Animation was deleted
-                selectedAnimation = null;
+                editingAnimation = null;
             }
         }
     }
@@ -49,10 +50,6 @@
     onMount(() => {
         refreshAnimationsList();
     });
-
-    function selectAnimation(animation) {
-        selectedAnimation = animation;
-    }
 
     function openNewAnimationDialog() {
         newAnimationName = '';
@@ -74,22 +71,45 @@
 
         animationLibrary.add(animation);
         refreshAnimationsList();
-        selectAnimation(animation);
         newAnimationDialog?.close();
     }
 
-    function confirmDeleteAnimation(animation) {
-        animationToDelete = animation;
-        deleteConfirmDialog?.showModal();
+    function openEditDialog(animation) {
+        editingAnimation = animation;
+        editingName = animation.name;
+
+        requestAnimationFrame(() => {
+            editDialog?.showModal();
+        });
     }
 
-    function deleteAnimation() {
-        if (!animationToDelete) return;
+    function closeEditDialog() {
+        editDialog?.close();
+        editingAnimation = null;
+        editingName = '';
+    }
 
-        animationLibrary.remove(animationToDelete.name);
+    function saveEdit() {
+        if (!editingAnimation || !editingName.trim()) return;
+
+        // Update animation name
+        const oldName = editingAnimation.name;
+        editingAnimation.name = editingName.trim();
+
+        // Save to library
+        animationLibrary.save();
         refreshAnimationsList();
-        deleteConfirmDialog?.close();
-        animationToDelete = null;
+        closeEditDialog();
+    }
+
+    function confirmDeleteAnimation() {
+        if (!editingAnimation) return;
+
+        if (confirm(`Are you sure you want to delete "${editingAnimation.name}"?`)) {
+            animationLibrary.remove(editingAnimation.name);
+            refreshAnimationsList();
+            closeEditDialog();
+        }
     }
 
     function handleAnimationUpdate() {
@@ -104,64 +124,43 @@
         </Button>
     </div>
 
-    <div class="panels-container">
-        <div class="left-panel">
-            <div class="panel-header">
-                <h3>Animations</h3>
+    <div class="animations-list">
+        {#if animationsList.length === 0}
+            <div class="empty-state">
+                <p>No animations yet. Create one to get started!</p>
             </div>
-
-        <div class="animations-list">
-            {#if animationsList.length === 0}
-                <p class="empty-state">No animations yet. Create one to get started!</p>
-            {:else}
-                {#each animationsList as animation}
-                    <div
-                        class="animation-item"
-                        class:selected={selectedAnimation?.name === animation.name}
-                        onclick={() => selectAnimation(animation)}
-                    >
-                        <span class="animation-name">{animation.name}</span>
-                        <span class="keyframe-count">{animation.keyframes.length} keyframes</span>
+        {:else}
+            {#each animationsList as animation (animation.name)}
+                <div class="animation-card">
+                    <div class="animation-header">
+                        <div class="animation-info">
+                            <h3>{animation.name}</h3>
+                            <div class="device-type-badge">{DEVICE_TYPES[animation.deviceType].name}</div>
+                        </div>
                         <IconButton
-                            icon={trashIcon}
-                            onclick={(e) => { e.stopPropagation(); confirmDeleteAnimation(animation); }}
+                            icon={settingsIcon}
+                            onclick={() => openEditDialog(animation)}
+                            title="Edit animation"
                             size="small"
-                            title="Delete animation"
                         />
                     </div>
-                {/each}
-            {/if}
-        </div>
-    </div>
 
-    <div class="center-panel">
-        {#if selectedAnimation}
-            <div class="panel-header">
-                <h3>{selectedAnimation.name}</h3>
-                <div class="device-type-badge">{DEVICE_TYPES[selectedAnimation.deviceType].name}</div>
-            </div>
-
-            <TimelineEditor
-                animation={selectedAnimation}
-                animationLibrary={animationLibrary}
-                animationVersion={animationVersion}
-                onUpdate={handleAnimationUpdate}
-            />
-        {:else}
-            <div class="empty-state-large">
-                <p>Select an animation to edit, or create a new one</p>
-            </div>
+                    <TimelineEditor
+                        {animation}
+                        {animationLibrary}
+                        {animationVersion}
+                        onUpdate={handleAnimationUpdate}
+                    />
+                </div>
+            {/each}
         {/if}
-    </div>
     </div>
 </div>
 
 <!-- New Animation Dialog -->
-<Dialog bind:dialogRef={newAnimationDialog}>
+<Dialog bind:dialogRef={newAnimationDialog} title="Create New Animation" onclose={() => newAnimationDialog?.close()}>
     <form method="dialog" onsubmit={(e) => { e.preventDefault(); createNewAnimation(); }}>
-        <h3>Create New Animation</h3>
-
-        <div class="dialog-field">
+        <div class="dialog-input-group">
             <label for="animation-name">Animation Name:</label>
             <input
                 id="animation-name"
@@ -172,7 +171,7 @@
             />
         </div>
 
-        <div class="dialog-field">
+        <div class="dialog-input-group">
             <label for="device-type">Device Type:</label>
             <select id="device-type" bind:value={newAnimationDeviceType}>
                 {#each Object.entries(DEVICE_TYPES) as [key, deviceType]}
@@ -182,23 +181,40 @@
         </div>
 
         <div class="dialog-buttons">
-            <Button type="button" onclick={() => newAnimationDialog?.close()}>Cancel</Button>
-            <Button type="submit" primary>Create</Button>
+            <Button type="button" onclick={() => newAnimationDialog?.close()} variant="secondary">Cancel</Button>
+            <Button type="submit" variant="primary">Create</Button>
         </div>
     </form>
 </Dialog>
 
-<!-- Delete Confirmation Dialog -->
-<Dialog bind:dialogRef={deleteConfirmDialog}>
-    <h3>Delete Animation</h3>
-    <p>Are you sure you want to delete "{animationToDelete?.name}"?</p>
-    <p class="warning">This cannot be undone.</p>
+<!-- Edit Animation Dialog -->
+{#if editingAnimation}
+<Dialog bind:dialogRef={editDialog} title="Animation" onclose={closeEditDialog}>
+    <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+        <div class="dialog-input-group">
+            <label for="edit-animation-name">Name:</label>
+            <input
+                id="edit-animation-name"
+                type="text"
+                bind:value={editingName}
+                placeholder="Animation name"
+                autofocus
+            />
+        </div>
 
-    <div class="dialog-buttons">
-        <Button onclick={() => deleteConfirmDialog?.close()}>Cancel</Button>
-        <Button onclick={deleteAnimation} primary>Delete</Button>
-    </div>
+        <div class="dialog-buttons">
+            <Button onclick={confirmDeleteAnimation} variant="secondary">
+                {@html removeIcon}
+                Delete
+            </Button>
+            <div class="dialog-buttons-right">
+                <Button onclick={closeEditDialog} variant="secondary">Cancel</Button>
+                <Button type="submit" variant="primary">Save</Button>
+            </div>
+        </div>
+    </form>
 </Dialog>
+{/if}
 
 <style>
     .animations-view {
@@ -215,79 +231,58 @@
         align-items: center;
     }
 
-    .panels-container {
-        display: flex;
-        flex: 1;
-        overflow: hidden;
-    }
-
-    .left-panel {
-        width: 250px;
-        border-right: 1px solid #ddd;
-        display: flex;
-        flex-direction: column;
-        background: #f9f9f9;
-    }
-
-    .center-panel {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-
-    .panel-header {
-        padding: 15px;
-        border-bottom: 1px solid #ddd;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-    }
-
-    .panel-header h3 {
-        margin: 0;
-        font-size: 12pt;
-        flex: 1;
-    }
-
     .animations-list {
         flex: 1;
         overflow-y: auto;
-        padding: 10px;
+        padding: 0 20px 20px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
     }
 
-    .animation-item {
-        padding: 10px;
-        margin-bottom: 5px;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        cursor: pointer;
+    .empty-state {
+        width: 100%;
+        text-align: center;
+        min-height: 50vh;
         display: flex;
         align-items: center;
-        gap: 10px;
-        transition: all 0.2s;
+        justify-content: center;
+        color: #999;
+        font-size: 10pt;
     }
 
-    .animation-item:hover {
+    .empty-state p {
+        margin: 0;
+    }
+
+    .animation-card {
+        width: 80vw;
         background: #f0f0f0;
-        border-color: #999;
+        border-radius: 8px;
+        overflow: hidden;
     }
 
-    .animation-item.selected {
-        background: #e3f2fd;
-        border-color: #2196f3;
+    .animation-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 15px 20px;
+        background: #e6e6e6;
+        gap: 15px;
     }
 
-    .animation-name {
+    .animation-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
         flex: 1;
-        font-weight: 500;
     }
 
-    .keyframe-count {
-        font-size: 9pt;
-        color: #666;
+    .animation-info h3 {
+        margin: 0;
+        font-size: 11pt;
+        color: #333;
     }
 
     .device-type-badge {
@@ -297,47 +292,53 @@
         border-radius: 4px;
         font-size: 9pt;
         font-weight: 500;
-        margin-left: auto;
-        margin-right: 10px;
     }
 
-    .empty-state-large {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #999;
-        font-size: 12pt;
+    .dialog-input-group {
+        margin-bottom: 20px;
     }
 
-    .dialog-field {
-        margin-bottom: 15px;
-    }
-
-    .dialog-field label {
+    .dialog-input-group label {
         display: block;
-        margin-bottom: 5px;
-        font-weight: 500;
+        margin-bottom: 8px;
+        font-size: 10pt;
+        font-weight: 400;
+        color: #555;
     }
 
-    .dialog-field input,
-    .dialog-field select {
+    .dialog-input-group input,
+    .dialog-input-group select {
         width: 100%;
-        padding: 8px;
-        border: 1px solid #ddd;
+        padding: 8px 12px;
+        font-size: 11pt;
+        font-family: var(--font-stack-mono);
+        border: 2px solid #ccc;
         border-radius: 4px;
-        font-size: 10pt;
+        box-sizing: border-box;
+    }
+
+    .dialog-input-group input:focus,
+    .dialog-input-group select:focus {
+        outline: none;
+        border-color: #2196F3;
     }
 
     .dialog-buttons {
         display: flex;
         gap: 10px;
-        justify-content: flex-end;
+        justify-content: space-between;
+        align-items: center;
         margin-top: 20px;
     }
 
-    .warning {
-        color: #f44336;
-        font-size: 10pt;
+    .dialog-buttons-right {
+        display: flex;
+        gap: 10px;
+    }
+
+    .dialog-buttons :global(svg) {
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
     }
 </style>
