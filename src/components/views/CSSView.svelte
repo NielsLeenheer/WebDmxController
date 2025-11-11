@@ -40,9 +40,7 @@
     );
 
     // Get all mappings for display (trigger and direct modes)
-    let allMappings = $derived(
-        mappingLibrary ? mappingLibrary.getAll() : []
-    );
+    let allMappings = $state([]);
 
     // Get all custom properties for display
     let customProperties = $state([]);
@@ -232,6 +230,7 @@
 
     // Regenerate CSS when mappings or animations change
     function handleMappingChange() {
+        allMappings = mappingLibrary.getAll();
         regenerateCSS();
         updateStyleElement();
     }
@@ -311,6 +310,9 @@
         // Listen for mapping and animation changes to update CSS automatically
         mappingLibrary.on('changed', handleMappingChange);
         animationLibrary.on('changed', handleAnimationChange);
+
+        // Initialize mappings list
+        allMappings = mappingLibrary.getAll();
 
         // Initialize CSS
         customCSS = loadCustomCSS();
