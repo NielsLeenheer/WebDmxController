@@ -5,7 +5,7 @@
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
-    import settingsIcon from '../../assets/icons/settings.svg?raw';
+    import editIcon from '../../assets/glyphs/edit.svg?raw';
 
     let {
         mappingLibrary,
@@ -285,7 +285,7 @@
                     <div class="trigger-content">
                         <span class="trigger-text">{getTriggerDisplayText(trigger)}</span>
                         <IconButton
-                            icon={settingsIcon}
+                            icon={editIcon}
                             onclick={() => openEditDialog(trigger)}
                             title="Edit trigger"
                             size="small"

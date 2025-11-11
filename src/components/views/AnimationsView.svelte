@@ -7,7 +7,7 @@
     import IconButton from '../common/IconButton.svelte';
     import TimelineEditor from '../animations/TimelineEditor.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
-    import settingsIcon from '../../assets/icons/settings.svg?raw';
+    import editIcon from '../../assets/glyphs/edit.svg?raw';
 
     let {
         animationLibrary,
@@ -138,7 +138,7 @@
                             <div class="device-type-badge">{DEVICE_TYPES[animation.deviceType].name}</div>
                         </div>
                         <IconButton
-                            icon={settingsIcon}
+                            icon={editIcon}
                             onclick={() => openEditDialog(animation)}
                             title="Edit animation"
                             size="small"

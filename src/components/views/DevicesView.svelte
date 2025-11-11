@@ -8,7 +8,7 @@
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
 
-    import settingsIcon from '../../assets/icons/settings.svg?raw';
+    import editIcon from '../../assets/glyphs/edit.svg?raw';
     import linkedIcon from '../../assets/icons/linked.svg?raw';
     import removeIcon from '../../assets/icons/remove.svg?raw';
 
@@ -375,7 +375,7 @@
                         <Icon data={linkedIcon} />
                     {/if}
                     <IconButton
-                        icon={settingsIcon}
+                        icon={editIcon}
                         onclick={() => openSettingsDialog(device)}
                         title="Device settings"
                         size="small"
