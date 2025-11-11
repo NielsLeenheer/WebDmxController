@@ -375,8 +375,6 @@
 <div class="css-view">
     <div class="left-column">
         <div class="reference-card">
-            <h3 class="reference-title">CSS Reference</h3>
-
             <!-- Devices Section -->
             {#if devices.length > 0}
                 <div class="reference-section">
@@ -461,8 +459,7 @@
         height: 100%;
         overflow: hidden;
         gap: 20px;
-        padding: 20px;
-        background: #f5f5f5;
+        padding: 20px 0 20px 20px;
     }
 
     .left-column {
@@ -471,22 +468,12 @@
     }
 
     .reference-card {
-        background: white;
+        background: #f5f5f5;
         border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         overflow: hidden;
         display: flex;
         flex-direction: column;
         height: 100%;
-    }
-
-    .reference-title {
-        margin: 0;
-        padding: 20px;
-        font-size: 12pt;
-        font-weight: 600;
-        border-bottom: 1px solid #e0e0e0;
-        background: #f9f9f9;
     }
 
     .reference-section {
@@ -580,12 +567,14 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        height: 100%;
     }
 
     .css-scroll-container {
         flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
+        height: 100%;
     }
 
     .css-editor {
@@ -618,7 +607,7 @@
     }
 
     .css-editor.editable {
-        background: white;
+        background: transparent;
         padding-top: 10px;
         min-height: 200px;
         border-top-left-radius: 0;
