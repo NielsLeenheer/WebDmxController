@@ -123,6 +123,8 @@
         align-items: center;
         padding: 16px 20px;
         background: #f5f5f5;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
     }
 
     .dialog-header h2 {
