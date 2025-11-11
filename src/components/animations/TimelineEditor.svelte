@@ -316,27 +316,24 @@
     showArrow={true}
     lightDismiss={true}
     onclose={closeEditDialog}
+    title="Keyframe at {(animation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%"
 >
-    <div class="keyframe-editor-content">
-        <h4>Keyframe at {(animation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%</h4>
+    <DeviceControls
+        deviceType={animation.deviceType}
+        bind:values={editingKeyframeValues}
+        onChange={updateKeyframeValues}
+    />
 
-        <DeviceControls
-            deviceType={animation.deviceType}
-            bind:values={editingKeyframeValues}
-            onChange={updateKeyframeValues}
-        />
-
-        <div class="keyframe-actions">
-            <Button
-                onclick={confirmDeleteKeyframe}
-                variant="secondary"
-                disabled={animation.keyframes.length <= 2}
-            >
-                {@html removeIcon}
-                Delete
-            </Button>
-        </div>
-    </div>
+    {#snippet tools()}
+        <Button
+            onclick={confirmDeleteKeyframe}
+            variant="secondary"
+            disabled={animation.keyframes.length <= 2}
+        >
+            {@html removeIcon}
+            Delete
+        </Button>
+    {/snippet}
 </Dialog>
 {/if}
 
@@ -409,28 +406,4 @@
         user-select: none;
     }
 
-    /* Keyframe Editor Content */
-    .keyframe-editor-content {
-        max-height: 500px;
-        overflow-y: auto;
-    }
-
-    .keyframe-editor-content h4 {
-        margin: 0 0 15px 0;
-        font-size: 11pt;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .keyframe-actions {
-        margin-top: 15px;
-        padding-top: 15px;
-        border-top: 1px solid #e0e0e0;
-    }
-
-    .keyframe-actions :global(svg) {
-        width: 16px;
-        height: 16px;
-        margin-right: 6px;
-    }
 </style>
