@@ -230,22 +230,6 @@
         }
     }
 
-    function clearCustomCSS() {
-        if (!confirm('This will clear your custom CSS. Generated CSS will remain. Continue?')) {
-            return;
-        }
-
-        // Clear custom CSS
-        customCSS = '/* Add your custom CSS here to override device defaults and apply animations */\n';
-        localStorage.setItem('dmx-custom-css', customCSS);
-
-        // Update editor
-        if (customCSSEditor) {
-            customCSSEditor.textContent = customCSS;
-        }
-        updateStyleElement();
-    }
-
     // Regenerate CSS when mappings or animations change
     function handleMappingChange() {
         regenerateCSS();
@@ -458,12 +442,6 @@
     </div>
 
     <div class="right-column">
-        <div class="css-header">
-            <h4>CSS</h4>
-            <span class="css-note">Generated CSS is readonly, custom CSS is editable</span>
-            <button class="clear-button" onclick={clearCustomCSS}>Clear Custom</button>
-        </div>
-
         <div class="css-scroll-container">
             <pre class="css-editor readonly">{generatedCSS}</pre>
             <pre
@@ -602,32 +580,6 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .css-header {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 20px;
-        background: #f9f9f9;
-        border-bottom: 1px solid #e0e0e0;
-        flex-shrink: 0;
-    }
-
-    .css-header h4 {
-        margin: 0;
-        font-size: 10pt;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .css-note {
-        font-size: 9pt;
-        color: #999;
-        margin-left: auto;
     }
 
     .css-scroll-container {
@@ -636,28 +588,11 @@
         overflow-x: hidden;
     }
 
-    .clear-button {
-        padding: 4px 10px;
-        border: 1px solid #ddd;
-        background: white;
-        color: #666;
-        border-radius: 3px;
-        cursor: pointer;
-        font-size: 9pt;
-        transition: all 0.2s;
-    }
-
-    .clear-button:hover {
-        background: #f5f5f5;
-        border-color: #007acc;
-        color: #007acc;
-    }
-
     .css-editor {
         display: block;
         margin: 0;
         padding: 20px;
-        background: #fff;
+        background: white;
         color: #333;
         font-family: var(--font-stack-mono);
         font-size: 10pt;
@@ -667,6 +602,8 @@
         white-space: pre;
         tab-size: 4;
         min-height: auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .css-editor.readonly {
@@ -675,12 +612,17 @@
         cursor: default;
         user-select: text;
         padding-bottom: 10px;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        box-shadow: none;
     }
 
     .css-editor.editable {
-        background: #fff;
+        background: white;
         padding-top: 10px;
         min-height: 200px;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
     }
 
     .css-editor.editable:focus {
