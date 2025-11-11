@@ -224,6 +224,17 @@ export class MappingLibrary {
 	}
 
 	/**
+	 * Update a mapping
+	 */
+	update(mapping) {
+		if (this.mappings.has(mapping.id)) {
+			this.mappings.set(mapping.id, mapping);
+			this.save();
+			this._emit('changed', { type: 'update', mapping });
+		}
+	}
+
+	/**
 	 * Remove a mapping
 	 */
 	remove(id) {

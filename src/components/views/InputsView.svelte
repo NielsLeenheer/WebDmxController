@@ -162,7 +162,7 @@
         const mapping = mappingLibrary.get(editingInput.id);
         if (mapping) {
             mapping.name = editingName.trim();
-            mappingLibrary.save();
+            mappingLibrary.update(mapping);
             refreshInputs();
         }
 

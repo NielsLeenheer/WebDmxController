@@ -422,7 +422,7 @@
                     <div class="reference-list">
                         {#each allMappings as mapping (mapping.id)}
                             <div class="reference-item">
-                                {#if mapping.mode === 'trigger'}
+                                {#if mapping.mode === 'trigger' || mapping.mode === 'input'}
                                     <code>.{mapping.cssClassName}</code>
                                 {:else if mapping.mode === 'direct'}
                                     <code>{mapping.getPropertyName()}</code>
