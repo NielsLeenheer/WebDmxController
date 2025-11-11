@@ -548,10 +548,6 @@
         margin-left: auto;
     }
 
-    .device-header :global(.icon-button:last-child) {
-        margin-left: 0;
-    }
-
     /* Dialog-specific overrides */
     .dialog-input-group input[type="number"] {
         width: 10ch;
