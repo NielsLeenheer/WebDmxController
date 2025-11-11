@@ -458,20 +458,14 @@
     </div>
 
     <div class="right-column">
-        <div class="css-section">
-            <div class="css-section-header">
-                <h4>Generated CSS</h4>
-                <span class="css-section-note">Auto-generated from devices, animations, and triggers</span>
-            </div>
-            <pre class="css-editor readonly">{generatedCSS}</pre>
+        <div class="css-header">
+            <h4>CSS</h4>
+            <span class="css-note">Generated CSS is readonly, custom CSS is editable</span>
+            <button class="clear-button" onclick={clearCustomCSS}>Clear Custom</button>
         </div>
 
-        <div class="css-section">
-            <div class="css-section-header">
-                <h4>Custom CSS</h4>
-                <span class="css-section-note">Freely editable</span>
-                <button class="clear-button" onclick={clearCustomCSS}>Clear</button>
-            </div>
+        <div class="css-scroll-container">
+            <pre class="css-editor readonly">{generatedCSS}</pre>
             <pre
                 class="css-editor editable"
                 contenteditable="true"
@@ -613,41 +607,33 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .css-section {
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-
-    .css-section:first-child {
-        flex: 1;
-        border-bottom: 2px solid #007acc;
-    }
-
-    .css-section:last-child {
-        flex: 1;
-    }
-
-    .css-section-header {
+    .css-header {
         display: flex;
         align-items: center;
         gap: 10px;
         padding: 12px 20px;
         background: #f9f9f9;
         border-bottom: 1px solid #e0e0e0;
+        flex-shrink: 0;
     }
 
-    .css-section-header h4 {
+    .css-header h4 {
         margin: 0;
         font-size: 10pt;
         font-weight: 600;
         color: #333;
     }
 
-    .css-section-note {
+    .css-note {
         font-size: 9pt;
         color: #999;
         margin-left: auto;
+    }
+
+    .css-scroll-container {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .clear-button {
@@ -668,7 +654,7 @@
     }
 
     .css-editor {
-        flex: 1;
+        display: block;
         margin: 0;
         padding: 20px;
         background: #fff;
@@ -676,22 +662,25 @@
         font-family: var(--font-stack-mono);
         font-size: 10pt;
         line-height: 1.6;
-        overflow: auto;
         border: none;
         outline: none;
         white-space: pre;
         tab-size: 4;
+        min-height: auto;
     }
 
     .css-editor.readonly {
         background: #fafafa;
         color: #666;
-        cursor: not-allowed;
+        cursor: default;
         user-select: text;
+        padding-bottom: 10px;
     }
 
     .css-editor.editable {
         background: #fff;
+        padding-top: 10px;
+        min-height: 200px;
     }
 
     .css-editor.editable:focus {
