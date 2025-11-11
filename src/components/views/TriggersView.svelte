@@ -17,7 +17,8 @@
     let availableAnimations = $state([]);
     let triggers = $state([]);
 
-    let newTriggerDialog = $state(null);
+    let manualTriggerDialog = $state(null);
+    let automaticTriggerDialog = $state(null);
     let newTriggerInput = $state(null);
     let newTriggerType = $state('pressed');
     let newTriggerDevice = $state(null);
@@ -37,10 +38,9 @@
     let editTriggerLooping = $state(false);
     let editTriggerEasing = $state('linear');
 
-    const TRIGGER_TYPES = [
-        { value: 'pressed', label: 'Pressed', description: 'Trigger when key/button is pressed down' },
-        { value: 'not-pressed', label: 'Not Pressed', description: 'Active when key/button is NOT pressed' },
-        { value: 'always', label: 'Always', description: 'Infinite loop animation' }
+    const MANUAL_TRIGGER_TYPES = [
+        { value: 'pressed', label: 'Pressed' },
+        { value: 'not-pressed', label: 'Not Pressed' }
     ];
 
     const EASING_FUNCTIONS = [
@@ -59,7 +59,7 @@
         refreshData();
     }
 
-    function openNewTriggerDialog() {
+    function openManualTriggerDialog() {
         newTriggerInput = availableInputs[0]?.id || null;
         newTriggerType = 'pressed';
         newTriggerDevice = devices[0]?.id || null;
@@ -67,10 +67,19 @@
         newTriggerDuration = 1000;
         newTriggerLooping = false;
         newTriggerEasing = 'linear';
-        newTriggerDialog?.showModal();
+        manualTriggerDialog?.showModal();
     }
 
-    function createTrigger() {
+    function openAutomaticTriggerDialog() {
+        newTriggerDevice = devices[0]?.id || null;
+        newTriggerAnimation = availableAnimations[0]?.name || null;
+        newTriggerDuration = 1000;
+        newTriggerLooping = false;
+        newTriggerEasing = 'linear';
+        automaticTriggerDialog?.showModal();
+    }
+
+    function createManualTrigger() {
         if (!newTriggerInput || !newTriggerDevice || !newTriggerAnimation) return;
 
         const inputMapping = mappingLibrary.get(newTriggerInput);
@@ -82,8 +91,7 @@
             .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
             .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
 
-        const suffix = newTriggerType === 'pressed' ? 'down' :
-                       newTriggerType === 'not-pressed' ? 'up' : 'always';
+        const suffix = newTriggerType === 'pressed' ? 'down' : 'up';
         const cssClassName = `${baseClassName}-${suffix}`;
 
         // Create trigger mapping
@@ -103,7 +111,30 @@
 
         mappingLibrary.add(trigger);
         refreshData();
-        newTriggerDialog?.close();
+        manualTriggerDialog?.close();
+    }
+
+    function createAutomaticTrigger() {
+        if (!newTriggerDevice || !newTriggerAnimation) return;
+
+        // Create trigger mapping for automatic (always) trigger
+        const trigger = new InputMapping({
+            name: `always_${newTriggerAnimation}`,
+            mode: 'trigger',
+            triggerType: 'always',
+            inputDeviceId: null,
+            inputControlId: null,
+            animationName: newTriggerAnimation,
+            targetDeviceIds: [newTriggerDevice],
+            duration: newTriggerDuration,
+            easing: newTriggerEasing,
+            iterations: newTriggerLooping ? 'infinite' : 1,
+            cssClassName: 'always'
+        });
+
+        mappingLibrary.add(trigger);
+        refreshData();
+        automaticTriggerDialog?.close();
     }
 
     function openEditDialog(trigger) {
@@ -129,33 +160,42 @@
     function saveEdit() {
         if (!editingTrigger) return;
 
-        // Get the input mapping from the selected input
-        const selectedInput = availableInputs.find(input =>
-            input.inputDeviceId === editingTrigger.inputDeviceId &&
-            input.inputControlId === editingTrigger.inputControlId
-        );
-
-        if (!selectedInput) return;
-
-        // Generate new CSS class name
-        const baseClassName = selectedInput.name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '');
-
-        const suffix = editTriggerType === 'pressed' ? 'down' :
-                       editTriggerType === 'not-pressed' ? 'up' : 'always';
-        const cssClassName = `${baseClassName}-${suffix}`;
-
         // Update trigger properties
-        editingTrigger.triggerType = editTriggerType;
-        editingTrigger.targetDeviceIds = [editTriggerDevice];
-        editingTrigger.animationName = editTriggerAnimation;
-        editingTrigger.duration = editTriggerDuration;
-        editingTrigger.easing = editTriggerEasing;
-        editingTrigger.iterations = editTriggerLooping ? 'infinite' : 1;
-        editingTrigger.cssClassName = cssClassName;
-        editingTrigger.name = `${selectedInput.name}_${editTriggerType}_${editTriggerAnimation}`;
+        if (editingTrigger.triggerType === 'always') {
+            // Automatic trigger
+            editingTrigger.targetDeviceIds = [editTriggerDevice];
+            editingTrigger.animationName = editTriggerAnimation;
+            editingTrigger.duration = editTriggerDuration;
+            editingTrigger.easing = editTriggerEasing;
+            editingTrigger.iterations = editTriggerLooping ? 'infinite' : 1;
+            editingTrigger.name = `always_${editTriggerAnimation}`;
+        } else {
+            // Manual trigger
+            const selectedInput = availableInputs.find(input =>
+                input.inputDeviceId === editingTrigger.inputDeviceId &&
+                input.inputControlId === editingTrigger.inputControlId
+            );
+
+            if (!selectedInput) return;
+
+            // Generate new CSS class name
+            const baseClassName = selectedInput.name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+            const suffix = editTriggerType === 'pressed' ? 'down' : 'up';
+            const cssClassName = `${baseClassName}-${suffix}`;
+
+            editingTrigger.triggerType = editTriggerType;
+            editingTrigger.targetDeviceIds = [editTriggerDevice];
+            editingTrigger.animationName = editTriggerAnimation;
+            editingTrigger.duration = editTriggerDuration;
+            editingTrigger.easing = editTriggerEasing;
+            editingTrigger.iterations = editTriggerLooping ? 'infinite' : 1;
+            editingTrigger.cssClassName = cssClassName;
+            editingTrigger.name = `${selectedInput.name}_${editTriggerType}_${editTriggerAnimation}`;
+        }
 
         mappingLibrary.save();
         refreshData();
@@ -184,13 +224,14 @@
         return device?.name || deviceId;
     }
 
-    function getTriggerTypeLabel(type) {
-        const typeInfo = TRIGGER_TYPES.find(t => t.value === type);
-        return typeInfo?.label || type;
-    }
+    function getTriggerDisplayText(trigger) {
+        if (trigger.triggerType === 'always') {
+            return `Always → ${trigger.animationName}`;
+        }
 
-    function getTriggerClassName(trigger) {
-        return trigger.cssClassName;
+        const inputName = getInputName(trigger.inputDeviceId, trigger.inputControlId);
+        const typeLabel = trigger.triggerType === 'pressed' ? 'Pressed' : 'Not Pressed';
+        return `${inputName} → ${typeLabel} → ${trigger.animationName}`;
     }
 
     onMount(() => {
@@ -206,11 +247,18 @@
 <div class="triggers-view">
     <div class="add-trigger-section">
         <Button
-            onclick={openNewTriggerDialog}
+            onclick={openManualTriggerDialog}
             variant="secondary"
             disabled={availableInputs.length === 0 || availableAnimations.length === 0 || devices.length === 0}
         >
-            Add Trigger
+            Add Manual Trigger
+        </Button>
+        <Button
+            onclick={openAutomaticTriggerDialog}
+            variant="secondary"
+            disabled={availableAnimations.length === 0 || devices.length === 0}
+        >
+            Add Automatic Trigger
         </Button>
     </div>
 
@@ -234,8 +282,8 @@
         {:else}
             {#each triggers as trigger (trigger.id)}
                 <div class="trigger-card">
-                    <div class="trigger-header">
-                        <h3>{trigger.name}</h3>
+                    <div class="trigger-content">
+                        <span class="trigger-text">{getTriggerDisplayText(trigger)}</span>
                         <IconButton
                             icon={settingsIcon}
                             onclick={() => openEditDialog(trigger)}
@@ -243,45 +291,15 @@
                             size="small"
                         />
                     </div>
-                    <div class="trigger-details">
-                        <div class="detail-row">
-                            <span class="label">Input:</span>
-                            <span class="value">{getInputName(trigger.inputDeviceId, trigger.inputControlId)}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Type:</span>
-                            <span class="value type-{trigger.triggerType}">{getTriggerTypeLabel(trigger.triggerType)}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Device:</span>
-                            <span class="value">{trigger.targetDeviceIds.map(id => getDeviceName(id)).join(', ')}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Animation:</span>
-                            <span class="value">{trigger.animationName}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Duration:</span>
-                            <span class="value">{trigger.duration}ms</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Loop:</span>
-                            <span class="value">{trigger.iterations === 'infinite' ? 'Yes' : 'No'}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">CSS Class:</span>
-                            <span class="value css-class">.{getTriggerClassName(trigger)}</span>
-                        </div>
-                    </div>
                 </div>
             {/each}
         {/if}
     </div>
 </div>
 
-<!-- New Trigger Dialog -->
-<Dialog bind:dialogRef={newTriggerDialog} title="Create New Trigger" onclose={() => newTriggerDialog?.close()}>
-    <form method="dialog" onsubmit={(e) => { e.preventDefault(); createTrigger(); }}>
+<!-- Manual Trigger Dialog -->
+<Dialog bind:dialogRef={manualTriggerDialog} title="Create Manual Trigger" onclose={() => manualTriggerDialog?.close()}>
+    <form method="dialog" onsubmit={(e) => { e.preventDefault(); createManualTrigger(); }}>
         <div class="dialog-input-group">
             <label for="trigger-input">Input:</label>
             <select id="trigger-input" bind:value={newTriggerInput}>
@@ -294,8 +312,8 @@
         <div class="dialog-input-group">
             <label for="trigger-type">Trigger Type:</label>
             <select id="trigger-type" bind:value={newTriggerType}>
-                {#each TRIGGER_TYPES as type}
-                    <option value={type.value}>{type.label} - {type.description}</option>
+                {#each MANUAL_TRIGGER_TYPES as type}
+                    <option value={type.value}>{type.label}</option>
                 {/each}
             </select>
         </div>
@@ -349,7 +367,65 @@
         </div>
 
         <div class="dialog-buttons">
-            <Button type="button" onclick={() => newTriggerDialog?.close()} variant="secondary">Cancel</Button>
+            <Button type="button" onclick={() => manualTriggerDialog?.close()} variant="secondary">Cancel</Button>
+            <Button type="submit" variant="primary">Create</Button>
+        </div>
+    </form>
+</Dialog>
+
+<!-- Automatic Trigger Dialog -->
+<Dialog bind:dialogRef={automaticTriggerDialog} title="Create Automatic Trigger" onclose={() => automaticTriggerDialog?.close()}>
+    <form method="dialog" onsubmit={(e) => { e.preventDefault(); createAutomaticTrigger(); }}>
+        <div class="dialog-input-group">
+            <label for="auto-trigger-device">Device:</label>
+            <select id="auto-trigger-device" bind:value={newTriggerDevice}>
+                {#each devices as device}
+                    <option value={device.id}>{device.name}</option>
+                {/each}
+            </select>
+        </div>
+
+        <div class="dialog-input-group">
+            <label for="auto-trigger-animation">Animation:</label>
+            <select id="auto-trigger-animation" bind:value={newTriggerAnimation}>
+                {#each availableAnimations as animation}
+                    <option value={animation.name}>{animation.name}</option>
+                {/each}
+            </select>
+        </div>
+
+        <div class="dialog-input-group">
+            <label for="auto-trigger-duration">Duration (ms):</label>
+            <input
+                id="auto-trigger-duration"
+                type="number"
+                bind:value={newTriggerDuration}
+                min="100"
+                step="100"
+            />
+        </div>
+
+        <div class="dialog-input-group">
+            <label for="auto-trigger-easing">Easing:</label>
+            <select id="auto-trigger-easing" bind:value={newTriggerEasing}>
+                {#each EASING_FUNCTIONS as easing}
+                    <option value={easing}>{easing}</option>
+                {/each}
+            </select>
+        </div>
+
+        <div class="dialog-input-group checkbox-field">
+            <label>
+                <input
+                    type="checkbox"
+                    bind:checked={newTriggerLooping}
+                />
+                Loop animation infinitely
+            </label>
+        </div>
+
+        <div class="dialog-buttons">
+            <Button type="button" onclick={() => automaticTriggerDialog?.close()} variant="secondary">Cancel</Button>
             <Button type="submit" variant="primary">Create</Button>
         </div>
     </form>
@@ -359,14 +435,16 @@
 {#if editingTrigger}
 <Dialog bind:dialogRef={editDialog} title="Trigger" onclose={closeEditDialog}>
     <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
-        <div class="dialog-input-group">
-            <label for="edit-trigger-type">Trigger Type:</label>
-            <select id="edit-trigger-type" bind:value={editTriggerType}>
-                {#each TRIGGER_TYPES as type}
-                    <option value={type.value}>{type.label} - {type.description}</option>
-                {/each}
-            </select>
-        </div>
+        {#if editingTrigger.triggerType !== 'always'}
+            <div class="dialog-input-group">
+                <label for="edit-trigger-type">Trigger Type:</label>
+                <select id="edit-trigger-type" bind:value={editTriggerType}>
+                    {#each MANUAL_TRIGGER_TYPES as type}
+                        <option value={type.value}>{type.label}</option>
+                    {/each}
+                </select>
+            </div>
+        {/if}
 
         <div class="dialog-input-group">
             <label for="edit-trigger-device">Device:</label>
@@ -443,6 +521,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
+        gap: 10px;
     }
 
     .triggers-list {
@@ -482,71 +561,20 @@
         width: 80vw;
         background: #f0f0f0;
         border-radius: 8px;
-        overflow: hidden;
     }
 
-    .trigger-header {
+    .trigger-content {
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: 15px 20px;
-        background: #e6e6e6;
         gap: 15px;
     }
 
-    .trigger-header h3 {
-        margin: 0;
+    .trigger-text {
+        flex: 1;
         font-size: 11pt;
         color: #333;
-        flex: 1;
-    }
-
-    .trigger-details {
-        padding: 15px 20px;
-    }
-
-    .detail-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 0;
-        font-size: 10pt;
-        border-bottom: 1px solid #e0e0e0;
-    }
-
-    .detail-row:last-child {
-        border-bottom: none;
-    }
-
-    .detail-row .label {
-        color: #666;
-        font-weight: 500;
-    }
-
-    .detail-row .value {
-        color: #333;
-        text-align: right;
-    }
-
-    .detail-row .value.type-pressed {
-        color: #4caf50;
-        font-weight: 600;
-    }
-
-    .detail-row .value.type-not-pressed {
-        color: #ff9800;
-        font-weight: 600;
-    }
-
-    .detail-row .value.type-always {
-        color: #2196f3;
-        font-weight: 600;
-    }
-
-    .detail-row .value.css-class {
-        font-family: var(--font-stack-mono);
-        background: #f5f5f5;
-        padding: 2px 6px;
-        border-radius: 3px;
     }
 
     .dialog-input-group {
