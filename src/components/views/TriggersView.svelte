@@ -76,7 +76,10 @@
         newTriggerDuration = 1000;
         newTriggerLooping = false;
         newTriggerEasing = 'linear';
-        automaticTriggerDialog?.showModal();
+
+        requestAnimationFrame(() => {
+            automaticTriggerDialog?.showModal();
+        });
     }
 
     function createManualTrigger() {
@@ -225,13 +228,15 @@
     }
 
     function getTriggerDisplayText(trigger) {
+        const deviceName = getDeviceName(trigger.targetDeviceIds[0]);
+
         if (trigger.triggerType === 'always') {
-            return `Always → ${trigger.animationName}`;
+            return `Always → ${trigger.animationName} → ${deviceName}`;
         }
 
         const inputName = getInputName(trigger.inputDeviceId, trigger.inputControlId);
         const typeLabel = trigger.triggerType === 'pressed' ? 'Pressed' : 'Not Pressed';
-        return `${inputName} → ${typeLabel} → ${trigger.animationName}`;
+        return `${inputName} → ${typeLabel} → ${trigger.animationName} → ${deviceName}`;
     }
 
     onMount(() => {
@@ -300,70 +305,79 @@
 <!-- Manual Trigger Dialog -->
 <Dialog bind:dialogRef={manualTriggerDialog} title="Create Manual Trigger" onclose={() => manualTriggerDialog?.close()}>
     <form id="manual-trigger-form" method="dialog" onsubmit={(e) => { e.preventDefault(); createManualTrigger(); }}>
-        <div class="dialog-input-group">
-            <label for="trigger-input">Input:</label>
-            <select id="trigger-input" bind:value={newTriggerInput}>
-                {#each availableInputs as input}
-                    <option value={input.id}>{input.name}</option>
-                {/each}
-            </select>
-        </div>
+        <div class="trigger-columns">
+            <div class="trigger-column">
+                <div class="dialog-input-group">
+                    <label for="trigger-input">Input:</label>
+                    <select id="trigger-input" bind:value={newTriggerInput}>
+                        {#each availableInputs as input}
+                            <option value={input.id}>{input.name}</option>
+                        {/each}
+                    </select>
+                </div>
 
-        <div class="dialog-input-group">
-            <label for="trigger-type">Trigger Type:</label>
-            <select id="trigger-type" bind:value={newTriggerType}>
-                {#each MANUAL_TRIGGER_TYPES as type}
-                    <option value={type.value}>{type.label}</option>
-                {/each}
-            </select>
-        </div>
+                <div class="dialog-input-group">
+                    <label for="trigger-type">Type:</label>
+                    <select id="trigger-type" bind:value={newTriggerType}>
+                        {#each MANUAL_TRIGGER_TYPES as type}
+                            <option value={type.value}>{type.label}</option>
+                        {/each}
+                    </select>
+                </div>
+            </div>
 
-        <div class="dialog-input-group">
-            <label for="trigger-device">Device:</label>
-            <select id="trigger-device" bind:value={newTriggerDevice}>
-                {#each devices as device}
-                    <option value={device.id}>{device.name}</option>
-                {/each}
-            </select>
-        </div>
+            <div class="trigger-column">
+                <div class="dialog-input-group">
+                    <label for="trigger-device">Device:</label>
+                    <select id="trigger-device" bind:value={newTriggerDevice}>
+                        {#each devices as device}
+                            <option value={device.id}>{device.name}</option>
+                        {/each}
+                    </select>
+                </div>
 
-        <div class="dialog-input-group">
-            <label for="trigger-animation">Animation:</label>
-            <select id="trigger-animation" bind:value={newTriggerAnimation}>
-                {#each availableAnimations as animation}
-                    <option value={animation.name}>{animation.name}</option>
-                {/each}
-            </select>
-        </div>
+                <div class="dialog-input-group">
+                    <label for="trigger-animation">Animation:</label>
+                    <select id="trigger-animation" bind:value={newTriggerAnimation}>
+                        {#each availableAnimations as animation}
+                            <option value={animation.name}>{animation.name}</option>
+                        {/each}
+                    </select>
+                </div>
+            </div>
 
-        <div class="dialog-input-group">
-            <label for="trigger-duration">Duration (ms):</label>
-            <input
-                id="trigger-duration"
-                type="number"
-                bind:value={newTriggerDuration}
-                min="100"
-                step="100"
-            />
-        </div>
+            <div class="trigger-column">
+                <div class="dialog-input-group">
+                    <label for="trigger-duration">Duration (ms):</label>
+                    <div class="duration-with-loop">
+                        <input
+                            id="trigger-duration"
+                            type="number"
+                            bind:value={newTriggerDuration}
+                            min="100"
+                            step="100"
+                        />
+                        <div class="checkbox-field">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    bind:checked={newTriggerLooping}
+                                />
+                                Loop
+                            </label>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="dialog-input-group">
-            <label for="trigger-easing">Easing:</label>
-            <select id="trigger-easing" bind:value={newTriggerEasing}>
-                {#each EASING_FUNCTIONS as easing}
-                    <option value={easing}>{easing}</option>
-                {/each}
-            </select>
-        </div>
-
-        <div class="dialog-input-group checkbox-field">
-            <label>
-                <input
-                    type="checkbox"
-                    bind:checked={newTriggerLooping}
-                />
-                Loop animation infinitely
-            </label>
+                <div class="dialog-input-group">
+                    <label for="trigger-easing">Easing:</label>
+                    <select id="trigger-easing" bind:value={newTriggerEasing}>
+                        {#each EASING_FUNCTIONS as easing}
+                            <option value={easing}>{easing}</option>
+                        {/each}
+                    </select>
+                </div>
+            </div>
         </div>
     </form>
 
@@ -376,52 +390,59 @@
 <!-- Automatic Trigger Dialog -->
 <Dialog bind:dialogRef={automaticTriggerDialog} title="Create Automatic Trigger" onclose={() => automaticTriggerDialog?.close()}>
     <form id="automatic-trigger-form" method="dialog" onsubmit={(e) => { e.preventDefault(); createAutomaticTrigger(); }}>
-        <div class="dialog-input-group">
-            <label for="auto-trigger-device">Device:</label>
-            <select id="auto-trigger-device" bind:value={newTriggerDevice}>
-                {#each devices as device}
-                    <option value={device.id}>{device.name}</option>
-                {/each}
-            </select>
-        </div>
+        <div class="trigger-columns">
+            <div class="trigger-column">
+                <div class="dialog-input-group">
+                    <label for="auto-trigger-device">Device:</label>
+                    <select id="auto-trigger-device" bind:value={newTriggerDevice}>
+                        {#each devices as device}
+                            <option value={device.id}>{device.name}</option>
+                        {/each}
+                    </select>
+                </div>
 
-        <div class="dialog-input-group">
-            <label for="auto-trigger-animation">Animation:</label>
-            <select id="auto-trigger-animation" bind:value={newTriggerAnimation}>
-                {#each availableAnimations as animation}
-                    <option value={animation.name}>{animation.name}</option>
-                {/each}
-            </select>
-        </div>
+                <div class="dialog-input-group">
+                    <label for="auto-trigger-animation">Animation:</label>
+                    <select id="auto-trigger-animation" bind:value={newTriggerAnimation}>
+                        {#each availableAnimations as animation}
+                            <option value={animation.name}>{animation.name}</option>
+                        {/each}
+                    </select>
+                </div>
+            </div>
 
-        <div class="dialog-input-group">
-            <label for="auto-trigger-duration">Duration (ms):</label>
-            <input
-                id="auto-trigger-duration"
-                type="number"
-                bind:value={newTriggerDuration}
-                min="100"
-                step="100"
-            />
-        </div>
+            <div class="trigger-column">
+                <div class="dialog-input-group">
+                    <label for="auto-trigger-duration">Duration (ms):</label>
+                    <div class="duration-with-loop">
+                        <input
+                            id="auto-trigger-duration"
+                            type="number"
+                            bind:value={newTriggerDuration}
+                            min="100"
+                            step="100"
+                        />
+                        <div class="checkbox-field">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    bind:checked={newTriggerLooping}
+                                />
+                                Loop
+                            </label>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="dialog-input-group">
-            <label for="auto-trigger-easing">Easing:</label>
-            <select id="auto-trigger-easing" bind:value={newTriggerEasing}>
-                {#each EASING_FUNCTIONS as easing}
-                    <option value={easing}>{easing}</option>
-                {/each}
-            </select>
-        </div>
-
-        <div class="dialog-input-group checkbox-field">
-            <label>
-                <input
-                    type="checkbox"
-                    bind:checked={newTriggerLooping}
-                />
-                Loop animation infinitely
-            </label>
+                <div class="dialog-input-group">
+                    <label for="auto-trigger-easing">Easing:</label>
+                    <select id="auto-trigger-easing" bind:value={newTriggerEasing}>
+                        {#each EASING_FUNCTIONS as easing}
+                            <option value={easing}>{easing}</option>
+                        {/each}
+                    </select>
+                </div>
+            </div>
         </div>
     </form>
 
@@ -435,63 +456,72 @@
 {#if editingTrigger}
 <Dialog bind:dialogRef={editDialog} title="Trigger" onclose={closeEditDialog}>
     <form id="edit-trigger-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
-        {#if editingTrigger.triggerType !== 'always'}
-            <div class="dialog-input-group">
-                <label for="edit-trigger-type">Trigger Type:</label>
-                <select id="edit-trigger-type" bind:value={editTriggerType}>
-                    {#each MANUAL_TRIGGER_TYPES as type}
-                        <option value={type.value}>{type.label}</option>
-                    {/each}
-                </select>
+        <div class="trigger-columns">
+            {#if editingTrigger.triggerType !== 'always'}
+                <div class="trigger-column">
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-type">Type:</label>
+                        <select id="edit-trigger-type" bind:value={editTriggerType}>
+                            {#each MANUAL_TRIGGER_TYPES as type}
+                                <option value={type.value}>{type.label}</option>
+                            {/each}
+                        </select>
+                    </div>
+                </div>
+            {/if}
+
+            <div class="trigger-column">
+                <div class="dialog-input-group">
+                    <label for="edit-trigger-device">Device:</label>
+                    <select id="edit-trigger-device" bind:value={editTriggerDevice}>
+                        {#each devices as device}
+                            <option value={device.id}>{device.name}</option>
+                        {/each}
+                    </select>
+                </div>
+
+                <div class="dialog-input-group">
+                    <label for="edit-trigger-animation">Animation:</label>
+                    <select id="edit-trigger-animation" bind:value={editTriggerAnimation}>
+                        {#each availableAnimations as animation}
+                            <option value={animation.name}>{animation.name}</option>
+                        {/each}
+                    </select>
+                </div>
             </div>
-        {/if}
 
-        <div class="dialog-input-group">
-            <label for="edit-trigger-device">Device:</label>
-            <select id="edit-trigger-device" bind:value={editTriggerDevice}>
-                {#each devices as device}
-                    <option value={device.id}>{device.name}</option>
-                {/each}
-            </select>
-        </div>
+            <div class="trigger-column">
+                <div class="dialog-input-group">
+                    <label for="edit-trigger-duration">Duration (ms):</label>
+                    <div class="duration-with-loop">
+                        <input
+                            id="edit-trigger-duration"
+                            type="number"
+                            bind:value={editTriggerDuration}
+                            min="100"
+                            step="100"
+                        />
+                        <div class="checkbox-field">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    bind:checked={editTriggerLooping}
+                                />
+                                Loop
+                            </label>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="dialog-input-group">
-            <label for="edit-trigger-animation">Animation:</label>
-            <select id="edit-trigger-animation" bind:value={editTriggerAnimation}>
-                {#each availableAnimations as animation}
-                    <option value={animation.name}>{animation.name}</option>
-                {/each}
-            </select>
-        </div>
-
-        <div class="dialog-input-group">
-            <label for="edit-trigger-duration">Duration (ms):</label>
-            <input
-                id="edit-trigger-duration"
-                type="number"
-                bind:value={editTriggerDuration}
-                min="100"
-                step="100"
-            />
-        </div>
-
-        <div class="dialog-input-group">
-            <label for="edit-trigger-easing">Easing:</label>
-            <select id="edit-trigger-easing" bind:value={editTriggerEasing}>
-                {#each EASING_FUNCTIONS as easing}
-                    <option value={easing}>{easing}</option>
-                {/each}
-            </select>
-        </div>
-
-        <div class="dialog-input-group checkbox-field">
-            <label>
-                <input
-                    type="checkbox"
-                    bind:checked={editTriggerLooping}
-                />
-                Loop animation infinitely
-            </label>
+                <div class="dialog-input-group">
+                    <label for="edit-trigger-easing">Easing:</label>
+                    <select id="edit-trigger-easing" bind:value={editTriggerEasing}>
+                        {#each EASING_FUNCTIONS as easing}
+                            <option value={easing}>{easing}</option>
+                        {/each}
+                    </select>
+                </div>
+            </div>
         </div>
     </form>
 
@@ -576,5 +606,36 @@
         flex: 1;
         font-size: 11pt;
         color: #333;
+    }
+
+    /* Dialog column layout */
+    .trigger-columns {
+        display: flex;
+        gap: 20px;
+    }
+
+    .trigger-column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .duration-with-loop {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .duration-with-loop input {
+        width: 100%;
+    }
+
+    .duration-with-loop .checkbox-field {
+        margin: 0;
+    }
+
+    .duration-with-loop .checkbox-field label {
+        font-size: 10pt;
     }
 </style>
