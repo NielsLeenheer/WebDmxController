@@ -459,12 +459,13 @@
         height: 100%;
         overflow: hidden;
         gap: 20px;
-        padding: 20px 0 20px 20px;
+        padding: 0 0 0 20px;
     }
 
     .left-column {
         width: 280px;
         flex-shrink: 0;
+        padding: 20px 0;
     }
 
     .reference-card {
@@ -489,7 +490,7 @@
 
     .reference-section h4 {
         margin: 0 0 15px 0;
-        font-size: 10pt;
+        font-size: 8pt;
         font-weight: 600;
         color: #666;
         text-transform: uppercase;
@@ -546,13 +547,9 @@
 
     .reference-item code {
         display: inline-block;
-        background: #f5f5f5;
-        padding: 6px 10px;
-        border-radius: 4px;
         font-family: var(--font-stack-mono);
-        font-size: 9pt;
+        font-size: 8pt;
         color: #007acc;
-        border: 1px solid #e0e0e0;
     }
 
     .animation-targets {
@@ -584,7 +581,7 @@
         background: white;
         color: #333;
         font-family: var(--font-stack-mono);
-        font-size: 10pt;
+        font-size: 9pt;
         line-height: 1.6;
         border: none;
         outline: none;
@@ -616,7 +613,6 @@
 
     .css-editor.editable:focus {
         outline: none;
-        background: #fffef9;
     }
 
     .css-editor::selection {
