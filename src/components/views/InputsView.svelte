@@ -22,7 +22,6 @@
     let editingInput = $state(null);
     let editingName = $state('');
     let editDialog = $state(null);
-    let editButtonRef = $state(null);
 
     // Event handlers
     let inputEventHandlers = [];
@@ -152,10 +151,9 @@
         }
     }
 
-    function startEditing(input, buttonElement) {
+    function startEditing(input) {
         editingInput = input;
         editingName = input.name;
-        editButtonRef = buttonElement;
 
         requestAnimationFrame(() => {
             editDialog?.showModal();
@@ -184,7 +182,6 @@
         editDialog?.close();
         editingInput = null;
         editingName = '';
-        editButtonRef = null;
     }
 
     async function confirmDelete() {
@@ -321,9 +318,8 @@
                     </div>
                     <div class="input-actions">
                         <button
-                            class="edit-button-anchor"
-                            style="anchor-name: --edit-button-{input.id}"
-                            onclick={(e) => startEditing(input, e.currentTarget)}
+                            class="edit-button"
+                            onclick={() => startEditing(input)}
                             title="Rename input"
                         >
                             {@html editIcon}
@@ -336,13 +332,10 @@
 </div>
 
 <!-- Edit Dialog -->
-{#if editButtonRef && editingInput}
+{#if editingInput}
 <Dialog
     bind:dialogRef={editDialog}
-    anchored={true}
-    anchorId="edit-button-{editingInput.id}"
-    showArrow={true}
-    lightDismiss={true}
+    title="Input"
     onclose={closeEditDialog}
 >
     <form id="edit-input-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
@@ -482,7 +475,7 @@
         margin-top: auto;
     }
 
-    .edit-button-anchor {
+    .edit-button {
         padding: 4px;
         background: transparent;
         border: none;
@@ -495,11 +488,11 @@
         transition: background 0.2s;
     }
 
-    .edit-button-anchor:hover {
+    .edit-button:hover {
         background: #e0e0e0;
     }
 
-    .edit-button-anchor :global(svg) {
+    .edit-button :global(svg) {
         width: 20px;
         height: 20px;
     }

@@ -135,11 +135,6 @@
         padding: 20px;
     }
 
-    /* Smaller padding for anchored dialogs */
-    .dialog.anchored .dialog-body {
-        padding: 15px;
-    }
-
     .dialog-footer {
         display: flex;
         justify-content: space-between;
