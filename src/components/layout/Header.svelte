@@ -3,6 +3,9 @@
     import connectIcon from '../../assets/icons/connect.svg?raw';
     import disconnectIcon from '../../assets/icons/disconnect.svg?raw';
     import addIcon from '../../assets/icons/add.svg?raw';
+    import streamdeckIcon from '../../assets/icons/streamdeck.svg?raw';
+    import midiIcon from '../../assets/icons/midi.svg?raw';
+    import Dialog from '../common/Dialog.svelte';
 
     let { onconnect, ondisconnect, connected, inputController } = $props();
 
@@ -23,32 +26,14 @@
             connectedDevices = inputController.getInputDevices();
         }
 
-        // Show dialog as non-modal
+        // Show dialog as modal so backdrop clicks work for light dismiss
         requestAnimationFrame(() => {
-            devicesDialog?.show();
+            devicesDialog?.showModal();
         });
     }
 
     function closeDevicesDialog() {
         devicesDialog?.close();
-    }
-
-    // Light dismiss: close dialog when clicking outside
-    function handleDialogClick(event) {
-        const dialog = devicesDialog;
-        if (!dialog) return;
-
-        const rect = dialog.getBoundingClientRect();
-        const isInDialog = (
-            event.clientX >= rect.left &&
-            event.clientX <= rect.right &&
-            event.clientY >= rect.top &&
-            event.clientY <= rect.bottom
-        );
-
-        if (!isInDialog) {
-            closeDevicesDialog();
-        }
     }
 
     async function connectStreamDeck() {
@@ -97,17 +82,20 @@
     </button>
 </header>
 
-<!-- Devices Dialog (non-modal with anchor positioning and light dismiss) -->
+<!-- Devices Dialog (anchored with light dismiss) -->
 {#if anchorButtonRef}
-<dialog
-    bind:this={devicesDialog}
-    class="devices-dialog"
-    style="position-anchor: --devices-button"
-    onclick={handleDialogClick}
+<Dialog
+    bind:dialogRef={devicesDialog}
+    anchored={true}
+    anchorId="devices-button"
+    showArrow={true}
+    lightDismiss={true}
+    onclose={closeDevicesDialog}
 >
     <!-- Stream Deck Section -->
     <div class="device-section">
         <button class="connect-device-btn" onclick={connectStreamDeck}>
+            <Icon data={streamdeckIcon} />
             Connect Stream Deck
         </button>
         {#if streamDeckDevices.length > 0}
@@ -128,6 +116,7 @@
             onclick={connectMIDI}
             disabled={hasMidiAccess}
         >
+            <Icon data={midiIcon} />
             Connect MIDI Device
         </button>
         {#if midiDevices.length > 0}
@@ -140,7 +129,7 @@
             </div>
         {/if}
     </div>
-</dialog>
+</Dialog>
 {/if}
 
 <style>
@@ -181,66 +170,39 @@
         color: #333;
     }
 
-    /* Devices Dialog */
-    .devices-dialog {
-        position: fixed;
-        position-anchor: var(--position-anchor);
-        top: anchor(bottom);
-        left: anchor(center);
-        translate: -50% 8px;
-        margin: 0;
-        padding: 0;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        background: #fff;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        min-width: 280px;
-        max-width: 320px;
-        z-index: 100;
-    }
-
-    .devices-dialog::backdrop {
-        background: transparent;
-    }
-
-    /* Tooltip arrow pointing up */
-    .devices-dialog::before {
-        content: '';
-        position: absolute;
-        top: -8px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 8px solid transparent;
-        border-right: 8px solid transparent;
-        border-bottom: 8px solid #fff;
-        filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
-    }
-
+    /* Device sections within dialog */
     .device-section {
-        padding: 15px;
     }
 
     .device-section:not(:last-child) {
-        border-bottom: 1px solid #e0e0e0;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
     }
 
     .connect-device-btn {
         width: 100%;
-        padding: 10px 15px;
-        background: #0078d4;
-        color: white;
+        padding: 0px 10px;
+        height: 36px;
+        background: #eee;
+        color: #333;
         border: none;
         border-radius: 4px;
         cursor: pointer;
         font-size: 10pt;
         font-weight: 500;
         transition: background 0.2s, opacity 0.2s;
+        display: flex;
+        align-items: center;
+    }
+
+    .connect-device-btn :global(svg) {
+        height: 75%;
+        margin-right: 3px;
     }
 
     .connect-device-btn:hover:not(:disabled) {
-        background: #106ebe;
+        background: #90caf9;
     }
 
     .connect-device-btn:disabled {

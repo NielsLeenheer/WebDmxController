@@ -14,79 +14,30 @@
         isActive = false
     } = $props();
 
-    // Generate CSS-safe ID from device name
-    function getDeviceId(device) {
-        return device.name
-            .toLowerCase()
-            .replace(/[^a-z0-9]/g, '_')  // Replace non-alphanumeric with underscore
-            .replace(/_+/g, '_')          // Collapse multiple underscores
-            .replace(/^_|_$/g, '');       // Remove leading/trailing underscores
+    // Separate generated and custom CSS
+    let generatedCSS = $state('');
+    let customCSS = $state('');
+
+    // Load custom CSS from localStorage
+    function loadCustomCSS() {
+        const saved = localStorage.getItem('dmx-custom-css');
+        return saved || '/* Add your custom CSS here to override device defaults and apply animations */\n';
     }
 
-    // Load CSS from localStorage or generate from libraries
-    function getInitialCSS() {
-        const saved = localStorage.getItem('dmx-css');
-        if (saved) {
-            return saved;
-        }
-
-        // Generate from animation and mapping libraries if they have content
-        const generated = cssGenerator.generate(devices);
-        if (generated && generated.trim().length > 200) {
-            return generated;
-        }
-
-        // Otherwise use default example CSS
-        return `/* CSS Animation Mode
-
-Target devices using ID selectors based on device names.
-Example: "Moving Head 1" becomes #moving_head_1
-
-Supported properties:
-- color: Maps to RGB(W) channels
-- opacity: Maps to dimmer channel
-- translate: x → pan, y → tilt (for moving heads)
-- --smoke-output: For smoke machines (0-255)
-
-Example animations:
-*/
-
-@keyframes rainbow {
-    0%   { color: rgb(255, 0, 0); }
-    16%  { color: rgb(255, 127, 0); }
-    33%  { color: rgb(255, 255, 0); }
-    50%  { color: rgb(0, 255, 0); }
-    66%  { color: rgb(0, 0, 255); }
-    83%  { color: rgb(75, 0, 130); }
-    100% { color: rgb(148, 0, 211); }
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.2; }
-}
-
-@keyframes pan-tilt {
-    0%   { translate: 0% 0%; }
-    25%  { translate: 100% 0%; }
-    50%  { translate: 100% 100%; }
-    75%  { translate: 0% 100%; }
-    100% { translate: 0% 0%; }
-}
-
-/* Apply rainbow animation to all devices */
-* {
-    animation: rainbow 5s linear infinite;
-}
-`;
+    // Regenerate generated CSS from current state
+    function regenerateCSS() {
+        generatedCSS = cssGenerator.generate(devices);
     }
-
-    let currentCSS = $state(getInitialCSS());
 
     let animationFrameId;
     let previewColors = $state({});
     let deviceOpacities = $state({});
     let devicePanTilt = $state({});
+
+    // Get animations for display
+    let animations = $derived(
+        animationLibrary ? animationLibrary.getAll() : []
+    );
 
     // Get all trigger mappings for display
     let triggerClasses = $derived(
@@ -107,14 +58,11 @@ Example animations:
         return () => clearInterval(interval);
     });
 
-    // Track if CSS is custom (edited by user)
-    let isCustomCSS = $state(localStorage.getItem('dmx-css') !== null);
-
-    // Create a style element for the user's CSS
+    // Style elements and containers
     let styleElement;
     let animationTargetsContainer;
-    let triggerClassesContainer; // Inner container that receives trigger classes
-    let cssEditorElement;
+    let triggerClassesContainer;
+    let customCSSEditor;
 
     /**
      * Convert sampled channel object to device channel array
@@ -262,207 +210,35 @@ Example animations:
         }
     }
 
-    function handleStyleInput(event) {
+    function handleCustomCSSInput(event) {
         // Read the content from the contenteditable element
         const newContent = event.target.textContent;
 
-        // Update the style element directly without updating state
-        // This prevents cursor position reset
+        // Update custom CSS
+        customCSS = newContent;
+        localStorage.setItem('dmx-custom-css', newContent);
+
+        // Update the combined style element
+        updateStyleElement();
+    }
+
+    function updateStyleElement() {
         if (styleElement) {
-            // Wrap user CSS in @scope to limit it to animation targets
-            // The trigger classes are on .trigger-classes inside .animation-targets
-            // So selectors like ".button_0_down #device" work because both are within the scope
-            styleElement.textContent = `@scope (.animation-targets) {\n${newContent}\n}`;
-        }
-
-        // Save to localStorage
-        currentCSS = newContent;
-        localStorage.setItem('dmx-css', newContent);
-        isCustomCSS = true;
-    }
-
-    function updateStyleElement(content) {
-        if (styleElement) {
-            // Wrap user CSS in @scope to limit it to animation targets
-            styleElement.textContent = `@scope (.animation-targets) {\n${content}\n}`;
+            // Combine generated CSS and custom CSS, wrap in @scope
+            const combinedCSS = generatedCSS + '\n\n' + customCSS;
+            styleElement.textContent = `@scope (.animation-targets) {\n${combinedCSS}\n}`;
         }
     }
 
-    function restoreDefaultCSS() {
-        if (!confirm('This will discard your custom CSS and generate a clean stylesheet from your devices, animations, and triggers. Continue?')) {
-            return;
-        }
-
-        // Clear localStorage
-        localStorage.removeItem('dmx-css');
-        isCustomCSS = false;
-
-        // Regenerate from libraries
-        const generated = cssGenerator.generate(devices);
-        currentCSS = generated;
-
-        // Update editor
-        if (cssEditorElement) {
-            cssEditorElement.textContent = generated;
-        }
-        updateStyleElement(generated);
+    // Regenerate CSS when mappings or animations change
+    function handleMappingChange() {
+        regenerateCSS();
+        updateStyleElement();
     }
 
-    // Smart CSS update: adds/removes specific sections without destroying custom CSS
-    function handleMappingChange(event) {
-        const { type, mapping } = event;
-
-        if (mapping.mode !== 'trigger') return; // Only handle triggers
-
-        if (type === 'add') {
-            // Add new trigger CSS at the end of the triggers section
-            const triggerCSS = mapping.toCSS(devices);
-            if (triggerCSS) {
-                insertTriggerCSS(triggerCSS);
-            }
-        } else if (type === 'remove') {
-            // Remove trigger CSS
-            removeTriggerCSS(mapping.cssClassName);
-        }
-    }
-
-    function handleAnimationChange(event) {
-        const { type, animation } = event;
-
-        if (type === 'add') {
-            // Add new animation CSS to the animations section
-            const animationCSS = animation.toCSS();
-            if (animationCSS) {
-                insertAnimationCSS(animationCSS);
-            }
-        } else if (type === 'remove') {
-            // Remove animation CSS
-            removeAnimationCSS(animation.name);
-        }
-    }
-
-    function insertTriggerCSS(triggerCSS) {
-        // Find the triggers section or append to end
-        let updatedCSS = currentCSS;
-
-        // Look for the "=== Triggers ===" section
-        const triggersHeaderRegex = /\/\*\s*===\s*Triggers\s*===\s*\*\//;
-        const match = updatedCSS.match(triggersHeaderRegex);
-
-        if (match) {
-            // Insert after the triggers header
-            const insertPos = match.index + match[0].length;
-            updatedCSS = updatedCSS.slice(0, insertPos) + '\n' + triggerCSS + '\n' + updatedCSS.slice(insertPos);
-        } else {
-            // No triggers section found, append at the end
-            updatedCSS += '\n\n/* === Triggers === */\n' + triggerCSS + '\n';
-        }
-
-        currentCSS = updatedCSS;
-        if (cssEditorElement) {
-            cssEditorElement.textContent = updatedCSS;
-        }
-        updateStyleElement(updatedCSS);
-        localStorage.setItem('dmx-css', updatedCSS);
-    }
-
-    function removeTriggerCSS(className) {
-        // Remove the CSS rule for this trigger class
-        const classRegex = new RegExp(`\\.${className}\\s+[^{]+\\{[^}]*\\}\\n?`, 'g');
-        let updatedCSS = currentCSS.replace(classRegex, '');
-
-        currentCSS = updatedCSS;
-        if (cssEditorElement) {
-            cssEditorElement.textContent = updatedCSS;
-        }
-        updateStyleElement(updatedCSS);
-        localStorage.setItem('dmx-css', updatedCSS);
-    }
-
-    function insertAnimationCSS(animationCSS) {
-        let updatedCSS = currentCSS;
-
-        // Look for the "=== Animations ===" section
-        const animationsHeaderRegex = /\/\*\s*===\s*Animations\s*===\s*\*\//;
-        const match = updatedCSS.match(animationsHeaderRegex);
-
-        if (match) {
-            // Insert after the animations header
-            const insertPos = match.index + match[0].length;
-            updatedCSS = updatedCSS.slice(0, insertPos) + '\n' + animationCSS + '\n' + updatedCSS.slice(insertPos);
-        } else {
-            // No animations section found, create it before triggers
-            const triggersHeaderRegex = /\/\*\s*===\s*Triggers\s*===\s*\*\//;
-            const triggersMatch = updatedCSS.match(triggersHeaderRegex);
-
-            if (triggersMatch) {
-                // Insert before triggers section
-                const insertPos = triggersMatch.index;
-                updatedCSS = updatedCSS.slice(0, insertPos) + '/* === Animations === */\n' + animationCSS + '\n\n' + updatedCSS.slice(insertPos);
-            } else {
-                // Append at the end
-                updatedCSS += '\n\n/* === Animations === */\n' + animationCSS + '\n';
-            }
-        }
-
-        currentCSS = updatedCSS;
-        if (cssEditorElement) {
-            cssEditorElement.textContent = updatedCSS;
-        }
-        updateStyleElement(updatedCSS);
-        localStorage.setItem('dmx-css', updatedCSS);
-    }
-
-    function removeAnimationCSS(animationName) {
-        // Remove the @keyframes rule for this animation
-        const keyframesRegex = new RegExp(`@keyframes\\s+${animationName}\\s*\\{[^}]*(?:\\{[^}]*\\}[^}]*)*\\}\\n?`, 'g');
-        let updatedCSS = currentCSS.replace(keyframesRegex, '');
-
-        currentCSS = updatedCSS;
-        if (cssEditorElement) {
-            cssEditorElement.textContent = updatedCSS;
-        }
-        updateStyleElement(updatedCSS);
-        localStorage.setItem('dmx-css', updatedCSS);
-    }
-
-    function insertDeviceCSS(deviceCSS) {
-        let updatedCSS = currentCSS;
-
-        // Look for the "=== Default Device Values ===" section
-        const devicesHeaderRegex = /\/\*\s*===\s*Default Device Values\s*===\s*\*\//;
-        const match = updatedCSS.match(devicesHeaderRegex);
-
-        if (match) {
-            // Find the end of the device defaults section (before animations or empty line)
-            const afterHeader = updatedCSS.slice(match.index + match[0].length);
-            const animationsMatch = afterHeader.match(/\/\*\s*===\s*Animations\s*===\s*\*\//);
-
-            if (animationsMatch) {
-                // Insert before animations section
-                const insertPos = match.index + match[0].length + animationsMatch.index;
-                updatedCSS = updatedCSS.slice(0, insertPos) + '\n' + deviceCSS + '\n' + updatedCSS.slice(insertPos);
-            } else {
-                // Insert after the header comment
-                const insertPos = match.index + match[0].length;
-                updatedCSS = updatedCSS.slice(0, insertPos) + '\n' + deviceCSS + '\n' + updatedCSS.slice(insertPos);
-            }
-        } else {
-            // No device defaults section, create it at the beginning
-            const headerEnd = updatedCSS.indexOf('*/') + 2;
-            if (headerEnd > 1) {
-                updatedCSS = updatedCSS.slice(0, headerEnd) + '\n\n/* === Default Device Values === */\n/* These selectors set the default state for each device */\n' + deviceCSS + '\n' + updatedCSS.slice(headerEnd);
-            } else {
-                updatedCSS = '/* === Default Device Values === */\n' + deviceCSS + '\n\n' + updatedCSS;
-            }
-        }
-
-        currentCSS = updatedCSS;
-        if (cssEditorElement) {
-            cssEditorElement.textContent = updatedCSS;
-        }
-        updateStyleElement(updatedCSS);
-        localStorage.setItem('dmx-css', updatedCSS);
+    function handleAnimationChange() {
+        regenerateCSS();
+        updateStyleElement();
     }
 
     onMount(() => {
@@ -536,11 +312,15 @@ Example animations:
         mappingLibrary.on('changed', handleMappingChange);
         animationLibrary.on('changed', handleAnimationChange);
 
-        // Set initial content in the editor
-        if (cssEditorElement) {
-            cssEditorElement.textContent = currentCSS;
+        // Initialize CSS
+        customCSS = loadCustomCSS();
+        regenerateCSS();
+
+        // Set initial content in the editors
+        if (customCSSEditor) {
+            customCSSEditor.textContent = customCSS;
         }
-        updateStyleElement(currentCSS);
+        updateStyleElement();
 
         // Initialize preview colors
         devices.forEach(device => {
@@ -561,30 +341,12 @@ Example animations:
         }
     });
 
-    // Track previous devices to detect additions (use regular variable, not $state)
-    let previousDeviceIds = new Set();
-
-    // Watch for device changes and update sampler + CSS
+    // Watch for device changes and regenerate CSS
     $effect(() => {
         if (cssSampler && devices) {
             cssSampler.updateDevices(devices);
-
-            // Detect new devices and add their default CSS
-            const currentDeviceIds = new Set(devices.map(d => d.id));
-            const newDevices = devices.filter(d => !previousDeviceIds.has(d.id));
-
-            if (newDevices.length > 0 && previousDeviceIds.size > 0) {
-                // Only insert CSS if we're not on initial load
-                for (const device of newDevices) {
-                    const deviceCSS = cssGenerator._generateDeviceDefaults(device);
-                    if (deviceCSS) {
-                        insertDeviceCSS(deviceCSS);
-                    }
-                }
-            }
-
-            // Update tracking - this is safe because previousDeviceIds is not reactive
-            previousDeviceIds = currentDeviceIds;
+            regenerateCSS();
+            updateStyleElement();
         }
     });
 
@@ -612,75 +374,82 @@ Example animations:
 
 <div class="css-view">
     <div class="left-column">
-        <div class="device-list">
-            {#each devices as device (device.id)}
-                <div class="device-item">
-                    <div class="device-preview-container">
-                        <div
-                            class="device-preview"
-                            style="background-color: {previewColors[device.id] || getDeviceColor(device.type, device.defaultValues)}; opacity: {deviceOpacities[device.id] || 1}"
-                        >
-                            {#if device.type === 'MOVING_HEAD' && devicePanTilt[device.id]}
-                                {@const panTilt = devicePanTilt[device.id]}
-                                {@const dotX = (panTilt.pan / 255) * 100}
-                                {@const dotY = (1 - panTilt.tilt / 255) * 100}
-                                <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
-                            {/if}
-                        </div>
-                    </div>
-                    <div class="device-info">
-                        <div class="device-id">#{device.cssId}</div>
-                        <div class="device-name">{device.name}</div>
+        <div class="reference-card">
+            <!-- Devices Section -->
+            {#if devices.length > 0}
+                <div class="reference-section">
+                    <h4>Devices</h4>
+                    <div class="device-previews">
+                        {#each devices as device (device.id)}
+                            <div class="device-preview-item">
+                                <div
+                                    class="device-preview"
+                                    style="background-color: {previewColors[device.id] || getDeviceColor(device.type, device.defaultValues)}; opacity: {deviceOpacities[device.id] || 1}"
+                                    title={device.name}
+                                >
+                                    {#if device.type === 'MOVING_HEAD' && devicePanTilt[device.id]}
+                                        {@const panTilt = devicePanTilt[device.id]}
+                                        {@const dotX = (panTilt.pan / 255) * 100}
+                                        {@const dotY = (1 - panTilt.tilt / 255) * 100}
+                                        <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
+                                    {/if}
+                                </div>
+                                <code class="device-id">#{device.cssId}</code>
+                            </div>
+                        {/each}
                     </div>
                 </div>
-            {/each}
+            {/if}
+
+            <!-- Animations Section -->
+            {#if animations.length > 0}
+                <div class="reference-section">
+                    <h4>Animations</h4>
+                    <div class="reference-list">
+                        {#each animations as animation (animation.name)}
+                            <div class="reference-item">
+                                <code>{animation.name}</code>
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+            {/if}
+
+            <!-- Inputs Section -->
+            {#if triggerClasses.length > 0 || customProperties.length > 0}
+                <div class="reference-section">
+                    <h4>Inputs</h4>
+                    <div class="reference-list">
+                        {#each triggerClasses as trigger (trigger.id)}
+                            <div class="reference-item">
+                                <code>.{trigger.cssClassName}</code>
+                            </div>
+                        {/each}
+                        {#each customProperties as prop (prop.name)}
+                            <div class="reference-item">
+                                <code>{prop.name}: {prop.value}</code>
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+            {/if}
         </div>
-
-        <!-- Trigger Classes List -->
-        {#if triggerClasses.length > 0}
-            <div class="reference-section">
-                <h4>Trigger Classes</h4>
-                <div class="reference-list">
-                    {#each triggerClasses as trigger (trigger.id)}
-                        <div class="reference-item">
-                            <code>.{trigger.cssClassName}</code>
-                        </div>
-                    {/each}
-                </div>
-            </div>
-        {/if}
-
-        <!-- Custom Properties List -->
-        {#if customProperties.length > 0}
-            <div class="reference-section">
-                <h4>Custom Properties</h4>
-                <div class="reference-list">
-                    {#each customProperties as prop (prop.name)}
-                        <div class="reference-item">
-                            <code>{prop.name}: {prop.value}</code>
-                        </div>
-                    {/each}
-                </div>
-            </div>
-        {/if}
 
         <!-- Off-screen animation targets (managed by cssSampler) -->
         <div class="animation-targets" bind:this={animationTargetsContainer}></div>
     </div>
 
     <div class="right-column">
-        <div class="css-toolbar">
-            <button class="restore-button" onclick={restoreDefaultCSS}>
-                Restore Default CSS
-            </button>
+        <div class="css-scroll-container">
+            <pre class="css-editor readonly">{generatedCSS}</pre>
+            <pre
+                class="css-editor editable"
+                contenteditable="true"
+                oninput={handleCustomCSSInput}
+                spellcheck="false"
+                bind:this={customCSSEditor}
+            ></pre>
         </div>
-        <pre
-            class="css-editor"
-            contenteditable="true"
-            oninput={handleStyleInput}
-            spellcheck="false"
-            bind:this={cssEditorElement}
-        ></pre>
     </div>
 </div>
 
@@ -689,65 +458,56 @@ Example animations:
         display: flex;
         height: 100%;
         overflow: hidden;
+        gap: 20px;
+        padding: 0 0 0 20px;
     }
 
     .left-column {
-        width: 250px;
-        border-right: 1px solid #ddd;
-        display: flex;
-        flex-direction: column;
-        background: #f9f9f9;
+        width: 280px;
+        flex-shrink: 0;
+        padding: 20px 0;
     }
 
-    .right-column {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
+    .reference-card {
+        background: #f5f5f5;
+        border-radius: 8px;
         overflow: hidden;
-    }
-
-    .css-toolbar {
-        padding: 10px 15px;
-        border-bottom: 1px solid #ddd;
-        background: #f9f9f9;
         display: flex;
-        justify-content: flex-end;
-        gap: 10px;
+        flex-direction: column;
+        height: 100%;
     }
 
-    .restore-button {
-        padding: 6px 12px;
-        border: 1px solid #007acc;
-        background: white;
-        color: #007acc;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 9pt;
-        font-weight: 500;
-        transition: all 0.2s;
+    .reference-section {
+        padding: 20px;
+        border-bottom: 1px solid #e0e0e0;
     }
 
-    .restore-button:hover {
-        background: #007acc;
-        color: white;
-    }
-
-    .device-list {
+    .reference-section:last-child {
+        border-bottom: none;
         flex: 1;
         overflow-y: auto;
-        padding-top: 15px;
     }
 
-    .device-item {
-        display: flex;
-        align-items: center;
+    .reference-section h4 {
+        margin: 0 0 15px 0;
+        font-size: 8pt;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .device-previews {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
         gap: 15px;
-        padding: 0 15px;
-        margin-bottom: 15px;
     }
 
-    .device-preview-container {
-        flex-shrink: 0;
+    .device-preview-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
     }
 
     .device-preview {
@@ -772,59 +532,24 @@ Example animations:
         z-index: 10;
     }
 
-    .device-info {
-        flex: 1;
-    }
-
-    .device-name {
-        font-weight: 600;
-        font-size: 11pt;
-        margin-bottom: 4px;
-    }
-
     .device-id {
         font-family: var(--font-stack-mono);
         font-size: 8pt;
-    }
-
-    .device-type {
-        font-size: 9pt;
-        color: #666;
-    }
-
-    .reference-section {
-        padding: 15px;
-        border-top: 1px solid #ddd;
-        background: #fff;
-    }
-
-    .reference-section h4 {
-        margin: 0 0 10px 0;
-        font-size: 10pt;
-        font-weight: 600;
-        color: #666;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        color: #007acc;
+        text-align: center;
     }
 
     .reference-list {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-    }
-
-    .reference-item {
-        font-size: 9pt;
+        gap: 8px;
     }
 
     .reference-item code {
         display: inline-block;
-        background: #f5f5f5;
-        padding: 4px 8px;
-        border-radius: 3px;
         font-family: var(--font-stack-mono);
+        font-size: 8pt;
         color: #007acc;
-        border: 1px solid #e0e0e0;
     }
 
     .animation-targets {
@@ -834,34 +559,64 @@ Example animations:
         pointer-events: none;
     }
 
-    .animation-target {
-        width: 100px;
-        height: 100px;
-        opacity: 0;
+    .right-column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .css-scroll-container {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: 100%;
     }
 
     .css-editor {
-        flex: 1;
+        display: block;
         margin: 0;
         padding: 20px;
-        background: #fff;
+        background: white;
         color: #333;
         font-family: var(--font-stack-mono);
-        font-size: 10pt;
+        font-size: 9pt;
         line-height: 1.6;
-        overflow: auto;
         border: none;
         outline: none;
         white-space: pre;
         tab-size: 4;
+        min-height: auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .css-editor:focus {
+    .css-editor.readonly {
+        background: #fafafa;
+        color: #666;
+        cursor: default;
+        user-select: text;
+        padding-bottom: 10px;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        box-shadow: none;
+    }
+
+    .css-editor.editable {
+        background: transparent;
+        padding-top: 10px;
+        min-height: 200px;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+
+    .css-editor.editable:focus {
         outline: none;
     }
 
-    /* CSS syntax highlighting via basic styling */
     .css-editor::selection {
         background: #264f78;
+        color: white;
     }
 </style>

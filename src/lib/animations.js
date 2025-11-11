@@ -105,6 +105,50 @@ export class Animation {
 	}
 
 	/**
+	 * Get interpolated values at a specific time
+	 */
+	getValuesAtTime(time) {
+		if (this.keyframes.length === 0) {
+			// No keyframes - return zeros
+			const numChannels = this.deviceType === 'RGB' ? 3 : 4;
+			return new Array(numChannels).fill(0);
+		}
+
+		const sortedKeyframes = [...this.keyframes].sort((a, b) => a.time - b.time);
+
+		// Before first keyframe - use first keyframe values
+		if (time <= sortedKeyframes[0].time) {
+			return [...sortedKeyframes[0].values];
+		}
+
+		// After last keyframe - use last keyframe values
+		if (time >= sortedKeyframes[sortedKeyframes.length - 1].time) {
+			return [...sortedKeyframes[sortedKeyframes.length - 1].values];
+		}
+
+		// Find surrounding keyframes
+		for (let i = 0; i < sortedKeyframes.length - 1; i++) {
+			const kf1 = sortedKeyframes[i];
+			const kf2 = sortedKeyframes[i + 1];
+
+			if (time >= kf1.time && time <= kf2.time) {
+				// Interpolate between kf1 and kf2
+				const t = (time - kf1.time) / (kf2.time - kf1.time);
+				const values = [];
+				for (let j = 0; j < kf1.values.length; j++) {
+					const v1 = kf1.values[j];
+					const v2 = kf2.values[j];
+					values.push(Math.round(v1 + (v2 - v1) * t));
+				}
+				return values;
+			}
+		}
+
+		// Fallback - shouldn't reach here
+		return [...sortedKeyframes[0].values];
+	}
+
+	/**
 	 * Get gradient segments for timeline visualization
 	 */
 	getGradientSegments(timelineWidth = 1000) {

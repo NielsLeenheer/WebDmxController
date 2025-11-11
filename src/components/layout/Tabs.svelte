@@ -2,7 +2,6 @@
     import { Icon } from 'svelte-icon';
     import listIcon from '../../assets/icons/list.svg?raw';
     import universeIcon from '../../assets/icons/universe.svg?raw';
-    import timelineIcon from '../../assets/icons/timeline.svg?raw';
     import animationsIcon from '../../assets/icons/animations.svg?raw';
     import inputsIcon from '../../assets/icons/inputs.svg?raw';
     import triggersIcon from '../../assets/icons/triggers.svg?raw';
@@ -10,10 +9,6 @@
 
     let {
         view = $bindable(),
-        showAddDevice = false,
-        deviceTypes = null,
-        selectedType = $bindable(),
-        onAddDevice = null,
         onClearUniverse = null
     } = $props();
 </script>
@@ -24,12 +19,6 @@
             <input type="radio" name="view" value="devices" bind:group={view}>
             <Icon data={listIcon} />
             Devices
-        </label>
-
-        <label>
-            <input type="radio" name="view" value="timeline" bind:group={view}>
-            <Icon data={timelineIcon} />
-            Timeline
         </label>
 
         <label>
@@ -62,17 +51,6 @@
             Universe
         </label>
     </nav>
-
-    {#if showAddDevice && view === 'devices'}
-        <div class="add-device">
-            <select bind:value={selectedType}>
-                {#each Object.entries(deviceTypes) as [key, type]}
-                    <option value={key}>{type.name}</option>
-                {/each}
-            </select>
-            <button onclick={onAddDevice}>Add Device</button>
-        </div>
-    {/if}
 
     {#if view === 'universe' && onClearUniverse}
         <div class="clear-universe">
@@ -127,23 +105,6 @@
     input[type="radio"] {
         position: absolute;
         opacity: 0;
-    }
-
-    .add-device {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
-
-    .add-device select {
-        margin: 0;
-        min-width: 200px;
-        height: 32px;
-    }
-
-    .add-device button {
-        margin: 0;
-        height: 32px;
     }
 
     .clear-universe {

@@ -3,23 +3,20 @@
     import { InputMapping } from '../../lib/mappings.js';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
+    import Dialog from '../common/Dialog.svelte';
+    import removeIcon from '../../assets/icons/remove.svg?raw';
+    import editIcon from '../../assets/glyphs/edit.svg?raw';
 
     let {
         inputController,
         mappingLibrary
     } = $props();
 
-    // Icons
-    const trashIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
-    const editIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
-    const keyboardIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>';
-    const midiIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>';
-    const hidIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>';
-
     let isListening = $state(false);
     let savedInputs = $state([]);
     let editingInput = $state(null);
     let editingName = $state('');
+    let editDialog = $state(null);
 
     // Event handlers
     let inputEventHandlers = [];
@@ -71,6 +68,7 @@
                 mode: 'input',  // Mark as input-only (not a trigger mapping)
                 inputDeviceId: deviceId,
                 inputControlId: controlId,
+                inputDeviceName: device?.name || deviceId, // Store device name for display
                 color: supportsColor ? undefined : null  // undefined = generate color, null = no color
             });
 
@@ -151,22 +149,43 @@
     function startEditing(input) {
         editingInput = input;
         editingName = input.name;
+
+        requestAnimationFrame(() => {
+            editDialog?.showModal();
+        });
     }
 
     function saveEdit() {
         if (!editingInput || !editingName.trim()) return;
 
-        editingInput.name = editingName.trim();
-        mappingLibrary.save();
-        refreshInputs();
+        // Get the mapping from the library and update it
+        const mapping = mappingLibrary.get(editingInput.id);
+        if (mapping) {
+            mapping.name = editingName.trim();
+            mappingLibrary.save();
+            refreshInputs();
+        }
 
+        closeEditDialog();
+    }
+
+    function cancelEdit() {
+        closeEditDialog();
+    }
+
+    function closeEditDialog() {
+        editDialog?.close();
         editingInput = null;
         editingName = '';
     }
 
-    function cancelEdit() {
-        editingInput = null;
-        editingName = '';
+    async function confirmDelete() {
+        if (!editingInput) return;
+
+        if (confirm(`Are you sure you want to delete "${editingInput.name}"?`)) {
+            await deleteInput(editingInput.id);
+            closeEditDialog();
+        }
     }
 
     async function deleteInput(inputId) {
@@ -193,21 +212,10 @@
 
     function refreshInputs() {
         // Only show input-mode mappings
-        savedInputs = mappingLibrary.getAll().filter(m => m.mode === 'input');
-    }
-
-    function getInputIcon(inputId) {
-        const device = inputController.getInputDevice(inputId);
-        switch (device?.type) {
-            case 'keyboard':
-                return keyboardIcon;
-            case 'midi':
-                return midiIcon;
-            case 'hid':
-                return hidIcon;
-            default:
-                return midiIcon;
-        }
+        // Create a new array with new object references to trigger reactivity
+        savedInputs = mappingLibrary.getAll()
+            .filter(m => m.mode === 'input')
+            .map(m => ({ ...m }));
     }
 
     async function applyColorsToStreamDeck() {
@@ -260,207 +268,134 @@
 </script>
 
 <div class="inputs-view">
-    <div class="left-panel">
-        <div class="panel-header">
-            <h3>Listen for Inputs</h3>
-        </div>
-
-        <div class="listen-section">
-            <p class="instructions">
-                Press any MIDI button, keyboard key, Stream Deck button, or move any MIDI control to detect and save it automatically.
-            </p>
-
-            <div class="button-group">
-                {#if isListening}
-                    <Button onclick={stopListening} primary>
-                        Stop Listening
-                    </Button>
-                {:else}
-                    <Button onclick={startListening} primary>
-                        Start Listening
-                    </Button>
-                {/if}
-            </div>
-
-            {#if isListening}
-                <div class="listening-indicator">
-                    <div class="pulse-dot"></div>
-                    Listening for inputs...
-                </div>
-            {/if}
-        </div>
+    <div class="listen-section">
+        {#if isListening}
+            <Button onclick={stopListening} variant="primary" pulsating={true}>
+                Stop Listening
+            </Button>
+        {:else}
+            <Button onclick={startListening} variant="secondary">
+                Start Listening
+            </Button>
+        {/if}
     </div>
 
-    <div class="right-panel">
-        <div class="panel-header">
-            <h3>Saved Inputs</h3>
-        </div>
-
-        <div class="inputs-list">
-            {#if savedInputs.length === 0}
-                <p class="empty-state">No inputs detected yet. Start listening to detect inputs!</p>
-            {:else}
-                {#each savedInputs as input (input.id)}
-                    <div class="input-item">
-                        {#if input.color}
-                            <div class="input-color-badge" style="background-color: {input.color}"></div>
-                        {/if}
-                        <div class="input-icon">
-                            {@html getInputIcon(input.inputDeviceId)}
-                        </div>
-                        <div class="input-info">
-                            {#if editingInput?.id === input.id}
-                                <input
-                                    type="text"
-                                    bind:value={editingName}
-                                    class="input-name-edit"
-                                    onkeydown={(e) => {
-                                        if (e.key === 'Enter') saveEdit();
-                                        if (e.key === 'Escape') cancelEdit();
-                                    }}
-                                    autofocus
-                                />
-                            {:else}
-                                <div class="input-name">{input.name}</div>
-                            {/if}
-                            <div class="input-details">
-                                {#if inputController.getInputDevice(input.inputDeviceId)}
-                                    {inputController.getInputDevice(input.inputDeviceId).name}
-                                {:else}
-                                    {input.inputDeviceId}
-                                {/if}
-                                &rarr; {input.inputControlId}
-                            </div>
-                        </div>
-                        <div class="input-actions">
-                            {#if editingInput?.id === input.id}
-                                <Button onclick={saveEdit} size="small">Save</Button>
-                                <Button onclick={cancelEdit} size="small">Cancel</Button>
-                            {:else}
-                                <IconButton
-                                    icon={editIcon}
-                                    onclick={() => startEditing(input)}
-                                    title="Rename input"
-                                />
-                                <IconButton
-                                    icon={trashIcon}
-                                    onclick={() => deleteInput(input.id)}
-                                    title="Delete input"
-                                />
-                            {/if}
+    <div class="inputs-grid">
+        {#if savedInputs.length === 0}
+            <div class="empty-state">
+                <p>No inputs detected yet. Start listening to detect inputs!</p>
+            </div>
+        {:else}
+            {#each savedInputs as input (input.id)}
+                <div class="input-card">
+                    {#if input.color}
+                        <div class="input-color-badge" style="background-color: {input.color}"></div>
+                    {/if}
+                    <div class="input-header">
+                        <div class="input-name">{input.name}</div>
+                        <div class="input-device-name">
+                            {input.inputDeviceName || input.inputDeviceId}
                         </div>
                     </div>
-                {/each}
-            {/if}
-        </div>
+                    <div class="input-actions">
+                        <button
+                            class="edit-button"
+                            onclick={() => startEditing(input)}
+                            title="Rename input"
+                        >
+                            {@html editIcon}
+                        </button>
+                    </div>
+                </div>
+            {/each}
+        {/if}
     </div>
 </div>
+
+<!-- Edit Dialog -->
+{#if editingInput}
+<Dialog
+    bind:dialogRef={editDialog}
+    title="Input"
+    onclose={closeEditDialog}
+>
+    <form id="edit-input-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+        <div class="dialog-input-group">
+            <label for="input-name">Name:</label>
+            <input
+                id="input-name"
+                type="text"
+                bind:value={editingName}
+                placeholder="Input name"
+                onkeydown={(e) => {
+                    if (e.key === 'Enter') saveEdit();
+                    if (e.key === 'Escape') cancelEdit();
+                }}
+                autofocus
+            />
+        </div>
+    </form>
+
+    {#snippet tools()}
+        <Button onclick={confirmDelete} variant="secondary">
+            {@html removeIcon}
+            Delete
+        </Button>
+    {/snippet}
+
+    {#snippet buttons()}
+        <Button onclick={cancelEdit} variant="secondary">Cancel</Button>
+        <Button type="submit" form="edit-input-form" variant="primary">Save</Button>
+    {/snippet}
+</Dialog>
+{/if}
 
 <style>
     .inputs-view {
         display: flex;
+        flex-direction: column;
         height: 100%;
         overflow: hidden;
     }
 
-    .left-panel {
-        width: 350px;
-        border-right: 1px solid #ddd;
-        display: flex;
-        flex-direction: column;
-        background: #f9f9f9;
-    }
-
-    .right-panel {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        background: #fff;
-    }
-
-    .panel-header {
-        padding: 15px;
-        border-bottom: 1px solid #ddd;
-    }
-
-    .panel-header h3 {
-        margin: 0;
-        font-size: 12pt;
-    }
-
     .listen-section {
         padding: 20px;
-    }
-
-    .instructions {
-        margin: 0 0 15px 0;
-        font-size: 10pt;
-        color: #666;
-        line-height: 1.5;
-    }
-
-    .button-group {
         display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
+        justify-content: center;
     }
 
-    .listening-indicator {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 15px;
-        padding: 12px;
-        background: #e3f2fd;
-        border-radius: 4px;
-        color: #1976d2;
-        font-weight: 500;
-        font-size: 10pt;
-    }
-
-    .pulse-dot {
-        width: 12px;
-        height: 12px;
-        background: #2196f3;
-        border-radius: 50%;
-        animation: pulse 1.5s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-        0%, 100% {
-            opacity: 1;
-            transform: scale(1);
-        }
-        50% {
-            opacity: 0.5;
-            transform: scale(0.8);
-        }
-    }
-
-    .inputs-list {
+    .inputs-grid {
         flex: 1;
         overflow-y: auto;
+        padding: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(15em, 1fr));
+        gap: 15px;
+        align-content: start;
+    }
+
+    .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        min-height: 50vh;
+        align-content: center;
+        color: #999;
+        font-size: 10pt;
+    }
+
+    .empty-state p {
+        margin: 0;
+    }
+
+    .input-card {
+        background: #f0f0f0;
+        border-radius: 8px;
         padding: 15px;
-    }
-
-    .input-item {
         display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-        margin-bottom: 8px;
-        background: #f9f9f9;
-        border: 1px solid #ddd;
-        border-radius: 4px;
+        flex-direction: column;
+        gap: 10px;
         animation: slideIn 0.2s ease-out;
-    }
-
-    .input-color-badge {
-        width: 32px;
-        height: 32px;
-        border-radius: 4px;
-        flex-shrink: 0;
-        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1);
+        position: relative;
     }
 
     @keyframes slideIn {
@@ -474,60 +409,81 @@
         }
     }
 
-    .input-icon {
+    .input-color-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
         width: 32px;
         height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #e3f2fd;
         border-radius: 4px;
-        color: #2196f3;
         flex-shrink: 0;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .input-icon :global(svg) {
-        width: 20px;
-        height: 20px;
-    }
-
-    .input-info {
-        flex: 1;
-        min-width: 0;
+    .input-header {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding-right: 40px; /* Space for color badge */
     }
 
     .input-name {
         font-weight: 600;
-        font-size: 10pt;
-        margin-bottom: 4px;
+        font-size: 11pt;
+        color: #333;
+        word-wrap: break-word;
     }
 
     .input-name-edit {
         width: 100%;
-        padding: 4px 8px;
-        border: 1px solid #2196f3;
+        padding: 6px 10px;
+        border: 2px solid #2196f3;
         border-radius: 4px;
-        font-size: 10pt;
+        font-size: 11pt;
         font-weight: 600;
-        margin-bottom: 4px;
+        box-sizing: border-box;
     }
 
-    .input-details {
+    .input-device-name {
         font-size: 9pt;
         color: #666;
-        font-family: var(--font-stack-mono);
     }
 
     .input-actions {
         display: flex;
         gap: 8px;
-        flex-shrink: 0;
+        justify-content: flex-end;
+        margin-top: auto;
     }
 
-    .empty-state {
-        text-align: center;
-        color: #999;
+    .edit-button {
+        padding: 4px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        color: #666;
+        transition: background 0.2s;
+    }
+
+    .edit-button:hover {
+        background: #e0e0e0;
+    }
+
+    .edit-button :global(svg) {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* Dialog content styles */
+    .dialog-input-group {
+        margin-bottom: 16px;
+    }
+
+    .dialog-input-group input {
         font-size: 10pt;
-        padding: 40px 20px;
     }
 </style>
