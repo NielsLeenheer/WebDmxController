@@ -143,6 +143,38 @@ export class InputMapping {
 	}
 
 	/**
+	 * Check if this input is a button/trigger type (vs slider/knob)
+	 * Buttons: Stream Deck buttons, MIDI notes
+	 * Sliders/Knobs: MIDI CC (control change)
+	 */
+	isButtonInput() {
+		if (!this.inputControlId) return false;
+
+		// Button types: button-*, note-*
+		// Slider/Knob types: cc-*, control-*
+		return this.inputControlId.startsWith('button-') ||
+		       this.inputControlId.startsWith('note-');
+	}
+
+	/**
+	 * Get button down class name (for button inputs)
+	 */
+	getButtonDownClass() {
+		if (!this.inputControlId) return null;
+		const controlPart = this.inputControlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+		return `${controlPart}_down`;
+	}
+
+	/**
+	 * Get button up class name (for button inputs)
+	 */
+	getButtonUpClass() {
+		if (!this.inputControlId) return null;
+		const controlPart = this.inputControlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+		return `${controlPart}_up`;
+	}
+
+	/**
 	 * Convert input value (0-1) to property value
 	 */
 	mapValue(inputValue) {

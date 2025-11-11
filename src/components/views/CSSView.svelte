@@ -409,11 +409,17 @@
                     <h4>Inputs</h4>
                     <div class="reference-list">
                         {#each allMappings as mapping (mapping.id)}
-                            {#if mapping.mode === 'trigger' || mapping.mode === 'input'}
-                                <div class="reference-item">
-                                    <code>.{mapping.cssClassName}</code>
-                                </div>
-                                {#if mapping.mode === 'input' && mapping.getInputPropertyName()}
+                            {#if mapping.mode === 'input'}
+                                {#if mapping.isButtonInput()}
+                                    <!-- Buttons show down and up classes -->
+                                    <div class="reference-item">
+                                        <code>.{mapping.getButtonDownClass()}</code>
+                                    </div>
+                                    <div class="reference-item">
+                                        <code>.{mapping.getButtonUpClass()}</code>
+                                    </div>
+                                {:else}
+                                    <!-- Sliders/Knobs show custom property -->
                                     <div class="reference-item">
                                         <code>{mapping.getInputPropertyName()}</code>
                                     </div>
