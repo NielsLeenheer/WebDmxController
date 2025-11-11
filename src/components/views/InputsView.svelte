@@ -319,7 +319,7 @@
     title="Input"
     onclose={closeEditDialog}
 >
-    <form id="edit-input-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+    <form id="edit-input-form" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
         <div class="dialog-input-group">
             <label for="input-name">Name:</label>
             <input

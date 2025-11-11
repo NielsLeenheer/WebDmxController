@@ -42,20 +42,6 @@
     // Get all mappings for display (trigger and direct modes)
     let allMappings = $state([]);
 
-    // Get all custom properties for display
-    let customProperties = $state([]);
-
-    // Update custom properties list periodically
-    $effect(() => {
-        const interval = setInterval(() => {
-            if (customPropertyManager) {
-                customProperties = customPropertyManager.getAll();
-            }
-        }, 100); // Update 10 times per second
-
-        return () => clearInterval(interval);
-    });
-
     // Style elements and containers
     let styleElement;
     let animationTargetsContainer;
@@ -418,23 +404,25 @@
             {/if}
 
             <!-- Inputs Section -->
-            {#if allMappings.length > 0 || customProperties.length > 0}
+            {#if allMappings.length > 0}
                 <div class="reference-section">
                     <h4>Inputs</h4>
                     <div class="reference-list">
                         {#each allMappings as mapping (mapping.id)}
-                            <div class="reference-item">
-                                {#if mapping.mode === 'trigger' || mapping.mode === 'input'}
+                            {#if mapping.mode === 'trigger' || mapping.mode === 'input'}
+                                <div class="reference-item">
                                     <code>.{mapping.cssClassName}</code>
-                                {:else if mapping.mode === 'direct'}
-                                    <code>{mapping.getPropertyName()}</code>
+                                </div>
+                                {#if mapping.mode === 'input' && mapping.getInputPropertyName()}
+                                    <div class="reference-item">
+                                        <code>{mapping.getInputPropertyName()}</code>
+                                    </div>
                                 {/if}
-                            </div>
-                        {/each}
-                        {#each customProperties as prop (prop.name)}
-                            <div class="reference-item">
-                                <code>{prop.name}: {prop.value}</code>
-                            </div>
+                            {:else if mapping.mode === 'direct'}
+                                <div class="reference-item">
+                                    <code>{mapping.getPropertyName()}</code>
+                                </div>
+                            {/if}
                         {/each}
                     </div>
                 </div>

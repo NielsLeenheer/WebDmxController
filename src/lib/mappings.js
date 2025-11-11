@@ -62,7 +62,12 @@ export class InputMapping {
 		// Convert input IDs to valid CSS class names
 		const controlPart = this.inputControlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
 
-		// Add suffix based on trigger type
+		// For input mode, don't add trigger suffix
+		if (this.mode === 'input') {
+			return controlPart;
+		}
+
+		// For trigger mode, add suffix based on trigger type
 		const suffix = this.triggerType === 'pressed' ? 'down' :
 		               this.triggerType === 'not-pressed' ? 'up' : 'always';
 
@@ -122,6 +127,22 @@ export class InputMapping {
 	}
 
 	/**
+	 * Get CSS custom property name generated from input name (for input mode)
+	 */
+	getInputPropertyName() {
+		if (!this.name) return null;
+
+		// Generate CSS custom property name from input name
+		// Same logic as in inputController._handleValueChange
+		const propertyName = this.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+		return `--${propertyName}`;
+	}
+
+	/**
 	 * Convert input value (0-1) to property value
 	 */
 	mapValue(inputValue) {
@@ -169,7 +190,15 @@ export class InputMapping {
 	 * Deserialize from JSON
 	 */
 	static fromJSON(json) {
-		return new InputMapping(json);
+		const mapping = new InputMapping(json);
+
+		// Fix old input mode mappings that have trigger suffixes in their class names
+		// This handles legacy data where input mode had _down/_up/_always suffixes
+		if (mapping.mode === 'input' && mapping.cssClassName.match(/_(down|up|always)$/)) {
+			mapping.cssClassName = mapping._generateClassName();
+		}
+
+		return mapping;
 	}
 }
 
