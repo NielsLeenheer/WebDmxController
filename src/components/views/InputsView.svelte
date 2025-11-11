@@ -345,7 +345,7 @@
     lightDismiss={true}
     onclose={closeEditDialog}
 >
-    <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+    <form id="edit-input-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
         <div class="dialog-input-group">
             <label for="input-name">Name:</label>
             <input
@@ -360,18 +360,19 @@
                 autofocus
             />
         </div>
-
-        <div class="dialog-buttons">
-            <Button onclick={confirmDelete} variant="secondary">
-                {@html removeIcon}
-                Delete
-            </Button>
-            <div class="action-buttons">
-                <Button onclick={cancelEdit} variant="secondary">Cancel</Button>
-                <Button type="submit" variant="primary">Save</Button>
-            </div>
-        </div>
     </form>
+
+    {#snippet tools()}
+        <Button onclick={confirmDelete} variant="secondary">
+            {@html removeIcon}
+            Delete
+        </Button>
+    {/snippet}
+
+    {#snippet buttons()}
+        <Button onclick={cancelEdit} variant="secondary">Cancel</Button>
+        <Button type="submit" form="edit-input-form" variant="primary">Save</Button>
+    {/snippet}
 </Dialog>
 {/if}
 
@@ -510,10 +511,5 @@
 
     .dialog-input-group input {
         font-size: 10pt;
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 8px;
     }
 </style>

@@ -398,7 +398,7 @@
     title="Device"
     onclose={closeSettingsDialog}
 >
-    <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveDeviceSettings(); }}>
+    <form id="device-settings-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveDeviceSettings(); }}>
         <div class="dialog-input-group">
             <label for="name-input">Name:</label>
             <input
@@ -443,24 +443,26 @@
                 <p class="no-devices">No compatible devices available to link</p>
             {/if}
         </div>
-
-        <div class="dialog-buttons">
-            <Button onclick={confirmRemoveDevice} variant="secondary">
-                {@html removeIcon}
-                Delete
-            </Button>
-            <div class="dialog-buttons-right">
-                <Button onclick={closeSettingsDialog} variant="secondary">Cancel</Button>
-                <Button
-                    type="submit"
-                    variant="primary"
-                    disabled={!isChannelValid(editingDevice, dialogChannel - 1)}
-                >
-                    Save
-                </Button>
-            </div>
-        </div>
     </form>
+
+    {#snippet tools()}
+        <Button onclick={confirmRemoveDevice} variant="secondary">
+            {@html removeIcon}
+            Delete
+        </Button>
+    {/snippet}
+
+    {#snippet buttons()}
+        <Button onclick={closeSettingsDialog} variant="secondary">Cancel</Button>
+        <Button
+            type="submit"
+            form="device-settings-form"
+            variant="primary"
+            disabled={!isChannelValid(editingDevice, dialogChannel - 1)}
+        >
+            Save
+        </Button>
+    {/snippet}
 </Dialog>
 {/if}
 </div>

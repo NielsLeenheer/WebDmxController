@@ -159,7 +159,7 @@
 
 <!-- New Animation Dialog -->
 <Dialog bind:dialogRef={newAnimationDialog} title="Create New Animation" onclose={() => newAnimationDialog?.close()}>
-    <form method="dialog" onsubmit={(e) => { e.preventDefault(); createNewAnimation(); }}>
+    <form id="new-animation-form" method="dialog" onsubmit={(e) => { e.preventDefault(); createNewAnimation(); }}>
         <div class="dialog-input-group">
             <label for="animation-name">Animation Name:</label>
             <input
@@ -179,18 +179,18 @@
                 {/each}
             </select>
         </div>
-
-        <div class="dialog-buttons">
-            <Button type="button" onclick={() => newAnimationDialog?.close()} variant="secondary">Cancel</Button>
-            <Button type="submit" variant="primary">Create</Button>
-        </div>
     </form>
+
+    {#snippet buttons()}
+        <Button type="button" onclick={() => newAnimationDialog?.close()} variant="secondary">Cancel</Button>
+        <Button type="submit" form="new-animation-form" variant="primary">Create</Button>
+    {/snippet}
 </Dialog>
 
 <!-- Edit Animation Dialog -->
 {#if editingAnimation}
 <Dialog bind:dialogRef={editDialog} title="Animation" onclose={closeEditDialog}>
-    <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+    <form id="edit-animation-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
         <div class="dialog-input-group">
             <label for="edit-animation-name">Name:</label>
             <input
@@ -201,18 +201,19 @@
                 autofocus
             />
         </div>
-
-        <div class="dialog-buttons">
-            <Button onclick={confirmDeleteAnimation} variant="secondary">
-                {@html removeIcon}
-                Delete
-            </Button>
-            <div class="dialog-buttons-right">
-                <Button onclick={closeEditDialog} variant="secondary">Cancel</Button>
-                <Button type="submit" variant="primary">Save</Button>
-            </div>
-        </div>
     </form>
+
+    {#snippet tools()}
+        <Button onclick={confirmDeleteAnimation} variant="secondary">
+            {@html removeIcon}
+            Delete
+        </Button>
+    {/snippet}
+
+    {#snippet buttons()}
+        <Button onclick={closeEditDialog} variant="secondary">Cancel</Button>
+        <Button type="submit" form="edit-animation-form" variant="primary">Save</Button>
+    {/snippet}
 </Dialog>
 {/if}
 

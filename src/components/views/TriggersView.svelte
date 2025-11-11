@@ -299,7 +299,7 @@
 
 <!-- Manual Trigger Dialog -->
 <Dialog bind:dialogRef={manualTriggerDialog} title="Create Manual Trigger" onclose={() => manualTriggerDialog?.close()}>
-    <form method="dialog" onsubmit={(e) => { e.preventDefault(); createManualTrigger(); }}>
+    <form id="manual-trigger-form" method="dialog" onsubmit={(e) => { e.preventDefault(); createManualTrigger(); }}>
         <div class="dialog-input-group">
             <label for="trigger-input">Input:</label>
             <select id="trigger-input" bind:value={newTriggerInput}>
@@ -365,17 +365,17 @@
                 Loop animation infinitely
             </label>
         </div>
-
-        <div class="dialog-buttons">
-            <Button type="button" onclick={() => manualTriggerDialog?.close()} variant="secondary">Cancel</Button>
-            <Button type="submit" variant="primary">Create</Button>
-        </div>
     </form>
+
+    {#snippet buttons()}
+        <Button type="button" onclick={() => manualTriggerDialog?.close()} variant="secondary">Cancel</Button>
+        <Button type="submit" form="manual-trigger-form" variant="primary">Create</Button>
+    {/snippet}
 </Dialog>
 
 <!-- Automatic Trigger Dialog -->
 <Dialog bind:dialogRef={automaticTriggerDialog} title="Create Automatic Trigger" onclose={() => automaticTriggerDialog?.close()}>
-    <form method="dialog" onsubmit={(e) => { e.preventDefault(); createAutomaticTrigger(); }}>
+    <form id="automatic-trigger-form" method="dialog" onsubmit={(e) => { e.preventDefault(); createAutomaticTrigger(); }}>
         <div class="dialog-input-group">
             <label for="auto-trigger-device">Device:</label>
             <select id="auto-trigger-device" bind:value={newTriggerDevice}>
@@ -423,18 +423,18 @@
                 Loop animation infinitely
             </label>
         </div>
-
-        <div class="dialog-buttons">
-            <Button type="button" onclick={() => automaticTriggerDialog?.close()} variant="secondary">Cancel</Button>
-            <Button type="submit" variant="primary">Create</Button>
-        </div>
     </form>
+
+    {#snippet buttons()}
+        <Button type="button" onclick={() => automaticTriggerDialog?.close()} variant="secondary">Cancel</Button>
+        <Button type="submit" form="automatic-trigger-form" variant="primary">Create</Button>
+    {/snippet}
 </Dialog>
 
 <!-- Edit Trigger Dialog -->
 {#if editingTrigger}
 <Dialog bind:dialogRef={editDialog} title="Trigger" onclose={closeEditDialog}>
-    <form method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+    <form id="edit-trigger-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
         {#if editingTrigger.triggerType !== 'always'}
             <div class="dialog-input-group">
                 <label for="edit-trigger-type">Trigger Type:</label>
@@ -493,18 +493,19 @@
                 Loop animation infinitely
             </label>
         </div>
-
-        <div class="dialog-buttons">
-            <Button onclick={confirmDeleteTrigger} variant="secondary">
-                {@html removeIcon}
-                Delete
-            </Button>
-            <div class="dialog-buttons-right">
-                <Button onclick={closeEditDialog} variant="secondary">Cancel</Button>
-                <Button type="submit" variant="primary">Save</Button>
-            </div>
-        </div>
     </form>
+
+    {#snippet tools()}
+        <Button onclick={confirmDeleteTrigger} variant="secondary">
+            {@html removeIcon}
+            Delete
+        </Button>
+    {/snippet}
+
+    {#snippet buttons()}
+        <Button onclick={closeEditDialog} variant="secondary">Cancel</Button>
+        <Button type="submit" form="edit-trigger-form" variant="primary">Save</Button>
+    {/snippet}
 </Dialog>
 {/if}
 

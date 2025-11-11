@@ -9,6 +9,8 @@
      * @prop {string} anchorId - Anchor name (CSS anchor-name value)
      * @prop {boolean} showArrow - Show arrow pointing to anchor (default true for anchored)
      * @prop {boolean} lightDismiss - Enable light dismiss on backdrop click (default true for anchored)
+     * @snippet tools - Optional snippet for tool buttons (e.g., Delete)
+     * @snippet buttons - Optional snippet for action buttons (e.g., Cancel, Save)
      */
     let {
         title = null,
@@ -18,7 +20,9 @@
         anchorId = null,
         showArrow = true,
         lightDismiss = true,
-        children
+        children,
+        tools,
+        buttons
     } = $props();
 
     function handleClose() {
@@ -49,6 +53,20 @@
     <div class="dialog-body">
         {@render children()}
     </div>
+    {#if tools || buttons}
+        <div class="dialog-footer">
+            <div class="dialog-footer-tools">
+                {#if tools}
+                    {@render tools()}
+                {/if}
+            </div>
+            <div class="dialog-footer-buttons">
+                {#if buttons}
+                    {@render buttons()}
+                {/if}
+            </div>
+        </div>
+    {/if}
 </dialog>
 
 <style>
@@ -120,5 +138,31 @@
     /* Smaller padding for anchored dialogs */
     .dialog.anchored .dialog-body {
         padding: 15px;
+    }
+
+    .dialog-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 20px 20px 20px;
+        gap: 10px;
+    }
+
+    .dialog-footer-tools {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .dialog-footer-buttons {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .dialog-footer :global(svg) {
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
     }
 </style>
