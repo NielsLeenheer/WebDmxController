@@ -508,39 +508,8 @@
         margin-bottom: 16px;
     }
 
-    .dialog-input-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-size: 10pt;
-        font-weight: 500;
-        color: #555;
-    }
-
     .dialog-input-group input {
-        width: 100%;
-        padding: 8px 12px;
         font-size: 10pt;
-        border: 2px solid #ccc;
-        border-radius: 4px;
-        box-sizing: border-box;
-    }
-
-    .dialog-input-group input:focus {
-        outline: none;
-        border-color: #2196f3;
-    }
-
-    .dialog-buttons {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .dialog-buttons :global(svg) {
-        width: 16px;
-        height: 16px;
-        margin-right: 6px;
     }
 
     .action-buttons {

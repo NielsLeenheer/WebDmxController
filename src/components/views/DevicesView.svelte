@@ -550,35 +550,9 @@
         margin-left: 0;
     }
 
-    .dialog-input-group {
-        margin-bottom: 20px;
-    }
-
-    .dialog-input-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-size: 10pt;
-        font-weight: 400;
-        color: #555;
-    }
-
-    .dialog-input-group input {
-        width: 100%;
-        padding: 8px 12px;
-        font-size: 11pt;
-        font-family: var(--font-stack-mono);
-        border: 2px solid #ccc;
-        border-radius: 4px;
-        box-sizing: border-box;
-    }
-
+    /* Dialog-specific overrides */
     .dialog-input-group input[type="number"] {
         width: 10ch;
-    }
-
-    .dialog-input-group input:focus {
-        outline: none;
-        border-color: #2196F3;
     }
 
     .dialog-input-group input.valid {
@@ -591,24 +565,13 @@
         background: #fff5f5;
     }
 
-    .dialog-input-group select {
-        width: 100%;
-        padding: 8px 12px;
-        font-size: 10pt;
-        border: 2px solid #ccc;
-        border-radius: 4px;
-        box-sizing: border-box;
-        background: white;
-        cursor: pointer;
-    }
-
-    .dialog-input-group select:focus {
-        outline: none;
-        border-color: #2196F3;
-    }
-
     .dialog-input-group input[type="text"] {
         font-family: inherit;
+    }
+
+    .dialog-input-group select {
+        background: white;
+        cursor: pointer;
     }
 
     .dialog-input-group small {
@@ -622,25 +585,6 @@
         text-align: right;
         font-family: var(--font-stack-mono);
         color: #666;
-    }
-
-    .dialog-buttons {
-        display: flex;
-        gap: 10px;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 20px;
-    }
-
-    .dialog-buttons-right {
-        display: flex;
-        gap: 10px;
-    }
-
-    .dialog-buttons :global(svg) {
-        width: 16px;
-        height: 16px;
-        margin-right: 6px;
     }
 
     .no-devices {
