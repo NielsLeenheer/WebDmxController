@@ -162,7 +162,7 @@
         const mapping = mappingLibrary.get(editingInput.id);
         if (mapping) {
             mapping.name = editingName.trim();
-            mappingLibrary.save();
+            mappingLibrary.update(mapping);
             refreshInputs();
         }
 
@@ -319,7 +319,7 @@
     title="Input"
     onclose={closeEditDialog}
 >
-    <form id="edit-input-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
+    <form id="edit-input-form" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
         <div class="dialog-input-group">
             <label for="input-name">Name:</label>
             <input
@@ -333,6 +333,14 @@
                 }}
                 autofocus
             />
+            <div class="css-identifiers">
+                {#if editingInput.isButtonInput()}
+                    <code class="css-id">.{editingInput.getButtonDownClass()}</code>
+                    <code class="css-id">.{editingInput.getButtonUpClass()}</code>
+                {:else}
+                    <code class="css-id">{editingInput.getInputPropertyName()}</code>
+                {/if}
+            </div>
         </div>
     </form>
 
@@ -485,5 +493,21 @@
 
     .dialog-input-group input {
         font-size: 10pt;
+    }
+
+    .css-identifiers {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .css-id {
+        font-family: var(--font-stack-mono);
+        font-size: 8pt;
+        color: #007acc;
+        background: #f5f5f5;
+        padding: 4px 8px;
+        border-radius: 4px;
     }
 </style>

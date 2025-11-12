@@ -39,24 +39,8 @@
         animationLibrary ? animationLibrary.getAll() : []
     );
 
-    // Get all trigger mappings for display
-    let triggerClasses = $derived(
-        mappingLibrary ? mappingLibrary.getAll().filter(m => m.mode === 'trigger') : []
-    );
-
-    // Get all custom properties for display
-    let customProperties = $state([]);
-
-    // Update custom properties list periodically
-    $effect(() => {
-        const interval = setInterval(() => {
-            if (customPropertyManager) {
-                customProperties = customPropertyManager.getAll();
-            }
-        }, 100); // Update 10 times per second
-
-        return () => clearInterval(interval);
-    });
+    // Get all mappings for display (trigger and direct modes)
+    let allMappings = $state([]);
 
     // Style elements and containers
     let styleElement;
@@ -232,6 +216,7 @@
 
     // Regenerate CSS when mappings or animations change
     function handleMappingChange() {
+        allMappings = mappingLibrary.getAll();
         regenerateCSS();
         updateStyleElement();
     }
@@ -311,6 +296,9 @@
         // Listen for mapping and animation changes to update CSS automatically
         mappingLibrary.on('changed', handleMappingChange);
         animationLibrary.on('changed', handleAnimationChange);
+
+        // Initialize mappings list
+        allMappings = mappingLibrary.getAll();
 
         // Initialize CSS
         customCSS = loadCustomCSS();
@@ -416,19 +404,31 @@
             {/if}
 
             <!-- Inputs Section -->
-            {#if triggerClasses.length > 0 || customProperties.length > 0}
+            {#if allMappings.length > 0}
                 <div class="reference-section">
                     <h4>Inputs</h4>
                     <div class="reference-list">
-                        {#each triggerClasses as trigger (trigger.id)}
-                            <div class="reference-item">
-                                <code>.{trigger.cssClassName}</code>
-                            </div>
-                        {/each}
-                        {#each customProperties as prop (prop.name)}
-                            <div class="reference-item">
-                                <code>{prop.name}: {prop.value}</code>
-                            </div>
+                        {#each allMappings as mapping (mapping.id)}
+                            {#if mapping.mode === 'input'}
+                                {#if mapping.isButtonInput()}
+                                    <!-- Buttons show down and up classes -->
+                                    <div class="reference-item">
+                                        <code>.{mapping.getButtonDownClass()}</code>
+                                    </div>
+                                    <div class="reference-item">
+                                        <code>.{mapping.getButtonUpClass()}</code>
+                                    </div>
+                                {:else}
+                                    <!-- Sliders/Knobs show custom property -->
+                                    <div class="reference-item">
+                                        <code>{mapping.getInputPropertyName()}</code>
+                                    </div>
+                                {/if}
+                            {:else if mapping.mode === 'direct'}
+                                <div class="reference-item">
+                                    <code>{mapping.getPropertyName()}</code>
+                                </div>
+                            {/if}
                         {/each}
                     </div>
                 </div>
@@ -498,16 +498,16 @@
     }
 
     .device-previews {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-        gap: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
     }
 
     .device-preview-item {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
     }
 
     .device-preview {
