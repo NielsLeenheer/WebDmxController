@@ -69,61 +69,71 @@
     }
 
     function saveDeviceSettings() {
-        if (!editingDevice) return;
-
-        // Validate channel
-        if (!isChannelValid(editingDevice, dialogChannel - 1)) {
-            return;
-        }
-
-        const newStartChannel = Math.max(0, Math.min(511, dialogChannel - 1));
-        const newName = dialogName.trim() || editingDevice.name;
-
-        // Only preserve cssId if name hasn't changed, otherwise regenerate
-        const preserveCssId = newName === editingDevice.name ? editingDevice.cssId : null;
-
-        // Create new Device instance with all updated properties
-        // If not linking, clear sync channels and mirror pan
-        const updatedDevice = new Device(
-            editingDevice.id,
-            editingDevice.type,
-            newStartChannel,
-            newName,
-            selectedLinkTarget,
-            preserveCssId,
-            selectedLinkTarget !== null ? selectedSyncChannels : null,
-            selectedLinkTarget !== null ? mirrorPan : false
-        );
-        updatedDevice.defaultValues = [...editingDevice.defaultValues];
-
-        // If linking, apply values from source device
-        if (selectedLinkTarget !== null) {
-            const sourceDevice = devices.find(d => d.id === selectedLinkTarget);
-            if (sourceDevice) {
-                const newValues = applyLinkedValues(
-                    sourceDevice.type,
-                    updatedDevice.type,
-                    sourceDevice.defaultValues,
-                    updatedDevice.defaultValues,
-                    selectedSyncChannels,
-                    mirrorPan
-                );
-                updatedDevice.defaultValues = newValues;
+        try {
+            if (!editingDevice) {
+                console.error('No editing device');
+                return;
             }
+
+            // Validate channel
+            if (!isChannelValid(editingDevice, dialogChannel - 1)) {
+                console.error('Invalid channel', dialogChannel);
+                return;
+            }
+
+            const newStartChannel = Math.max(0, Math.min(511, dialogChannel - 1));
+            const newName = dialogName.trim() || editingDevice.name;
+
+            // Only preserve cssId if name hasn't changed, otherwise regenerate
+            const preserveCssId = newName === editingDevice.name ? editingDevice.cssId : null;
+
+            // Create new Device instance with all updated properties
+            // If not linking, clear sync channels and mirror pan
+            const updatedDevice = new Device(
+                editingDevice.id,
+                editingDevice.type,
+                newStartChannel,
+                newName,
+                selectedLinkTarget,
+                preserveCssId,
+                selectedLinkTarget !== null ? selectedSyncChannels : null,
+                selectedLinkTarget !== null ? mirrorPan : false
+            );
+            updatedDevice.defaultValues = [...editingDevice.defaultValues];
+
+            // If linking, apply values from source device
+            if (selectedLinkTarget !== null) {
+                const sourceDevice = devices.find(d => d.id === selectedLinkTarget);
+                if (sourceDevice) {
+                    const newValues = applyLinkedValues(
+                        sourceDevice.type,
+                        updatedDevice.type,
+                        sourceDevice.defaultValues,
+                        updatedDevice.defaultValues,
+                        selectedSyncChannels,
+                        mirrorPan
+                    );
+                    updatedDevice.defaultValues = newValues;
+                }
+            }
+
+            // Update DMX controller with new channel values
+            if (dmxController) {
+                updatedDevice.defaultValues.forEach((value, index) => {
+                    const channelIndex = updatedDevice.startChannel + index;
+                    dmxController.setChannel(channelIndex, value);
+                });
+            }
+
+            // Update devices array
+            devices = devices.map(d => d.id === editingDevice.id ? updatedDevice : d);
+
+            console.log('Settings saved successfully, closing dialog');
+            closeSettingsDialog();
+        } catch (error) {
+            console.error('Error saving device settings:', error);
+            alert('Failed to save device settings: ' + error.message);
         }
-
-        // Update DMX controller with new channel values
-        if (dmxController) {
-            updatedDevice.defaultValues.forEach((value, index) => {
-                const channelIndex = updatedDevice.startChannel + index;
-                dmxController.setChannel(channelIndex, value);
-            });
-        }
-
-        // Update devices array
-        devices = devices.map(d => d.id === editingDevice.id ? updatedDevice : d);
-
-        closeSettingsDialog();
     }
 
     function isChannelValid(device, startChannel0indexed) {
