@@ -77,6 +77,10 @@
         }
 
         const newStartChannel = Math.max(0, Math.min(511, dialogChannel - 1));
+        const newName = dialogName.trim() || editingDevice.name;
+
+        // Only preserve cssId if name hasn't changed, otherwise regenerate
+        const preserveCssId = newName === editingDevice.name ? editingDevice.cssId : null;
 
         // Create new Device instance with all updated properties
         // If not linking, clear sync channels and mirror pan
@@ -84,9 +88,9 @@
             editingDevice.id,
             editingDevice.type,
             newStartChannel,
-            dialogName.trim() || editingDevice.name,
+            newName,
             selectedLinkTarget,
-            editingDevice.cssId,
+            preserveCssId,
             selectedLinkTarget !== null ? selectedSyncChannels : null,
             selectedLinkTarget !== null ? mirrorPan : false
         );
