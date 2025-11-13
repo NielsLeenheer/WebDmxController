@@ -179,6 +179,18 @@
         editingName = '';
     }
 
+    // Generate preview of CSS property name based on current editing name
+    function getPreviewPropertyName() {
+        if (!editingName.trim()) return '--';
+
+        const propertyName = editingName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+        return `--${propertyName}`;
+    }
+
     async function confirmDelete() {
         if (!editingInput) return;
 
@@ -336,7 +348,7 @@
                     <code class="css-id">.{editingInput.getButtonDownClass()}</code>
                     <code class="css-id">.{editingInput.getButtonUpClass()}</code>
                 {:else}
-                    <code class="css-id">{editingInput.getInputPropertyName()}</code>
+                    <code class="css-id">{getPreviewPropertyName()}</code>
                 {/if}
             </div>
         </div>
