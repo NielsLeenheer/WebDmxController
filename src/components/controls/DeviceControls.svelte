@@ -128,8 +128,8 @@
                 <label>{control.name}</label>
                 <div class="xypad-wrapper" class:disabled={bothDisabled}>
                     <XYPad
-                        bind:panValue={values[control.panIndex]}
-                        bind:tiltValue={values[control.tiltIndex]}
+                        panValue={values[control.panIndex]}
+                        tiltValue={values[control.tiltIndex]}
                         onUpdate={(pan, tilt) => !bothDisabled && handleXYPadChange(control.panIndex, control.tiltIndex, pan, tilt)}
                     />
                 </div>

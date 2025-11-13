@@ -470,7 +470,7 @@
 
                 <DeviceControls
                     deviceType={device.type}
-                    bind:values={device.defaultValues}
+                    values={device.defaultValues}
                     onChange={(channelIndex, value) => handleDeviceValueChange(device, channelIndex, value)}
                     disabledChannels={getDisabledChannels(device)}
                 />
