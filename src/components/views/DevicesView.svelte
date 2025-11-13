@@ -79,6 +79,7 @@
         const newStartChannel = Math.max(0, Math.min(511, dialogChannel - 1));
 
         // Create new Device instance with all updated properties
+        // If not linking, clear sync channels and mirror pan
         const updatedDevice = new Device(
             editingDevice.id,
             editingDevice.type,
@@ -86,8 +87,8 @@
             dialogName.trim() || editingDevice.name,
             selectedLinkTarget,
             editingDevice.cssId,
-            selectedSyncChannels,
-            mirrorPan
+            selectedLinkTarget !== null ? selectedSyncChannels : null,
+            selectedLinkTarget !== null ? mirrorPan : false
         );
         updatedDevice.defaultValues = [...editingDevice.defaultValues];
 
