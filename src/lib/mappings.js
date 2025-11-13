@@ -151,16 +151,17 @@ export class InputMapping {
 
 	/**
 	 * Check if this input is a button/trigger type (vs slider/knob)
-	 * Buttons: Stream Deck buttons, MIDI notes
+	 * Buttons: Stream Deck buttons, MIDI notes, Keyboard keys
 	 * Sliders/Knobs: MIDI CC (control change)
 	 */
 	isButtonInput() {
 		if (!this.inputControlId) return false;
 
-		// Button types: button-*, note-*
+		// Button types: button-*, note-*, key-*
 		// Slider/Knob types: cc-*, control-*
 		return this.inputControlId.startsWith('button-') ||
-		       this.inputControlId.startsWith('note-');
+		       this.inputControlId.startsWith('note-') ||
+		       this.inputControlId.startsWith('key-');
 	}
 
 	/**

@@ -191,6 +191,30 @@
         return `--${propertyName}`;
     }
 
+    // Generate preview of button down class name based on current editing name
+    function getPreviewButtonDownClass() {
+        if (!editingName.trim()) return '';
+
+        const namePart = editingName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+            .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+        return `${namePart}_down`;
+    }
+
+    // Generate preview of button up class name based on current editing name
+    function getPreviewButtonUpClass() {
+        if (!editingName.trim()) return '';
+
+        const namePart = editingName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+            .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+        return `${namePart}_up`;
+    }
+
     async function confirmDelete() {
         if (!editingInput) return;
 
@@ -345,8 +369,8 @@
             />
             <div class="css-identifiers">
                 {#if editingInput.isButtonInput()}
-                    <code class="css-id">.{editingInput.getButtonDownClass()}</code>
-                    <code class="css-id">.{editingInput.getButtonUpClass()}</code>
+                    <code class="css-id">.{getPreviewButtonDownClass()}</code>
+                    <code class="css-id">.{getPreviewButtonUpClass()}</code>
                 {:else}
                     <code class="css-id">{getPreviewPropertyName()}</code>
                 {/if}
