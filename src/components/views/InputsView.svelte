@@ -16,7 +16,7 @@
     let savedInputs = $state([]);
     let editingInput = $state(null);
     let editingName = $state('');
-    let editDialog = $state(null);
+    let editDialog = null; // DOM reference - should NOT be $state
 
     // Event handlers
     let inputEventHandlers = [];
@@ -212,10 +212,8 @@
 
     function refreshInputs() {
         // Only show input-mode mappings
-        // Create a new array with new object references to trigger reactivity
         savedInputs = mappingLibrary.getAll()
-            .filter(m => m.mode === 'input')
-            .map(m => ({ ...m }));
+            .filter(m => m.mode === 'input');
     }
 
     async function applyColorsToStreamDeck() {
