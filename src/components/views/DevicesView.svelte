@@ -1,7 +1,7 @@
 <script>
     import { Icon } from 'svelte-icon';
     import { DEVICE_TYPES, Device } from '../../lib/devices.js';
-    import { canLinkDevices, applyLinkedValues, getMappedChannels } from '../../lib/channelMapping.js';
+    import { canLinkDevices, applyLinkedValues, getMappedChannels, getAvailableSyncChannels } from '../../lib/channelMapping.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import DeviceControls from '../controls/DeviceControls.svelte';
     import Dialog from '../common/Dialog.svelte';
@@ -23,12 +23,16 @@
     let dialogName = $state('');
     let dialogChannel = $state(1);
     let selectedLinkTarget = $state(null);
+    let selectedSyncChannels = $state(null); // Array of semantic channel names, or null for all
+    let mirrorPan = $state(false);
 
     function openSettingsDialog(device) {
         editingDevice = device;
         dialogName = device.name;
         dialogChannel = device.startChannel + 1;
         selectedLinkTarget = device.linkedTo || null;
+        selectedSyncChannels = device.syncedChannels || null;
+        mirrorPan = device.mirrorPan || false;
 
         // Wait for Dialog to mount before showing
         requestAnimationFrame(() => {
@@ -41,6 +45,8 @@
         editingDevice = null;
         dialogName = '';
         selectedLinkTarget = null;
+        selectedSyncChannels = null;
+        mirrorPan = false;
     }
 
     function confirmRemoveDevice() {
@@ -78,7 +84,10 @@
             editingDevice.type,
             newStartChannel,
             dialogName.trim() || editingDevice.name,
-            selectedLinkTarget
+            selectedLinkTarget,
+            editingDevice.cssId,
+            selectedSyncChannels,
+            mirrorPan
         );
         updatedDevice.defaultValues = [...editingDevice.defaultValues];
 
@@ -90,7 +99,9 @@
                     sourceDevice.type,
                     updatedDevice.type,
                     sourceDevice.defaultValues,
-                    updatedDevice.defaultValues
+                    updatedDevice.defaultValues,
+                    selectedSyncChannels,
+                    mirrorPan
                 );
                 updatedDevice.defaultValues = newValues;
             }
@@ -142,7 +153,16 @@
                 const data = JSON.parse(saved);
                 // Reconstruct Device objects
                 const loadedDevices = data.devices.map(d => {
-                    const device = new Device(d.id, d.type, d.startChannel, d.name, d.linkedTo, d.cssId);
+                    const device = new Device(
+                        d.id,
+                        d.type,
+                        d.startChannel,
+                        d.name,
+                        d.linkedTo,
+                        d.cssId,
+                        d.syncedChannels || null,
+                        d.mirrorPan || false
+                    );
                     device.defaultValues = d.defaultValues || new Array(DEVICE_TYPES[d.type].channels).fill(0);
                     return device;
                 });
@@ -178,7 +198,10 @@
                     type: d.type,
                     startChannel: d.startChannel,
                     defaultValues: d.defaultValues,
-                    linkedTo: d.linkedTo
+                    linkedTo: d.linkedTo,
+                    cssId: d.cssId,
+                    syncedChannels: d.syncedChannels,
+                    mirrorPan: d.mirrorPan
                 })),
                 nextId
             };
@@ -261,7 +284,10 @@
             device.type,
             device.startChannel,
             device.name,
-            device.linkedTo
+            device.linkedTo,
+            device.cssId,
+            device.syncedChannels,
+            device.mirrorPan
         );
         updatedDevice.defaultValues = [...device.defaultValues];
         updatedDevice.defaultValues[channelIndex] = value;
@@ -295,15 +321,20 @@
                     device.type,
                     device.startChannel,
                     device.name,
-                    device.linkedTo
+                    device.linkedTo,
+                    device.cssId,
+                    device.syncedChannels,
+                    device.mirrorPan
                 );
 
-                // Apply linked values
+                // Apply linked values with selective syncing and pan mirroring
                 const newValues = applyLinkedValues(
                     sourceDevice.type,
                     device.type,
                     sourceDevice.defaultValues,
-                    device.defaultValues
+                    device.defaultValues,
+                    device.syncedChannels,
+                    device.mirrorPan
                 );
                 updatedDevice.defaultValues = newValues;
 
@@ -331,7 +362,47 @@
         const sourceDevice = devices.find(d => d.id === device.linkedTo);
         if (!sourceDevice) return [];
 
-        return getMappedChannels(sourceDevice.type, device.type);
+        return getMappedChannels(sourceDevice.type, device.type, device.syncedChannels);
+    }
+
+    // Get available sync channels for current link target
+    function getAvailableChannelsForLink() {
+        if (!selectedLinkTarget || !editingDevice) return [];
+
+        const sourceDevice = devices.find(d => d.id === selectedLinkTarget);
+        if (!sourceDevice) return [];
+
+        return getAvailableSyncChannels(sourceDevice.type, editingDevice.type);
+    }
+
+    // Toggle a sync channel selection
+    function toggleSyncChannel(semanticName) {
+        if (selectedSyncChannels === null) {
+            // If currently syncing all, create array with all except this one
+            const available = getAvailableChannelsForLink();
+            selectedSyncChannels = available
+                .map(ch => ch.semantic)
+                .filter(s => s !== semanticName);
+        } else if (selectedSyncChannels.includes(semanticName)) {
+            // Remove from array
+            selectedSyncChannels = selectedSyncChannels.filter(s => s !== semanticName);
+            // If all channels are deselected, set to empty array (none synced)
+        } else {
+            // Add to array
+            selectedSyncChannels = [...selectedSyncChannels, semanticName];
+        }
+    }
+
+    // Check if a channel is currently selected for syncing
+    function isSyncChannelSelected(semanticName) {
+        if (selectedSyncChannels === null) return true; // All channels selected
+        return selectedSyncChannels.includes(semanticName);
+    }
+
+    // Check if pan channel is available for current link
+    function isPanChannelAvailable() {
+        const available = getAvailableChannelsForLink();
+        return available.some(ch => ch.semantic === 'Pan');
     }
 
     // Restore all device values to DMX controller on load
@@ -443,6 +514,38 @@
                 <p class="no-devices">No compatible devices available to link</p>
             {/if}
         </div>
+
+        {#if selectedLinkTarget !== null}
+            <div class="dialog-input-group">
+                <label>Sync channels:</label>
+                <div class="sync-channels-list">
+                    {#each getAvailableChannelsForLink() as channel}
+                        <label class="sync-channel-item">
+                            <input
+                                type="checkbox"
+                                checked={isSyncChannelSelected(channel.semantic)}
+                                onchange={() => toggleSyncChannel(channel.semantic)}
+                            />
+                            <span>{channel.semantic}</span>
+                        </label>
+                    {/each}
+                </div>
+                <small class="link-help">Select which properties to sync from the linked device</small>
+            </div>
+
+            {#if isPanChannelAvailable()}
+                <div class="dialog-input-group">
+                    <label class="checkbox-label">
+                        <input
+                            type="checkbox"
+                            bind:checked={mirrorPan}
+                        />
+                        <span>Mirror pan (invert pan values)</span>
+                    </label>
+                    <small class="link-help">Useful for moving heads facing each other</small>
+                </div>
+            {/if}
+        {/if}
     </form>
 
     {#snippet tools()}
@@ -593,5 +696,54 @@
         color: #999;
         text-align: center;
         font-size: 10pt;
+    }
+
+    .sync-channels-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 12px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+    }
+
+    .sync-channel-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .sync-channel-item input[type="checkbox"] {
+        cursor: pointer;
+        width: 16px;
+        height: 16px;
+    }
+
+    .sync-channel-item span {
+        font-size: 10pt;
+        color: #333;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+        padding: 8px 0;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+        cursor: pointer;
+        width: 16px;
+        height: 16px;
+    }
+
+    .checkbox-label span {
+        font-size: 10pt;
+        color: #333;
     }
 </style>

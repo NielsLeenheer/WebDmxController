@@ -1,6 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { InputMapping } from '../../lib/mappings.js';
+    import { DEVICE_TYPES } from '../../lib/devices.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
@@ -21,26 +22,35 @@
     let automaticTriggerDialog = $state(null);
     let newTriggerInput = $state(null);
     let newTriggerType = $state('pressed');
+    let newTriggerActionType = $state('animation'); // 'animation' or 'setValue'
     let newTriggerDevice = $state(null);
     let newTriggerAnimation = $state(null);
     let newTriggerDuration = $state(1000);
     let newTriggerLooping = $state(false);
     let newTriggerEasing = $state('linear');
+    let newTriggerChannelValues = $state({}); // For setValue actions
 
     // Edit dialog states
     let editDialog = $state(null);
     let editingTrigger = $state(null);
     let editTriggerInput = $state(null);
     let editTriggerType = $state('pressed');
+    let editTriggerActionType = $state('animation');
     let editTriggerDevice = $state(null);
     let editTriggerAnimation = $state(null);
     let editTriggerDuration = $state(1000);
     let editTriggerLooping = $state(false);
     let editTriggerEasing = $state('linear');
+    let editTriggerChannelValues = $state({});
 
     const MANUAL_TRIGGER_TYPES = [
         { value: 'pressed', label: 'Pressed' },
         { value: 'not-pressed', label: 'Not Pressed' }
+    ];
+
+    const ACTION_TYPES = [
+        { value: 'animation', label: 'Run Animation' },
+        { value: 'setValue', label: 'Set Device Values' }
     ];
 
     const EASING_FUNCTIONS = [
@@ -62,11 +72,13 @@
     function openManualTriggerDialog() {
         newTriggerInput = availableInputs[0]?.id || null;
         newTriggerType = 'pressed';
+        newTriggerActionType = 'animation';
         newTriggerDevice = devices[0]?.id || null;
         newTriggerAnimation = availableAnimations[0]?.name || null;
         newTriggerDuration = 1000;
         newTriggerLooping = false;
         newTriggerEasing = 'linear';
+        newTriggerChannelValues = {};
         manualTriggerDialog?.showModal();
     }
 
@@ -83,7 +95,8 @@
     }
 
     function createManualTrigger() {
-        if (!newTriggerInput || !newTriggerDevice || !newTriggerAnimation) return;
+        if (!newTriggerInput || !newTriggerDevice) return;
+        if (newTriggerActionType === 'animation' && !newTriggerAnimation) return;
 
         const inputMapping = mappingLibrary.get(newTriggerInput);
         if (!inputMapping) return;
@@ -97,18 +110,27 @@
         const suffix = newTriggerType === 'pressed' ? 'down' : 'up';
         const cssClassName = `${baseClassName}-${suffix}`;
 
+        const triggerName = newTriggerActionType === 'animation'
+            ? `${inputMapping.name}_${newTriggerType}_${newTriggerAnimation}`
+            : `${inputMapping.name}_${newTriggerType}_setValue`;
+
         // Create trigger mapping
         const trigger = new InputMapping({
-            name: `${inputMapping.name}_${newTriggerType}_${newTriggerAnimation}`,
+            name: triggerName,
             mode: 'trigger',
             triggerType: newTriggerType,
+            actionType: newTriggerActionType,
             inputDeviceId: inputMapping.inputDeviceId,
             inputControlId: inputMapping.inputControlId,
-            animationName: newTriggerAnimation,
-            targetDeviceIds: [newTriggerDevice],
+            // Animation action properties
+            animationName: newTriggerActionType === 'animation' ? newTriggerAnimation : null,
+            targetDeviceIds: newTriggerActionType === 'animation' ? [newTriggerDevice] : [],
             duration: newTriggerDuration,
             easing: newTriggerEasing,
             iterations: newTriggerLooping ? 'infinite' : 1,
+            // SetValue action properties
+            setValueDeviceId: newTriggerActionType === 'setValue' ? newTriggerDevice : null,
+            channelValues: newTriggerActionType === 'setValue' ? {...newTriggerChannelValues} : {},
             cssClassName: cssClassName
         });
 
@@ -144,8 +166,16 @@
         editingTrigger = trigger;
         editTriggerInput = trigger.inputDeviceId + '_' + trigger.inputControlId;
         editTriggerType = trigger.triggerType;
-        editTriggerDevice = trigger.targetDeviceIds[0];
-        editTriggerAnimation = trigger.animationName;
+        editTriggerActionType = trigger.actionType || 'animation';
+
+        if (trigger.actionType === 'setValue') {
+            editTriggerDevice = trigger.setValueDeviceId;
+            editTriggerChannelValues = {...trigger.channelValues};
+        } else {
+            editTriggerDevice = trigger.targetDeviceIds[0];
+            editTriggerAnimation = trigger.animationName;
+        }
+
         editTriggerDuration = trigger.duration;
         editTriggerLooping = trigger.iterations === 'infinite';
         editTriggerEasing = trigger.easing;
@@ -191,13 +221,26 @@
             const cssClassName = `${baseClassName}-${suffix}`;
 
             editingTrigger.triggerType = editTriggerType;
-            editingTrigger.targetDeviceIds = [editTriggerDevice];
-            editingTrigger.animationName = editTriggerAnimation;
+            editingTrigger.actionType = editTriggerActionType;
+
+            if (editTriggerActionType === 'animation') {
+                editingTrigger.animationName = editTriggerAnimation;
+                editingTrigger.targetDeviceIds = [editTriggerDevice];
+                editingTrigger.setValueDeviceId = null;
+                editingTrigger.channelValues = {};
+                editingTrigger.name = `${selectedInput.name}_${editTriggerType}_${editTriggerAnimation}`;
+            } else {
+                editingTrigger.setValueDeviceId = editTriggerDevice;
+                editingTrigger.channelValues = {...editTriggerChannelValues};
+                editingTrigger.animationName = null;
+                editingTrigger.targetDeviceIds = [];
+                editingTrigger.name = `${selectedInput.name}_${editTriggerType}_setValue`;
+            }
+
             editingTrigger.duration = editTriggerDuration;
             editingTrigger.easing = editTriggerEasing;
             editingTrigger.iterations = editTriggerLooping ? 'infinite' : 1;
             editingTrigger.cssClassName = cssClassName;
-            editingTrigger.name = `${selectedInput.name}_${editTriggerType}_${editTriggerAnimation}`;
         }
 
         mappingLibrary.save();
@@ -228,15 +271,57 @@
     }
 
     function getTriggerDisplayText(trigger) {
-        const deviceName = getDeviceName(trigger.targetDeviceIds[0]);
+        const actionType = trigger.actionType || 'animation';
 
         if (trigger.triggerType === 'always') {
+            const deviceName = getDeviceName(trigger.targetDeviceIds[0]);
             return `Always → ${trigger.animationName} → ${deviceName}`;
         }
 
         const inputName = getInputName(trigger.inputDeviceId, trigger.inputControlId);
         const typeLabel = trigger.triggerType === 'pressed' ? 'Pressed' : 'Not Pressed';
-        return `${inputName} → ${typeLabel} → ${trigger.animationName} → ${deviceName}`;
+
+        if (actionType === 'animation') {
+            const deviceName = getDeviceName(trigger.targetDeviceIds[0]);
+            return `${inputName} → ${typeLabel} → ${trigger.animationName} → ${deviceName}`;
+        } else {
+            const deviceName = getDeviceName(trigger.setValueDeviceId);
+            const channelCount = Object.keys(trigger.channelValues || {}).length;
+            return `${inputName} → ${typeLabel} → Set ${channelCount} channel(s) → ${deviceName}`;
+        }
+    }
+
+    // Helper functions for channel value management
+    function getSelectedDevice(deviceId) {
+        return devices.find(d => d.id === deviceId);
+    }
+
+    function getDeviceChannels(deviceId) {
+        const device = getSelectedDevice(deviceId);
+        if (!device) return [];
+
+        const deviceType = DEVICE_TYPES[device.type];
+        if (!deviceType) return [];
+
+        return deviceType.controls.map((control, index) => ({
+            index,
+            name: control.name,
+            type: control.type
+        }));
+    }
+
+    function setChannelValue(channelValues, channelIndex, value) {
+        const newValues = {...channelValues};
+        if (value === '' || value === null || value === undefined) {
+            delete newValues[channelIndex];
+        } else {
+            newValues[channelIndex] = Math.max(0, Math.min(255, parseInt(value) || 0));
+        }
+        return newValues;
+    }
+
+    function getChannelValue(channelValues, channelIndex) {
+        return channelValues[channelIndex] !== undefined ? channelValues[channelIndex] : '';
     }
 
     onMount(() => {
@@ -324,6 +409,15 @@
                         {/each}
                     </select>
                 </div>
+
+                <div class="dialog-input-group">
+                    <label for="trigger-action-type">Action:</label>
+                    <select id="trigger-action-type" bind:value={newTriggerActionType}>
+                        {#each ACTION_TYPES as type}
+                            <option value={type.value}>{type.label}</option>
+                        {/each}
+                    </select>
+                </div>
             </div>
 
             <div class="trigger-column">
@@ -336,14 +430,16 @@
                     </select>
                 </div>
 
-                <div class="dialog-input-group">
-                    <label for="trigger-animation">Animation:</label>
-                    <select id="trigger-animation" bind:value={newTriggerAnimation}>
-                        {#each availableAnimations as animation}
-                            <option value={animation.name}>{animation.name}</option>
-                        {/each}
-                    </select>
-                </div>
+                {#if newTriggerActionType === 'animation'}
+                    <div class="dialog-input-group">
+                        <label for="trigger-animation">Animation:</label>
+                        <select id="trigger-animation" bind:value={newTriggerAnimation}>
+                            {#each availableAnimations as animation}
+                                <option value={animation.name}>{animation.name}</option>
+                            {/each}
+                        </select>
+                    </div>
+                {/if}
             </div>
 
             <div class="trigger-column">
@@ -379,6 +475,30 @@
                 </div>
             </div>
         </div>
+
+        {#if newTriggerActionType === 'setValue' && newTriggerDevice}
+            <div class="channel-values-section">
+                <h4>Channel Values:</h4>
+                <div class="channel-values-grid">
+                    {#each getDeviceChannels(newTriggerDevice) as channel}
+                        <div class="channel-value-item">
+                            <label>{channel.name}:</label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="255"
+                                value={getChannelValue(newTriggerChannelValues, channel.index)}
+                                oninput={(e) => {
+                                    newTriggerChannelValues = setChannelValue(newTriggerChannelValues, channel.index, e.target.value);
+                                }}
+                                placeholder="--"
+                            />
+                        </div>
+                    {/each}
+                </div>
+                <small>Leave empty to not change that channel</small>
+            </div>
+        {/if}
     </form>
 
     {#snippet buttons()}
@@ -467,6 +587,15 @@
                             {/each}
                         </select>
                     </div>
+
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-action-type">Action:</label>
+                        <select id="edit-trigger-action-type" bind:value={editTriggerActionType}>
+                            {#each ACTION_TYPES as type}
+                                <option value={type.value}>{type.label}</option>
+                            {/each}
+                        </select>
+                    </div>
                 </div>
             {/if}
 
@@ -480,14 +609,16 @@
                     </select>
                 </div>
 
-                <div class="dialog-input-group">
-                    <label for="edit-trigger-animation">Animation:</label>
-                    <select id="edit-trigger-animation" bind:value={editTriggerAnimation}>
-                        {#each availableAnimations as animation}
-                            <option value={animation.name}>{animation.name}</option>
-                        {/each}
-                    </select>
-                </div>
+                {#if editTriggerActionType === 'animation'}
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-animation">Animation:</label>
+                        <select id="edit-trigger-animation" bind:value={editTriggerAnimation}>
+                            {#each availableAnimations as animation}
+                                <option value={animation.name}>{animation.name}</option>
+                            {/each}
+                        </select>
+                    </div>
+                {/if}
             </div>
 
             <div class="trigger-column">
@@ -523,6 +654,30 @@
                 </div>
             </div>
         </div>
+
+        {#if editTriggerActionType === 'setValue' && editTriggerDevice && editingTrigger.triggerType !== 'always'}
+            <div class="channel-values-section">
+                <h4>Channel Values:</h4>
+                <div class="channel-values-grid">
+                    {#each getDeviceChannels(editTriggerDevice) as channel}
+                        <div class="channel-value-item">
+                            <label>{channel.name}:</label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="255"
+                                value={getChannelValue(editTriggerChannelValues, channel.index)}
+                                oninput={(e) => {
+                                    editTriggerChannelValues = setChannelValue(editTriggerChannelValues, channel.index, e.target.value);
+                                }}
+                                placeholder="--"
+                            />
+                        </div>
+                    {/each}
+                </div>
+                <small>Leave empty to not change that channel</small>
+            </div>
+        {/if}
     </form>
 
     {#snippet tools()}
@@ -637,5 +792,57 @@
 
     .duration-with-loop .checkbox-field label {
         font-size: 10pt;
+    }
+
+    .channel-values-section {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+    }
+
+    .channel-values-section h4 {
+        margin: 0 0 12px 0;
+        font-size: 11pt;
+        color: #333;
+    }
+
+    .channel-values-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+    }
+
+    .channel-value-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .channel-value-item label {
+        font-size: 9pt;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .channel-value-item input {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        font-size: 10pt;
+    }
+
+    .channel-value-item input::placeholder {
+        color: #999;
+    }
+
+    .channel-values-section small {
+        display: block;
+        margin-top: 10px;
+        font-size: 9pt;
+        color: #888;
+        font-style: italic;
     }
 </style>

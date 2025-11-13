@@ -26,11 +26,18 @@ export class InputMapping {
 
 		// Trigger mode settings
 		this.triggerType = config.triggerType || 'pressed'; // 'pressed', 'not-pressed', 'always'
+		this.actionType = config.actionType || 'animation'; // 'animation' or 'setValue'
+
+		// Animation action settings
 		this.animationName = config.animationName || null;
 		this.duration = config.duration || 1000; // ms
 		this.easing = config.easing || 'linear';
 		this.iterations = config.iterations || 1; // number or 'infinite'
-		this.targetDeviceIds = config.targetDeviceIds || []; // Array of device IDs
+		this.targetDeviceIds = config.targetDeviceIds || []; // Array of device IDs (for animations)
+
+		// SetValue action settings
+		this.setValueDeviceId = config.setValueDeviceId || null; // Single device ID for setValue
+		this.channelValues = config.channelValues || {}; // Object mapping channel index to value (0-255)
 
 		// Direct mode settings
 		this.propertyName = config.propertyName || '--value'; // CSS custom property name
@@ -206,11 +213,14 @@ export class InputMapping {
 			inputDeviceName: this.inputDeviceName,
 			color: this.color,
 			triggerType: this.triggerType,
+			actionType: this.actionType,
 			animationName: this.animationName,
 			duration: this.duration,
 			easing: this.easing,
 			iterations: this.iterations,
 			targetDeviceIds: this.targetDeviceIds,
+			setValueDeviceId: this.setValueDeviceId,
+			channelValues: this.channelValues,
 			propertyName: this.propertyName,
 			propertyType: this.propertyType,
 			range: this.range,
@@ -396,6 +406,8 @@ export class TriggerManager {
 		this.notPressedClasses = new Set(); // Track not-pressed triggers
 		this.alwaysClasses = new Set(); // Track always triggers
 		this.container = null; // Will be set to the container element
+		this.setValueCallback = null; // Callback for setValue actions: (deviceId, channelValues) => void
+		this.activeSetValueMappings = new Map(); // Track active setValue mappings
 	}
 
 	/**
@@ -414,21 +426,38 @@ export class TriggerManager {
 	}
 
 	/**
+	 * Set callback for setValue actions
+	 * @param {Function} callback - (deviceId, channelValues) => void
+	 */
+	setSetValueCallback(callback) {
+		this.setValueCallback = callback;
+	}
+
+	/**
 	 * Register a trigger mapping
 	 */
 	register(mapping) {
 		if (mapping.mode !== 'trigger') return;
 
-		// For not-pressed and always types, add to permanent sets
-		if (mapping.triggerType === 'not-pressed') {
-			this.notPressedClasses.add(mapping.cssClassName);
-			if (this.container) {
-				this.container.classList.add(mapping.cssClassName);
+		// Handle animation actions
+		if (mapping.actionType === 'animation') {
+			// For not-pressed and always types, add to permanent sets
+			if (mapping.triggerType === 'not-pressed') {
+				this.notPressedClasses.add(mapping.cssClassName);
+				if (this.container) {
+					this.container.classList.add(mapping.cssClassName);
+				}
+			} else if (mapping.triggerType === 'always') {
+				this.alwaysClasses.add(mapping.cssClassName);
+				if (this.container) {
+					this.container.classList.add(mapping.cssClassName);
+				}
 			}
-		} else if (mapping.triggerType === 'always') {
-			this.alwaysClasses.add(mapping.cssClassName);
-			if (this.container) {
-				this.container.classList.add(mapping.cssClassName);
+		} else if (mapping.actionType === 'setValue') {
+			// For setValue with 'always' type, apply immediately
+			if (mapping.triggerType === 'always' && this.setValueCallback) {
+				this.setValueCallback(mapping.setValueDeviceId, mapping.channelValues);
+				this.activeSetValueMappings.set(mapping.id, mapping);
 			}
 		}
 	}
@@ -439,11 +468,15 @@ export class TriggerManager {
 	unregister(mapping) {
 		if (mapping.mode !== 'trigger') return;
 
-		this.notPressedClasses.delete(mapping.cssClassName);
-		this.alwaysClasses.delete(mapping.cssClassName);
+		if (mapping.actionType === 'animation') {
+			this.notPressedClasses.delete(mapping.cssClassName);
+			this.alwaysClasses.delete(mapping.cssClassName);
 
-		if (this.container) {
-			this.container.classList.remove(mapping.cssClassName);
+			if (this.container) {
+				this.container.classList.remove(mapping.cssClassName);
+			}
+		} else if (mapping.actionType === 'setValue') {
+			this.activeSetValueMappings.delete(mapping.id);
 		}
 	}
 
@@ -451,38 +484,70 @@ export class TriggerManager {
 	 * Trigger a mapping when input is pressed
 	 */
 	trigger(mapping) {
-		if (!this.container || mapping.mode !== 'trigger') return;
+		if (mapping.mode !== 'trigger') return;
 
-		const className = mapping.cssClassName;
+		if (mapping.actionType === 'animation') {
+			if (!this.container) return;
 
-		if (mapping.triggerType === 'pressed') {
-			// Pressed: Add class when triggered
-			this.container.classList.add(className);
-			this.activeClasses.add(className);
-		} else if (mapping.triggerType === 'not-pressed') {
-			// Not-pressed: Remove class when triggered (pressed)
-			this.container.classList.remove(className);
+			const className = mapping.cssClassName;
+
+			if (mapping.triggerType === 'pressed') {
+				// Pressed: Add class when triggered
+				this.container.classList.add(className);
+				this.activeClasses.add(className);
+			} else if (mapping.triggerType === 'not-pressed') {
+				// Not-pressed: Remove class when triggered (pressed)
+				this.container.classList.remove(className);
+			}
+			// 'always' type is always on, no action needed on trigger
+		} else if (mapping.actionType === 'setValue') {
+			if (!this.setValueCallback) return;
+
+			if (mapping.triggerType === 'pressed') {
+				// Apply setValue when pressed
+				this.setValueCallback(mapping.setValueDeviceId, mapping.channelValues);
+				this.activeSetValueMappings.set(mapping.id, mapping);
+			} else if (mapping.triggerType === 'not-pressed') {
+				// Remove setValue when pressed (will restore on release)
+				this.activeSetValueMappings.delete(mapping.id);
+			}
+			// 'always' type is handled in register()
 		}
-		// 'always' type is always on, no action needed on trigger
 	}
 
 	/**
 	 * Release a mapping when input is released
 	 */
 	release(mapping) {
-		if (!this.container || mapping.mode !== 'trigger') return;
+		if (mapping.mode !== 'trigger') return;
 
-		const className = mapping.cssClassName;
+		if (mapping.actionType === 'animation') {
+			if (!this.container) return;
 
-		if (mapping.triggerType === 'pressed') {
-			// Pressed: Remove class when released
-			this.container.classList.remove(className);
-			this.activeClasses.delete(className);
-		} else if (mapping.triggerType === 'not-pressed') {
-			// Not-pressed: Add class back when released
-			this.container.classList.add(className);
+			const className = mapping.cssClassName;
+
+			if (mapping.triggerType === 'pressed') {
+				// Pressed: Remove class when released
+				this.container.classList.remove(className);
+				this.activeClasses.delete(className);
+			} else if (mapping.triggerType === 'not-pressed') {
+				// Not-pressed: Add class back when released
+				this.container.classList.add(className);
+			}
+			// 'always' type is always on, no action needed on release
+		} else if (mapping.actionType === 'setValue') {
+			if (!this.setValueCallback) return;
+
+			if (mapping.triggerType === 'pressed') {
+				// Remove setValue when released
+				this.activeSetValueMappings.delete(mapping.id);
+			} else if (mapping.triggerType === 'not-pressed') {
+				// Restore setValue when released
+				this.setValueCallback(mapping.setValueDeviceId, mapping.channelValues);
+				this.activeSetValueMappings.set(mapping.id, mapping);
+			}
+			// 'always' type is always on, no action needed on release
 		}
-		// 'always' type is always on, no action needed on release
 	}
 
 	/**
