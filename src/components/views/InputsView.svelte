@@ -406,6 +406,19 @@
         savedInputs = mappingLibrary.getAll()
             .filter(m => m.mode === 'input');
 
+        // Initialize input states for all inputs
+        for (const input of savedInputs) {
+            if (input.isButtonInput()) {
+                // Initialize toggle buttons to 'off', momentary buttons have no initial state
+                if (input.buttonMode === 'toggle') {
+                    inputStates[input.id] = { state: 'off' };
+                }
+            } else {
+                // Initialize knobs/sliders to 0%
+                inputStates[input.id] = { value: 0 };
+            }
+        }
+
         rebuildDeviceColorUsage();
     }
 
