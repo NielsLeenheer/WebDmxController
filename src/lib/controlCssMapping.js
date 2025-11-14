@@ -149,6 +149,22 @@ export const CSS_TO_DMX_MAPPING = {
 			return { 'Safety': dmxValue };
 		},
 		requiredComponents: ['Safety']
+	},
+
+	// Pressure custom property (for pressure-sensitive buttons)
+	// Note: This is a pattern - actual property names are dynamic (e.g., --button-a-pressure)
+	// This serves as documentation and example for pressure properties
+	'--pressure': {
+		// Convert 0.0-1.0 → 0-255 DMX
+		sample: (cssValue) => {
+			const value = parseFloat(cssValue) || 0;
+			const clamped = Math.max(0, Math.min(1, value));
+			const dmxValue = Math.round(clamped * 255);
+
+			// Pressure can map to Intensity/Dimmer or custom channels
+			return { 'Intensity': dmxValue, 'Dimmer': dmxValue };
+		},
+		requiredComponents: [] // Generic - can map to any component
 	}
 };
 
@@ -306,6 +322,27 @@ export function sampleCSSProperties(computed, components) {
 		for (const [componentName, dmxValue] of Object.entries(sampledValues)) {
 			if (hasComponent(componentName)) {
 				result[componentName] = dmxValue;
+			}
+		}
+	}
+
+	// Sample dynamic pressure properties (e.g., --button-a-pressure, --key-space-pressure)
+	// These are created dynamically by input controller based on input names
+	const allProperties = Array.from(computed);
+	for (const propertyName of allProperties) {
+		if (propertyName.endsWith('-pressure')) {
+			const cssValue = computed.getPropertyValue(propertyName);
+			if (cssValue) {
+				// Use the pressure mapping to convert to DMX
+				const pressureMapping = CSS_TO_DMX_MAPPING['--pressure'];
+				const sampledValues = pressureMapping.sample(cssValue);
+
+				// Only include components that this device actually has
+				for (const [componentName, dmxValue] of Object.entries(sampledValues)) {
+					if (hasComponent(componentName)) {
+						result[componentName] = dmxValue;
+					}
+				}
 			}
 		}
 	}

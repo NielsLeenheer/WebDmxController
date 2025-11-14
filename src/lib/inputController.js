@@ -100,6 +100,21 @@ export class InputController {
 			const upClass = this._generateClassName(controlId, 'up');
 			this.triggerManager.removeRawClass(upClass);
 
+			// Set pressure as custom property (for pressure-sensitive buttons)
+			// Find the input mapping (mode='input') for this control
+			const inputMapping = mappings.find(m => m.mode === 'input');
+			if (inputMapping && inputMapping.name) {
+				// Generate CSS custom property name from input name
+				const propertyName = inputMapping.name
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+					.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+				// Normalize velocity (typically 0-127 for MIDI) to 0.0-1.0
+				const normalizedVelocity = Math.max(0, Math.min(1, velocity / 127));
+				this.customPropertyManager.setProperty(`${propertyName}-pressure`, normalizedVelocity.toFixed(3));
+			}
+
 			for (const mapping of mappings) {
 				if (mapping.mode === 'trigger') {
 					// Trigger animation via CSS class
@@ -125,6 +140,16 @@ export class InputController {
 
 			const upClass = this._generateClassName(controlId, 'up');
 			this.triggerManager.addRawClass(upClass);
+
+			// Reset pressure custom property to 0
+			const inputMapping = mappings.find(m => m.mode === 'input');
+			if (inputMapping && inputMapping.name) {
+				const propertyName = inputMapping.name
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, '-')
+					.replace(/^-+|-+$/g, '');
+				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.000');
+			}
 
 			for (const mapping of mappings) {
 				if (mapping.mode === 'trigger') {
