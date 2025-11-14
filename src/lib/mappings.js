@@ -57,12 +57,42 @@ export class InputMapping {
 		// CSS class name for trigger mode (auto-generated from input)
 		this.cssClassName = config.cssClassName || this._generateClassName();
 
+		// Button mode for input-mode button inputs: 'momentary' or 'toggle'
+		// Momentary: down/up states, Toggle: on/off states
+		this.buttonMode = config.buttonMode || 'momentary';
+
 		// Stored CSS identifiers (generated from name and stored)
-		// For button inputs: store both down and up class names
-		this.cssClassDown = config.cssClassDown || (this.isButtonInput() ? this._generateButtonDownClass() : null);
-		this.cssClassUp = config.cssClassUp || (this.isButtonInput() ? this._generateButtonUpClass() : null);
-		// For slider/knob inputs: store the CSS custom property name
-		this.cssProperty = config.cssProperty || (!this.isButtonInput() ? this._generatePropertyName() : null);
+		// For button inputs in input mode:
+		if (this.mode === 'input' && this.isButtonInput()) {
+			if (this.buttonMode === 'toggle') {
+				// Toggle mode: on/off class names
+				this.cssClassOn = config.cssClassOn || this._generateButtonOnClass();
+				this.cssClassOff = config.cssClassOff || this._generateButtonOffClass();
+				this.cssClassDown = null;
+				this.cssClassUp = null;
+			} else {
+				// Momentary mode: down/up class names (default)
+				this.cssClassDown = config.cssClassDown || this._generateButtonDownClass();
+				this.cssClassUp = config.cssClassUp || this._generateButtonUpClass();
+				this.cssClassOn = null;
+				this.cssClassOff = null;
+			}
+			this.cssProperty = null;
+		} else if (!this.isButtonInput()) {
+			// For slider/knob inputs: store the CSS custom property name
+			this.cssProperty = config.cssProperty || this._generatePropertyName();
+			this.cssClassDown = null;
+			this.cssClassUp = null;
+			this.cssClassOn = null;
+			this.cssClassOff = null;
+		} else {
+			// For trigger mode buttons, keep old behavior
+			this.cssClassDown = config.cssClassDown || (this.isButtonInput() ? this._generateButtonDownClass() : null);
+			this.cssClassUp = config.cssClassUp || (this.isButtonInput() ? this._generateButtonUpClass() : null);
+			this.cssClassOn = null;
+			this.cssClassOff = null;
+			this.cssProperty = null;
+		}
 	}
 
 	/**
@@ -146,17 +176,64 @@ export class InputMapping {
 	}
 
 	/**
+	 * Generate CSS class name for button on state (for toggle button inputs)
+	 */
+	_generateButtonOnClass() {
+		if (!this.name) return '';
+
+		const namePart = this.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+			.replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+		return `${namePart}_on`;
+	}
+
+	/**
+	 * Generate CSS class name for button off state (for toggle button inputs)
+	 */
+	_generateButtonOffClass() {
+		if (!this.name) return '';
+
+		const namePart = this.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+			.replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+		return `${namePart}_off`;
+	}
+
+	/**
 	 * Update stored CSS identifiers when name changes
 	 */
 	updateCSSIdentifiers() {
-		if (this.isButtonInput()) {
+		if (this.mode === 'input' && this.isButtonInput()) {
+			if (this.buttonMode === 'toggle') {
+				this.cssClassOn = this._generateButtonOnClass();
+				this.cssClassOff = this._generateButtonOffClass();
+				this.cssClassDown = null;
+				this.cssClassUp = null;
+			} else {
+				this.cssClassDown = this._generateButtonDownClass();
+				this.cssClassUp = this._generateButtonUpClass();
+				this.cssClassOn = null;
+				this.cssClassOff = null;
+			}
+			this.cssProperty = null;
+		} else if (this.isButtonInput()) {
+			// Trigger mode buttons
 			this.cssClassDown = this._generateButtonDownClass();
 			this.cssClassUp = this._generateButtonUpClass();
+			this.cssClassOn = null;
+			this.cssClassOff = null;
 			this.cssProperty = null;
 		} else {
+			// Slider/knob inputs
 			this.cssProperty = this._generatePropertyName();
 			this.cssClassDown = null;
 			this.cssClassUp = null;
+			this.cssClassOn = null;
+			this.cssClassOff = null;
 		}
 	}
 
@@ -245,6 +322,22 @@ export class InputMapping {
 	}
 
 	/**
+	 * Get button on class name (for toggle button inputs)
+	 * Returns the stored cssClassOn value
+	 */
+	getButtonOnClass() {
+		return this.cssClassOn;
+	}
+
+	/**
+	 * Get button off class name (for toggle button inputs)
+	 * Returns the stored cssClassOff value
+	 */
+	getButtonOffClass() {
+		return this.cssClassOff;
+	}
+
+	/**
 	 * Convert input value (0-1) to property value
 	 */
 	mapValue(inputValue) {
@@ -275,6 +368,7 @@ export class InputMapping {
 			inputControlId: this.inputControlId,
 			inputDeviceName: this.inputDeviceName,
 			color: this.color,
+			buttonMode: this.buttonMode,
 			triggerType: this.triggerType,
 			actionType: this.actionType,
 			animationName: this.animationName,
@@ -287,7 +381,12 @@ export class InputMapping {
 			propertyName: this.propertyName,
 			propertyType: this.propertyType,
 			range: this.range,
-			cssClassName: this.cssClassName
+			cssClassName: this.cssClassName,
+			cssClassDown: this.cssClassDown,
+			cssClassUp: this.cssClassUp,
+			cssClassOn: this.cssClassOn,
+			cssClassOff: this.cssClassOff,
+			cssProperty: this.cssProperty
 		};
 	}
 

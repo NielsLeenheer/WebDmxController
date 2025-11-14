@@ -17,6 +17,7 @@
     let savedInputs = $state([]);
     let editingInput = $state(null);
     let editingName = $state('');
+    let editingButtonMode = $state('momentary');
     let editDialog = null; // DOM reference - should NOT be $state
 
     const deviceColorUsage = new Map(); // deviceId -> Set(colors)
@@ -237,6 +238,7 @@
     function startEditing(input) {
         editingInput = input;
         editingName = input.name;
+        editingButtonMode = input.buttonMode || 'momentary';
 
         requestAnimationFrame(() => {
             editDialog?.showModal();
@@ -250,7 +252,13 @@
         const mapping = mappingLibrary.get(editingInput.id);
         if (mapping) {
             mapping.name = editingName.trim();
-            // Update CSS identifiers based on new name
+
+            // Update button mode for button inputs
+            if (mapping.mode === 'input' && mapping.isButtonInput()) {
+                mapping.buttonMode = editingButtonMode;
+            }
+
+            // Update CSS identifiers based on new name and button mode
             mapping.updateCSSIdentifiers();
             mappingLibrary.update(mapping);
             refreshInputs();
@@ -303,6 +311,30 @@
             .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
 
         return `${namePart}_up`;
+    }
+
+    // Generate preview of button on class name based on current editing name
+    function getPreviewButtonOnClass() {
+        if (!editingName.trim()) return '';
+
+        const namePart = editingName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+            .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+        return `${namePart}_on`;
+    }
+
+    // Generate preview of button off class name based on current editing name
+    function getPreviewButtonOffClass() {
+        if (!editingName.trim()) return '';
+
+        const namePart = editingName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+            .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+        return `${namePart}_off`;
     }
 
     async function confirmDelete() {
@@ -467,15 +499,31 @@
                 }}
                 autofocus
             />
+        </div>
+
+        {#if editingInput.isButtonInput()}
+            <div class="dialog-input-group">
+                <label for="button-mode">Button Mode:</label>
+                <select id="button-mode" bind:value={editingButtonMode}>
+                    <option value="momentary">Momentary (Down/Up)</option>
+                    <option value="toggle">Toggle (On/Off)</option>
+                </select>
+            </div>
+
             <div class="css-identifiers">
-                {#if editingInput.isButtonInput()}
+                {#if editingButtonMode === 'toggle'}
+                    <code class="css-id">.{getPreviewButtonOnClass()}</code>
+                    <code class="css-id">.{getPreviewButtonOffClass()}</code>
+                {:else}
                     <code class="css-id">.{getPreviewButtonDownClass()}</code>
                     <code class="css-id">.{getPreviewButtonUpClass()}</code>
-                {:else}
-                    <code class="css-id">{getPreviewPropertyName()}</code>
                 {/if}
             </div>
-        </div>
+        {:else}
+            <div class="css-identifiers">
+                <code class="css-id">{getPreviewPropertyName()}</code>
+            </div>
+        {/if}
     </form>
 
     {#snippet tools()}
