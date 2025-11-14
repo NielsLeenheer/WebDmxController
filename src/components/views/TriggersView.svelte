@@ -5,6 +5,7 @@
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
+    import DeviceControls from '../controls/DeviceControls.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
     import editIcon from '../../assets/glyphs/edit.svg?raw';
 
@@ -331,6 +332,33 @@
         return channelValues[channelIndex] !== undefined ? channelValues[channelIndex] : '';
     }
 
+    // Convert channelValues object to full values array for DeviceControls
+    function getValuesArrayForDevice(deviceId, channelValues) {
+        const device = devices.find(d => d.id === deviceId);
+        if (!device) return [];
+
+        const numChannels = DEVICE_TYPES[device.type].channels;
+        const values = new Array(numChannels).fill(0);
+
+        // Fill in values from channelValues object
+        for (let i = 0; i < numChannels; i++) {
+            if (channelValues[i] !== undefined) {
+                values[i] = channelValues[i];
+            }
+        }
+
+        return values;
+    }
+
+    // Handle device control changes for setValue triggers
+    function handleSetValueChange(channelIndex, value) {
+        newTriggerChannelValues = setChannelValue(newTriggerChannelValues, channelIndex, value);
+    }
+
+    function handleEditSetValueChange(channelIndex, value) {
+        editTriggerChannelValues = setChannelValue(editTriggerChannelValues, channelIndex, value);
+    }
+
     onMount(() => {
         refreshData();
         mappingLibrary.on('changed', handleMappingChange);
@@ -484,27 +512,17 @@
         </div>
 
         {#if newTriggerActionType === 'setValue' && newTriggerDevice}
-            <div class="channel-values-section">
-                <h4>Channel Values:</h4>
-                <div class="channel-values-grid">
-                    {#each getDeviceChannels(newTriggerDevice) as channel}
-                        <div class="channel-value-item">
-                            <label>{channel.name}:</label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="255"
-                                value={getChannelValue(newTriggerChannelValues, channel.index)}
-                                oninput={(e) => {
-                                    newTriggerChannelValues = setChannelValue(newTriggerChannelValues, channel.index, e.target.value);
-                                }}
-                                placeholder="--"
-                            />
-                        </div>
-                    {/each}
+            {@const selectedDevice = devices.find(d => d.id === newTriggerDevice)}
+            {#if selectedDevice}
+                <div class="channel-values-section">
+                    <h4>Set Channel Values:</h4>
+                    <DeviceControls
+                        deviceType={selectedDevice.type}
+                        values={getValuesArrayForDevice(newTriggerDevice, newTriggerChannelValues)}
+                        onChange={handleSetValueChange}
+                    />
                 </div>
-                <small>Leave empty to not change that channel</small>
-            </div>
+            {/if}
         {/if}
     </form>
 
@@ -663,27 +681,17 @@
         </div>
 
         {#if editTriggerActionType === 'setValue' && editTriggerDevice && editingTrigger.triggerType !== 'always'}
-            <div class="channel-values-section">
-                <h4>Channel Values:</h4>
-                <div class="channel-values-grid">
-                    {#each getDeviceChannels(editTriggerDevice) as channel}
-                        <div class="channel-value-item">
-                            <label>{channel.name}:</label>
-                            <input
-                                type="number"
-                                min="0"
-                                max="255"
-                                value={getChannelValue(editTriggerChannelValues, channel.index)}
-                                oninput={(e) => {
-                                    editTriggerChannelValues = setChannelValue(editTriggerChannelValues, channel.index, e.target.value);
-                                }}
-                                placeholder="--"
-                            />
-                        </div>
-                    {/each}
+            {@const selectedDevice = devices.find(d => d.id === editTriggerDevice)}
+            {#if selectedDevice}
+                <div class="channel-values-section">
+                    <h4>Set Channel Values:</h4>
+                    <DeviceControls
+                        deviceType={selectedDevice.type}
+                        values={getValuesArrayForDevice(editTriggerDevice, editTriggerChannelValues)}
+                        onChange={handleEditSetValueChange}
+                    />
                 </div>
-                <small>Leave empty to not change that channel</small>
-            </div>
+            {/if}
         {/if}
     </form>
 
@@ -810,46 +818,8 @@
     }
 
     .channel-values-section h4 {
-        margin: 0 0 12px 0;
+        margin: 0 0 16px 0;
         font-size: 11pt;
         color: #333;
-    }
-
-    .channel-values-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 12px;
-    }
-
-    .channel-value-item {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .channel-value-item label {
-        font-size: 9pt;
-        color: #666;
-        font-weight: 500;
-    }
-
-    .channel-value-item input {
-        width: 100%;
-        padding: 6px 8px;
-        border: 1px solid #ddd;
-        border-radius: 3px;
-        font-size: 10pt;
-    }
-
-    .channel-value-item input::placeholder {
-        color: #999;
-    }
-
-    .channel-values-section small {
-        display: block;
-        margin-top: 10px;
-        font-size: 9pt;
-        color: #888;
-        font-style: italic;
     }
 </style>
