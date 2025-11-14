@@ -28,8 +28,14 @@ export const DEVICE_TYPES = {
         controls: [
             {
                 name: 'Color',
-                type: 'rgba',
-                components: { r: 0, g: 1, b: 2, a: 3 }
+                type: 'rgb',
+                components: { r: 0, g: 1, b: 2 }
+            },
+            {
+                name: 'Amber',
+                type: 'slider',
+                color: '#ffbf00',
+                components: { value: 3 }
             }
         ]
     },
