@@ -129,7 +129,7 @@ export class InputController {
 					if (upClass) this.triggerManager.removeRawClass(upClass);
 				}
 
-				// Set pressure as custom property (for pressure-sensitive buttons)
+				// Set velocity as custom property (for velocity-sensitive buttons)
 				if (inputMapping.name) {
 					// Generate CSS custom property name from input name
 					const propertyName = inputMapping.name
@@ -137,8 +137,8 @@ export class InputController {
 						.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
 						.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
 
-					// Normalize velocity (typically 0-127 for MIDI) to percentage (0% to 100%)
-					const normalizedVelocity = Math.max(0, Math.min(1, velocity / 127));
+					// Velocity is already normalized to 0-1 by input devices
+					const normalizedVelocity = Math.max(0, Math.min(1, velocity));
 					const percentage = (normalizedVelocity * 100).toFixed(1);
 					this.customPropertyManager.setProperty(`${propertyName}-pressure`, `${percentage}%`);
 				}
