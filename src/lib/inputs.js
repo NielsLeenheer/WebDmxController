@@ -183,16 +183,60 @@ export class MIDIInputDevice extends InputDevice {
 	/**
 	 * Set button color (device-agnostic, will use device profile)
 	 * @param {number} button - Button/pad number
-	 * @param {string|number} color - Color name or velocity value
+	 * @param {string|number} color - Color name, HSL string, or velocity value
 	 */
 	setButtonColor(button, color) {
 		if (!this.midiOutput) return;
 
+		// Convert HSL color to named color if needed
+		let colorName = color;
+		if (typeof color === 'string' && color.startsWith('hsl(')) {
+			colorName = this._hslToNamedColor(color);
+		}
+
 		// Convert color to velocity value based on device
-		const velocity = this._colorToVelocity(color);
+		const velocity = this._colorToVelocity(colorName);
 
 		// Most MIDI pads use Note On with velocity for color
 		this.sendNoteOn(button, velocity);
+	}
+
+	/**
+	 * Convert HSL color to closest named color from device palette
+	 * @param {string} hslString - HSL color string like "hsl(120, 75%, 60%)"
+	 * @returns {string} Named color from device palette
+	 */
+	_hslToNamedColor(hslString) {
+		// Parse HSL string
+		const match = hslString.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+		if (!match) return 'red'; // fallback
+
+		const hue = parseInt(match[1]);
+
+		// Map hue ranges to basic color names
+		// 0-30: red
+		// 30-60: orange/yellow
+		// 60-150: green/lime
+		// 150-210: cyan/turquoise
+		// 210-270: blue
+		// 270-330: purple/magenta
+		// 330-360: pink/red
+
+		if (hue >= 0 && hue < 20) return 'red';
+		if (hue >= 20 && hue < 40) return 'orange';
+		if (hue >= 40 && hue < 70) return 'yellow';
+		if (hue >= 70 && hue < 90) return 'lime';
+		if (hue >= 90 && hue < 140) return 'green';
+		if (hue >= 140 && hue < 160) return 'spring';
+		if (hue >= 160 && hue < 180) return 'turquoise';
+		if (hue >= 180 && hue < 200) return 'cyan';
+		if (hue >= 200 && hue < 220) return 'sky';
+		if (hue >= 220 && hue < 250) return 'blue';
+		if (hue >= 250 && hue < 280) return 'violet';
+		if (hue >= 280 && hue < 310) return 'purple';
+		if (hue >= 310 && hue < 330) return 'magenta';
+		if (hue >= 330 && hue < 350) return 'pink';
+		return 'red'; // 350-360
 	}
 
 	/**
