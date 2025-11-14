@@ -1,6 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
-    import { InputMapping } from '../../lib/mappings.js';
+    import { InputMapping, INPUT_COLOR_PALETTE } from '../../lib/mappings.js';
+    import { getInputColorCSS } from '../../lib/inputColors.js';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Dialog from '../common/Dialog.svelte';
@@ -18,8 +19,86 @@
     let editingName = $state('');
     let editDialog = null; // DOM reference - should NOT be $state
 
+    const deviceColorUsage = new Map(); // deviceId -> Set(colors)
+    const deviceColorIndices = new Map(); // deviceId -> last palette index used when cycling
+    const COLOR_CAPABLE_PREFIXES = ['button-', 'note-'];
+
+    function isColorCapableControl(controlId) {
+        if (!controlId || typeof controlId !== 'string') return false;
+        return COLOR_CAPABLE_PREFIXES.some(prefix => controlId.startsWith(prefix));
+    }
+
+    function deviceSupportsColors(device) {
+        if (!device) return false;
+        if (device.type === 'hid') {
+            return device.id !== 'keyboard';
+        }
+        return device.type === 'midi';
+    }
+
+    function shouldAssignColor(device, controlId) {
+        return deviceSupportsColors(device) && isColorCapableControl(controlId);
+    }
+
+    function normalizeColor(color) {
+        if (!color || typeof color !== 'string') return null;
+        return color.trim().toLowerCase();
+    }
+
+    function registerColorUsage(deviceId, controlId, color) {
+        const normalized = normalizeColor(color);
+        if (!deviceId || !normalized || !isColorCapableControl(controlId)) return;
+
+        if (!deviceColorUsage.has(deviceId)) {
+            deviceColorUsage.set(deviceId, new Set());
+        }
+        deviceColorUsage.get(deviceId).add(normalized);
+    }
+
+    function releaseColorUsage(deviceId, controlId, color) {
+        const normalized = normalizeColor(color);
+        if (!deviceId || !normalized || !isColorCapableControl(controlId)) return;
+
+        const usage = deviceColorUsage.get(deviceId);
+        if (!usage) return;
+        usage.delete(normalized);
+        if (usage.size === 0) {
+            deviceColorUsage.delete(deviceId);
+            deviceColorIndices.delete(deviceId);
+        }
+    }
+
+    function rebuildDeviceColorUsage() {
+        deviceColorUsage.clear();
+        deviceColorIndices.clear();
+        for (const input of savedInputs) {
+            registerColorUsage(input.inputDeviceId, input.inputControlId, input.color);
+        }
+    }
+
     // Event handlers
     let inputEventHandlers = [];
+
+    function getNextAvailableColor(deviceId) {
+        const palette = INPUT_COLOR_PALETTE || [];
+        if (!palette.length) return undefined;
+
+        const usedColors = deviceColorUsage.get(deviceId);
+        if (!usedColors || usedColors.size === 0) {
+            return palette[0];
+        }
+
+        for (const color of palette) {
+            if (!usedColors.has(color)) {
+                return color;
+            }
+        }
+
+        const lastIndex = deviceColorIndices.get(deviceId) ?? -1;
+        const nextIndex = (lastIndex + 1) % palette.length;
+        deviceColorIndices.set(deviceId, nextIndex);
+        return palette[nextIndex];
+    }
 
     function startListening() {
         isListening = true;
@@ -61,7 +140,7 @@
             const name = formatInputName(device?.name || deviceId, controlId);
 
             // Stream Deck (HID, not keyboard) and MIDI devices support colors
-            const supportsColor = (device?.type === 'hid' && device.id !== 'keyboard') || device?.type === 'midi';
+            const supportsColor = shouldAssignColor(device, controlId);
 
             const inputMapping = new InputMapping({
                 name,
@@ -69,11 +148,15 @@
                 inputDeviceId: deviceId,
                 inputControlId: controlId,
                 inputDeviceName: device?.name || deviceId, // Store device name for display
-                color: supportsColor ? undefined : null  // undefined = generate color, null = no color
+                color: supportsColor ? getNextAvailableColor(deviceId) : null  // unique random color if supported
             });
 
             mappingLibrary.add(inputMapping);
             refreshInputs();
+
+            if (supportsColor) {
+                registerColorUsage(deviceId, controlId, inputMapping.color);
+            }
 
             // Set color on hardware for devices that support it
             if (supportsColor) {
@@ -235,7 +318,10 @@
         const input = mappingLibrary.get(inputId);
         if (!input) return;
 
-        // Clear button color on hardware
+    // Release color usage for this device before clearing hardware
+    releaseColorUsage(input.inputDeviceId, input.inputControlId, input.color);
+
+    // Clear button color on hardware
         const inputDevice = inputController.getInputDevice(input.inputDeviceId);
         if (inputDevice?.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
             // Stream Deck button
@@ -249,6 +335,9 @@
             // MIDI note/button
             const noteNumber = parseInt(input.inputControlId.replace('note-', ''));
             if (!isNaN(noteNumber) && noteNumber >= 0) {
+                if (typeof inputDevice.setButtonColor === 'function') {
+                    inputDevice.setButtonColor(noteNumber, 'off');
+                }
                 inputDevice.sendNoteOff(noteNumber);
             }
         }
@@ -261,13 +350,15 @@
         // Only show input-mode mappings
         savedInputs = mappingLibrary.getAll()
             .filter(m => m.mode === 'input');
+
+        rebuildDeviceColorUsage();
     }
 
     async function applyColorsToDevices() {
         // Apply colors to all buttons that have saved inputs
         for (const input of savedInputs) {
             const inputDevice = inputController.getInputDevice(input.inputDeviceId);
-            if (!inputDevice || !input.color) continue;
+            if (!inputDevice || !input.color || !isColorCapableControl(input.inputControlId)) continue;
 
             if (inputDevice.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
                 // Stream Deck button
@@ -328,8 +419,11 @@
         {:else}
             {#each savedInputs as input (input.id)}
                 <div class="input-card">
-                    {#if input.color}
-                        <div class="input-color-badge" style="background-color: {input.color}"></div>
+                    {#if input.color && isColorCapableControl(input.inputControlId)}
+                        <div
+                            class="input-color-badge"
+                            style="background-color: {getInputColorCSS(input.color)}"
+                        ></div>
                     {/if}
                     <div class="input-header">
                         <div class="input-name">{input.name}</div>

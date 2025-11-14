@@ -108,6 +108,8 @@ export class MIDIInputDevice extends InputDevice {
 		this.midiInput = midiInput;
 		this.midiOutput = midiOutput; // Optional MIDI output for LED feedback
 		this.profile = profile; // Device-specific profile for color mapping
+		this.buttonColors = new Map(); // Track desired colors per note/pad
+		this._sysexDisabled = false;
 		this.midiInput.onmidimessage = this._handleMIDIMessage.bind(this);
 	}
 
@@ -186,13 +188,51 @@ export class MIDIInputDevice extends InputDevice {
 	 * @param {string|number} color - Color name or velocity value
 	 */
 	setButtonColor(button, color) {
+		if (color === undefined || color === null) {
+			this.buttonColors.delete(button);
+		} else {
+			this.buttonColors.set(button, color);
+		}
+
 		if (!this.midiOutput) return;
 
-		// Convert color to velocity value based on device
-		const velocity = this._colorToVelocity(color);
+		const mode = this.profile?.colorUpdateMode || 'note';
 
-		// Most MIDI pads use Note On with velocity for color
-		this.sendNoteOn(button, velocity);
+		if (
+			mode === 'sysex' &&
+			!this._sysexDisabled &&
+			typeof this.profile?.buildColorSysEx === 'function'
+		) {
+			const message = this.profile.buildColorSysEx(this.buttonColors);
+			if (message && message.length) {
+				try {
+					this.midiOutput.send(message);
+					return;
+				} catch (error) {
+					if (error?.name === 'InvalidAccessError') {
+						console.warn('MIDI device rejected SysEx message; disabling SysEx mode for this session.', error);
+						this._sysexDisabled = true;
+					} else {
+						console.error('Failed to send SysEx color update:', error);
+					}
+				}
+			}
+		}
+
+		// Default to velocity-based color via NOTE ON
+		const noteData = typeof this.profile?.getNoteColor === 'function'
+			? this.profile.getNoteColor(button, color)
+			: { note: button, velocity: this._colorToVelocity(color), channel: 0 };
+
+		if (!noteData) return;
+
+		const {
+			note = button,
+			velocity = this._colorToVelocity(color),
+			channel = 0
+		} = noteData;
+
+		this.sendNoteOn(note, velocity, channel);
 	}
 
 	/**
@@ -230,10 +270,29 @@ export class MIDIInputDevice extends InputDevice {
 		}
 		// Clear all LEDs on disconnect
 		if (this.midiOutput) {
-			for (let i = 0; i < 128; i++) {
-				this.sendNoteOff(i);
+			const mode = this.profile?.colorUpdateMode || 'note';
+			if (
+				mode === 'sysex' &&
+				!this._sysexDisabled &&
+				typeof this.profile?.buildColorSysEx === 'function'
+			) {
+				this.buttonColors.clear();
+				const message = this.profile.buildColorSysEx(this.buttonColors);
+				if (message && message.length) {
+					try {
+						this.midiOutput.send(message);
+					} catch (error) {
+						console.warn('Failed to send SysEx clear message on disconnect.', error);
+						this._sysexDisabled = true;
+					}
+				}
+			} else {
+				for (let i = 0; i < 128; i++) {
+					this.sendNoteOff(i);
+				}
 			}
 		}
+		this.buttonColors.clear();
 	}
 }
 
@@ -438,7 +497,18 @@ export class InputDeviceManager {
 		}
 
 		try {
-			this.midiAccess = await navigator.requestMIDIAccess();
+			this.midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+		} catch (firstError) {
+			console.warn('SysEx-enabled MIDI access denied, retrying without SysEx.', firstError);
+			try {
+				this.midiAccess = await navigator.requestMIDIAccess({ sysex: false });
+			} catch (fallbackError) {
+				console.error('Failed to initialize MIDI:', fallbackError);
+				return false;
+			}
+		}
+
+		try {
 			this.midiAccess.onstatechange = this._handleMIDIStateChange.bind(this);
 
 			// Add existing MIDI inputs
@@ -448,7 +518,7 @@ export class InputDeviceManager {
 
 			return true;
 		} catch (e) {
-			console.error('Failed to initialize MIDI:', e);
+			console.error('Failed to configure MIDI:', e);
 			return false;
 		}
 	}

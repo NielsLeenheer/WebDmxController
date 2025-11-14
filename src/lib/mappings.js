@@ -6,6 +6,12 @@
  * 2. Direct mode - Continuously control a CSS custom property
  */
 
+export const INPUT_COLOR_PALETTE = [
+	'red', 'orange', 'yellow', 'lime', 'green', 'spring',
+	'turquoise', 'cyan', 'sky', 'blue', 'violet', 'purple',
+	'magenta', 'pink'
+];
+
 /**
  * Represents a single input-to-output mapping
  */
@@ -64,12 +70,7 @@ export class InputMapping {
 	 * Named colors work across all devices (MIDI, Stream Deck)
 	 */
 	_generateRandomColor() {
-		const colors = [
-			'red', 'orange', 'yellow', 'lime', 'green', 'spring',
-			'turquoise', 'cyan', 'sky', 'blue', 'violet', 'purple',
-			'magenta', 'pink'
-		];
-		return colors[Math.floor(Math.random() * colors.length)];
+		return INPUT_COLOR_PALETTE[Math.floor(Math.random() * INPUT_COLOR_PALETTE.length)];
 	}
 
 	/**
