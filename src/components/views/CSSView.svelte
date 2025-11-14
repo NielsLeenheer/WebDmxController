@@ -411,13 +411,24 @@
                         {#each allMappings as mapping (mapping.id)}
                             {#if mapping.mode === 'input'}
                                 {#if mapping.isButtonInput()}
-                                    <!-- Buttons show down and up classes -->
-                                    <div class="reference-item">
-                                        <code>.{mapping.getButtonDownClass()}</code>
-                                    </div>
-                                    <div class="reference-item">
-                                        <code>.{mapping.getButtonUpClass()}</code>
-                                    </div>
+                                    <!-- Buttons show classes based on mode -->
+                                    {#if mapping.buttonMode === 'toggle'}
+                                        <!-- Toggle buttons show on and off classes -->
+                                        <div class="reference-item">
+                                            <code>.{mapping.getButtonOnClass()}</code>
+                                        </div>
+                                        <div class="reference-item">
+                                            <code>.{mapping.getButtonOffClass()}</code>
+                                        </div>
+                                    {:else}
+                                        <!-- Momentary buttons show down and up classes -->
+                                        <div class="reference-item">
+                                            <code>.{mapping.getButtonDownClass()}</code>
+                                        </div>
+                                        <div class="reference-item">
+                                            <code>.{mapping.getButtonUpClass()}</code>
+                                        </div>
+                                    {/if}
                                 {:else}
                                     <!-- Sliders/Knobs show custom property -->
                                     <div class="reference-item">
