@@ -19,10 +19,33 @@
     let editingName = $state('');
     let editingButtonMode = $state('momentary');
     let editDialog = null; // DOM reference - should NOT be $state
+    let inputStates = $state({}); // Track state/value for each input: { inputId: { state: 'on'|'off', value: number } }
 
     const deviceColorUsage = new Map(); // deviceId -> Set(colors)
     const deviceColorIndices = new Map(); // deviceId -> last palette index used when cycling
     const COLOR_CAPABLE_PREFIXES = ['button-', 'note-'];
+
+    function getInputStateDisplay(input) {
+        const state = inputStates[input.id];
+        if (!state) return '';
+
+        // For buttons (toggle or momentary)
+        if (input.isButtonInput()) {
+            if (input.buttonMode === 'toggle') {
+                return state.state === 'on' ? 'On' : 'Off';
+            } else {
+                // Momentary buttons - only show when pressed
+                return state.state === 'pressed' ? '●' : '';
+            }
+        }
+
+        // For knobs/sliders
+        if (state.value !== undefined) {
+            return `${state.value}%`;
+        }
+
+        return '';
+    }
 
     function isColorCapableControl(controlId) {
         if (!controlId || typeof controlId !== 'string') return false;
@@ -413,6 +436,34 @@
     onMount(() => {
         refreshInputs();
 
+        // Track input state changes for display
+        inputController.on('trigger', ({ mapping, velocity }) => {
+            if (mapping.mode === 'input') {
+                // For toggle buttons, flip the state
+                if (mapping.buttonMode === 'toggle') {
+                    const current = inputStates[mapping.id]?.state || 'off';
+                    inputStates[mapping.id] = { state: current === 'on' ? 'off' : 'on' };
+                } else if (mapping.isButtonInput()) {
+                    // For momentary buttons, show pressed state
+                    inputStates[mapping.id] = { state: 'pressed' };
+                }
+            }
+        });
+
+        inputController.on('release', ({ mapping }) => {
+            if (mapping.mode === 'input' && mapping.isButtonInput() && mapping.buttonMode !== 'toggle') {
+                // For momentary buttons, clear pressed state
+                inputStates[mapping.id] = { state: 'released' };
+            }
+        });
+
+        inputController.on('valuechange', ({ mapping, value }) => {
+            if (mapping.mode === 'input' && !mapping.isButtonInput()) {
+                // For knobs/sliders, store the value (0-1)
+                inputStates[mapping.id] = { value: Math.round(value * 100) };
+            }
+        });
+
         // Apply colors when devices connect
         inputController.on('deviceadded', (device) => {
             if (device.type === 'hid' || device.type === 'midi') {
@@ -462,6 +513,9 @@
                         <div class="input-device-name">
                             {input.inputDeviceName || input.inputDeviceId}
                         </div>
+                    </div>
+                    <div class="input-state">
+                        {getInputStateDisplay(input)}
                     </div>
                     <div class="input-actions">
                         <button
@@ -637,6 +691,16 @@
     .input-device-name {
         font-size: 9pt;
         color: #666;
+    }
+
+    .input-state {
+        position: absolute;
+        bottom: 8px;
+        left: 12px;
+        font-size: 9pt;
+        font-weight: 600;
+        color: #666;
+        min-height: 14px;
     }
 
     .input-actions {
