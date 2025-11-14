@@ -108,6 +108,7 @@ export class MIDIInputDevice extends InputDevice {
 		this.midiInput = midiInput;
 		this.midiOutput = midiOutput; // Optional MIDI output for LED feedback
 		this.profile = profile; // Device-specific profile for color mapping
+		this.buttonColors = new Map(); // Track assigned colors for each button
 		this.midiInput.onmidimessage = this._handleMIDIMessage.bind(this);
 	}
 
@@ -120,6 +121,14 @@ export class MIDIInputDevice extends InputDevice {
 			case 0x90: // Note On
 				if (data2 > 0) {
 					const controlId = `note-${data1}`;
+
+					// Assign random color to button if not already assigned
+					if (!this.buttonColors.has(data1)) {
+						const color = this._getRandomColor();
+						this.buttonColors.set(data1, color);
+						this.setButtonColor(data1, color);
+					}
+
 					this._trigger(controlId, data2 / 127);
 				} else {
 					// Note off (velocity 0)
@@ -224,6 +233,21 @@ export class MIDIInputDevice extends InputDevice {
 		return colorMap[color.toLowerCase()] || 0;
 	}
 
+	/**
+	 * Get a random color from the device's palette
+	 */
+	_getRandomColor() {
+		// Use device profile's color palette if available
+		if (this.profile && this.profile.colorMap) {
+			const colors = Object.keys(this.profile.colorMap).filter(c => c !== 'off' && c !== 'black');
+			return colors[Math.floor(Math.random() * colors.length)];
+		}
+
+		// Fallback to basic color palette
+		const basicColors = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink'];
+		return basicColors[Math.floor(Math.random() * basicColors.length)];
+	}
+
 	disconnect() {
 		if (this.midiInput) {
 			this.midiInput.onmidimessage = null;
@@ -234,6 +258,8 @@ export class MIDIInputDevice extends InputDevice {
 				this.sendNoteOff(i);
 			}
 		}
+		// Clear button color assignments
+		this.buttonColors.clear();
 	}
 }
 

@@ -116,10 +116,6 @@ export class InputController {
 				this.customPropertyManager.setProperty(`${propertyName}-pressure`, `${percentage}%`);
 			}
 
-			// Set button color when trigger is active
-			// Use green for active triggers (can be customized per mapping)
-			this.setButtonColor(deviceId, controlId, 'green');
-
 			for (const mapping of mappings) {
 				if (mapping.mode === 'trigger') {
 					// Trigger animation via CSS class
@@ -155,10 +151,6 @@ export class InputController {
 					.replace(/^-+|-+$/g, '');
 				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
 			}
-
-			// Turn off button color when released
-			// Use dim color to show button is mapped but not active
-			this.setButtonColor(deviceId, controlId, 'red-dim');
 
 			for (const mapping of mappings) {
 				if (mapping.mode === 'trigger') {
