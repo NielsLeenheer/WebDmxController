@@ -116,6 +116,10 @@ export class InputController {
 				this.customPropertyManager.setProperty(`${propertyName}-pressure`, `${percentage}%`);
 			}
 
+			// Set button color when trigger is active
+			// Use green for active triggers (can be customized per mapping)
+			this.setButtonColor(deviceId, controlId, 'green');
+
 			for (const mapping of mappings) {
 				if (mapping.mode === 'trigger') {
 					// Trigger animation via CSS class
@@ -151,6 +155,10 @@ export class InputController {
 					.replace(/^-+|-+$/g, '');
 				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
 			}
+
+			// Turn off button color when released
+			// Use dim color to show button is mapped but not active
+			this.setButtonColor(deviceId, controlId, 'red-dim');
 
 			for (const mapping of mappings) {
 				if (mapping.mode === 'trigger') {
@@ -233,6 +241,52 @@ export class InputController {
 	 */
 	createVirtualDevice(name) {
 		return this.inputDeviceManager.createVirtual(name);
+	}
+
+	/**
+	 * Set button color on a MIDI device
+	 * @param {string} deviceId - Device ID
+	 * @param {string} controlId - Control ID (e.g., "note-36")
+	 * @param {string|number} color - Color name or velocity value
+	 */
+	setButtonColor(deviceId, controlId, color) {
+		const device = this.inputDeviceManager.getDevice(deviceId);
+		if (device && device.type === 'midi' && device.setButtonColor) {
+			// Extract note number from control ID (e.g., "note-36" -> 36)
+			const noteMatch = controlId.match(/note-(\d+)/);
+			if (noteMatch) {
+				const noteNumber = parseInt(noteMatch[1]);
+				device.setButtonColor(noteNumber, color);
+			}
+		}
+	}
+
+	/**
+	 * Set button color by input mapping
+	 * @param {string} mappingId - Mapping ID or name
+	 * @param {string|number} color - Color name or velocity value
+	 */
+	setButtonColorByMapping(mappingId, color) {
+		const mapping = this.mappingLibrary.get(mappingId);
+		if (mapping && mapping.inputDeviceId && mapping.inputControlId) {
+			this.setButtonColor(mapping.inputDeviceId, mapping.inputControlId, color);
+		}
+	}
+
+	/**
+	 * Clear all button colors on a device
+	 * @param {string} deviceId - Device ID
+	 */
+	clearDeviceColors(deviceId) {
+		const device = this.inputDeviceManager.getDevice(deviceId);
+		if (device && device.type === 'midi') {
+			// Turn off all notes (0-127)
+			for (let i = 0; i < 128; i++) {
+				if (device.sendNoteOff) {
+					device.sendNoteOff(i);
+				}
+			}
+		}
 	}
 
 	/**
