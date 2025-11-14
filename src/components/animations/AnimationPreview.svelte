@@ -15,13 +15,15 @@
             return '';
         }
 
+        const deviceType = animation.getDeviceTypeForEditing();
+
         const keyframeRules = animation.keyframes
             .map(kf => {
-                const color = getDeviceColor(animation.deviceType, kf.values);
+                const color = getDeviceColor(kf.deviceType || deviceType, kf.values);
                 const percent = Math.round(kf.time * 100);
 
                 // For moving heads, also include transform
-                if (animation.deviceType === 'MOVING_HEAD') {
+                if ((kf.deviceType || deviceType) === 'MOVING_HEAD') {
                     const pan = kf.values[0] || 0;
                     const tilt = kf.values[1] || 0;
                     const panPercent = ((pan / 255) * 100) - 50;

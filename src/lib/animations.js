@@ -60,12 +60,36 @@ class Keyframe {
 export class Animation {
 	constructor(name = 'animation', deviceType = 'RGB', keyframes = [], cssName = null, controls = null, displayName = null) {
 		this.name = name;
-		this.deviceType = deviceType;
-		this.controls = controls; // Array of control names to animate, or null to animate all controls
-		this.displayName = displayName; // Display name for UI (e.g., "RGBW Light - Color")
+		// NOTE: deviceType parameter kept for backwards compatibility but not stored
+		// Animations are control-based, not device-based
+		this.controls = controls || []; // Array of control names to animate
+		this.displayName = displayName; // Display name for UI (e.g., "Color" or "RGBW Light")
 		this.keyframes = keyframes; // Array of Keyframe objects
 		// Stored CSS animation name (generated from name and stored)
 		this.cssName = cssName || this._generateCSSName();
+	}
+
+	/**
+	 * Find a device type that has all the required controls
+	 * Used for editing and rendering purposes only
+	 */
+	getDeviceTypeForEditing() {
+		if (!this.controls || this.controls.length === 0) {
+			return 'RGB'; // Default fallback
+		}
+
+		// Find first device type that has all required controls
+		for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
+			const hasAllControls = this.controls.every(controlName =>
+				deviceDef.controls.some(c => c.name === controlName)
+			);
+			if (hasAllControls) {
+				return deviceKey;
+			}
+		}
+
+		// Fallback to RGB if no match found
+		return 'RGB';
 	}
 
 	/**
@@ -93,7 +117,8 @@ export class Animation {
 	 * Add a keyframe to the animation
 	 */
 	addKeyframe(time, values) {
-		const keyframe = new Keyframe(time, this.deviceType, values);
+		const deviceType = this.getDeviceTypeForEditing();
+		const keyframe = new Keyframe(time, deviceType, values);
 		this.keyframes = [...this.keyframes, keyframe].sort((a, b) => a.time - b.time);
 		return keyframe;
 	}
@@ -127,7 +152,8 @@ export class Animation {
 	 * Get color for a keyframe (for visualization)
 	 */
 	getKeyframeColor(keyframe) {
-		return getDeviceColor(this.deviceType, keyframe.values);
+		// Use the keyframe's own deviceType (keyframes store deviceType for rendering)
+		return getDeviceColor(keyframe.deviceType, keyframe.values);
 	}
 
 	/**
@@ -135,8 +161,10 @@ export class Animation {
 	 */
 	getValuesAtTime(time) {
 		if (this.keyframes.length === 0) {
-			// No keyframes - return zeros
-			const numChannels = this.deviceType === 'RGB' ? 3 : 4;
+			// No keyframes - return zeros based on controls
+			const deviceType = this.getDeviceTypeForEditing();
+			const deviceDef = DEVICE_TYPES[deviceType];
+			const numChannels = deviceDef?.channels || 3;
 			return new Array(numChannels).fill(0);
 		}
 
@@ -228,11 +256,13 @@ export class Animation {
 	}
 
 	/**
-	 * Get channels that this animation affects
+	 * Get channels that this animation affects for a specific device type
 	 * Returns array of channel indices for the device type
 	 */
-	getAffectedChannels() {
-		const deviceDef = DEVICE_TYPES[this.deviceType];
+	getAffectedChannels(deviceType = null) {
+		// Use provided deviceType or find one that matches the controls
+		const type = deviceType || this.getDeviceTypeForEditing();
+		const deviceDef = DEVICE_TYPES[type];
 		if (!deviceDef) return [];
 
 		if (!this.controls || this.controls.length === 0) {
@@ -259,20 +289,23 @@ export class Animation {
 	/**
 	 * Get number of channels that this animation uses
 	 */
-	getNumChannels() {
-		return this.getAffectedChannels().length;
+	getNumChannels(deviceType = null) {
+		return this.getAffectedChannels(deviceType).length;
 	}
 
 	/**
 	 * Get display name for this animation
-	 * Uses stored displayName or falls back to generating from deviceType
+	 * Uses stored displayName or falls back to controls list
 	 */
 	getDisplayName() {
 		if (this.displayName) {
 			return this.displayName;
 		}
-		// Fallback for old animations without displayName
-		return DEVICE_TYPES[this.deviceType]?.name || this.deviceType;
+		// Fallback: join control names
+		if (this.controls && this.controls.length > 0) {
+			return this.controls.join(', ');
+		}
+		return 'Animation';
 	}
 
 	/**
@@ -288,12 +321,12 @@ export class Animation {
 	toJSON() {
 		return {
 			name: this.name,
-			deviceType: this.deviceType,
+			// NOTE: Not storing deviceType - animations are control-based
 			controls: this.controls,
 			displayName: this.displayName,
 			keyframes: this.keyframes.map(kf => ({
 				time: kf.time,
-				deviceType: kf.deviceType,
+				deviceType: kf.deviceType,  // Keyframes still store deviceType for rendering
 				values: kf.values
 			}))
 		};
@@ -303,17 +336,29 @@ export class Animation {
 	 * Deserialize from JSON
 	 */
 	static fromJSON(json) {
-		const deviceType = json.deviceType || 'RGB'; // Default for backward compatibility
-
 		// Handle backward compatibility: controlName (singular) → controls (array)
 		let controls = json.controls || null;
 		if (!controls && json.controlName) {
 			controls = [json.controlName];
 		}
 
+		// Backward compatibility: if no controls, derive from old deviceType
+		if (!controls && json.deviceType) {
+			const deviceDef = DEVICE_TYPES[json.deviceType];
+			if (deviceDef) {
+				controls = deviceDef.controls.map(c => c.name);
+			}
+		}
+
+		// Final fallback
+		if (!controls || controls.length === 0) {
+			controls = ['Color'];
+		}
+
 		const displayName = json.displayName || null;
 
-		const animation = new Animation(json.name, deviceType, [], null, controls, displayName);
+		// Pass deviceType for constructor but it won't be stored
+		const animation = new Animation(json.name, 'RGB', [], null, controls, displayName);
 
 		for (const kf of json.keyframes) {
 			// Handle old format (properties) and new format (values)

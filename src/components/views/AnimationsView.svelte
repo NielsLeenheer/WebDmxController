@@ -94,17 +94,7 @@
         return targets;
     }
 
-    // Find a device type that has the specified control
-    function findDeviceTypeForControl(controlName) {
-        for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
-            if (deviceDef.controls.some(c => c.name === controlName)) {
-                return deviceKey;
-            }
-        }
-        return 'RGB'; // Fallback
-    }
-
-    // Parse selected target into deviceType and controls array
+    // Parse selected target into controls array and displayName
     function parseAnimationTarget(target) {
         const parts = target.split('|');
         const targetType = parts[0];
@@ -112,10 +102,7 @@
         if (targetType === 'control') {
             // Single control (device-agnostic)
             const controlName = parts[1];
-            // Find a device type that has this control (use first match)
-            const deviceType = findDeviceTypeForControl(controlName);
             return {
-                deviceType,
                 controls: [controlName],
                 displayName: controlName
             };
@@ -125,7 +112,6 @@
             const deviceDef = DEVICE_TYPES[deviceType];
             const controlNames = deviceDef.controls.map(c => c.name);
             return {
-                deviceType,
                 controls: controlNames,  // Array of all control names from this device
                 displayName: deviceDef.name
             };
@@ -133,9 +119,8 @@
 
         // Fallback
         return {
-            deviceType: 'RGB',
             controls: ['Color'],
-            displayName: 'RGB Light'
+            displayName: 'Color'
         };
     }
 
@@ -144,11 +129,10 @@
 
         // Parse selected target
         const parsed = parseAnimationTarget(selectedAnimationTarget);
-        const { deviceType, controls, displayName } = parsed;
+        const { controls, displayName } = parsed;
 
-        // Create animation with controls array
-        const animation = new Animation(newAnimationName.trim(), deviceType, [], null, controls);
-        animation.displayName = displayName; // Store for UI display
+        // Create animation with controls array (no deviceType stored)
+        const animation = new Animation(newAnimationName.trim(), null, [], null, controls, displayName);
 
         // Determine number of channels based on control selection
         const numChannels = animation.getNumChannels();

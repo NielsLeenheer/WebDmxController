@@ -319,7 +319,7 @@
     title="Keyframe at {(animation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%"
 >
     <DeviceControls
-        deviceType={animation.deviceType}
+        deviceType={animation.getDeviceTypeForEditing()}
         bind:values={editingKeyframeValues}
         onChange={updateKeyframeValues}
         controlFilter={animation.controls}
