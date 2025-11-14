@@ -155,14 +155,14 @@ export const DEVICE_TYPES = {
 };
 
 export class Device {
-    constructor(id, type, startChannel, name = '', linkedTo = null, cssId = null, syncedChannels = null, mirrorPan = false) {
+    constructor(id, type, startChannel, name = '', linkedTo = null, cssId = null, syncedControls = null, mirrorPan = false) {
         this.id = id;
         this.type = type;
         this.startChannel = startChannel;
         this.name = name || `${DEVICE_TYPES[type].name} ${id}`;
         this.defaultValues = new Array(DEVICE_TYPES[type].channels).fill(0);
         this.linkedTo = linkedTo; // ID of device to follow, or null
-        this.syncedChannels = syncedChannels; // Array of semantic channel names to sync, or null for all
+        this.syncedControls = syncedControls; // Array of control names to sync, or null for all
         this.mirrorPan = mirrorPan; // Whether to mirror pan values for linked devices
         this.cssId = cssId || this.generateCssId(this.name);
     }

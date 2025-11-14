@@ -1,7 +1,7 @@
 <script>
     import { Icon } from 'svelte-icon';
     import { DEVICE_TYPES, Device } from '../../lib/devices.js';
-    import { canLinkDevices, applyLinkedValues, getMappedChannels, getAvailableSyncChannels } from '../../lib/channelMapping.js';
+    import { canLinkDevices, applyLinkedValues, getMappedChannels, getAvailableSyncControls } from '../../lib/channelMapping.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import DeviceControls from '../controls/DeviceControls.svelte';
     import Dialog from '../common/Dialog.svelte';
@@ -23,7 +23,7 @@
     let dialogName = $state('');
     let dialogChannel = $state(1);
     let selectedLinkTarget = $state(null);
-    let selectedSyncChannels = $state(null); // Array of semantic channel names, or null for all
+    let selectedSyncControls = $state(null); // Array of control names, or null for all
     let mirrorPan = $state(false);
 
     function openSettingsDialog(device) {
@@ -31,7 +31,7 @@
         dialogName = device.name;
         dialogChannel = device.startChannel + 1;
         selectedLinkTarget = device.linkedTo || null;
-        selectedSyncChannels = device.syncedChannels || null;
+        selectedSyncControls = device.syncedControls || null;
         mirrorPan = device.mirrorPan || false;
 
         // Wait for Dialog to mount before showing
@@ -45,7 +45,7 @@
         editingDevice = null;
         dialogName = '';
         selectedLinkTarget = null;
-        selectedSyncChannels = null;
+        selectedSyncControls = null;
         mirrorPan = false;
     }
 
@@ -83,7 +83,7 @@
         const preserveCssId = newName === editingDevice.name ? editingDevice.cssId : null;
 
         // Create new Device instance with all updated properties
-        // If not linking, clear sync channels and mirror pan
+        // If not linking, clear sync controls and mirror pan
         const updatedDevice = new Device(
             editingDevice.id,
             editingDevice.type,
@@ -91,7 +91,7 @@
             newName,
             selectedLinkTarget,
             preserveCssId,
-            selectedLinkTarget !== null ? selectedSyncChannels : null,
+            selectedLinkTarget !== null ? selectedSyncControls : null,
             selectedLinkTarget !== null ? mirrorPan : false
         );
         updatedDevice.defaultValues = [...editingDevice.defaultValues];
@@ -105,7 +105,7 @@
                     updatedDevice.type,
                     sourceDevice.defaultValues,
                     updatedDevice.defaultValues,
-                    selectedSyncChannels,
+                    selectedSyncControls,
                     mirrorPan
                 );
                 updatedDevice.defaultValues = newValues;
@@ -165,7 +165,7 @@
                         d.name,
                         d.linkedTo,
                         d.cssId,
-                        d.syncedChannels || null,
+                        d.syncedControls || null,
                         d.mirrorPan || false
                     );
                     device.defaultValues = d.defaultValues || new Array(DEVICE_TYPES[d.type].channels).fill(0);
@@ -205,7 +205,7 @@
                     defaultValues: d.defaultValues,
                     linkedTo: d.linkedTo,
                     cssId: d.cssId,
-                    syncedChannels: d.syncedChannels,
+                    syncedControls: d.syncedControls,
                     mirrorPan: d.mirrorPan
                 })),
                 nextId
@@ -291,7 +291,7 @@
             device.name,
             device.linkedTo,
             device.cssId,
-            device.syncedChannels,
+            device.syncedControls,
             device.mirrorPan
         );
         updatedDevice.defaultValues = [...device.defaultValues];
@@ -328,7 +328,7 @@
                     device.name,
                     device.linkedTo,
                     device.cssId,
-                    device.syncedChannels,
+                    device.syncedControls,
                     device.mirrorPan
                 );
 
@@ -338,7 +338,7 @@
                     device.type,
                     sourceDevice.defaultValues,
                     device.defaultValues,
-                    device.syncedChannels,
+                    device.syncedControls,
                     device.mirrorPan
                 );
                 updatedDevice.defaultValues = newValues;
@@ -367,47 +367,47 @@
         const sourceDevice = devices.find(d => d.id === device.linkedTo);
         if (!sourceDevice) return [];
 
-        return getMappedChannels(sourceDevice.type, device.type, device.syncedChannels);
+        return getMappedChannels(sourceDevice.type, device.type, device.syncedControls);
     }
 
-    // Get available sync channels for current link target
-    function getAvailableChannelsForLink() {
+    // Get available sync controls for current link target
+    function getAvailableControlsForLink() {
         if (!selectedLinkTarget || !editingDevice) return [];
 
         const sourceDevice = devices.find(d => d.id === selectedLinkTarget);
         if (!sourceDevice) return [];
 
-        return getAvailableSyncChannels(sourceDevice.type, editingDevice.type);
+        return getAvailableSyncControls(sourceDevice.type, editingDevice.type);
     }
 
-    // Toggle a sync channel selection
-    function toggleSyncChannel(semanticName) {
-        if (selectedSyncChannels === null) {
+    // Toggle a sync control selection
+    function toggleSyncControl(controlName) {
+        if (selectedSyncControls === null) {
             // If currently syncing all, create array with all except this one
-            const available = getAvailableChannelsForLink();
-            selectedSyncChannels = available
-                .map(ch => ch.semantic)
-                .filter(s => s !== semanticName);
-        } else if (selectedSyncChannels.includes(semanticName)) {
+            const available = getAvailableControlsForLink();
+            selectedSyncControls = available
+                .map(c => c.controlName)
+                .filter(name => name !== controlName);
+        } else if (selectedSyncControls.includes(controlName)) {
             // Remove from array
-            selectedSyncChannels = selectedSyncChannels.filter(s => s !== semanticName);
-            // If all channels are deselected, set to empty array (none synced)
+            selectedSyncControls = selectedSyncControls.filter(name => name !== controlName);
+            // If all controls are deselected, set to empty array (none synced)
         } else {
             // Add to array
-            selectedSyncChannels = [...selectedSyncChannels, semanticName];
+            selectedSyncControls = [...selectedSyncControls, controlName];
         }
     }
 
-    // Check if a channel is currently selected for syncing
-    function isSyncChannelSelected(semanticName) {
-        if (selectedSyncChannels === null) return true; // All channels selected
-        return selectedSyncChannels.includes(semanticName);
+    // Check if a control is currently selected for syncing
+    function isSyncControlSelected(controlName) {
+        if (selectedSyncControls === null) return true; // All controls selected
+        return selectedSyncControls.includes(controlName);
     }
 
-    // Check if pan channel is available for current link
-    function isPanChannelAvailable() {
-        const available = getAvailableChannelsForLink();
-        return available.some(ch => ch.semantic === 'Pan');
+    // Check if Pan/Tilt control is available for current link
+    function isPanTiltControlAvailable() {
+        const available = getAvailableControlsForLink();
+        return available.some(c => c.controlName === 'Pan/Tilt');
     }
 
     // Restore all device values to DMX controller on load
@@ -522,23 +522,23 @@
 
         {#if selectedLinkTarget !== null}
             <div class="dialog-input-group">
-                <label>Sync channels:</label>
-                <div class="sync-channels-list">
-                    {#each getAvailableChannelsForLink() as channel}
-                        <label class="sync-channel-item">
+                <label>Sync controls:</label>
+                <div class="sync-controls-list">
+                    {#each getAvailableControlsForLink() as control}
+                        <label class="sync-control-item">
                             <input
                                 type="checkbox"
-                                checked={isSyncChannelSelected(channel.semantic)}
-                                onchange={() => toggleSyncChannel(channel.semantic)}
+                                checked={isSyncControlSelected(control.controlName)}
+                                onchange={() => toggleSyncControl(control.controlName)}
                             />
-                            <span>{channel.semantic}</span>
+                            <span>{control.controlName}</span>
                         </label>
                     {/each}
                 </div>
-                <small class="link-help">Select which properties to sync from the linked device</small>
+                <small class="link-help">Select which controls to sync from the linked device</small>
             </div>
 
-            {#if isPanChannelAvailable()}
+            {#if isPanTiltControlAvailable()}
                 <div class="dialog-input-group">
                     <label class="checkbox-label">
                         <input
@@ -703,7 +703,7 @@
         font-size: 10pt;
     }
 
-    .sync-channels-list {
+    .sync-controls-list {
         display: flex;
         flex-wrap: wrap;
         gap: 12px;
@@ -713,7 +713,7 @@
         border: 1px solid #e0e0e0;
     }
 
-    .sync-channel-item {
+    .sync-control-item {
         display: flex;
         align-items: center;
         gap: 6px;
@@ -721,13 +721,13 @@
         user-select: none;
     }
 
-    .sync-channel-item input[type="checkbox"] {
+    .sync-control-item input[type="checkbox"] {
         cursor: pointer;
         width: 16px;
         height: 16px;
     }
 
-    .sync-channel-item span {
+    .sync-control-item span {
         font-size: 10pt;
         color: #333;
     }
