@@ -412,6 +412,7 @@
                 // Initialize toggle buttons to 'off', momentary buttons have no initial state
                 if (input.buttonMode === 'toggle') {
                     inputStates[input.id] = { state: 'off' };
+                    // Note: Initial color will be set by applyColorsToDevices()
                 }
             } else {
                 // Initialize knobs/sliders to 0%
@@ -428,20 +429,51 @@
             const inputDevice = inputController.getInputDevice(input.inputDeviceId);
             if (!inputDevice || !input.color || !isColorCapableControl(input.inputControlId)) continue;
 
+            // For toggle buttons, respect the current toggle state
+            let color = input.color;
+            if (input.isButtonInput() && input.buttonMode === 'toggle') {
+                const state = inputStates[input.id];
+                color = (state?.state === 'on') ? input.color : 'black';
+            }
+
             if (inputDevice.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
                 // Stream Deck button
                 const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
                 if (!isNaN(buttonIndex) && buttonIndex >= 0) {
                     const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
                     const serialNumber = input.inputDeviceId;
-                    await streamDeckManager.setButtonColor(serialNumber, buttonIndex, input.color);
+                    await streamDeckManager.setButtonColor(serialNumber, buttonIndex, color);
                 }
             } else if (inputDevice.type === 'midi' && input.inputControlId.startsWith('note-')) {
                 // MIDI note/button
                 const noteNumber = parseInt(input.inputControlId.replace('note-', ''));
                 if (!isNaN(noteNumber) && noteNumber >= 0) {
-                    inputDevice.setButtonColor(noteNumber, input.color);
+                    inputDevice.setButtonColor(noteNumber, color);
                 }
+            }
+        }
+    }
+
+    async function updateButtonColorForToggleState(input, isOn) {
+        // Update button color based on toggle state (on = full color, off = black)
+        const inputDevice = inputController.getInputDevice(input.inputDeviceId);
+        if (!inputDevice || !input.color || !isColorCapableControl(input.inputControlId)) return;
+
+        const color = isOn ? input.color : 'black';
+
+        if (inputDevice.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
+            // Stream Deck button
+            const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
+            if (!isNaN(buttonIndex) && buttonIndex >= 0) {
+                const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
+                const serialNumber = input.inputDeviceId;
+                await streamDeckManager.setButtonColor(serialNumber, buttonIndex, color);
+            }
+        } else if (inputDevice.type === 'midi' && input.inputControlId.startsWith('note-')) {
+            // MIDI note/button
+            const noteNumber = parseInt(input.inputControlId.replace('note-', ''));
+            if (!isNaN(noteNumber) && noteNumber >= 0) {
+                inputDevice.setButtonColor(noteNumber, color);
             }
         }
     }
@@ -454,6 +486,9 @@
             // For toggle buttons, use the toggleState from the event
             if (mapping.buttonMode === 'toggle') {
                 inputStates[mapping.id] = { state: toggleState ? 'on' : 'off' };
+
+                // Update button color based on toggle state
+                updateButtonColorForToggleState(mapping, toggleState);
             } else if (mapping.isButtonInput()) {
                 // For momentary buttons, show pressed state
                 inputStates[mapping.id] = { state: 'pressed' };
