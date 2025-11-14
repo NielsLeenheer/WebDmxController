@@ -17,12 +17,12 @@
         }
     }
 
-    function handleXYPadChange(panIndex, tiltIndex, panValue, tiltValue) {
-        values[panIndex] = panValue;
-        values[tiltIndex] = tiltValue;
+    function handleXYPadChange(xChannel, yChannel, xValue, yValue) {
+        values[xChannel] = xValue;
+        values[yChannel] = yValue;
         if (onChange) {
-            onChange(panIndex, panValue);
-            onChange(tiltIndex, tiltValue);
+            onChange(xChannel, xValue);
+            onChange(yChannel, yValue);
         }
     }
 
@@ -55,20 +55,10 @@
         return disabledChannels.includes(channelIndex);
     }
 
-    // Get the channel index for a control
-    function getControlChannelIndex(controlIndex) {
-        const controls = DEVICE_TYPES[deviceType].controls;
-        let channelOffset = 0;
-
-        for (let i = 0; i < controlIndex; i++) {
-            if (controls[i].type === 'xypad') {
-                channelOffset += 2; // XY pad uses 2 channels
-            } else {
-                channelOffset += 1;
-            }
-        }
-
-        return channelOffset;
+    // Get the channel number for a component index
+    function getChannel(componentIndex) {
+        const components = DEVICE_TYPES[deviceType].components;
+        return components[componentIndex].channel;
     }
 
     // Generate gradient background for slider based on control name
@@ -119,45 +109,162 @@
 </script>
 
 <div class="device-controls">
-    {#each DEVICE_TYPES[deviceType].controls as control, controlIndex}
+    {#each DEVICE_TYPES[deviceType].controls as control}
         {#if control.type === 'xypad'}
-            {@const panDisabled = isChannelDisabled(control.panIndex)}
-            {@const tiltDisabled = isChannelDisabled(control.tiltIndex)}
-            {@const bothDisabled = panDisabled && tiltDisabled}
+            {@const xChannel = getChannel(control.components.x)}
+            {@const yChannel = getChannel(control.components.y)}
+            {@const xDisabled = isChannelDisabled(xChannel)}
+            {@const yDisabled = isChannelDisabled(yChannel)}
+            {@const bothDisabled = xDisabled && yDisabled}
             <div class="control-xypad">
                 <label>{control.name}</label>
                 <div class="xypad-wrapper" class:disabled={bothDisabled}>
                     <XYPad
-                        panValue={values[control.panIndex]}
-                        tiltValue={values[control.tiltIndex]}
-                        onUpdate={(pan, tilt) => !bothDisabled && handleXYPadChange(control.panIndex, control.tiltIndex, pan, tilt)}
+                        panValue={values[xChannel]}
+                        tiltValue={values[yChannel]}
+                        onUpdate={(x, y) => !bothDisabled && handleXYPadChange(xChannel, yChannel, x, y)}
                     />
                 </div>
                 <div class="xypad-inputs">
                     <input
                         type="text"
-                        value={values[control.panIndex]}
+                        value={values[xChannel]}
                         oninput={handleTextInput}
-                        onchange={(e) => !panDisabled && handleTextInputChange(control.panIndex, e.target.value, e)}
+                        onchange={(e) => !xDisabled && handleTextInputChange(xChannel, e.target.value, e)}
                         class="value-input"
-                        title="Pan"
-                        disabled={panDisabled}
+                        title="X"
+                        disabled={xDisabled}
                         maxlength="3"
                     />
                     <input
                         type="text"
-                        value={values[control.tiltIndex]}
+                        value={values[yChannel]}
                         oninput={handleTextInput}
-                        onchange={(e) => !tiltDisabled && handleTextInputChange(control.tiltIndex, e.target.value, e)}
+                        onchange={(e) => !yDisabled && handleTextInputChange(yChannel, e.target.value, e)}
                         class="value-input"
-                        title="Tilt"
-                        disabled={tiltDisabled}
+                        title="Y"
+                        disabled={yDisabled}
                         maxlength="3"
                     />
                 </div>
             </div>
+        {:else if control.type === 'rgb' || control.type === 'rgba'}
+            {@const components = DEVICE_TYPES[deviceType].components}
+            {@const rChannel = getChannel(control.components.r)}
+            {@const gChannel = getChannel(control.components.g)}
+            {@const bChannel = getChannel(control.components.b)}
+            {#if control.type === 'rgba'}
+                {@const aChannel = getChannel(control.components.a)}
+                <!-- Color label for the group -->
+                <div class="control-group-label">
+                    <label>{control.name}</label>
+                </div>
+                <!-- Red -->
+                {@const rDisabled = isChannelDisabled(rChannel)}
+                <div class="control">
+                    <label>{components[control.components.r].name}</label>
+                    <div class="slider-wrapper">
+                        <input type="range" min="0" max="255" value={values[rChannel]}
+                            oninput={(e) => !rDisabled && handleSliderChange(rChannel, parseInt(e.target.value))}
+                            style="--slider-gradient: {getSliderGradient('Red')}; --thumb-color: {getThumbColor('Red', values[rChannel])}"
+                            disabled={rDisabled} class="color-slider" />
+                    </div>
+                    <input type="text" value={values[rChannel]} oninput={handleTextInput}
+                        onchange={(e) => !rDisabled && handleTextInputChange(rChannel, e.target.value, e)}
+                        class="value-input" disabled={rDisabled} maxlength="3" />
+                </div>
+                <!-- Green -->
+                {@const gDisabled = isChannelDisabled(gChannel)}
+                <div class="control">
+                    <label>{components[control.components.g].name}</label>
+                    <div class="slider-wrapper">
+                        <input type="range" min="0" max="255" value={values[gChannel]}
+                            oninput={(e) => !gDisabled && handleSliderChange(gChannel, parseInt(e.target.value))}
+                            style="--slider-gradient: {getSliderGradient('Green')}; --thumb-color: {getThumbColor('Green', values[gChannel])}"
+                            disabled={gDisabled} class="color-slider" />
+                    </div>
+                    <input type="text" value={values[gChannel]} oninput={handleTextInput}
+                        onchange={(e) => !gDisabled && handleTextInputChange(gChannel, e.target.value, e)}
+                        class="value-input" disabled={gDisabled} maxlength="3" />
+                </div>
+                <!-- Blue -->
+                {@const bDisabled = isChannelDisabled(bChannel)}
+                <div class="control">
+                    <label>{components[control.components.b].name}</label>
+                    <div class="slider-wrapper">
+                        <input type="range" min="0" max="255" value={values[bChannel]}
+                            oninput={(e) => !bDisabled && handleSliderChange(bChannel, parseInt(e.target.value))}
+                            style="--slider-gradient: {getSliderGradient('Blue')}; --thumb-color: {getThumbColor('Blue', values[bChannel])}"
+                            disabled={bDisabled} class="color-slider" />
+                    </div>
+                    <input type="text" value={values[bChannel]} oninput={handleTextInput}
+                        onchange={(e) => !bDisabled && handleTextInputChange(bChannel, e.target.value, e)}
+                        class="value-input" disabled={bDisabled} maxlength="3" />
+                </div>
+                <!-- Amber -->
+                {@const aDisabled = isChannelDisabled(aChannel)}
+                <div class="control">
+                    <label>{components[control.components.a].name}</label>
+                    <div class="slider-wrapper">
+                        <input type="range" min="0" max="255" value={values[aChannel]}
+                            oninput={(e) => !aDisabled && handleSliderChange(aChannel, parseInt(e.target.value))}
+                            style="--slider-gradient: {getSliderGradient('Amber')}; --thumb-color: {getThumbColor('Amber', values[aChannel])}"
+                            disabled={aDisabled} class="color-slider" />
+                    </div>
+                    <input type="text" value={values[aChannel]} oninput={handleTextInput}
+                        onchange={(e) => !aDisabled && handleTextInputChange(aChannel, e.target.value, e)}
+                        class="value-input" disabled={aDisabled} maxlength="3" />
+                </div>
+            {:else}
+                <!-- Color label for the group -->
+                <div class="control-group-label">
+                    <label>{control.name}</label>
+                </div>
+                <!-- Red -->
+                {@const rDisabled = isChannelDisabled(rChannel)}
+                <div class="control">
+                    <label>{components[control.components.r].name}</label>
+                    <div class="slider-wrapper">
+                        <input type="range" min="0" max="255" value={values[rChannel]}
+                            oninput={(e) => !rDisabled && handleSliderChange(rChannel, parseInt(e.target.value))}
+                            style="--slider-gradient: {getSliderGradient('Red')}; --thumb-color: {getThumbColor('Red', values[rChannel])}"
+                            disabled={rDisabled} class="color-slider" />
+                    </div>
+                    <input type="text" value={values[rChannel]} oninput={handleTextInput}
+                        onchange={(e) => !rDisabled && handleTextInputChange(rChannel, e.target.value, e)}
+                        class="value-input" disabled={rDisabled} maxlength="3" />
+                </div>
+                <!-- Green -->
+                {@const gDisabled = isChannelDisabled(gChannel)}
+                <div class="control">
+                    <label>{components[control.components.g].name}</label>
+                    <div class="slider-wrapper">
+                        <input type="range" min="0" max="255" value={values[gChannel]}
+                            oninput={(e) => !gDisabled && handleSliderChange(gChannel, parseInt(e.target.value))}
+                            style="--slider-gradient: {getSliderGradient('Green')}; --thumb-color: {getThumbColor('Green', values[gChannel])}"
+                            disabled={gDisabled} class="color-slider" />
+                    </div>
+                    <input type="text" value={values[gChannel]} oninput={handleTextInput}
+                        onchange={(e) => !gDisabled && handleTextInputChange(gChannel, e.target.value, e)}
+                        class="value-input" disabled={gDisabled} maxlength="3" />
+                </div>
+                <!-- Blue -->
+                {@const bDisabled = isChannelDisabled(bChannel)}
+                <div class="control">
+                    <label>{components[control.components.b].name}</label>
+                    <div class="slider-wrapper">
+                        <input type="range" min="0" max="255" value={values[bChannel]}
+                            oninput={(e) => !bDisabled && handleSliderChange(bChannel, parseInt(e.target.value))}
+                            style="--slider-gradient: {getSliderGradient('Blue')}; --thumb-color: {getThumbColor('Blue', values[bChannel])}"
+                            disabled={bDisabled} class="color-slider" />
+                    </div>
+                    <input type="text" value={values[bChannel]} oninput={handleTextInput}
+                        onchange={(e) => !bDisabled && handleTextInputChange(bChannel, e.target.value, e)}
+                        class="value-input" disabled={bDisabled} maxlength="3" />
+                </div>
+            {/if}
         {:else if control.type === 'toggle'}
-            {@const channelIndex = getControlChannelIndex(controlIndex)}
+            {@const channelIndex = getChannel(control.components.value)}
             {@const channelDisabled = isChannelDisabled(channelIndex)}
             {@const isOn = values[channelIndex] === control.onValue}
             <div class="control">
@@ -180,9 +287,10 @@
                     maxlength="3"
                 />
             </div>
-        {:else}
-            {@const channelIndex = getControlChannelIndex(controlIndex)}
+        {:else if control.type === 'slider'}
+            {@const channelIndex = getChannel(control.components.value)}
             {@const channelDisabled = isChannelDisabled(channelIndex)}
+            {@const components = DEVICE_TYPES[deviceType].components}
             <div class="control">
                 <label>{control.name}</label>
                 <div class="slider-wrapper">
@@ -192,7 +300,7 @@
                         max="255"
                         value={values[channelIndex]}
                         oninput={(e) => !channelDisabled && handleSliderChange(channelIndex, parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient(control.name)}; --thumb-color: {getThumbColor(control.name, values[channelIndex])}"
+                        style="--slider-gradient: {getSliderGradient(components[control.components.value].name)}; --thumb-color: {getThumbColor(components[control.components.value].name, values[channelIndex])}"
                         disabled={channelDisabled}
                         class="color-slider"
                     />
@@ -216,6 +324,19 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
+    }
+
+    .control-group-label {
+        margin-top: 12px;
+        margin-bottom: 4px;
+    }
+
+    .control-group-label label {
+        font-size: 10pt;
+        font-weight: 700;
+        color: #333;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
     .control {
