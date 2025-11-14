@@ -7,6 +7,7 @@
 
 import { StreamDeckManager, getStreamDeckFilters, isStreamDeck, getStreamDeckModel } from './streamdeck.js';
 import { MIDIDeviceProfileManager } from './midiDeviceProfiles.js';
+import { ButtonColorManager } from './buttonColors.js';
 
 /**
  * Base class for all input devices
@@ -103,13 +104,38 @@ class InputDevice {
  * MIDI Input Device (WebMIDI API)
  */
 export class MIDIInputDevice extends InputDevice {
-	constructor(midiInput, midiOutput = null, profile = null) {
+	constructor(midiInput, midiOutput = null, profile = null, colorManager = null) {
 		super(midiInput.id, midiInput.name || 'MIDI Device', 'midi');
 		this.midiInput = midiInput;
 		this.midiOutput = midiOutput; // Optional MIDI output for LED feedback
 		this.profile = profile; // Device-specific profile for color mapping
-		this.buttonColors = new Map(); // Track assigned colors for each button
+		this.colorManager = colorManager; // Persistent color storage
+		this.buttonColors = new Map(); // Track assigned colors for each button (runtime cache)
 		this.midiInput.onmidimessage = this._handleMIDIMessage.bind(this);
+
+		// Restore saved colors on connect
+		this._restoreSavedColors();
+	}
+
+	/**
+	 * Restore saved button colors from persistent storage
+	 */
+	_restoreSavedColors() {
+		if (!this.colorManager || !this.midiOutput) return;
+
+		// Get all saved colors for this device
+		const savedColors = this.colorManager.getDeviceColors(this.name);
+
+		// Restore each color to the device and runtime cache
+		// Pass save=false since these are already in storage
+		for (const [buttonNumber, color] of savedColors.entries()) {
+			this.buttonColors.set(buttonNumber, color);
+			this.setButtonColor(buttonNumber, color, false);
+		}
+
+		if (savedColors.size > 0) {
+			console.log(`Restored ${savedColors.size} button colors for ${this.name}`);
+		}
 	}
 
 	_handleMIDIMessage(event) {
@@ -125,8 +151,8 @@ export class MIDIInputDevice extends InputDevice {
 					// Assign random color to button if not already assigned
 					if (!this.buttonColors.has(data1)) {
 						const color = this._getRandomColor();
-						this.buttonColors.set(data1, color);
-						this.setButtonColor(data1, color);
+						// setButtonColor will update cache and save to storage
+						this.setButtonColor(data1, color, true);
 					}
 
 					this._trigger(controlId, data2 / 127);
@@ -193,8 +219,9 @@ export class MIDIInputDevice extends InputDevice {
 	 * Set button color (device-agnostic, will use device profile)
 	 * @param {number} button - Button/pad number
 	 * @param {string|number} color - Color name or velocity value
+	 * @param {boolean} save - Whether to save to persistent storage (default: true)
 	 */
-	setButtonColor(button, color) {
+	setButtonColor(button, color, save = true) {
 		if (!this.midiOutput) return;
 
 		// Convert color to velocity value based on device
@@ -202,6 +229,14 @@ export class MIDIInputDevice extends InputDevice {
 
 		// Most MIDI pads use Note On with velocity for color
 		this.sendNoteOn(button, velocity);
+
+		// Update runtime cache
+		this.buttonColors.set(button, color);
+
+		// Save to persistent storage if requested
+		if (save && this.colorManager) {
+			this.colorManager.setColor(this.name, button, color);
+		}
 	}
 
 	/**
@@ -409,6 +444,7 @@ export class InputDeviceManager {
 		this.keyboardDevice = null;
 		this.streamDeckManager = new StreamDeckManager();
 		this.midiProfileManager = new MIDIDeviceProfileManager();
+		this.buttonColorManager = new ButtonColorManager();
 		this._setupStreamDeckListeners();
 	}
 
@@ -509,7 +545,7 @@ export class InputDeviceManager {
 		const profile = this.midiProfileManager.getProfile(midiInput.name);
 		console.log(`Using profile "${profile.name}" for ${midiInput.name}`);
 
-		const device = new MIDIInputDevice(midiInput, midiOutput, profile);
+		const device = new MIDIInputDevice(midiInput, midiOutput, profile, this.buttonColorManager);
 		this.devices.set(device.id, device);
 		this._emit('deviceadded', device);
 	}
@@ -670,6 +706,26 @@ export class InputDeviceManager {
 		for (const callback of callbacks) {
 			callback(data);
 		}
+	}
+
+	/**
+	 * Clear saved button colors for a device
+	 * @param {string} deviceId - Device ID
+	 */
+	clearDeviceButtonColors(deviceId) {
+		const device = this.getDevice(deviceId);
+		if (device && device.name) {
+			this.buttonColorManager.clearDevice(device.name);
+			console.log(`Cleared saved button colors for ${device.name}`);
+		}
+	}
+
+	/**
+	 * Clear all saved button colors
+	 */
+	clearAllButtonColors() {
+		this.buttonColorManager.clearAll();
+		console.log('Cleared all saved button colors');
 	}
 
 	/**
