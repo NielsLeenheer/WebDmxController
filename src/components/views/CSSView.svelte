@@ -396,7 +396,7 @@
                     <div class="reference-list">
                         {#each animations as animation (animation.name)}
                             <div class="reference-item">
-                                <code>{animation.name}</code>
+                                <code>{animation.cssName}</code>
                             </div>
                         {/each}
                     </div>

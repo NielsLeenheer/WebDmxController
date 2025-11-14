@@ -18,12 +18,12 @@
     let animationsList = $state([]);
 
     // Dialog states
-    let newAnimationDialog = $state(null);
+    let newAnimationDialog = null; // DOM reference - should NOT be $state
     let newAnimationName = $state('');
     let newAnimationDeviceType = $state('RGB');
 
     // Edit dialog states
-    let editDialog = $state(null);
+    let editDialog = null; // DOM reference - should NOT be $state
     let editingAnimation = $state(null);
     let editingName = $state('');
 
@@ -95,11 +95,25 @@
         // Update animation name
         const oldName = editingAnimation.name;
         editingAnimation.name = editingName.trim();
+        // Update CSS name based on new animation name
+        editingAnimation.updateCSSName();
 
         // Save to library
         animationLibrary.save();
         refreshAnimationsList();
         closeEditDialog();
+    }
+
+    // Generate preview of CSS animation name based on current editing name
+    function getPreviewCSSName() {
+        if (!editingName.trim()) return '';
+
+        const cssName = editingName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+        return cssName;
     }
 
     function confirmDeleteAnimation() {
@@ -200,6 +214,7 @@
                 placeholder="Animation name"
                 autofocus
             />
+            <small class="css-preview">@keyframes {getPreviewCSSName()}</small>
         </div>
     </form>
 

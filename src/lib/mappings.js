@@ -46,6 +46,13 @@ export class InputMapping {
 
 		// CSS class name for trigger mode (auto-generated from input)
 		this.cssClassName = config.cssClassName || this._generateClassName();
+
+		// Stored CSS identifiers (generated from name and stored)
+		// For button inputs: store both down and up class names
+		this.cssClassDown = config.cssClassDown || (this.isButtonInput() ? this._generateButtonDownClass() : null);
+		this.cssClassUp = config.cssClassUp || (this.isButtonInput() ? this._generateButtonUpClass() : null);
+		// For slider/knob inputs: store the CSS custom property name
+		this.cssProperty = config.cssProperty || (!this.isButtonInput() ? this._generatePropertyName() : null);
 	}
 
 	/**
@@ -86,6 +93,63 @@ export class InputMapping {
 	 */
 	updateClassName() {
 		this.cssClassName = this._generateClassName();
+	}
+
+	/**
+	 * Generate CSS custom property name from input name (for slider/knob inputs)
+	 */
+	_generatePropertyName() {
+		if (!this.name) return '--value';
+
+		const propertyName = this.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+		return `--${propertyName}`;
+	}
+
+	/**
+	 * Generate CSS class name for button down state (for button inputs)
+	 */
+	_generateButtonDownClass() {
+		if (!this.name) return '';
+
+		const namePart = this.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+			.replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+		return `${namePart}_down`;
+	}
+
+	/**
+	 * Generate CSS class name for button up state (for button inputs)
+	 */
+	_generateButtonUpClass() {
+		if (!this.name) return '';
+
+		const namePart = this.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+			.replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+		return `${namePart}_up`;
+	}
+
+	/**
+	 * Update stored CSS identifiers when name changes
+	 */
+	updateCSSIdentifiers() {
+		if (this.isButtonInput()) {
+			this.cssClassDown = this._generateButtonDownClass();
+			this.cssClassUp = this._generateButtonUpClass();
+			this.cssProperty = null;
+		} else {
+			this.cssProperty = this._generatePropertyName();
+			this.cssClassDown = null;
+			this.cssClassUp = null;
+		}
 	}
 
 	/**
@@ -134,19 +198,11 @@ export class InputMapping {
 	}
 
 	/**
-	 * Get CSS custom property name generated from input name (for input mode)
+	 * Get CSS custom property name (for slider/knob inputs)
+	 * Returns the stored cssProperty value
 	 */
 	getInputPropertyName() {
-		if (!this.name) return null;
-
-		// Generate CSS custom property name from input name
-		// Same logic as in inputController._handleValueChange
-		const propertyName = this.name
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
-		return `--${propertyName}`;
+		return this.cssProperty;
 	}
 
 	/**
@@ -166,20 +222,18 @@ export class InputMapping {
 
 	/**
 	 * Get button down class name (for button inputs)
+	 * Returns the stored cssClassDown value
 	 */
 	getButtonDownClass() {
-		if (!this.inputControlId) return null;
-		const controlPart = this.inputControlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-		return `${controlPart}_down`;
+		return this.cssClassDown;
 	}
 
 	/**
 	 * Get button up class name (for button inputs)
+	 * Returns the stored cssClassUp value
 	 */
 	getButtonUpClass() {
-		if (!this.inputControlId) return null;
-		const controlPart = this.inputControlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-		return `${controlPart}_up`;
+		return this.cssClassUp;
 	}
 
 	/**

@@ -162,6 +162,8 @@
         const mapping = mappingLibrary.get(editingInput.id);
         if (mapping) {
             mapping.name = editingName.trim();
+            // Update CSS identifiers based on new name
+            mapping.updateCSSIdentifiers();
             mappingLibrary.update(mapping);
             refreshInputs();
         }

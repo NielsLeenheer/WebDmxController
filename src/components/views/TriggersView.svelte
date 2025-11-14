@@ -270,12 +270,18 @@
         return device?.name || deviceId;
     }
 
+    function getAnimationDisplayName(cssName) {
+        const animation = availableAnimations.find(a => a.cssName === cssName);
+        return animation?.name || cssName;
+    }
+
     function getTriggerDisplayText(trigger) {
         const actionType = trigger.actionType || 'animation';
 
         if (trigger.triggerType === 'always') {
             const deviceName = getDeviceName(trigger.targetDeviceIds[0]);
-            return `Always → ${trigger.animationName} → ${deviceName}`;
+            const animationName = getAnimationDisplayName(trigger.animationName);
+            return `Always → ${animationName} → ${deviceName}`;
         }
 
         const inputName = getInputName(trigger.inputDeviceId, trigger.inputControlId);
@@ -283,7 +289,8 @@
 
         if (actionType === 'animation') {
             const deviceName = getDeviceName(trigger.targetDeviceIds[0]);
-            return `${inputName} → ${typeLabel} → ${trigger.animationName} → ${deviceName}`;
+            const animationName = getAnimationDisplayName(trigger.animationName);
+            return `${inputName} → ${typeLabel} → ${animationName} → ${deviceName}`;
         } else {
             const deviceName = getDeviceName(trigger.setValueDeviceId);
             const channelCount = Object.keys(trigger.channelValues || {}).length;
@@ -435,7 +442,7 @@
                         <label for="trigger-animation">Animation:</label>
                         <select id="trigger-animation" bind:value={newTriggerAnimation}>
                             {#each availableAnimations as animation}
-                                <option value={animation.name}>{animation.name}</option>
+                                <option value={animation.cssName}>{animation.name}</option>
                             {/each}
                         </select>
                     </div>
@@ -525,7 +532,7 @@
                     <label for="auto-trigger-animation">Animation:</label>
                     <select id="auto-trigger-animation" bind:value={newTriggerAnimation}>
                         {#each availableAnimations as animation}
-                            <option value={animation.name}>{animation.name}</option>
+                            <option value={animation.cssName}>{animation.name}</option>
                         {/each}
                     </select>
                 </div>
@@ -614,7 +621,7 @@
                         <label for="edit-trigger-animation">Animation:</label>
                         <select id="edit-trigger-animation" bind:value={editTriggerAnimation}>
                             {#each availableAnimations as animation}
-                                <option value={animation.name}>{animation.name}</option>
+                                <option value={animation.cssName}>{animation.name}</option>
                             {/each}
                         </select>
                     </div>

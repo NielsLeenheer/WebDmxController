@@ -57,10 +57,33 @@ class Keyframe {
  * Reusable animation definition (like CSS @keyframes)
  */
 export class Animation {
-	constructor(name = 'animation', deviceType = 'RGB', keyframes = []) {
+	constructor(name = 'animation', deviceType = 'RGB', keyframes = [], cssName = null) {
 		this.name = name;
 		this.deviceType = deviceType;
 		this.keyframes = keyframes; // Array of Keyframe objects
+		// Stored CSS animation name (generated from name and stored)
+		this.cssName = cssName || this._generateCSSName();
+	}
+
+	/**
+	 * Generate CSS animation name from the animation name
+	 */
+	_generateCSSName() {
+		if (!this.name) return 'animation';
+
+		const cssName = this.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+		return cssName;
+	}
+
+	/**
+	 * Update stored CSS name when animation name changes
+	 */
+	updateCSSName() {
+		this.cssName = this._generateCSSName();
 	}
 
 	/**
@@ -94,7 +117,7 @@ export class Animation {
 			.map(kf => kf.toCSS())
 			.join('\n  ');
 
-		return `@keyframes ${this.name} {\n  ${keyframeRules}\n}`;
+		return `@keyframes ${this.cssName} {\n  ${keyframeRules}\n}`;
 	}
 
 	/**
