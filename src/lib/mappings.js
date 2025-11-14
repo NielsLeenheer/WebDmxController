@@ -51,6 +51,7 @@ export class InputMapping {
 		// SetValue action settings
 		this.setValueDeviceId = config.setValueDeviceId || null; // Single device ID for setValue
 		this.channelValues = config.channelValues || {}; // Object mapping channel index to value (0-255)
+		this.enabledControls = config.enabledControls || []; // Array of control names that should be set
 
 		// Direct mode settings
 		this.propertyName = config.propertyName || '--value'; // CSS custom property name
@@ -310,9 +311,15 @@ export class InputMapping {
 			valuesArray[channel] = value;
 		}
 
-		// Generate CSS properties from DMX values
+		// Filter controls to only include enabled ones
+		const enabledControlNames = new Set(this.enabledControls || []);
+		const filteredControls = deviceType.controls.filter(control =>
+			enabledControlNames.size === 0 || enabledControlNames.has(control.name)
+		);
+
+		// Generate CSS properties only for enabled controls
 		const properties = generateCSSProperties(
-			deviceType.controls,
+			filteredControls,
 			deviceType.components,
 			valuesArray,
 			device.type
@@ -436,6 +443,7 @@ ${props}
 			targetDeviceIds: this.targetDeviceIds,
 			setValueDeviceId: this.setValueDeviceId,
 			channelValues: this.channelValues,
+			enabledControls: this.enabledControls,
 			propertyName: this.propertyName,
 			propertyType: this.propertyType,
 			range: this.range,
