@@ -1,9 +1,11 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { InputMapping } from '../../lib/mappings.js';
+    import { DEVICE_TYPES } from '../../lib/devices.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
+    import Controls from '../controls/Controls.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
     import editIcon from '../../assets/glyphs/edit.svg?raw';
 
@@ -21,26 +23,85 @@
     let automaticTriggerDialog = $state(null);
     let newTriggerInput = $state(null);
     let newTriggerType = $state('pressed');
+    let newTriggerActionType = $state('animation'); // 'animation' or 'setValue'
     let newTriggerDevice = $state(null);
     let newTriggerAnimation = $state(null);
     let newTriggerDuration = $state(1000);
     let newTriggerLooping = $state(false);
     let newTriggerEasing = $state('linear');
+    let newTriggerChannelValues = $state({}); // For setValue actions
+    let newTriggerEnabledControls = $state([]); // For setValue: which controls to set
 
     // Edit dialog states
     let editDialog = $state(null);
     let editingTrigger = $state(null);
     let editTriggerInput = $state(null);
     let editTriggerType = $state('pressed');
+    let editTriggerActionType = $state('animation');
     let editTriggerDevice = $state(null);
     let editTriggerAnimation = $state(null);
     let editTriggerDuration = $state(1000);
     let editTriggerLooping = $state(false);
     let editTriggerEasing = $state('linear');
+    let editTriggerChannelValues = $state({});
+    let editTriggerEnabledControls = $state([]);
 
-    const MANUAL_TRIGGER_TYPES = [
-        { value: 'pressed', label: 'Pressed' },
-        { value: 'not-pressed', label: 'Not Pressed' }
+    // Get trigger type options based on the selected input's button mode
+    function getTriggerTypeOptions(inputId) {
+        const input = availableInputs.find(i => i.id === inputId);
+        if (!input || !input.isButtonInput()) {
+            return [
+                { value: 'pressed', label: 'Pressed' },
+                { value: 'not-pressed', label: 'Not Pressed' }
+            ];
+        }
+
+        const buttonMode = input.buttonMode || 'momentary';
+
+        if (buttonMode === 'toggle') {
+            return [
+                { value: 'pressed', label: 'On' },
+                { value: 'not-pressed', label: 'Off' }
+            ];
+        } else {
+            return [
+                { value: 'pressed', label: 'Down' },
+                { value: 'not-pressed', label: 'Up' }
+            ];
+        }
+    }
+
+    // Get trigger type options for a trigger being edited
+    function getTriggerTypeOptionsForTrigger(trigger) {
+        const input = availableInputs.find(i =>
+            i.inputDeviceId === trigger.inputDeviceId &&
+            i.inputControlId === trigger.inputControlId
+        );
+        if (!input || !input.isButtonInput()) {
+            return [
+                { value: 'pressed', label: 'Pressed' },
+                { value: 'not-pressed', label: 'Not Pressed' }
+            ];
+        }
+
+        const buttonMode = input.buttonMode || 'momentary';
+
+        if (buttonMode === 'toggle') {
+            return [
+                { value: 'pressed', label: 'On' },
+                { value: 'not-pressed', label: 'Off' }
+            ];
+        } else {
+            return [
+                { value: 'pressed', label: 'Down' },
+                { value: 'not-pressed', label: 'Up' }
+            ];
+        }
+    }
+
+    const ACTION_TYPES = [
+        { value: 'animation', label: 'Run Animation' },
+        { value: 'setValue', label: 'Set values' }
     ];
 
     const EASING_FUNCTIONS = [
@@ -62,11 +123,23 @@
     function openManualTriggerDialog() {
         newTriggerInput = availableInputs[0]?.id || null;
         newTriggerType = 'pressed';
+        newTriggerActionType = 'animation';
         newTriggerDevice = devices[0]?.id || null;
         newTriggerAnimation = availableAnimations[0]?.name || null;
         newTriggerDuration = 1000;
         newTriggerLooping = false;
         newTriggerEasing = 'linear';
+        newTriggerChannelValues = {};
+
+        // Initialize enabled controls with all controls for setValue
+        const device = devices.find(d => d.id === newTriggerDevice);
+        if (device) {
+            const deviceType = DEVICE_TYPES[device.type];
+            newTriggerEnabledControls = deviceType.controls.map(c => c.name);
+        } else {
+            newTriggerEnabledControls = [];
+        }
+
         manualTriggerDialog?.showModal();
     }
 
@@ -83,10 +156,14 @@
     }
 
     function createManualTrigger() {
-        if (!newTriggerInput || !newTriggerDevice || !newTriggerAnimation) return;
+        if (!newTriggerInput || !newTriggerDevice) return;
+        if (newTriggerActionType === 'animation' && !newTriggerAnimation) return;
 
         const inputMapping = mappingLibrary.get(newTriggerInput);
         if (!inputMapping) return;
+
+        // Get button mode from the input mapping
+        const buttonMode = inputMapping.buttonMode || 'momentary';
 
         // Generate CSS class name from input name with state suffix
         const baseClassName = inputMapping.name
@@ -94,21 +171,37 @@
             .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
             .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
 
-        const suffix = newTriggerType === 'pressed' ? 'down' : 'up';
+        // Determine suffix based on button mode
+        let suffix;
+        if (buttonMode === 'toggle') {
+            suffix = newTriggerType === 'pressed' ? 'on' : 'off';
+        } else {
+            suffix = newTriggerType === 'pressed' ? 'down' : 'up';
+        }
         const cssClassName = `${baseClassName}-${suffix}`;
+
+        const triggerName = newTriggerActionType === 'animation'
+            ? `${inputMapping.name}_${newTriggerType}_${newTriggerAnimation}`
+            : `${inputMapping.name}_${newTriggerType}_setValue`;
 
         // Create trigger mapping
         const trigger = new InputMapping({
-            name: `${inputMapping.name}_${newTriggerType}_${newTriggerAnimation}`,
+            name: triggerName,
             mode: 'trigger',
             triggerType: newTriggerType,
+            actionType: newTriggerActionType,
             inputDeviceId: inputMapping.inputDeviceId,
             inputControlId: inputMapping.inputControlId,
-            animationName: newTriggerAnimation,
-            targetDeviceIds: [newTriggerDevice],
+            // Animation action properties
+            animationName: newTriggerActionType === 'animation' ? newTriggerAnimation : null,
+            targetDeviceIds: newTriggerActionType === 'animation' ? [newTriggerDevice] : [],
             duration: newTriggerDuration,
             easing: newTriggerEasing,
             iterations: newTriggerLooping ? 'infinite' : 1,
+            // SetValue action properties
+            setValueDeviceId: newTriggerActionType === 'setValue' ? newTriggerDevice : null,
+            channelValues: newTriggerActionType === 'setValue' ? {...newTriggerChannelValues} : {},
+            enabledControls: newTriggerActionType === 'setValue' ? [...newTriggerEnabledControls] : [],
             cssClassName: cssClassName
         });
 
@@ -144,8 +237,27 @@
         editingTrigger = trigger;
         editTriggerInput = trigger.inputDeviceId + '_' + trigger.inputControlId;
         editTriggerType = trigger.triggerType;
-        editTriggerDevice = trigger.targetDeviceIds[0];
-        editTriggerAnimation = trigger.animationName;
+        editTriggerActionType = trigger.actionType || 'animation';
+
+        if (trigger.actionType === 'setValue') {
+            editTriggerDevice = trigger.setValueDeviceId;
+            editTriggerChannelValues = {...trigger.channelValues};
+            editTriggerEnabledControls = trigger.enabledControls ? [...trigger.enabledControls] : [];
+
+            // If enabledControls is empty, initialize with all controls
+            if (editTriggerEnabledControls.length === 0 && editTriggerDevice) {
+                const device = devices.find(d => d.id === editTriggerDevice);
+                if (device) {
+                    const deviceType = DEVICE_TYPES[device.type];
+                    editTriggerEnabledControls = deviceType.controls.map(c => c.name);
+                }
+            }
+        } else {
+            editTriggerDevice = trigger.targetDeviceIds[0];
+            editTriggerAnimation = trigger.animationName;
+            editTriggerEnabledControls = [];
+        }
+
         editTriggerDuration = trigger.duration;
         editTriggerLooping = trigger.iterations === 'infinite';
         editTriggerEasing = trigger.easing;
@@ -181,23 +293,47 @@
 
             if (!selectedInput) return;
 
+            // Get button mode from the input mapping
+            const buttonMode = selectedInput.buttonMode || 'momentary';
+
             // Generate new CSS class name
             const baseClassName = selectedInput.name
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')
                 .replace(/^-+|-+$/g, '');
 
-            const suffix = editTriggerType === 'pressed' ? 'down' : 'up';
+            // Determine suffix based on button mode
+            let suffix;
+            if (buttonMode === 'toggle') {
+                suffix = editTriggerType === 'pressed' ? 'on' : 'off';
+            } else {
+                suffix = editTriggerType === 'pressed' ? 'down' : 'up';
+            }
             const cssClassName = `${baseClassName}-${suffix}`;
 
             editingTrigger.triggerType = editTriggerType;
-            editingTrigger.targetDeviceIds = [editTriggerDevice];
-            editingTrigger.animationName = editTriggerAnimation;
+            editingTrigger.actionType = editTriggerActionType;
+
+            if (editTriggerActionType === 'animation') {
+                editingTrigger.animationName = editTriggerAnimation;
+                editingTrigger.targetDeviceIds = [editTriggerDevice];
+                editingTrigger.setValueDeviceId = null;
+                editingTrigger.channelValues = {};
+                editingTrigger.enabledControls = [];
+                editingTrigger.name = `${selectedInput.name}_${editTriggerType}_${editTriggerAnimation}`;
+            } else {
+                editingTrigger.setValueDeviceId = editTriggerDevice;
+                editingTrigger.channelValues = {...editTriggerChannelValues};
+                editingTrigger.enabledControls = [...editTriggerEnabledControls];
+                editingTrigger.animationName = null;
+                editingTrigger.targetDeviceIds = [];
+                editingTrigger.name = `${selectedInput.name}_${editTriggerType}_setValue`;
+            }
+
             editingTrigger.duration = editTriggerDuration;
             editingTrigger.easing = editTriggerEasing;
             editingTrigger.iterations = editTriggerLooping ? 'infinite' : 1;
             editingTrigger.cssClassName = cssClassName;
-            editingTrigger.name = `${selectedInput.name}_${editTriggerType}_${editTriggerAnimation}`;
         }
 
         mappingLibrary.save();
@@ -227,16 +363,92 @@
         return device?.name || deviceId;
     }
 
+    function getAnimationDisplayName(cssName) {
+        const animation = availableAnimations.find(a => a.cssName === cssName);
+        return animation?.name || cssName;
+    }
+
     function getTriggerDisplayText(trigger) {
-        const deviceName = getDeviceName(trigger.targetDeviceIds[0]);
+        const actionType = trigger.actionType || 'animation';
 
         if (trigger.triggerType === 'always') {
-            return `Always → ${trigger.animationName} → ${deviceName}`;
+            const deviceName = getDeviceName(trigger.targetDeviceIds[0]);
+            const animationName = getAnimationDisplayName(trigger.animationName);
+            return `Always → ${animationName} → ${deviceName}`;
         }
 
         const inputName = getInputName(trigger.inputDeviceId, trigger.inputControlId);
         const typeLabel = trigger.triggerType === 'pressed' ? 'Pressed' : 'Not Pressed';
-        return `${inputName} → ${typeLabel} → ${trigger.animationName} → ${deviceName}`;
+
+        if (actionType === 'animation') {
+            const deviceName = getDeviceName(trigger.targetDeviceIds[0]);
+            const animationName = getAnimationDisplayName(trigger.animationName);
+            return `${inputName} → ${typeLabel} → ${animationName} → ${deviceName}`;
+        } else {
+            const deviceName = getDeviceName(trigger.setValueDeviceId);
+            const channelCount = Object.keys(trigger.channelValues || {}).length;
+            return `${inputName} → ${typeLabel} → Set ${channelCount} channel(s) → ${deviceName}`;
+        }
+    }
+
+    // Helper functions for channel value management
+    function getSelectedDevice(deviceId) {
+        return devices.find(d => d.id === deviceId);
+    }
+
+    function getDeviceChannels(deviceId) {
+        const device = getSelectedDevice(deviceId);
+        if (!device) return [];
+
+        const deviceType = DEVICE_TYPES[device.type];
+        if (!deviceType) return [];
+
+        return deviceType.controls.map((control, index) => ({
+            index,
+            name: control.name,
+            type: control.type
+        }));
+    }
+
+    function setChannelValue(channelValues, channelIndex, value) {
+        const newValues = {...channelValues};
+        if (value === '' || value === null || value === undefined) {
+            delete newValues[channelIndex];
+        } else {
+            newValues[channelIndex] = Math.max(0, Math.min(255, parseInt(value) || 0));
+        }
+        return newValues;
+    }
+
+    function getChannelValue(channelValues, channelIndex) {
+        return channelValues[channelIndex] !== undefined ? channelValues[channelIndex] : '';
+    }
+
+    // Convert channelValues object to full values array for Controls
+    function getValuesArrayForDevice(deviceId, channelValues) {
+        const device = devices.find(d => d.id === deviceId);
+        if (!device) return [];
+
+        const numChannels = DEVICE_TYPES[device.type].channels;
+        const values = new Array(numChannels).fill(0);
+
+        // Fill in values from channelValues object
+        for (let i = 0; i < numChannels; i++) {
+            if (channelValues[i] !== undefined) {
+                values[i] = channelValues[i];
+            }
+        }
+
+        return values;
+    }
+
+    // Handle device control changes for setValue triggers
+    function handleSetValueChange(channelIndex, value) {
+        newTriggerChannelValues = setChannelValue(newTriggerChannelValues, channelIndex, value);
+    }
+
+    function handleEditSetValueChange(channelIndex, value) {
+        editTriggerChannelValues = setChannelValue(editTriggerChannelValues, channelIndex, value);
     }
 
     onMount(() => {
@@ -306,6 +518,7 @@
 <Dialog bind:dialogRef={manualTriggerDialog} title="Create Manual Trigger" onclose={() => manualTriggerDialog?.close()}>
     <form id="manual-trigger-form" method="dialog" onsubmit={(e) => { e.preventDefault(); createManualTrigger(); }}>
         <div class="trigger-columns">
+            <!-- Column 1: Trigger Configuration -->
             <div class="trigger-column">
                 <div class="dialog-input-group">
                     <label for="trigger-input">Input:</label>
@@ -317,16 +530,26 @@
                 </div>
 
                 <div class="dialog-input-group">
-                    <label for="trigger-type">Type:</label>
+                    <label for="trigger-type">Trigger Type:</label>
                     <select id="trigger-type" bind:value={newTriggerType}>
-                        {#each MANUAL_TRIGGER_TYPES as type}
+                        {#each getTriggerTypeOptions(newTriggerInput) as type}
                             <option value={type.value}>{type.label}</option>
                         {/each}
                     </select>
                 </div>
             </div>
 
+            <!-- Column 2: Device Configuration -->
             <div class="trigger-column">
+                <div class="dialog-input-group">
+                    <label for="trigger-action-type">Action:</label>
+                    <select id="trigger-action-type" bind:value={newTriggerActionType}>
+                        {#each ACTION_TYPES as type}
+                            <option value={type.value}>{type.label}</option>
+                        {/each}
+                    </select>
+                </div>
+
                 <div class="dialog-input-group">
                     <label for="trigger-device">Device:</label>
                     <select id="trigger-device" bind:value={newTriggerDevice}>
@@ -335,48 +558,69 @@
                         {/each}
                     </select>
                 </div>
-
-                <div class="dialog-input-group">
-                    <label for="trigger-animation">Animation:</label>
-                    <select id="trigger-animation" bind:value={newTriggerAnimation}>
-                        {#each availableAnimations as animation}
-                            <option value={animation.name}>{animation.name}</option>
-                        {/each}
-                    </select>
-                </div>
             </div>
 
+            <!-- Column 3: Action Configuration -->
             <div class="trigger-column">
-                <div class="dialog-input-group">
-                    <label for="trigger-duration">Duration (ms):</label>
-                    <div class="duration-with-loop">
-                        <input
-                            id="trigger-duration"
-                            type="number"
-                            bind:value={newTriggerDuration}
-                            min="100"
-                            step="100"
-                        />
-                        <div class="checkbox-field">
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    bind:checked={newTriggerLooping}
-                                />
-                                Loop
-                            </label>
+                {#if newTriggerActionType === 'animation'}
+                    <div class="dialog-input-group">
+                        <label for="trigger-animation">Animation:</label>
+                        <select id="trigger-animation" bind:value={newTriggerAnimation}>
+                            {#each availableAnimations as animation}
+                                <option value={animation.cssName}>{animation.name}</option>
+                            {/each}
+                        </select>
+                    </div>
+
+                    <div class="dialog-input-group">
+                        <label for="trigger-duration">Duration (ms):</label>
+                        <div class="duration-with-loop">
+                            <input
+                                id="trigger-duration"
+                                type="number"
+                                bind:value={newTriggerDuration}
+                                min="100"
+                                step="100"
+                                disabled={!newTriggerAnimation}
+                            />
+                            <div class="checkbox-field">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        bind:checked={newTriggerLooping}
+                                        disabled={!newTriggerAnimation}
+                                    />
+                                    Loop
+                                </label>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="dialog-input-group">
-                    <label for="trigger-easing">Easing:</label>
-                    <select id="trigger-easing" bind:value={newTriggerEasing}>
-                        {#each EASING_FUNCTIONS as easing}
-                            <option value={easing}>{easing}</option>
-                        {/each}
-                    </select>
-                </div>
+                    <div class="dialog-input-group">
+                        <label for="trigger-easing">Easing:</label>
+                        <select id="trigger-easing" bind:value={newTriggerEasing} disabled={!newTriggerAnimation}>
+                            {#each EASING_FUNCTIONS as easing}
+                                <option value={easing}>{easing}</option>
+                            {/each}
+                        </select>
+                    </div>
+                {:else if newTriggerActionType === 'setValue' && newTriggerDevice}
+                    {@const selectedDevice = devices.find(d => d.id === newTriggerDevice)}
+                    {#if selectedDevice}
+                        <div class="dialog-input-group">
+                            <label>Set Channel Values:</label>
+                            <div class="controls-info">Select which controls to set when triggered:</div>
+                            <Controls
+                                controls={DEVICE_TYPES[selectedDevice.type].controls}
+                                components={DEVICE_TYPES[selectedDevice.type].components}
+                                values={getValuesArrayForDevice(newTriggerDevice, newTriggerChannelValues)}
+                                onChange={handleSetValueChange}
+                                showCheckboxes={true}
+                                bind:enabledControls={newTriggerEnabledControls}
+                            />
+                        </div>
+                    {/if}
+                {/if}
             </div>
         </div>
     </form>
@@ -391,6 +635,7 @@
 <Dialog bind:dialogRef={automaticTriggerDialog} title="Create Automatic Trigger" onclose={() => automaticTriggerDialog?.close()}>
     <form id="automatic-trigger-form" method="dialog" onsubmit={(e) => { e.preventDefault(); createAutomaticTrigger(); }}>
         <div class="trigger-columns">
+            <!-- Column 1: Device Configuration -->
             <div class="trigger-column">
                 <div class="dialog-input-group">
                     <label for="auto-trigger-device">Device:</label>
@@ -400,18 +645,19 @@
                         {/each}
                     </select>
                 </div>
+            </div>
 
+            <!-- Column 2: Action Configuration -->
+            <div class="trigger-column">
                 <div class="dialog-input-group">
                     <label for="auto-trigger-animation">Animation:</label>
                     <select id="auto-trigger-animation" bind:value={newTriggerAnimation}>
                         {#each availableAnimations as animation}
-                            <option value={animation.name}>{animation.name}</option>
+                            <option value={animation.cssName}>{animation.name}</option>
                         {/each}
                     </select>
                 </div>
-            </div>
 
-            <div class="trigger-column">
                 <div class="dialog-input-group">
                     <label for="auto-trigger-duration">Duration (ms):</label>
                     <div class="duration-with-loop">
@@ -421,12 +667,14 @@
                             bind:value={newTriggerDuration}
                             min="100"
                             step="100"
+                            disabled={!newTriggerAnimation}
                         />
                         <div class="checkbox-field">
                             <label>
                                 <input
                                     type="checkbox"
                                     bind:checked={newTriggerLooping}
+                                    disabled={!newTriggerAnimation}
                                 />
                                 Loop
                             </label>
@@ -436,7 +684,7 @@
 
                 <div class="dialog-input-group">
                     <label for="auto-trigger-easing">Easing:</label>
-                    <select id="auto-trigger-easing" bind:value={newTriggerEasing}>
+                    <select id="auto-trigger-easing" bind:value={newTriggerEasing} disabled={!newTriggerAnimation}>
                         {#each EASING_FUNCTIONS as easing}
                             <option value={easing}>{easing}</option>
                         {/each}
@@ -458,70 +706,160 @@
     <form id="edit-trigger-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
         <div class="trigger-columns">
             {#if editingTrigger.triggerType !== 'always'}
+                <!-- Column 1: Trigger Configuration (Manual only) -->
                 <div class="trigger-column">
                     <div class="dialog-input-group">
-                        <label for="edit-trigger-type">Type:</label>
+                        <label for="edit-trigger-type">Trigger Type:</label>
                         <select id="edit-trigger-type" bind:value={editTriggerType}>
-                            {#each MANUAL_TRIGGER_TYPES as type}
+                            {#each getTriggerTypeOptionsForTrigger(editingTrigger) as type}
                                 <option value={type.value}>{type.label}</option>
                             {/each}
                         </select>
                     </div>
                 </div>
-            {/if}
 
-            <div class="trigger-column">
-                <div class="dialog-input-group">
-                    <label for="edit-trigger-device">Device:</label>
-                    <select id="edit-trigger-device" bind:value={editTriggerDevice}>
-                        {#each devices as device}
-                            <option value={device.id}>{device.name}</option>
-                        {/each}
-                    </select>
-                </div>
+                <!-- Column 2: Device Configuration (Manual) -->
+                <div class="trigger-column">
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-action-type">Action:</label>
+                        <select id="edit-trigger-action-type" bind:value={editTriggerActionType}>
+                            {#each ACTION_TYPES as type}
+                                <option value={type.value}>{type.label}</option>
+                            {/each}
+                        </select>
+                    </div>
 
-                <div class="dialog-input-group">
-                    <label for="edit-trigger-animation">Animation:</label>
-                    <select id="edit-trigger-animation" bind:value={editTriggerAnimation}>
-                        {#each availableAnimations as animation}
-                            <option value={animation.name}>{animation.name}</option>
-                        {/each}
-                    </select>
-                </div>
-            </div>
-
-            <div class="trigger-column">
-                <div class="dialog-input-group">
-                    <label for="edit-trigger-duration">Duration (ms):</label>
-                    <div class="duration-with-loop">
-                        <input
-                            id="edit-trigger-duration"
-                            type="number"
-                            bind:value={editTriggerDuration}
-                            min="100"
-                            step="100"
-                        />
-                        <div class="checkbox-field">
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    bind:checked={editTriggerLooping}
-                                />
-                                Loop
-                            </label>
-                        </div>
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-device">Device:</label>
+                        <select id="edit-trigger-device" bind:value={editTriggerDevice}>
+                            {#each devices as device}
+                                <option value={device.id}>{device.name}</option>
+                            {/each}
+                        </select>
                     </div>
                 </div>
 
-                <div class="dialog-input-group">
-                    <label for="edit-trigger-easing">Easing:</label>
-                    <select id="edit-trigger-easing" bind:value={editTriggerEasing}>
-                        {#each EASING_FUNCTIONS as easing}
-                            <option value={easing}>{easing}</option>
-                        {/each}
-                    </select>
+                <!-- Column 3: Action Configuration (Manual) -->
+                <div class="trigger-column">
+                    {#if editTriggerActionType === 'animation'}
+                        <div class="dialog-input-group">
+                            <label for="edit-trigger-animation">Animation:</label>
+                            <select id="edit-trigger-animation" bind:value={editTriggerAnimation}>
+                                {#each availableAnimations as animation}
+                                    <option value={animation.cssName}>{animation.name}</option>
+                                {/each}
+                            </select>
+                        </div>
+
+                        <div class="dialog-input-group">
+                            <label for="edit-trigger-duration">Duration (ms):</label>
+                            <div class="duration-with-loop">
+                                <input
+                                    id="edit-trigger-duration"
+                                    type="number"
+                                    bind:value={editTriggerDuration}
+                                    min="100"
+                                    step="100"
+                                    disabled={!editTriggerAnimation}
+                                />
+                                <div class="checkbox-field">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            bind:checked={editTriggerLooping}
+                                            disabled={!editTriggerAnimation}
+                                        />
+                                        Loop
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dialog-input-group">
+                            <label for="edit-trigger-easing">Easing:</label>
+                            <select id="edit-trigger-easing" bind:value={editTriggerEasing} disabled={!editTriggerAnimation}>
+                                {#each EASING_FUNCTIONS as easing}
+                                    <option value={easing}>{easing}</option>
+                                {/each}
+                            </select>
+                        </div>
+                    {:else if editTriggerActionType === 'setValue' && editTriggerDevice}
+                        {@const selectedDevice = devices.find(d => d.id === editTriggerDevice)}
+                        {#if selectedDevice}
+                            <div class="dialog-input-group">
+                                <label>Set Channel Values:</label>
+                                <div class="controls-info">Select which controls to set when triggered:</div>
+                                <Controls
+                                    controls={DEVICE_TYPES[selectedDevice.type].controls}
+                                    components={DEVICE_TYPES[selectedDevice.type].components}
+                                    values={getValuesArrayForDevice(editTriggerDevice, editTriggerChannelValues)}
+                                    onChange={handleEditSetValueChange}
+                                    showCheckboxes={true}
+                                    bind:enabledControls={editTriggerEnabledControls}
+                                />
+                            </div>
+                        {/if}
+                    {/if}
                 </div>
-            </div>
+            {:else}
+                <!-- Automatic trigger: Only 2 columns -->
+                <!-- Column 1: Device Configuration (Automatic) -->
+                <div class="trigger-column">
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-device">Device:</label>
+                        <select id="edit-trigger-device" bind:value={editTriggerDevice}>
+                            {#each devices as device}
+                                <option value={device.id}>{device.name}</option>
+                            {/each}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Column 2: Action Configuration (Automatic) -->
+                <div class="trigger-column">
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-animation">Animation:</label>
+                        <select id="edit-trigger-animation" bind:value={editTriggerAnimation}>
+                            {#each availableAnimations as animation}
+                                <option value={animation.cssName}>{animation.name}</option>
+                            {/each}
+                        </select>
+                    </div>
+
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-duration">Duration (ms):</label>
+                        <div class="duration-with-loop">
+                            <input
+                                id="edit-trigger-duration"
+                                type="number"
+                                bind:value={editTriggerDuration}
+                                min="100"
+                                step="100"
+                                disabled={!editTriggerAnimation}
+                            />
+                            <div class="checkbox-field">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        bind:checked={editTriggerLooping}
+                                        disabled={!editTriggerAnimation}
+                                    />
+                                    Loop
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-easing">Easing:</label>
+                        <select id="edit-trigger-easing" bind:value={editTriggerEasing} disabled={!editTriggerAnimation}>
+                            {#each EASING_FUNCTIONS as easing}
+                                <option value={easing}>{easing}</option>
+                            {/each}
+                        </select>
+                    </div>
+                </div>
+            {/if}
         </div>
     </form>
 
@@ -637,5 +975,12 @@
 
     .duration-with-loop .checkbox-field label {
         font-size: 10pt;
+    }
+
+    .controls-info {
+        font-size: 9pt;
+        color: #666;
+        margin-bottom: 8px;
+        font-style: italic;
     }
 </style>

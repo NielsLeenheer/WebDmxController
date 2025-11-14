@@ -34,6 +34,27 @@
         inputController.initialize();
     });
 
+    // Set up setValue callback for triggers
+    $effect(() => {
+        triggerManager.setSetValueCallback((deviceId, channelValues) => {
+            // Find the device and update its channel values
+            const device = devices.find(d => d.id === deviceId);
+            if (!device || !dmxController) return;
+
+            // Update the device values and DMX controller
+            for (const [channelIndex, value] of Object.entries(channelValues)) {
+                const index = parseInt(channelIndex);
+                if (index >= 0 && index < device.defaultValues.length) {
+                    device.defaultValues[index] = value;
+                    dmxController.setChannel(device.startChannel + index, value);
+                }
+            }
+
+            // Trigger reactivity by creating a new array
+            devices = [...devices];
+        });
+    });
+
     async function handleConnect() {
         try {
             await dmxController.connect();

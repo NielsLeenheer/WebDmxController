@@ -3,76 +3,167 @@ export const DEVICE_TYPES = {
     RGB: {
         name: 'RGB Light',
         channels: 3,
+        components: [
+            { name: 'Red', channel: 0 },
+            { name: 'Green', channel: 1 },
+            { name: 'Blue', channel: 2 }
+        ],
         controls: [
-            { name: 'Red', type: 'slider', color: '#b83838' },
-            { name: 'Green', type: 'slider', color: '#4a964a' },
-            { name: 'Blue', type: 'slider', color: '#365fb4' }
+            {
+                name: 'Color',
+                type: 'rgb',
+                components: { r: 0, g: 1, b: 2 }
+            }
         ]
     },
     RGBA: {
         name: 'RGBA Light',
         channels: 4,
+        components: [
+            { name: 'Red', channel: 0 },
+            { name: 'Green', channel: 1 },
+            { name: 'Blue', channel: 2 },
+            { name: 'Amber', channel: 3 }
+        ],
         controls: [
-            { name: 'Red', type: 'slider', color: '#b83838' },
-            { name: 'Green', type: 'slider', color: '#4a964a' },
-            { name: 'Blue', type: 'slider', color: '#365fb4' },
-            { name: 'Amber', type: 'slider', color: '#a68522' }
+            {
+                name: 'Color',
+                type: 'rgb',
+                components: { r: 0, g: 1, b: 2 }
+            },
+            {
+                name: 'Amber',
+                type: 'slider',
+                color: '#ffbf00',
+                components: { value: 3 }
+            }
         ]
     },
     RGBW: {
         name: 'RGBW Light',
         channels: 4,
+        components: [
+            { name: 'Red', channel: 0 },
+            { name: 'Green', channel: 1 },
+            { name: 'Blue', channel: 2 },
+            { name: 'White', channel: 3 }
+        ],
         controls: [
-            { name: 'Red', type: 'slider', color: '#b83838' },
-            { name: 'Green', type: 'slider', color: '#4a964a' },
-            { name: 'Blue', type: 'slider', color: '#365fb4' },
-            { name: 'White', type: 'slider', color: '#808080' }
+            {
+                name: 'Color',
+                type: 'rgb',
+                components: { r: 0, g: 1, b: 2 }
+            },
+            {
+                name: 'White',
+                type: 'slider',
+                color: '#808080',
+                components: { value: 3 }
+            }
         ]
     },
     DIMMER: {
         name: 'Dimmer',
         channels: 1,
+        components: [
+            { name: 'Intensity', channel: 0 }
+        ],
         controls: [
-            { name: 'Intensity', type: 'slider', color: '#888888' }
+            {
+                name: 'Intensity',
+                type: 'slider',
+                color: '#888888',
+                components: { value: 0 }
+            }
         ]
     },
     SMOKE: {
         name: 'Smoke Machine',
         channels: 1,
+        components: [
+            { name: 'Output', channel: 0 }
+        ],
         controls: [
-            { name: 'Output', type: 'slider', color: '#666666' }
+            {
+                name: 'Output',
+                type: 'slider',
+                color: '#666666',
+                components: { value: 0 }
+            }
         ]
     },
     MOVING_HEAD: {
         name: 'Moving Head (Basic)',
         channels: 7,
+        components: [
+            { name: 'Pan', channel: 0 },
+            { name: 'Tilt', channel: 1 },
+            { name: 'Dimmer', channel: 2 },
+            { name: 'Red', channel: 3 },
+            { name: 'Green', channel: 4 },
+            { name: 'Blue', channel: 5 },
+            { name: 'White', channel: 6 }
+        ],
         controls: [
-            { name: 'Pan/Tilt', type: 'xypad', panIndex: 0, tiltIndex: 1 },
-            { name: 'Dimmer', type: 'slider', color: '#888888' },
-            { name: 'Red', type: 'slider', color: '#b83838' },
-            { name: 'Green', type: 'slider', color: '#4a964a' },
-            { name: 'Blue', type: 'slider', color: '#365fb4' },
-            { name: 'White', type: 'slider', color: '#808080' }
+            {
+                name: 'Pan/Tilt',
+                type: 'xypad',
+                components: { x: 0, y: 1 }
+            },
+            {
+                name: 'Dimmer',
+                type: 'slider',
+                color: '#888888',
+                components: { value: 2 }
+            },
+            {
+                name: 'Color',
+                type: 'rgb',
+                components: { r: 3, g: 4, b: 5 }
+            },
+            {
+                name: 'White',
+                type: 'slider',
+                color: '#808080',
+                components: { value: 6 }
+            }
         ]
     },
     FLAMETHROWER: {
         name: 'Flamethrower',
         channels: 2,
+        components: [
+            { name: 'Safety', channel: 0 },
+            { name: 'Fuel', channel: 1 }
+        ],
         controls: [
-            { name: 'Safety', type: 'toggle', offValue: 0, onValue: 125 },
-            { name: 'Fuel', type: 'slider', color: '#ff5722' }
+            {
+                name: 'Safety',
+                type: 'toggle',
+                offValue: 0,
+                onValue: 125,
+                components: { value: 0 }
+            },
+            {
+                name: 'Fuel',
+                type: 'slider',
+                color: '#ff5722',
+                components: { value: 1 }
+            }
         ]
     }
 };
 
 export class Device {
-    constructor(id, type, startChannel, name = '', linkedTo = null, cssId = null) {
+    constructor(id, type, startChannel, name = '', linkedTo = null, cssId = null, syncedControls = null, mirrorPan = false) {
         this.id = id;
         this.type = type;
         this.startChannel = startChannel;
         this.name = name || `${DEVICE_TYPES[type].name} ${id}`;
         this.defaultValues = new Array(DEVICE_TYPES[type].channels).fill(0);
         this.linkedTo = linkedTo; // ID of device to follow, or null
+        this.syncedControls = syncedControls; // Array of control names to sync, or null for all
+        this.mirrorPan = mirrorPan; // Whether to mirror pan values for linked devices
         this.cssId = cssId || this.generateCssId(this.name);
     }
 

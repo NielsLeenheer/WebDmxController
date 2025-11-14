@@ -18,12 +18,12 @@
     let animationsList = $state([]);
 
     // Dialog states
-    let newAnimationDialog = $state(null);
+    let newAnimationDialog = null; // DOM reference - should NOT be $state
     let newAnimationName = $state('');
-    let newAnimationDeviceType = $state('RGB');
+    let selectedAnimationTarget = $state('RGB|all'); // Format: "deviceType|all" or "deviceType|control|ControlName"
 
     // Edit dialog states
-    let editDialog = $state(null);
+    let editDialog = null; // DOM reference - should NOT be $state
     let editingAnimation = $state(null);
     let editingName = $state('');
 
@@ -53,18 +53,91 @@
 
     function openNewAnimationDialog() {
         newAnimationName = '';
-        newAnimationDeviceType = 'RGB';
+        selectedAnimationTarget = 'control|Color'; // Default to Color control
         newAnimationDialog?.showModal();
+    }
+
+    // Build complete list of animation targets (controls + device types)
+    function getAllAnimationTargets() {
+        const targets = [];
+
+        // First, collect all unique control names across all device types
+        const controlNamesSet = new Set();
+        for (const deviceDef of Object.values(DEVICE_TYPES)) {
+            for (const control of deviceDef.controls) {
+                controlNamesSet.add(control.name);
+            }
+        }
+
+        // Add individual controls (device-agnostic)
+        const sortedControlNames = Array.from(controlNamesSet).sort();
+        for (const controlName of sortedControlNames) {
+            targets.push({
+                type: 'control',
+                value: `control|${controlName}`,
+                label: controlName
+            });
+        }
+
+        // Add separator
+        targets.push({ type: 'separator' });
+
+        // Add device types (all controls)
+        for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
+            targets.push({
+                type: 'device',
+                value: `device|${deviceKey}`,
+                label: deviceDef.name
+            });
+        }
+
+        return targets;
+    }
+
+    // Parse selected target into controls array and displayName
+    function parseAnimationTarget(target) {
+        const parts = target.split('|');
+        const targetType = parts[0];
+
+        if (targetType === 'control') {
+            // Single control (device-agnostic)
+            const controlName = parts[1];
+            return {
+                controls: [controlName],
+                displayName: controlName
+            };
+        } else if (targetType === 'device') {
+            // All controls for this device type
+            const deviceType = parts[1];
+            const deviceDef = DEVICE_TYPES[deviceType];
+            const controlNames = deviceDef.controls.map(c => c.name);
+            return {
+                controls: controlNames,  // Array of all control names from this device
+                displayName: deviceDef.name
+            };
+        }
+
+        // Fallback
+        return {
+            controls: ['Color'],
+            displayName: 'Color'
+        };
     }
 
     function createNewAnimation() {
         if (!newAnimationName.trim()) return;
 
-        const deviceType = newAnimationDeviceType;
-        const numChannels = DEVICE_TYPES[deviceType].channels;
+        // Parse selected target
+        const parsed = parseAnimationTarget(selectedAnimationTarget);
+        const { controls, displayName } = parsed;
+
+        // Create animation with controls array (no deviceType stored)
+        const animation = new Animation(newAnimationName.trim(), null, [], null, controls, displayName);
+
+        // Determine number of channels based on control selection
+        const numChannels = animation.getNumChannels();
         const defaultValues = new Array(numChannels).fill(0);
 
-        const animation = new Animation(newAnimationName.trim(), deviceType);
         // Add default keyframes at start and end
         animation.addKeyframe(0, [...defaultValues]);
         animation.addKeyframe(1, [...defaultValues]);
@@ -95,11 +168,37 @@
         // Update animation name
         const oldName = editingAnimation.name;
         editingAnimation.name = editingName.trim();
+        // Update CSS name based on new animation name
+        editingAnimation.updateCSSName();
 
         // Save to library
         animationLibrary.save();
         refreshAnimationsList();
         closeEditDialog();
+    }
+
+    // Generate preview of CSS animation name for new animation
+    function getNewAnimationCSSName() {
+        if (!newAnimationName.trim()) return '';
+
+        const cssName = newAnimationName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+        return cssName;
+    }
+
+    // Generate preview of CSS animation name based on current editing name
+    function getPreviewCSSName() {
+        if (!editingName.trim()) return '';
+
+        const cssName = editingName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+        return cssName;
     }
 
     function confirmDeleteAnimation() {
@@ -135,7 +234,9 @@
                     <div class="animation-header">
                         <div class="animation-info">
                             <h3>{animation.name}</h3>
-                            <div class="device-type-badge">{DEVICE_TYPES[animation.deviceType].name}</div>
+                            <div class="badges">
+                                <div class="target-badge">{animation.getDisplayName()}</div>
+                            </div>
                         </div>
                         <IconButton
                             icon={editIcon}
@@ -169,15 +270,21 @@
                 placeholder="e.g., rainbow, pulse, sweep"
                 autofocus
             />
+            <small class="css-preview">@keyframes {getNewAnimationCSSName()}</small>
         </div>
 
         <div class="dialog-input-group">
-            <label for="device-type">Device Type:</label>
-            <select id="device-type" bind:value={newAnimationDeviceType}>
-                {#each Object.entries(DEVICE_TYPES) as [key, deviceType]}
-                    <option value={key}>{deviceType.name}</option>
+            <label for="animation-target">Target:</label>
+            <select id="animation-target" bind:value={selectedAnimationTarget} class="animation-target-select">
+                {#each getAllAnimationTargets() as target}
+                    {#if target.type === 'separator'}
+                        <option disabled>──────────</option>
+                    {:else}
+                        <option value={target.value}>{target.label}</option>
+                    {/if}
                 {/each}
             </select>
+            <small class="help-text">Select a specific control or entire device type</small>
         </div>
     </form>
 
@@ -200,6 +307,7 @@
                 placeholder="Animation name"
                 autofocus
             />
+            <small class="css-preview">@keyframes {getPreviewCSSName()}</small>
         </div>
     </form>
 
@@ -286,12 +394,25 @@
         color: #333;
     }
 
-    .device-type-badge {
+    .badges {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .target-badge {
         background: #e3f2fd;
         color: #1976d2;
         padding: 4px 8px;
         border-radius: 4px;
         font-size: 9pt;
         font-weight: 500;
+    }
+
+    .help-text {
+        display: block;
+        margin-top: 4px;
+        font-size: 9pt;
+        color: #888;
     }
 </style>

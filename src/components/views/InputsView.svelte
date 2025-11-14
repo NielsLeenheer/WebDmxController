@@ -1,6 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
-    import { InputMapping } from '../../lib/mappings.js';
+    import { InputMapping, INPUT_COLOR_PALETTE } from '../../lib/mappings.js';
+    import { getInputColorCSS } from '../../lib/inputColors.js';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Dialog from '../common/Dialog.svelte';
@@ -16,10 +17,89 @@
     let savedInputs = $state([]);
     let editingInput = $state(null);
     let editingName = $state('');
-    let editDialog = $state(null);
+    let editingButtonMode = $state('momentary');
+    let editDialog = null; // DOM reference - should NOT be $state
+
+    const deviceColorUsage = new Map(); // deviceId -> Set(colors)
+    const deviceColorIndices = new Map(); // deviceId -> last palette index used when cycling
+    const COLOR_CAPABLE_PREFIXES = ['button-', 'note-'];
+
+    function isColorCapableControl(controlId) {
+        if (!controlId || typeof controlId !== 'string') return false;
+        return COLOR_CAPABLE_PREFIXES.some(prefix => controlId.startsWith(prefix));
+    }
+
+    function deviceSupportsColors(device) {
+        if (!device) return false;
+        if (device.type === 'hid') {
+            return device.id !== 'keyboard';
+        }
+        return device.type === 'midi';
+    }
+
+    function shouldAssignColor(device, controlId) {
+        return deviceSupportsColors(device) && isColorCapableControl(controlId);
+    }
+
+    function normalizeColor(color) {
+        if (!color || typeof color !== 'string') return null;
+        return color.trim().toLowerCase();
+    }
+
+    function registerColorUsage(deviceId, controlId, color) {
+        const normalized = normalizeColor(color);
+        if (!deviceId || !normalized || !isColorCapableControl(controlId)) return;
+
+        if (!deviceColorUsage.has(deviceId)) {
+            deviceColorUsage.set(deviceId, new Set());
+        }
+        deviceColorUsage.get(deviceId).add(normalized);
+    }
+
+    function releaseColorUsage(deviceId, controlId, color) {
+        const normalized = normalizeColor(color);
+        if (!deviceId || !normalized || !isColorCapableControl(controlId)) return;
+
+        const usage = deviceColorUsage.get(deviceId);
+        if (!usage) return;
+        usage.delete(normalized);
+        if (usage.size === 0) {
+            deviceColorUsage.delete(deviceId);
+            deviceColorIndices.delete(deviceId);
+        }
+    }
+
+    function rebuildDeviceColorUsage() {
+        deviceColorUsage.clear();
+        deviceColorIndices.clear();
+        for (const input of savedInputs) {
+            registerColorUsage(input.inputDeviceId, input.inputControlId, input.color);
+        }
+    }
 
     // Event handlers
     let inputEventHandlers = [];
+
+    function getNextAvailableColor(deviceId) {
+        const palette = INPUT_COLOR_PALETTE || [];
+        if (!palette.length) return undefined;
+
+        const usedColors = deviceColorUsage.get(deviceId);
+        if (!usedColors || usedColors.size === 0) {
+            return palette[0];
+        }
+
+        for (const color of palette) {
+            if (!usedColors.has(color)) {
+                return color;
+            }
+        }
+
+        const lastIndex = deviceColorIndices.get(deviceId) ?? -1;
+        const nextIndex = (lastIndex + 1) % palette.length;
+        deviceColorIndices.set(deviceId, nextIndex);
+        return palette[nextIndex];
+    }
 
     function startListening() {
         isListening = true;
@@ -60,8 +140,8 @@
             // Auto-save new input
             const name = formatInputName(device?.name || deviceId, controlId);
 
-            // Only Stream Deck devices support colors (not keyboard or MIDI)
-            const supportsColor = device?.type === 'hid' && device.id !== 'keyboard';
+            // Stream Deck (HID, not keyboard) and MIDI devices support colors
+            const supportsColor = shouldAssignColor(device, controlId);
 
             const inputMapping = new InputMapping({
                 name,
@@ -69,25 +149,34 @@
                 inputDeviceId: deviceId,
                 inputControlId: controlId,
                 inputDeviceName: device?.name || deviceId, // Store device name for display
-                color: supportsColor ? undefined : null  // undefined = generate color, null = no color
+                color: supportsColor ? getNextAvailableColor(deviceId) : null  // unique random color if supported
             });
 
             mappingLibrary.add(inputMapping);
             refreshInputs();
 
-            // Set color on hardware for Stream Deck devices only
-            if (supportsColor && controlId.startsWith('button-')) {
-                const buttonIndex = parseInt(controlId.replace('button-', ''));
+            if (supportsColor) {
+                registerColorUsage(deviceId, controlId, inputMapping.color);
+            }
 
-                // Validate buttonIndex is a valid number
-                if (!isNaN(buttonIndex) && buttonIndex >= 0) {
-                    const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
-                    const serialNumber = deviceId; // deviceId is the serialNumber for Stream Deck
-
-                    // Set the button color on the device (async, but don't wait)
-                    streamDeckManager.setButtonColor(serialNumber, buttonIndex, inputMapping.color).catch(err => {
-                        console.warn(`Could not set button ${buttonIndex} color:`, err);
-                    });
+            // Set color on hardware for devices that support it
+            if (supportsColor) {
+                if (device.type === 'hid' && controlId.startsWith('button-')) {
+                    // Stream Deck button
+                    const buttonIndex = parseInt(controlId.replace('button-', ''));
+                    if (!isNaN(buttonIndex) && buttonIndex >= 0) {
+                        const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
+                        const serialNumber = deviceId;
+                        streamDeckManager.setButtonColor(serialNumber, buttonIndex, inputMapping.color).catch(err => {
+                            console.warn(`Could not set Stream Deck button ${buttonIndex} color:`, err);
+                        });
+                    }
+                } else if (device.type === 'midi' && controlId.startsWith('note-')) {
+                    // MIDI note/button
+                    const noteNumber = parseInt(controlId.replace('note-', ''));
+                    if (!isNaN(noteNumber) && noteNumber >= 0) {
+                        device.setButtonColor(noteNumber, inputMapping.color);
+                    }
                 }
             }
         }
@@ -149,6 +238,7 @@
     function startEditing(input) {
         editingInput = input;
         editingName = input.name;
+        editingButtonMode = input.buttonMode || 'momentary';
 
         requestAnimationFrame(() => {
             editDialog?.showModal();
@@ -162,6 +252,14 @@
         const mapping = mappingLibrary.get(editingInput.id);
         if (mapping) {
             mapping.name = editingName.trim();
+
+            // Update button mode for button inputs
+            if (mapping.mode === 'input' && mapping.isButtonInput()) {
+                mapping.buttonMode = editingButtonMode;
+            }
+
+            // Update CSS identifiers based on new name and button mode
+            mapping.updateCSSIdentifiers();
             mappingLibrary.update(mapping);
             refreshInputs();
         }
@@ -179,6 +277,66 @@
         editingName = '';
     }
 
+    // Generate preview of CSS property name based on current editing name
+    function getPreviewPropertyName() {
+        if (!editingName.trim()) return '--';
+
+        const propertyName = editingName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+        return `--${propertyName}`;
+    }
+
+    // Generate preview of button down class name based on current editing name
+    function getPreviewButtonDownClass() {
+        if (!editingName.trim()) return '';
+
+        const namePart = editingName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+            .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+        return `${namePart}_down`;
+    }
+
+    // Generate preview of button up class name based on current editing name
+    function getPreviewButtonUpClass() {
+        if (!editingName.trim()) return '';
+
+        const namePart = editingName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+            .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+        return `${namePart}_up`;
+    }
+
+    // Generate preview of button on class name based on current editing name
+    function getPreviewButtonOnClass() {
+        if (!editingName.trim()) return '';
+
+        const namePart = editingName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+            .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+        return `${namePart}_on`;
+    }
+
+    // Generate preview of button off class name based on current editing name
+    function getPreviewButtonOffClass() {
+        if (!editingName.trim()) return '';
+
+        const namePart = editingName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+            .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+        return `${namePart}_off`;
+    }
+
     async function confirmDelete() {
         if (!editingInput) return;
 
@@ -192,17 +350,27 @@
         const input = mappingLibrary.get(inputId);
         if (!input) return;
 
-        // If this is a Stream Deck button (not keyboard), clear its color (set to black)
+    // Release color usage for this device before clearing hardware
+    releaseColorUsage(input.inputDeviceId, input.inputControlId, input.color);
+
+    // Clear button color on hardware
         const inputDevice = inputController.getInputDevice(input.inputDeviceId);
         if (inputDevice?.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
+            // Stream Deck button
             const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
-
             if (!isNaN(buttonIndex) && buttonIndex >= 0) {
                 const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
                 const serialNumber = input.inputDeviceId;
-
-                // Clear the button color (set to black)
                 await streamDeckManager.clearButtonColor(serialNumber, buttonIndex);
+            }
+        } else if (inputDevice?.type === 'midi' && input.inputControlId.startsWith('note-')) {
+            // MIDI note/button
+            const noteNumber = parseInt(input.inputControlId.replace('note-', ''));
+            if (!isNaN(noteNumber) && noteNumber >= 0) {
+                if (typeof inputDevice.setButtonColor === 'function') {
+                    inputDevice.setButtonColor(noteNumber, 'off');
+                }
+                inputDevice.sendNoteOff(noteNumber);
             }
         }
 
@@ -212,36 +380,31 @@
 
     function refreshInputs() {
         // Only show input-mode mappings
-        // Create a new array with new object references to trigger reactivity
         savedInputs = mappingLibrary.getAll()
-            .filter(m => m.mode === 'input')
-            .map(m => ({ ...m }));
+            .filter(m => m.mode === 'input');
+
+        rebuildDeviceColorUsage();
     }
 
-    async function applyColorsToStreamDeck() {
-        // Apply colors to all Stream Deck buttons that have saved inputs
-        const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
-        const connectedDevices = streamDeckManager.getConnectedDevices();
-
-        if (connectedDevices.length === 0) {
-            // No Stream Deck connected, skip color application
-            return;
-        }
-
-        // Find all Stream Deck inputs and apply their colors (skip keyboard)
+    async function applyColorsToDevices() {
+        // Apply colors to all buttons that have saved inputs
         for (const input of savedInputs) {
             const inputDevice = inputController.getInputDevice(input.inputDeviceId);
+            if (!inputDevice || !input.color || !isColorCapableControl(input.inputControlId)) continue;
 
-            // Check if this is a Stream Deck device that's currently connected (not keyboard)
-            if (inputDevice?.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
+            if (inputDevice.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
+                // Stream Deck button
                 const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
-
-                // Validate buttonIndex is a valid number
                 if (!isNaN(buttonIndex) && buttonIndex >= 0) {
-                    const serialNumber = input.inputDeviceId; // deviceId is the serialNumber
-
-                    // Set the button color on the device (will silently fail if button doesn't exist)
+                    const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
+                    const serialNumber = input.inputDeviceId;
                     await streamDeckManager.setButtonColor(serialNumber, buttonIndex, input.color);
+                }
+            } else if (inputDevice.type === 'midi' && input.inputControlId.startsWith('note-')) {
+                // MIDI note/button
+                const noteNumber = parseInt(input.inputControlId.replace('note-', ''));
+                if (!isNaN(noteNumber) && noteNumber >= 0) {
+                    inputDevice.setButtonColor(noteNumber, input.color);
                 }
             }
         }
@@ -250,16 +413,16 @@
     onMount(() => {
         refreshInputs();
 
-        // Apply colors when a Stream Deck connects
+        // Apply colors when devices connect
         inputController.on('deviceadded', (device) => {
-            if (device.type === 'hid') {
+            if (device.type === 'hid' || device.type === 'midi') {
                 // Small delay to ensure device is fully initialized
-                setTimeout(() => applyColorsToStreamDeck(), 500);
+                setTimeout(() => applyColorsToDevices(), 500);
             }
         });
 
         // Apply colors on initial load
-        setTimeout(() => applyColorsToStreamDeck(), 1000);
+        setTimeout(() => applyColorsToDevices(), 1000);
     });
 
     onDestroy(() => {
@@ -288,8 +451,11 @@
         {:else}
             {#each savedInputs as input (input.id)}
                 <div class="input-card">
-                    {#if input.color}
-                        <div class="input-color-badge" style="background-color: {input.color}"></div>
+                    {#if input.color && isColorCapableControl(input.inputControlId)}
+                        <div
+                            class="input-color-badge"
+                            style="background-color: {getInputColorCSS(input.color)}"
+                        ></div>
                     {/if}
                     <div class="input-header">
                         <div class="input-name">{input.name}</div>
@@ -333,15 +499,31 @@
                 }}
                 autofocus
             />
+        </div>
+
+        {#if editingInput.isButtonInput()}
+            <div class="dialog-input-group">
+                <label for="button-mode">Button Mode:</label>
+                <select id="button-mode" bind:value={editingButtonMode}>
+                    <option value="momentary">Momentary (Down/Up)</option>
+                    <option value="toggle">Toggle (On/Off)</option>
+                </select>
+            </div>
+
             <div class="css-identifiers">
-                {#if editingInput.isButtonInput()}
-                    <code class="css-id">.{editingInput.getButtonDownClass()}</code>
-                    <code class="css-id">.{editingInput.getButtonUpClass()}</code>
+                {#if editingButtonMode === 'toggle'}
+                    <code class="css-id">.{getPreviewButtonOnClass()}</code>
+                    <code class="css-id">.{getPreviewButtonOffClass()}</code>
                 {:else}
-                    <code class="css-id">{editingInput.getInputPropertyName()}</code>
+                    <code class="css-id">.{getPreviewButtonDownClass()}</code>
+                    <code class="css-id">.{getPreviewButtonUpClass()}</code>
                 {/if}
             </div>
-        </div>
+        {:else}
+            <div class="css-identifiers">
+                <code class="css-id">{getPreviewPropertyName()}</code>
+            </div>
+        {/if}
     </form>
 
     {#snippet tools()}

@@ -6,6 +6,7 @@
  */
 
 import { StreamDeckManager, getStreamDeckFilters, isStreamDeck, getStreamDeckModel } from './streamdeck.js';
+import { MIDIDeviceProfileManager } from './midiDeviceProfiles.js';
 
 /**
  * Base class for all input devices
@@ -102,9 +103,13 @@ class InputDevice {
  * MIDI Input Device (WebMIDI API)
  */
 export class MIDIInputDevice extends InputDevice {
-	constructor(midiInput) {
+	constructor(midiInput, midiOutput = null, profile = null) {
 		super(midiInput.id, midiInput.name || 'MIDI Device', 'midi');
 		this.midiInput = midiInput;
+		this.midiOutput = midiOutput; // Optional MIDI output for LED feedback
+		this.profile = profile; // Device-specific profile for color mapping
+		this.buttonColors = new Map(); // Track desired colors per note/pad
+		this._sysexDisabled = false;
 		this.midiInput.onmidimessage = this._handleMIDIMessage.bind(this);
 	}
 
@@ -142,10 +147,152 @@ export class MIDIInputDevice extends InputDevice {
 		}
 	}
 
+	/**
+	 * Send a MIDI Note On message (used for setting button LED colors)
+	 * @param {number} note - Note number (0-127)
+	 * @param {number} velocity - Velocity/color (0-127)
+	 * @param {number} channel - MIDI channel (0-15, default 0)
+	 */
+	sendNoteOn(note, velocity, channel = 0) {
+		if (!this.midiOutput) return;
+		const status = 0x90 | (channel & 0x0f);
+		this.midiOutput.send([status, note & 0x7f, velocity & 0x7f]);
+	}
+
+	/**
+	 * Send a MIDI Note Off message
+	 * @param {number} note - Note number (0-127)
+	 * @param {number} channel - MIDI channel (0-15, default 0)
+	 */
+	sendNoteOff(note, channel = 0) {
+		if (!this.midiOutput) return;
+		const status = 0x80 | (channel & 0x0f);
+		this.midiOutput.send([status, note & 0x7f, 0]);
+	}
+
+	/**
+	 * Send a MIDI Control Change message
+	 * @param {number} controller - Controller number (0-127)
+	 * @param {number} value - Controller value (0-127)
+	 * @param {number} channel - MIDI channel (0-15, default 0)
+	 */
+	sendControlChange(controller, value, channel = 0) {
+		if (!this.midiOutput) return;
+		const status = 0xb0 | (channel & 0x0f);
+		this.midiOutput.send([status, controller & 0x7f, value & 0x7f]);
+	}
+
+	/**
+	 * Set button color (device-agnostic, will use device profile)
+	 * @param {number} button - Button/pad number
+	 * @param {string|number} color - Color name or velocity value
+	 */
+	setButtonColor(button, color) {
+		if (color === undefined || color === null) {
+			this.buttonColors.delete(button);
+		} else {
+			this.buttonColors.set(button, color);
+		}
+
+		if (!this.midiOutput) return;
+
+		const mode = this.profile?.colorUpdateMode || 'note';
+
+		if (
+			mode === 'sysex' &&
+			!this._sysexDisabled &&
+			typeof this.profile?.buildColorSysEx === 'function'
+		) {
+			const message = this.profile.buildColorSysEx(this.buttonColors);
+			if (message && message.length) {
+				try {
+					this.midiOutput.send(message);
+					return;
+				} catch (error) {
+					if (error?.name === 'InvalidAccessError') {
+						console.warn('MIDI device rejected SysEx message; disabling SysEx mode for this session.', error);
+						this._sysexDisabled = true;
+					} else {
+						console.error('Failed to send SysEx color update:', error);
+					}
+				}
+			}
+		}
+
+		// Default to velocity-based color via NOTE ON
+		const noteData = typeof this.profile?.getNoteColor === 'function'
+			? this.profile.getNoteColor(button, color)
+			: { note: button, velocity: this._colorToVelocity(color), channel: 0 };
+
+		if (!noteData) return;
+
+		const {
+			note = button,
+			velocity = this._colorToVelocity(color),
+			channel = 0
+		} = noteData;
+
+		this.sendNoteOn(note, velocity, channel);
+	}
+
+	/**
+	 * Convert color to velocity value (device-specific)
+	 * Uses device profile if available
+	 */
+	_colorToVelocity(color) {
+		// Use profile if available
+		if (this.profile) {
+			return this.profile.colorToVelocity(color);
+		}
+
+		// Fallback to basic mapping
+		if (typeof color === 'number') return Math.max(0, Math.min(127, color));
+
+		const colorMap = {
+			'off': 0,
+			'red': 5,
+			'orange': 9,
+			'yellow': 13,
+			'green': 21,
+			'cyan': 37,
+			'blue': 45,
+			'purple': 53,
+			'pink': 57,
+			'white': 3
+		};
+
+		return colorMap[color.toLowerCase()] || 0;
+	}
+
 	disconnect() {
 		if (this.midiInput) {
 			this.midiInput.onmidimessage = null;
 		}
+		// Clear all LEDs on disconnect
+		if (this.midiOutput) {
+			const mode = this.profile?.colorUpdateMode || 'note';
+			if (
+				mode === 'sysex' &&
+				!this._sysexDisabled &&
+				typeof this.profile?.buildColorSysEx === 'function'
+			) {
+				this.buttonColors.clear();
+				const message = this.profile.buildColorSysEx(this.buttonColors);
+				if (message && message.length) {
+					try {
+						this.midiOutput.send(message);
+					} catch (error) {
+						console.warn('Failed to send SysEx clear message on disconnect.', error);
+						this._sysexDisabled = true;
+					}
+				}
+			} else {
+				for (let i = 0; i < 128; i++) {
+					this.sendNoteOff(i);
+				}
+			}
+		}
+		this.buttonColors.clear();
 	}
 }
 
@@ -294,6 +441,7 @@ export class InputDeviceManager {
 		this.midiAccess = null;
 		this.keyboardDevice = null;
 		this.streamDeckManager = new StreamDeckManager();
+		this.midiProfileManager = new MIDIDeviceProfileManager();
 		this._setupStreamDeckListeners();
 	}
 
@@ -349,7 +497,18 @@ export class InputDeviceManager {
 		}
 
 		try {
-			this.midiAccess = await navigator.requestMIDIAccess();
+			this.midiAccess = await navigator.requestMIDIAccess({ sysex: true });
+		} catch (firstError) {
+			console.warn('SysEx-enabled MIDI access denied, retrying without SysEx.', firstError);
+			try {
+				this.midiAccess = await navigator.requestMIDIAccess({ sysex: false });
+			} catch (fallbackError) {
+				console.error('Failed to initialize MIDI:', fallbackError);
+				return false;
+			}
+		}
+
+		try {
 			this.midiAccess.onstatechange = this._handleMIDIStateChange.bind(this);
 
 			// Add existing MIDI inputs
@@ -359,7 +518,7 @@ export class InputDeviceManager {
 
 			return true;
 		} catch (e) {
-			console.error('Failed to initialize MIDI:', e);
+			console.error('Failed to configure MIDI:', e);
 			return false;
 		}
 	}
@@ -377,7 +536,24 @@ export class InputDeviceManager {
 	}
 
 	_addMIDIDevice(midiInput) {
-		const device = new MIDIInputDevice(midiInput);
+		// Try to find matching output port
+		let midiOutput = null;
+		if (this.midiAccess) {
+			for (const output of this.midiAccess.outputs.values()) {
+				// Match by name (most devices have same name for input/output)
+				if (output.name === midiInput.name) {
+					midiOutput = output;
+					console.log(`Matched MIDI output for ${midiInput.name}`);
+					break;
+				}
+			}
+		}
+
+		// Get device profile based on name
+		const profile = this.midiProfileManager.getProfile(midiInput.name);
+		console.log(`Using profile "${profile.name}" for ${midiInput.name}`);
+
+		const device = new MIDIInputDevice(midiInput, midiOutput, profile);
 		this.devices.set(device.id, device);
 		this._emit('deviceadded', device);
 	}

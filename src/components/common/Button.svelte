@@ -6,6 +6,7 @@
      * @prop {boolean} disabled - Whether button is disabled
      * @prop {Function} onclick - Click handler
      * @prop {string} type - Button type attribute
+     * @prop {string} form - Form ID to associate with (for submit buttons outside forms)
      * @prop {boolean} pulsating - Whether button should have pulsating animation
      */
     let {
@@ -13,6 +14,7 @@
         disabled = false,
         onclick = null,
         type = 'button',
+        form = null,
         pulsating = false,
         children
     } = $props();
@@ -23,6 +25,7 @@
     {disabled}
     {onclick}
     {type}
+    form={form || undefined}
 >
     {@render children()}
 </button>

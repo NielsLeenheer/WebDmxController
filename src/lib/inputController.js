@@ -17,6 +17,7 @@ export class InputController {
 		this.triggerManager = triggerManager || new TriggerManager();
 
 		this.listeners = new Map();
+		this.toggleStates = new Map(); // Track toggle button states: "deviceId:controlId" -> boolean
 		this._setupInputListeners();
 	}
 
@@ -92,13 +93,56 @@ export class InputController {
 
 		// Only add CSS classes if this input has defined mappings
 		if (mappings.length > 0) {
-			// Add raw "down" class for custom CSS
-			const downClass = this._generateClassName(controlId, 'down');
-			this.triggerManager.addRawClass(downClass);
+			// Find the input mapping (mode='input') for this control
+			const inputMapping = mappings.find(m => m.mode === 'input');
 
-			// Also remove "up" class if it exists
-			const upClass = this._generateClassName(controlId, 'up');
-			this.triggerManager.removeRawClass(upClass);
+			if (inputMapping && inputMapping.isButtonInput()) {
+				// Handle toggle vs momentary mode
+				const buttonMode = inputMapping.buttonMode || 'momentary';
+
+				if (buttonMode === 'toggle') {
+					// Toggle mode: flip state on each press
+					const toggleKey = `${deviceId}:${controlId}`;
+					const currentState = this.toggleStates.get(toggleKey) || false;
+					const newState = !currentState;
+					this.toggleStates.set(toggleKey, newState);
+
+					// Apply on/off classes based on new state
+					const onClass = inputMapping.cssClassOn;
+					const offClass = inputMapping.cssClassOff;
+
+					if (newState) {
+						// Turned ON
+						if (onClass) this.triggerManager.addRawClass(onClass);
+						if (offClass) this.triggerManager.removeRawClass(offClass);
+					} else {
+						// Turned OFF
+						if (offClass) this.triggerManager.addRawClass(offClass);
+						if (onClass) this.triggerManager.removeRawClass(onClass);
+					}
+				} else {
+					// Momentary mode: add down class, remove up class
+					const downClass = inputMapping.cssClassDown;
+					const upClass = inputMapping.cssClassUp;
+
+					if (downClass) this.triggerManager.addRawClass(downClass);
+					if (upClass) this.triggerManager.removeRawClass(upClass);
+				}
+
+				// Set pressure as custom property (for pressure-sensitive buttons)
+				if (inputMapping.name) {
+					// Generate CSS custom property name from input name
+					const propertyName = inputMapping.name
+						.toLowerCase()
+						.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+						.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+					// Normalize velocity (typically 0-127 for MIDI) to percentage (0% to 100%)
+					const normalizedVelocity = Math.max(0, Math.min(1, velocity / 127));
+					const percentage = (normalizedVelocity * 100).toFixed(1);
+					this.customPropertyManager.setProperty(`${propertyName}-pressure`, `${percentage}%`);
+				}
+			}
 
 			for (const mapping of mappings) {
 				if (mapping.mode === 'trigger') {
@@ -119,12 +163,32 @@ export class InputController {
 
 		// Only update CSS classes if this input has defined mappings
 		if (mappings.length > 0) {
-			// Remove raw "down" class and add "up" class for custom CSS
-			const downClass = this._generateClassName(controlId, 'down');
-			this.triggerManager.removeRawClass(downClass);
+			// Find the input mapping (mode='input') for this control
+			const inputMapping = mappings.find(m => m.mode === 'input');
 
-			const upClass = this._generateClassName(controlId, 'up');
-			this.triggerManager.addRawClass(upClass);
+			if (inputMapping && inputMapping.isButtonInput()) {
+				// Handle toggle vs momentary mode
+				const buttonMode = inputMapping.buttonMode || 'momentary';
+
+				if (buttonMode === 'momentary') {
+					// Momentary mode: remove down class and add up class on release
+					const downClass = inputMapping.cssClassDown;
+					const upClass = inputMapping.cssClassUp;
+
+					if (downClass) this.triggerManager.removeRawClass(downClass);
+					if (upClass) this.triggerManager.addRawClass(upClass);
+				}
+				// Toggle mode: do nothing on release (state was toggled on press)
+
+				// Reset pressure custom property to 0%
+				if (inputMapping.name) {
+					const propertyName = inputMapping.name
+						.toLowerCase()
+						.replace(/[^a-z0-9]+/g, '-')
+						.replace(/^-+|-+$/g, '');
+					this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
+				}
+			}
 
 			for (const mapping of mappings) {
 				if (mapping.mode === 'trigger') {
@@ -207,6 +271,52 @@ export class InputController {
 	 */
 	createVirtualDevice(name) {
 		return this.inputDeviceManager.createVirtual(name);
+	}
+
+	/**
+	 * Set button color on a MIDI device
+	 * @param {string} deviceId - Device ID
+	 * @param {string} controlId - Control ID (e.g., "note-36")
+	 * @param {string|number} color - Color name or velocity value
+	 */
+	setButtonColor(deviceId, controlId, color) {
+		const device = this.inputDeviceManager.getDevice(deviceId);
+		if (device && device.type === 'midi' && device.setButtonColor) {
+			// Extract note number from control ID (e.g., "note-36" -> 36)
+			const noteMatch = controlId.match(/note-(\d+)/);
+			if (noteMatch) {
+				const noteNumber = parseInt(noteMatch[1]);
+				device.setButtonColor(noteNumber, color);
+			}
+		}
+	}
+
+	/**
+	 * Set button color by input mapping
+	 * @param {string} mappingId - Mapping ID or name
+	 * @param {string|number} color - Color name or velocity value
+	 */
+	setButtonColorByMapping(mappingId, color) {
+		const mapping = this.mappingLibrary.get(mappingId);
+		if (mapping && mapping.inputDeviceId && mapping.inputControlId) {
+			this.setButtonColor(mapping.inputDeviceId, mapping.inputControlId, color);
+		}
+	}
+
+	/**
+	 * Clear all button colors on a device
+	 * @param {string} deviceId - Device ID
+	 */
+	clearDeviceColors(deviceId) {
+		const device = this.inputDeviceManager.getDevice(deviceId);
+		if (device && device.type === 'midi') {
+			// Turn off all notes (0-127)
+			for (let i = 0; i < 128; i++) {
+				if (device.sendNoteOff) {
+					device.sendNoteOff(i);
+				}
+			}
+		}
 	}
 
 	/**

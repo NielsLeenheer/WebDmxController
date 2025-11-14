@@ -17,11 +17,12 @@
 
         const keyframeRules = animation.keyframes
             .map(kf => {
-                const color = getDeviceColor(animation.deviceType, kf.values);
+                // Use keyframe's own deviceType (keyframes store deviceType for rendering)
+                const color = getDeviceColor(kf.deviceType, kf.values);
                 const percent = Math.round(kf.time * 100);
 
                 // For moving heads, also include transform
-                if (animation.deviceType === 'MOVING_HEAD') {
+                if (kf.deviceType === 'MOVING_HEAD') {
                     const pan = kf.values[0] || 0;
                     const tilt = kf.values[1] || 0;
                     const panPercent = ((pan / 255) * 100) - 50;

@@ -6,6 +6,12 @@
  * 2. Direct mode - Continuously control a CSS custom property
  */
 
+export const INPUT_COLOR_PALETTE = [
+	'red', 'orange', 'yellow', 'lime', 'green', 'spring',
+	'turquoise', 'cyan', 'sky', 'blue', 'violet', 'purple',
+	'magenta', 'pink'
+];
+
 /**
  * Represents a single input-to-output mapping
  */
@@ -21,16 +27,27 @@ export class InputMapping {
 		this.inputDeviceName = config.inputDeviceName || null; // Store device name for display
 
 		// Visual color for the input (shown in UI and on hardware)
-		// If color is explicitly set (even to null), use it. Otherwise generate a random color.
-		this.color = 'color' in config ? config.color : this._generateRandomColor();
+		// undefined = generate random, null = no color support, string = use that color
+		if (!('color' in config) || config.color === undefined) {
+			this.color = this._generateRandomColor();
+		} else {
+			this.color = config.color; // Could be null or an actual color string
+		}
 
 		// Trigger mode settings
 		this.triggerType = config.triggerType || 'pressed'; // 'pressed', 'not-pressed', 'always'
+		this.actionType = config.actionType || 'animation'; // 'animation' or 'setValue'
+
+		// Animation action settings
 		this.animationName = config.animationName || null;
 		this.duration = config.duration || 1000; // ms
 		this.easing = config.easing || 'linear';
 		this.iterations = config.iterations || 1; // number or 'infinite'
-		this.targetDeviceIds = config.targetDeviceIds || []; // Array of device IDs
+		this.targetDeviceIds = config.targetDeviceIds || []; // Array of device IDs (for animations)
+
+		// SetValue action settings
+		this.setValueDeviceId = config.setValueDeviceId || null; // Single device ID for setValue
+		this.channelValues = config.channelValues || {}; // Object mapping channel index to value (0-255)
 
 		// Direct mode settings
 		this.propertyName = config.propertyName || '--value'; // CSS custom property name
@@ -39,16 +56,51 @@ export class InputMapping {
 
 		// CSS class name for trigger mode (auto-generated from input)
 		this.cssClassName = config.cssClassName || this._generateClassName();
+
+		// Button mode for input-mode button inputs: 'momentary' or 'toggle'
+		// Momentary: down/up states, Toggle: on/off states
+		this.buttonMode = config.buttonMode || 'momentary';
+
+		// Stored CSS identifiers (generated from name and stored)
+		// For button inputs in input mode:
+		if (this.mode === 'input' && this.isButtonInput()) {
+			if (this.buttonMode === 'toggle') {
+				// Toggle mode: on/off class names
+				this.cssClassOn = config.cssClassOn || this._generateButtonOnClass();
+				this.cssClassOff = config.cssClassOff || this._generateButtonOffClass();
+				this.cssClassDown = null;
+				this.cssClassUp = null;
+			} else {
+				// Momentary mode: down/up class names (default)
+				this.cssClassDown = config.cssClassDown || this._generateButtonDownClass();
+				this.cssClassUp = config.cssClassUp || this._generateButtonUpClass();
+				this.cssClassOn = null;
+				this.cssClassOff = null;
+			}
+			this.cssProperty = null;
+		} else if (!this.isButtonInput()) {
+			// For slider/knob inputs: store the CSS custom property name
+			this.cssProperty = config.cssProperty || this._generatePropertyName();
+			this.cssClassDown = null;
+			this.cssClassUp = null;
+			this.cssClassOn = null;
+			this.cssClassOff = null;
+		} else {
+			// For trigger mode buttons, keep old behavior
+			this.cssClassDown = config.cssClassDown || (this.isButtonInput() ? this._generateButtonDownClass() : null);
+			this.cssClassUp = config.cssClassUp || (this.isButtonInput() ? this._generateButtonUpClass() : null);
+			this.cssClassOn = null;
+			this.cssClassOff = null;
+			this.cssProperty = null;
+		}
 	}
 
 	/**
-	 * Generate a random vibrant color
+	 * Generate a random named color
+	 * Named colors work across all devices (MIDI, Stream Deck)
 	 */
 	_generateRandomColor() {
-		const hue = Math.floor(Math.random() * 360);
-		const saturation = 70 + Math.floor(Math.random() * 30); // 70-100%
-		const lightness = 50 + Math.floor(Math.random() * 20); // 50-70%
-		return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+		return INPUT_COLOR_PALETTE[Math.floor(Math.random() * INPUT_COLOR_PALETTE.length)];
 	}
 
 	/**
@@ -79,6 +131,110 @@ export class InputMapping {
 	 */
 	updateClassName() {
 		this.cssClassName = this._generateClassName();
+	}
+
+	/**
+	 * Generate CSS custom property name from input name (for slider/knob inputs)
+	 */
+	_generatePropertyName() {
+		if (!this.name) return '--value';
+
+		const propertyName = this.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+		return `--${propertyName}`;
+	}
+
+	/**
+	 * Generate CSS class name for button down state (for button inputs)
+	 */
+	_generateButtonDownClass() {
+		if (!this.name) return '';
+
+		const namePart = this.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+			.replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+		return `${namePart}_down`;
+	}
+
+	/**
+	 * Generate CSS class name for button up state (for button inputs)
+	 */
+	_generateButtonUpClass() {
+		if (!this.name) return '';
+
+		const namePart = this.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+			.replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+		return `${namePart}_up`;
+	}
+
+	/**
+	 * Generate CSS class name for button on state (for toggle button inputs)
+	 */
+	_generateButtonOnClass() {
+		if (!this.name) return '';
+
+		const namePart = this.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+			.replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+		return `${namePart}_on`;
+	}
+
+	/**
+	 * Generate CSS class name for button off state (for toggle button inputs)
+	 */
+	_generateButtonOffClass() {
+		if (!this.name) return '';
+
+		const namePart = this.name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
+			.replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+
+		return `${namePart}_off`;
+	}
+
+	/**
+	 * Update stored CSS identifiers when name changes
+	 */
+	updateCSSIdentifiers() {
+		if (this.mode === 'input' && this.isButtonInput()) {
+			if (this.buttonMode === 'toggle') {
+				this.cssClassOn = this._generateButtonOnClass();
+				this.cssClassOff = this._generateButtonOffClass();
+				this.cssClassDown = null;
+				this.cssClassUp = null;
+			} else {
+				this.cssClassDown = this._generateButtonDownClass();
+				this.cssClassUp = this._generateButtonUpClass();
+				this.cssClassOn = null;
+				this.cssClassOff = null;
+			}
+			this.cssProperty = null;
+		} else if (this.isButtonInput()) {
+			// Trigger mode buttons
+			this.cssClassDown = this._generateButtonDownClass();
+			this.cssClassUp = this._generateButtonUpClass();
+			this.cssClassOn = null;
+			this.cssClassOff = null;
+			this.cssProperty = null;
+		} else {
+			// Slider/knob inputs
+			this.cssProperty = this._generatePropertyName();
+			this.cssClassDown = null;
+			this.cssClassUp = null;
+			this.cssClassOn = null;
+			this.cssClassOff = null;
+		}
 	}
 
 	/**
@@ -127,51 +283,58 @@ export class InputMapping {
 	}
 
 	/**
-	 * Get CSS custom property name generated from input name (for input mode)
+	 * Get CSS custom property name (for slider/knob inputs)
+	 * Returns the stored cssProperty value
 	 */
 	getInputPropertyName() {
-		if (!this.name) return null;
-
-		// Generate CSS custom property name from input name
-		// Same logic as in inputController._handleValueChange
-		const propertyName = this.name
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
-		return `--${propertyName}`;
+		return this.cssProperty;
 	}
 
 	/**
 	 * Check if this input is a button/trigger type (vs slider/knob)
-	 * Buttons: Stream Deck buttons, MIDI notes
+	 * Buttons: Stream Deck buttons, MIDI notes, Keyboard keys
 	 * Sliders/Knobs: MIDI CC (control change)
 	 */
 	isButtonInput() {
 		if (!this.inputControlId) return false;
 
-		// Button types: button-*, note-*
+		// Button types: button-*, note-*, key-*
 		// Slider/Knob types: cc-*, control-*
 		return this.inputControlId.startsWith('button-') ||
-		       this.inputControlId.startsWith('note-');
+		       this.inputControlId.startsWith('note-') ||
+		       this.inputControlId.startsWith('key-');
 	}
 
 	/**
 	 * Get button down class name (for button inputs)
+	 * Returns the stored cssClassDown value
 	 */
 	getButtonDownClass() {
-		if (!this.inputControlId) return null;
-		const controlPart = this.inputControlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-		return `${controlPart}_down`;
+		return this.cssClassDown;
 	}
 
 	/**
 	 * Get button up class name (for button inputs)
+	 * Returns the stored cssClassUp value
 	 */
 	getButtonUpClass() {
-		if (!this.inputControlId) return null;
-		const controlPart = this.inputControlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-		return `${controlPart}_up`;
+		return this.cssClassUp;
+	}
+
+	/**
+	 * Get button on class name (for toggle button inputs)
+	 * Returns the stored cssClassOn value
+	 */
+	getButtonOnClass() {
+		return this.cssClassOn;
+	}
+
+	/**
+	 * Get button off class name (for toggle button inputs)
+	 * Returns the stored cssClassOff value
+	 */
+	getButtonOffClass() {
+		return this.cssClassOff;
 	}
 
 	/**
@@ -205,16 +368,25 @@ export class InputMapping {
 			inputControlId: this.inputControlId,
 			inputDeviceName: this.inputDeviceName,
 			color: this.color,
+			buttonMode: this.buttonMode,
 			triggerType: this.triggerType,
+			actionType: this.actionType,
 			animationName: this.animationName,
 			duration: this.duration,
 			easing: this.easing,
 			iterations: this.iterations,
 			targetDeviceIds: this.targetDeviceIds,
+			setValueDeviceId: this.setValueDeviceId,
+			channelValues: this.channelValues,
 			propertyName: this.propertyName,
 			propertyType: this.propertyType,
 			range: this.range,
-			cssClassName: this.cssClassName
+			cssClassName: this.cssClassName,
+			cssClassDown: this.cssClassDown,
+			cssClassUp: this.cssClassUp,
+			cssClassOn: this.cssClassOn,
+			cssClassOff: this.cssClassOff,
+			cssProperty: this.cssProperty
 		};
 	}
 
@@ -396,6 +568,8 @@ export class TriggerManager {
 		this.notPressedClasses = new Set(); // Track not-pressed triggers
 		this.alwaysClasses = new Set(); // Track always triggers
 		this.container = null; // Will be set to the container element
+		this.setValueCallback = null; // Callback for setValue actions: (deviceId, channelValues) => void
+		this.activeSetValueMappings = new Map(); // Track active setValue mappings
 	}
 
 	/**
@@ -414,21 +588,38 @@ export class TriggerManager {
 	}
 
 	/**
+	 * Set callback for setValue actions
+	 * @param {Function} callback - (deviceId, channelValues) => void
+	 */
+	setSetValueCallback(callback) {
+		this.setValueCallback = callback;
+	}
+
+	/**
 	 * Register a trigger mapping
 	 */
 	register(mapping) {
 		if (mapping.mode !== 'trigger') return;
 
-		// For not-pressed and always types, add to permanent sets
-		if (mapping.triggerType === 'not-pressed') {
-			this.notPressedClasses.add(mapping.cssClassName);
-			if (this.container) {
-				this.container.classList.add(mapping.cssClassName);
+		// Handle animation actions
+		if (mapping.actionType === 'animation') {
+			// For not-pressed and always types, add to permanent sets
+			if (mapping.triggerType === 'not-pressed') {
+				this.notPressedClasses.add(mapping.cssClassName);
+				if (this.container) {
+					this.container.classList.add(mapping.cssClassName);
+				}
+			} else if (mapping.triggerType === 'always') {
+				this.alwaysClasses.add(mapping.cssClassName);
+				if (this.container) {
+					this.container.classList.add(mapping.cssClassName);
+				}
 			}
-		} else if (mapping.triggerType === 'always') {
-			this.alwaysClasses.add(mapping.cssClassName);
-			if (this.container) {
-				this.container.classList.add(mapping.cssClassName);
+		} else if (mapping.actionType === 'setValue') {
+			// For setValue with 'always' type, apply immediately
+			if (mapping.triggerType === 'always' && this.setValueCallback) {
+				this.setValueCallback(mapping.setValueDeviceId, mapping.channelValues);
+				this.activeSetValueMappings.set(mapping.id, mapping);
 			}
 		}
 	}
@@ -439,11 +630,15 @@ export class TriggerManager {
 	unregister(mapping) {
 		if (mapping.mode !== 'trigger') return;
 
-		this.notPressedClasses.delete(mapping.cssClassName);
-		this.alwaysClasses.delete(mapping.cssClassName);
+		if (mapping.actionType === 'animation') {
+			this.notPressedClasses.delete(mapping.cssClassName);
+			this.alwaysClasses.delete(mapping.cssClassName);
 
-		if (this.container) {
-			this.container.classList.remove(mapping.cssClassName);
+			if (this.container) {
+				this.container.classList.remove(mapping.cssClassName);
+			}
+		} else if (mapping.actionType === 'setValue') {
+			this.activeSetValueMappings.delete(mapping.id);
 		}
 	}
 
@@ -451,38 +646,70 @@ export class TriggerManager {
 	 * Trigger a mapping when input is pressed
 	 */
 	trigger(mapping) {
-		if (!this.container || mapping.mode !== 'trigger') return;
+		if (mapping.mode !== 'trigger') return;
 
-		const className = mapping.cssClassName;
+		if (mapping.actionType === 'animation') {
+			if (!this.container) return;
 
-		if (mapping.triggerType === 'pressed') {
-			// Pressed: Add class when triggered
-			this.container.classList.add(className);
-			this.activeClasses.add(className);
-		} else if (mapping.triggerType === 'not-pressed') {
-			// Not-pressed: Remove class when triggered (pressed)
-			this.container.classList.remove(className);
+			const className = mapping.cssClassName;
+
+			if (mapping.triggerType === 'pressed') {
+				// Pressed: Add class when triggered
+				this.container.classList.add(className);
+				this.activeClasses.add(className);
+			} else if (mapping.triggerType === 'not-pressed') {
+				// Not-pressed: Remove class when triggered (pressed)
+				this.container.classList.remove(className);
+			}
+			// 'always' type is always on, no action needed on trigger
+		} else if (mapping.actionType === 'setValue') {
+			if (!this.setValueCallback) return;
+
+			if (mapping.triggerType === 'pressed') {
+				// Apply setValue when pressed
+				this.setValueCallback(mapping.setValueDeviceId, mapping.channelValues);
+				this.activeSetValueMappings.set(mapping.id, mapping);
+			} else if (mapping.triggerType === 'not-pressed') {
+				// Remove setValue when pressed (will restore on release)
+				this.activeSetValueMappings.delete(mapping.id);
+			}
+			// 'always' type is handled in register()
 		}
-		// 'always' type is always on, no action needed on trigger
 	}
 
 	/**
 	 * Release a mapping when input is released
 	 */
 	release(mapping) {
-		if (!this.container || mapping.mode !== 'trigger') return;
+		if (mapping.mode !== 'trigger') return;
 
-		const className = mapping.cssClassName;
+		if (mapping.actionType === 'animation') {
+			if (!this.container) return;
 
-		if (mapping.triggerType === 'pressed') {
-			// Pressed: Remove class when released
-			this.container.classList.remove(className);
-			this.activeClasses.delete(className);
-		} else if (mapping.triggerType === 'not-pressed') {
-			// Not-pressed: Add class back when released
-			this.container.classList.add(className);
+			const className = mapping.cssClassName;
+
+			if (mapping.triggerType === 'pressed') {
+				// Pressed: Remove class when released
+				this.container.classList.remove(className);
+				this.activeClasses.delete(className);
+			} else if (mapping.triggerType === 'not-pressed') {
+				// Not-pressed: Add class back when released
+				this.container.classList.add(className);
+			}
+			// 'always' type is always on, no action needed on release
+		} else if (mapping.actionType === 'setValue') {
+			if (!this.setValueCallback) return;
+
+			if (mapping.triggerType === 'pressed') {
+				// Remove setValue when released
+				this.activeSetValueMappings.delete(mapping.id);
+			} else if (mapping.triggerType === 'not-pressed') {
+				// Restore setValue when released
+				this.setValueCallback(mapping.setValueDeviceId, mapping.channelValues);
+				this.activeSetValueMappings.set(mapping.id, mapping);
+			}
+			// 'always' type is always on, no action needed on release
 		}
-		// 'always' type is always on, no action needed on release
 	}
 
 	/**
