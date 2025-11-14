@@ -474,56 +474,56 @@
                             {/each}
                         </select>
                     </div>
+
+                    <div class="dialog-input-group">
+                        <label for="trigger-duration">Duration (ms):</label>
+                        <div class="duration-with-loop">
+                            <input
+                                id="trigger-duration"
+                                type="number"
+                                bind:value={newTriggerDuration}
+                                min="100"
+                                step="100"
+                            />
+                            <div class="checkbox-field">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        bind:checked={newTriggerLooping}
+                                    />
+                                    Loop
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dialog-input-group">
+                        <label for="trigger-easing">Easing:</label>
+                        <select id="trigger-easing" bind:value={newTriggerEasing}>
+                            {#each EASING_FUNCTIONS as easing}
+                                <option value={easing}>{easing}</option>
+                            {/each}
+                        </select>
+                    </div>
                 {/if}
             </div>
 
             <div class="trigger-column">
-                <div class="dialog-input-group">
-                    <label for="trigger-duration">Duration (ms):</label>
-                    <div class="duration-with-loop">
-                        <input
-                            id="trigger-duration"
-                            type="number"
-                            bind:value={newTriggerDuration}
-                            min="100"
-                            step="100"
-                        />
-                        <div class="checkbox-field">
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    bind:checked={newTriggerLooping}
-                                />
-                                Loop
-                            </label>
+                {#if newTriggerActionType === 'setValue' && newTriggerDevice}
+                    {@const selectedDevice = devices.find(d => d.id === newTriggerDevice)}
+                    {#if selectedDevice}
+                        <div class="dialog-input-group">
+                            <label>Set Channel Values:</label>
+                            <DeviceControls
+                                deviceType={selectedDevice.type}
+                                values={getValuesArrayForDevice(newTriggerDevice, newTriggerChannelValues)}
+                                onChange={handleSetValueChange}
+                            />
                         </div>
-                    </div>
-                </div>
-
-                <div class="dialog-input-group">
-                    <label for="trigger-easing">Easing:</label>
-                    <select id="trigger-easing" bind:value={newTriggerEasing}>
-                        {#each EASING_FUNCTIONS as easing}
-                            <option value={easing}>{easing}</option>
-                        {/each}
-                    </select>
-                </div>
+                    {/if}
+                {/if}
             </div>
         </div>
-
-        {#if newTriggerActionType === 'setValue' && newTriggerDevice}
-            {@const selectedDevice = devices.find(d => d.id === newTriggerDevice)}
-            {#if selectedDevice}
-                <div class="channel-values-section">
-                    <h4>Set Channel Values:</h4>
-                    <DeviceControls
-                        deviceType={selectedDevice.type}
-                        values={getValuesArrayForDevice(newTriggerDevice, newTriggerChannelValues)}
-                        onChange={handleSetValueChange}
-                    />
-                </div>
-            {/if}
-        {/if}
     </form>
 
     {#snippet buttons()}
@@ -643,56 +643,56 @@
                             {/each}
                         </select>
                     </div>
+
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-duration">Duration (ms):</label>
+                        <div class="duration-with-loop">
+                            <input
+                                id="edit-trigger-duration"
+                                type="number"
+                                bind:value={editTriggerDuration}
+                                min="100"
+                                step="100"
+                            />
+                            <div class="checkbox-field">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        bind:checked={editTriggerLooping}
+                                    />
+                                    Loop
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-easing">Easing:</label>
+                        <select id="edit-trigger-easing" bind:value={editTriggerEasing}>
+                            {#each EASING_FUNCTIONS as easing}
+                                <option value={easing}>{easing}</option>
+                            {/each}
+                        </select>
+                    </div>
                 {/if}
             </div>
 
             <div class="trigger-column">
-                <div class="dialog-input-group">
-                    <label for="edit-trigger-duration">Duration (ms):</label>
-                    <div class="duration-with-loop">
-                        <input
-                            id="edit-trigger-duration"
-                            type="number"
-                            bind:value={editTriggerDuration}
-                            min="100"
-                            step="100"
-                        />
-                        <div class="checkbox-field">
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    bind:checked={editTriggerLooping}
-                                />
-                                Loop
-                            </label>
+                {#if editTriggerActionType === 'setValue' && editTriggerDevice && editingTrigger.triggerType !== 'always'}
+                    {@const selectedDevice = devices.find(d => d.id === editTriggerDevice)}
+                    {#if selectedDevice}
+                        <div class="dialog-input-group">
+                            <label>Set Channel Values:</label>
+                            <DeviceControls
+                                deviceType={selectedDevice.type}
+                                values={getValuesArrayForDevice(editTriggerDevice, editTriggerChannelValues)}
+                                onChange={handleEditSetValueChange}
+                            />
                         </div>
-                    </div>
-                </div>
-
-                <div class="dialog-input-group">
-                    <label for="edit-trigger-easing">Easing:</label>
-                    <select id="edit-trigger-easing" bind:value={editTriggerEasing}>
-                        {#each EASING_FUNCTIONS as easing}
-                            <option value={easing}>{easing}</option>
-                        {/each}
-                    </select>
-                </div>
+                    {/if}
+                {/if}
             </div>
         </div>
-
-        {#if editTriggerActionType === 'setValue' && editTriggerDevice && editingTrigger.triggerType !== 'always'}
-            {@const selectedDevice = devices.find(d => d.id === editTriggerDevice)}
-            {#if selectedDevice}
-                <div class="channel-values-section">
-                    <h4>Set Channel Values:</h4>
-                    <DeviceControls
-                        deviceType={selectedDevice.type}
-                        values={getValuesArrayForDevice(editTriggerDevice, editTriggerChannelValues)}
-                        onChange={handleEditSetValueChange}
-                    />
-                </div>
-            {/if}
-        {/if}
     </form>
 
     {#snippet tools()}
@@ -807,19 +807,5 @@
 
     .duration-with-loop .checkbox-field label {
         font-size: 10pt;
-    }
-
-    .channel-values-section {
-        margin-top: 20px;
-        padding: 15px;
-        background: #f9f9f9;
-        border-radius: 4px;
-        border: 1px solid #e0e0e0;
-    }
-
-    .channel-values-section h4 {
-        margin: 0 0 16px 0;
-        font-size: 11pt;
-        color: #333;
     }
 </style>
