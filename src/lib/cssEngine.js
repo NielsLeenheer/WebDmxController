@@ -6,6 +6,7 @@
  */
 
 import { DEVICE_TYPES } from './devices.js';
+import { generateCSSProperties } from './controlCssMapping.js';
 
 /**
  * Generates a complete CSS stylesheet from animations and mappings
@@ -95,74 +96,29 @@ export class CSSGenerator {
 			return null;
 		}
 
-		const props = [];
-
 		// Get default values from device
 		const defaultValues = device.defaultValues || [];
 
-		switch (device.type) {
-			case 'RGB':
-				const [r, g, b] = defaultValues;
-				props.push(`  color: rgb(${r || 0}, ${g || 0}, ${b || 0});`);
-				break;
+		// Use shared control-to-CSS mapping
+		const properties = generateCSSProperties(
+			deviceType.controls,
+			deviceType.components,
+			defaultValues,
+			device.type
+		);
 
-			case 'RGBA':
-				const [r2, g2, b2, a] = defaultValues;
-				props.push(`  color: rgb(${r2 || 0}, ${g2 || 0}, ${b2 || 0});`);
-				// Convert amber DMX value (0-255) to percentage (0-100%)
-				const amberPercent = Math.round(((a || 0) / 255) * 100);
-				props.push(`  --amber: ${amberPercent}%;`);
-				break;
-
-			case 'RGBW':
-				const [r3, g3, b3, w] = defaultValues;
-				props.push(`  color: rgb(${r3 || 0}, ${g3 || 0}, ${b3 || 0});`);
-				props.push(`  /* White channel: ${w || 0} */`);
-				break;
-
-			case 'DIMMER':
-				const intensity = defaultValues[0] || 0;
-				props.push(`  opacity: ${(intensity / 255).toFixed(2)};`);
-				break;
-
-			case 'SMOKE':
-				const output = defaultValues[0] || 0;
-				// Convert DMX value (0-255) to percentage (0-100%)
-				const smokePercent = Math.round((output / 255) * 100);
-				props.push(`  --smoke: ${smokePercent}%;`);
-				break;
-
-			case 'MOVING_HEAD':
-				const [pan, tilt, dimmer, r4, g4, b4, w2] = defaultValues;
-				// Convert DMX values to percentages
-			// Pan: 0-255 DMX -> -50% to 50% (0% = center)
-				const panPercent = pan !== undefined ? Math.round(((pan / 255) * 100) - 50) : 0;
-				// Tilt: 0-255 DMX -> 0% to 100%
-			const tiltPercent = tilt !== undefined ? Math.round((tilt / 255) * 100) : 0;
-				props.push(`  --pan: ${panPercent}%;`);
-				props.push(`  --tilt: ${tiltPercent}%;`);
-				props.push(`  opacity: ${dimmer !== undefined ? (dimmer / 255).toFixed(2) : '1'};`);
-				props.push(`  color: rgb(${r4 || 0}, ${g4 || 0}, ${b4 || 0});`);
-				if (w2 !== undefined) {
-					props.push(`  /* White channel: ${w2} */`);
-				}
-				break;
-
-			case 'FLAMETHROWER':
-				const [safety, fuel] = defaultValues;
-				// Safety: map 0 to "none", 125+ to "probably"
-				const safetyValue = safety >= 125 ? 'probably' : 'none';
-				// Fuel: convert to percentage (0-255 -> 0-100%)
-				const fuelPercent = Math.round((fuel / 255) * 100);
-				props.push(`  --safety: ${safetyValue};`);
-				props.push(`  --fuel: ${fuelPercent}%;`);
-				break;
-
-			default:
-				return null;
+		// Handle special cases not covered by control mapping
+		if (device.type === 'FLAMETHROWER') {
+			const [safety, fuel] = defaultValues;
+			// Safety: map 0 to "none", 125+ to "probably"
+			properties['--safety'] = safety >= 125 ? 'probably' : 'none';
+			// Fuel is handled by standard slider mapping
 		}
 
-		if (props.length === 0) return null;
+		if (Object.keys(properties).length === 0) return null;
+
+		// Convert properties object to CSS string
+		const props = Object.entries(properties).map(([prop, value]) => `  ${prop}: ${value};`);
 
 		return `#${device.cssId} {\n${props.join('\n')}\n}`;
 	}
