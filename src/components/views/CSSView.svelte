@@ -39,6 +39,14 @@
         animationLibrary ? animationLibrary.getAll() : []
     );
 
+    // Filter devices to only show those with independent controls
+    // A device has independent controls if:
+    // - It's not linked to another device (linkedTo === null), OR
+    // - It's linked but not all controls are synced (syncedControls !== null)
+    let independentDevices = $derived(
+        devices.filter(device => !device.linkedTo || device.syncedControls !== null)
+    );
+
     // Get all mappings for display (trigger and direct modes)
     let allMappings = $state([]);
 
@@ -371,11 +379,11 @@
     <div class="left-column">
         <div class="reference-card">
             <!-- Devices Section -->
-            {#if devices.length > 0}
+            {#if independentDevices.length > 0}
                 <div class="reference-section">
                     <h4>Devices</h4>
                     <div class="device-previews">
-                        {#each devices as device (device.id)}
+                        {#each independentDevices as device (device.id)}
                             <div class="device-preview-item">
                                 <div
                                     class="device-preview"
