@@ -70,26 +70,40 @@ export class Animation {
 	}
 
 	/**
-	 * Find a device type that has all the required controls
-	 * Used for editing and rendering purposes only
+	 * Get controls and components arrays for rendering
+	 * Returns {controls: [], components: []} needed by the Controls component
 	 */
-	getDeviceTypeForEditing() {
+	getControlsForRendering() {
 		if (!this.controls || this.controls.length === 0) {
-			return 'RGB'; // Default fallback
+			// Fallback: use RGB device controls
+			return {
+				controls: DEVICE_TYPES.RGB.controls,
+				components: DEVICE_TYPES.RGB.components
+			};
 		}
 
-		// Find first device type that has all required controls
+		// Find a device type that has all the required controls
 		for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
 			const hasAllControls = this.controls.every(controlName =>
 				deviceDef.controls.some(c => c.name === controlName)
 			);
 			if (hasAllControls) {
-				return deviceKey;
+				// Filter to only the controls we want
+				const filteredControls = deviceDef.controls.filter(c =>
+					this.controls.includes(c.name)
+				);
+				return {
+					controls: filteredControls,
+					components: deviceDef.components
+				};
 			}
 		}
 
-		// Fallback to RGB if no match found
-		return 'RGB';
+		// Fallback to RGB if no device type matches
+		return {
+			controls: DEVICE_TYPES.RGB.controls,
+			components: DEVICE_TYPES.RGB.components
+		};
 	}
 
 	/**
@@ -117,7 +131,16 @@ export class Animation {
 	 * Add a keyframe to the animation
 	 */
 	addKeyframe(time, values) {
-		const deviceType = this.getDeviceTypeForEditing();
+		// Find a device type for rendering the keyframe
+		const { controls, components } = this.getControlsForRendering();
+		// Use first matching device type (this is just for keyframe rendering)
+		let deviceType = 'RGB';
+		for (const [key, def] of Object.entries(DEVICE_TYPES)) {
+			if (def.controls === controls && def.components === components) {
+				deviceType = key;
+				break;
+			}
+		}
 		const keyframe = new Keyframe(time, deviceType, values);
 		this.keyframes = [...this.keyframes, keyframe].sort((a, b) => a.time - b.time);
 		return keyframe;
@@ -162,9 +185,8 @@ export class Animation {
 	getValuesAtTime(time) {
 		if (this.keyframes.length === 0) {
 			// No keyframes - return zeros based on controls
-			const deviceType = this.getDeviceTypeForEditing();
-			const deviceDef = DEVICE_TYPES[deviceType];
-			const numChannels = deviceDef?.channels || 3;
+			const { components } = this.getControlsForRendering();
+			const numChannels = components.length;
 			return new Array(numChannels).fill(0);
 		}
 
@@ -256,29 +278,22 @@ export class Animation {
 	}
 
 	/**
-	 * Get channels that this animation affects for a specific device type
-	 * Returns array of channel indices for the device type
+	 * Get channels that this animation affects
+	 * Returns array of channel indices
 	 */
-	getAffectedChannels(deviceType = null) {
-		// Use provided deviceType or find one that matches the controls
-		const type = deviceType || this.getDeviceTypeForEditing();
-		const deviceDef = DEVICE_TYPES[type];
-		if (!deviceDef) return [];
+	getAffectedChannels() {
+		const { controls, components } = this.getControlsForRendering();
 
 		if (!this.controls || this.controls.length === 0) {
 			// Animate all channels
-			const numChannels = deviceDef.channels || 3;
-			return Array.from({ length: numChannels }, (_, i) => i);
+			return Array.from({ length: components.length }, (_, i) => i);
 		}
 
 		// Animate only channels for the specified controls
 		const channels = new Set(); // Use Set to avoid duplicates
-		for (const controlName of this.controls) {
-			const control = deviceDef.controls.find(c => c.name === controlName);
-			if (!control) continue;
-
+		for (const control of controls) {
 			for (const componentIndex of Object.values(control.components)) {
-				const channel = deviceDef.components[componentIndex].channel;
+				const channel = components[componentIndex].channel;
 				channels.add(channel);
 			}
 		}
@@ -289,8 +304,8 @@ export class Animation {
 	/**
 	 * Get number of channels that this animation uses
 	 */
-	getNumChannels(deviceType = null) {
-		return this.getAffectedChannels(deviceType).length;
+	getNumChannels() {
+		return this.getAffectedChannels().length;
 	}
 
 	/**

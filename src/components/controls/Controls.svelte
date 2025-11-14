@@ -1,22 +1,14 @@
 <script>
-    import { DEVICE_TYPES } from '../../lib/devices.js';
     import XYPad from './XYPad.svelte';
     import ToggleSwitch from '../common/ToggleSwitch.svelte';
 
     let {
-        deviceType,
+        controls, // Array of control definitions
+        components, // Array of component definitions (with channel mapping)
         values = $bindable([]),
         onChange = null,
-        disabledChannels = [], // Array of channel indices that should be disabled
-        controlFilter = null // Optional: array of control names to show, or null to show all
+        disabledChannels = [] // Array of channel indices that should be disabled
     } = $props();
-
-    // Get controls to display (filtered if controlFilter is set)
-    function getControlsToDisplay() {
-        const allControls = DEVICE_TYPES[deviceType].controls;
-        if (!controlFilter) return allControls;
-        return allControls.filter(c => controlFilter.includes(c.name));
-    }
 
     function handleSliderChange(channelIndex, value) {
         values[channelIndex] = value;
@@ -65,7 +57,6 @@
 
     // Get the channel number for a component index
     function getChannel(componentIndex) {
-        const components = DEVICE_TYPES[deviceType].components;
         return components[componentIndex].channel;
     }
 
@@ -116,8 +107,8 @@
     }
 </script>
 
-<div class="device-controls">
-    {#each getControlsToDisplay() as control}
+<div class="controls">
+    {#each controls as control}
         {#if control.type === 'xypad'}
             {@const xChannel = getChannel(control.components.x)}
             {@const yChannel = getChannel(control.components.y)}
@@ -157,7 +148,6 @@
                 </div>
             </div>
         {:else if control.type === 'rgb'}
-            {@const components = DEVICE_TYPES[deviceType].components}
             {@const rChannel = getChannel(control.components.r)}
             {@const gChannel = getChannel(control.components.g)}
             {@const bChannel = getChannel(control.components.b)}
@@ -234,7 +224,6 @@
         {:else if control.type === 'slider'}
             {@const channelIndex = getChannel(control.components.value)}
             {@const channelDisabled = isChannelDisabled(channelIndex)}
-            {@const components = DEVICE_TYPES[deviceType].components}
             <div class="control">
                 <label>{control.name}</label>
                 <div class="slider-wrapper">
@@ -264,7 +253,7 @@
 </div>
 
 <style>
-    .device-controls {
+    .controls {
         display: flex;
         flex-direction: column;
         gap: 6px;

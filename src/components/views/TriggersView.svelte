@@ -5,7 +5,7 @@
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
-    import DeviceControls from '../controls/DeviceControls.svelte';
+    import Controls from '../controls/Controls.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
     import editIcon from '../../assets/glyphs/edit.svg?raw';
 
@@ -332,7 +332,7 @@
         return channelValues[channelIndex] !== undefined ? channelValues[channelIndex] : '';
     }
 
-    // Convert channelValues object to full values array for DeviceControls
+    // Convert channelValues object to full values array for Controls
     function getValuesArrayForDevice(deviceId, channelValues) {
         const device = devices.find(d => d.id === deviceId);
         if (!device) return [];
@@ -517,8 +517,9 @@
                     {#if selectedDevice}
                         <div class="dialog-input-group">
                             <label>Set Channel Values:</label>
-                            <DeviceControls
-                                deviceType={selectedDevice.type}
+                            <Controls
+                                controls={DEVICE_TYPES[selectedDevice.type].controls}
+                                components={DEVICE_TYPES[selectedDevice.type].components}
                                 values={getValuesArrayForDevice(newTriggerDevice, newTriggerChannelValues)}
                                 onChange={handleSetValueChange}
                             />
@@ -692,8 +693,9 @@
                         {#if selectedDevice}
                             <div class="dialog-input-group">
                                 <label>Set Channel Values:</label>
-                                <DeviceControls
-                                    deviceType={selectedDevice.type}
+                                <Controls
+                                    controls={DEVICE_TYPES[selectedDevice.type].controls}
+                                    components={DEVICE_TYPES[selectedDevice.type].components}
                                     values={getValuesArrayForDevice(editTriggerDevice, editTriggerChannelValues)}
                                     onChange={handleEditSetValueChange}
                                 />

@@ -3,7 +3,7 @@
     import { DEVICE_TYPES, Device } from '../../lib/devices.js';
     import { canLinkDevices, applyLinkedValues, getMappedChannels, getAvailableSyncControls } from '../../lib/channelMapping.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
-    import DeviceControls from '../controls/DeviceControls.svelte';
+    import Controls from '../controls/Controls.svelte';
     import Dialog from '../common/Dialog.svelte';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
@@ -458,8 +458,9 @@
                     />
                 </div>
 
-                <DeviceControls
-                    deviceType={device.type}
+                <Controls
+                    controls={DEVICE_TYPES[device.type].controls}
+                    components={DEVICE_TYPES[device.type].components}
                     values={device.defaultValues}
                     onChange={(channelIndex, value) => handleDeviceValueChange(device, channelIndex, value)}
                     disabledChannels={getDisabledChannels(device)}

@@ -1,7 +1,7 @@
 <script>
     import Dialog from '../common/Dialog.svelte';
     import Button from '../common/Button.svelte';
-    import DeviceControls from '../controls/DeviceControls.svelte';
+    import Controls from '../controls/Controls.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
 
     let {
@@ -318,11 +318,10 @@
     onclose={closeEditDialog}
     title="Keyframe at {(animation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%"
 >
-    <DeviceControls
-        deviceType={animation.getDeviceTypeForEditing()}
+    <Controls
+        {...animation.getControlsForRendering()}
         bind:values={editingKeyframeValues}
         onChange={updateKeyframeValues}
-        controlFilter={animation.controls}
     />
 
     {#snippet tools()}
