@@ -6,6 +6,9 @@
  * 2. Direct mode - Continuously control a CSS custom property
  */
 
+import { DEVICE_TYPES } from './devices.js';
+import { generateCSSProperties } from './controlCssMapping.js';
+
 export const INPUT_COLOR_PALETTE = [
 	'red', 'orange', 'yellow', 'lime', 'green', 'spring',
 	'turquoise', 'cyan', 'sky', 'blue', 'violet', 'purple',
@@ -112,7 +115,7 @@ export class InputMapping {
 		}
 
 		// Convert input IDs to valid CSS class names
-		const controlPart = this.inputControlId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+		const controlPart = this.inputControlId.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
 
 		// For input mode, don't add trigger suffix
 		if (this.mode === 'input') {
@@ -123,7 +126,7 @@ export class InputMapping {
 		const suffix = this.triggerType === 'pressed' ? 'down' :
 		               this.triggerType === 'not-pressed' ? 'up' : 'always';
 
-		return `${controlPart}_${suffix}`;
+		return `${controlPart}-${suffix}`;
 	}
 
 	/**
@@ -155,10 +158,10 @@ export class InputMapping {
 
 		const namePart = this.name
 			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
-			.replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
 
-		return `${namePart}_down`;
+		return `${namePart}-down`;
 	}
 
 	/**
@@ -169,10 +172,10 @@ export class InputMapping {
 
 		const namePart = this.name
 			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
-			.replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
 
-		return `${namePart}_up`;
+		return `${namePart}-up`;
 	}
 
 	/**
@@ -183,10 +186,10 @@ export class InputMapping {
 
 		const namePart = this.name
 			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
-			.replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
 
-		return `${namePart}_on`;
+		return `${namePart}-on`;
 	}
 
 	/**
@@ -197,10 +200,10 @@ export class InputMapping {
 
 		const namePart = this.name
 			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
-			.replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
+			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
 
-		return `${namePart}_off`;
+		return `${namePart}-off`;
 	}
 
 	/**
@@ -251,6 +254,18 @@ export class InputMapping {
 	}
 
 	_generateTriggerCSS(devices = []) {
+		if (this.actionType === 'animation') {
+			return this._generateAnimationCSS(devices);
+		} else if (this.actionType === 'setValue') {
+			return this._generateSetValueCSS(devices);
+		}
+		return '';
+	}
+
+	/**
+	 * Generate CSS for animation actions
+	 */
+	_generateAnimationCSS(devices = []) {
 		if (!this.animationName) return '';
 
 		// Map device IDs to CSS IDs
@@ -269,6 +284,49 @@ export class InputMapping {
 
 		return `.${this.cssClassName} ${targetSelectors} {
   animation: ${this.animationName} ${durationSec}s ${this.easing} ${iterationsValue};
+}`;
+	}
+
+	/**
+	 * Generate CSS for setValue actions
+	 */
+	_generateSetValueCSS(devices = []) {
+		if (!this.setValueDeviceId || !this.channelValues) return '';
+
+		// Find the target device
+		const device = devices.find(d => d.id === this.setValueDeviceId);
+		if (!device) return '';
+
+		// Get device type to access controls/components
+		const deviceType = DEVICE_TYPES[device.type];
+		if (!deviceType) return '';
+
+		// Convert channelValues object to array format
+		// channelValues: { 0: 255, 1: 128, 2: 0 } → [255, 128, 0]
+		const maxChannel = Math.max(...Object.keys(this.channelValues).map(Number), -1);
+		const valuesArray = new Array(maxChannel + 1).fill(0);
+		for (const [channelStr, value] of Object.entries(this.channelValues)) {
+			const channel = parseInt(channelStr);
+			valuesArray[channel] = value;
+		}
+
+		// Generate CSS properties from DMX values
+		const properties = generateCSSProperties(
+			deviceType.controls,
+			deviceType.components,
+			valuesArray,
+			device.type
+		);
+
+		if (Object.keys(properties).length === 0) return '';
+
+		// Convert properties object to CSS string
+		const props = Object.entries(properties)
+			.map(([prop, value]) => `  ${prop}: ${value};`)
+			.join('\n');
+
+		return `.${this.cssClassName} #${device.cssId} {
+${props}
 }`;
 	}
 
@@ -398,8 +456,25 @@ export class InputMapping {
 
 		// Fix old input mode mappings that have trigger suffixes in their class names
 		// This handles legacy data where input mode had _down/_up/_always suffixes
-		if (mapping.mode === 'input' && mapping.cssClassName.match(/_(down|up|always)$/)) {
+		if (mapping.mode === 'input' && mapping.cssClassName.match(/[_-](down|up|always)$/)) {
 			mapping.cssClassName = mapping._generateClassName();
+		}
+
+		// Migrate old underscore-based class names to dash-based format
+		if (mapping.cssClassName) {
+			mapping.cssClassName = mapping.cssClassName.replace(/_/g, '-');
+		}
+		if (mapping.cssClassDown) {
+			mapping.cssClassDown = mapping.cssClassDown.replace(/_/g, '-');
+		}
+		if (mapping.cssClassUp) {
+			mapping.cssClassUp = mapping.cssClassUp.replace(/_/g, '-');
+		}
+		if (mapping.cssClassOn) {
+			mapping.cssClassOn = mapping.cssClassOn.replace(/_/g, '-');
+		}
+		if (mapping.cssClassOff) {
+			mapping.cssClassOff = mapping.cssClassOff.replace(/_/g, '-');
 		}
 
 		return mapping;
