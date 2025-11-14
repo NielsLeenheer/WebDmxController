@@ -39,7 +39,7 @@ const CONTROL_CSS_MAPPING = {
 			}
 		}
 	},
-	// Slider controls (Dimmer, Intensity, etc.)
+	// Slider controls (Dimmer, Intensity, White, Amber, etc.)
 	slider: {
 		properties: {
 			value: {
@@ -48,15 +48,26 @@ const CONTROL_CSS_MAPPING = {
 					if (controlName === 'Dimmer' || controlName === 'Intensity') {
 						return '--intensity';
 					}
+					if (controlName === 'White') {
+						return '--white';
+					}
+					if (controlName === 'Amber') {
+						return '--amber';
+					}
 					// Default for other sliders
 					return `--${controlName.toLowerCase().replace(/\s+/g, '-')}`;
 				},
-				// Convert DMX 0-255 to 0.0-1.0 for intensity, or keep as value
+				// Convert DMX 0-255 based on control type
 				convert: (value, controlName) => {
 					if (controlName === 'Dimmer' || controlName === 'Intensity') {
+						// Convert to 0.0-1.0 for intensity
 						return (value / 255).toFixed(3);
 					}
-					// For other sliders, just use the value
+					if (controlName === 'White' || controlName === 'Amber') {
+						// Convert to 0.0-1.0 for white/amber
+						return (value / 255).toFixed(3);
+					}
+					// For other sliders, use raw DMX value
 					return value.toString();
 				}
 			}
