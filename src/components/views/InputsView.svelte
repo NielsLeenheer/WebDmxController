@@ -60,8 +60,8 @@
             // Auto-save new input
             const name = formatInputName(device?.name || deviceId, controlId);
 
-            // Only Stream Deck devices support colors (not keyboard or MIDI)
-            const supportsColor = device?.type === 'hid' && device.id !== 'keyboard';
+            // Stream Deck (HID, not keyboard) and MIDI devices support colors
+            const supportsColor = (device?.type === 'hid' && device.id !== 'keyboard') || device?.type === 'midi';
 
             const inputMapping = new InputMapping({
                 name,
@@ -75,19 +75,24 @@
             mappingLibrary.add(inputMapping);
             refreshInputs();
 
-            // Set color on hardware for Stream Deck devices only
-            if (supportsColor && controlId.startsWith('button-')) {
-                const buttonIndex = parseInt(controlId.replace('button-', ''));
-
-                // Validate buttonIndex is a valid number
-                if (!isNaN(buttonIndex) && buttonIndex >= 0) {
-                    const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
-                    const serialNumber = deviceId; // deviceId is the serialNumber for Stream Deck
-
-                    // Set the button color on the device (async, but don't wait)
-                    streamDeckManager.setButtonColor(serialNumber, buttonIndex, inputMapping.color).catch(err => {
-                        console.warn(`Could not set button ${buttonIndex} color:`, err);
-                    });
+            // Set color on hardware for devices that support it
+            if (supportsColor) {
+                if (device.type === 'hid' && controlId.startsWith('button-')) {
+                    // Stream Deck button
+                    const buttonIndex = parseInt(controlId.replace('button-', ''));
+                    if (!isNaN(buttonIndex) && buttonIndex >= 0) {
+                        const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
+                        const serialNumber = deviceId;
+                        streamDeckManager.setButtonColor(serialNumber, buttonIndex, inputMapping.color).catch(err => {
+                            console.warn(`Could not set Stream Deck button ${buttonIndex} color:`, err);
+                        });
+                    }
+                } else if (device.type === 'midi' && controlId.startsWith('note-')) {
+                    // MIDI note/button
+                    const noteNumber = parseInt(controlId.replace('note-', ''));
+                    if (!isNaN(noteNumber) && noteNumber >= 0) {
+                        device.setButtonColor(noteNumber, inputMapping.color);
+                    }
                 }
             }
         }
@@ -230,17 +235,21 @@
         const input = mappingLibrary.get(inputId);
         if (!input) return;
 
-        // If this is a Stream Deck button (not keyboard), clear its color (set to black)
+        // Clear button color on hardware
         const inputDevice = inputController.getInputDevice(input.inputDeviceId);
         if (inputDevice?.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
+            // Stream Deck button
             const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
-
             if (!isNaN(buttonIndex) && buttonIndex >= 0) {
                 const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
                 const serialNumber = input.inputDeviceId;
-
-                // Clear the button color (set to black)
                 await streamDeckManager.clearButtonColor(serialNumber, buttonIndex);
+            }
+        } else if (inputDevice?.type === 'midi' && input.inputControlId.startsWith('note-')) {
+            // MIDI note/button
+            const noteNumber = parseInt(input.inputControlId.replace('note-', ''));
+            if (!isNaN(noteNumber) && noteNumber >= 0) {
+                inputDevice.sendNoteOff(noteNumber);
             }
         }
 
@@ -254,30 +263,25 @@
             .filter(m => m.mode === 'input');
     }
 
-    async function applyColorsToStreamDeck() {
-        // Apply colors to all Stream Deck buttons that have saved inputs
-        const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
-        const connectedDevices = streamDeckManager.getConnectedDevices();
-
-        if (connectedDevices.length === 0) {
-            // No Stream Deck connected, skip color application
-            return;
-        }
-
-        // Find all Stream Deck inputs and apply their colors (skip keyboard)
+    async function applyColorsToDevices() {
+        // Apply colors to all buttons that have saved inputs
         for (const input of savedInputs) {
             const inputDevice = inputController.getInputDevice(input.inputDeviceId);
+            if (!inputDevice || !input.color) continue;
 
-            // Check if this is a Stream Deck device that's currently connected (not keyboard)
-            if (inputDevice?.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
+            if (inputDevice.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
+                // Stream Deck button
                 const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
-
-                // Validate buttonIndex is a valid number
                 if (!isNaN(buttonIndex) && buttonIndex >= 0) {
-                    const serialNumber = input.inputDeviceId; // deviceId is the serialNumber
-
-                    // Set the button color on the device (will silently fail if button doesn't exist)
+                    const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
+                    const serialNumber = input.inputDeviceId;
                     await streamDeckManager.setButtonColor(serialNumber, buttonIndex, input.color);
+                }
+            } else if (inputDevice.type === 'midi' && input.inputControlId.startsWith('note-')) {
+                // MIDI note/button
+                const noteNumber = parseInt(input.inputControlId.replace('note-', ''));
+                if (!isNaN(noteNumber) && noteNumber >= 0) {
+                    inputDevice.setButtonColor(noteNumber, input.color);
                 }
             }
         }
@@ -286,16 +290,16 @@
     onMount(() => {
         refreshInputs();
 
-        // Apply colors when a Stream Deck connects
+        // Apply colors when devices connect
         inputController.on('deviceadded', (device) => {
-            if (device.type === 'hid') {
+            if (device.type === 'hid' || device.type === 'midi') {
                 // Small delay to ensure device is fully initialized
-                setTimeout(() => applyColorsToStreamDeck(), 500);
+                setTimeout(() => applyColorsToDevices(), 500);
             }
         });
 
         // Apply colors on initial load
-        setTimeout(() => applyColorsToStreamDeck(), 1000);
+        setTimeout(() => applyColorsToDevices(), 1000);
     });
 
     onDestroy(() => {
