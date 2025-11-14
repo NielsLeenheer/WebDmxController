@@ -53,7 +53,7 @@
 
     function openNewAnimationDialog() {
         newAnimationName = '';
-        selectedAnimationTarget = 'RGB|all';
+        selectedAnimationTarget = 'control|Color'; // Default to Color control
         newAnimationDialog?.showModal();
     }
 
@@ -61,51 +61,71 @@
     function getAllAnimationTargets() {
         const targets = [];
 
-        // First, add all individual controls from all device types
-        for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
+        // First, collect all unique control names across all device types
+        const controlNamesSet = new Set();
+        for (const deviceDef of Object.values(DEVICE_TYPES)) {
             for (const control of deviceDef.controls) {
-                targets.push({
-                    type: 'control',
-                    value: `${deviceKey}|control|${control.name}`,
-                    label: `${deviceDef.name} - ${control.name}`
-                });
+                controlNamesSet.add(control.name);
             }
+        }
+
+        // Add individual controls (device-agnostic)
+        const sortedControlNames = Array.from(controlNamesSet).sort();
+        for (const controlName of sortedControlNames) {
+            targets.push({
+                type: 'control',
+                value: `control|${controlName}`,
+                label: controlName
+            });
         }
 
         // Add separator
         targets.push({ type: 'separator' });
 
-        // Add "all controls" options for each device type
+        // Add device types (all controls)
         for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
             targets.push({
-                type: 'all',
-                value: `${deviceKey}|all`,
-                label: `${deviceDef.name} (all controls)`
+                type: 'device',
+                value: `device|${deviceKey}`,
+                label: deviceDef.name
             });
         }
 
         return targets;
     }
 
+    // Find a device type that has the specified control
+    function findDeviceTypeForControl(controlName) {
+        for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
+            if (deviceDef.controls.some(c => c.name === controlName)) {
+                return deviceKey;
+            }
+        }
+        return 'RGB'; // Fallback
+    }
+
     // Parse selected target into deviceType and controls array
     function parseAnimationTarget(target) {
         const parts = target.split('|');
-        const deviceType = parts[0];
+        const targetType = parts[0];
 
-        if (parts[1] === 'all') {
+        if (targetType === 'control') {
+            // Single control (device-agnostic)
+            const controlName = parts[1];
+            // Find a device type that has this control (use first match)
+            const deviceType = findDeviceTypeForControl(controlName);
+            return {
+                deviceType,
+                controls: [controlName],
+                displayName: controlName
+            };
+        } else if (targetType === 'device') {
             // All controls for this device type
+            const deviceType = parts[1];
             return {
                 deviceType,
                 controls: null,
                 displayName: DEVICE_TYPES[deviceType].name
-            };
-        } else if (parts[1] === 'control') {
-            // Single control
-            const controlName = parts[2];
-            return {
-                deviceType,
-                controls: [controlName],
-                displayName: `${DEVICE_TYPES[deviceType].name} - ${controlName}`
             };
         }
 
