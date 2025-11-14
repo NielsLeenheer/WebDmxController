@@ -185,22 +185,20 @@
             {@const rChannel = getChannel(control.components.r)}
             {@const gChannel = getChannel(control.components.g)}
             {@const bChannel = getChannel(control.components.b)}
-            <!-- Color label for the group -->
-            <div class="control-group-label" class:control-disabled={!isControlEnabled(control)}>
-                {#if showCheckboxes}
-                    <input
-                        type="checkbox"
-                        checked={isControlEnabled(control)}
-                        onchange={() => toggleControlEnabled(control)}
-                        class="control-checkbox"
-                    />
-                {/if}
-                <label>{control.name}</label>
-            </div>
             <!-- Red -->
             {@const rDisabled = isChannelDisabled(rChannel)}
             <div class="control">
-                <label>{components[control.components.r].name}</label>
+                <div class="control-header-inline">
+                    {#if showCheckboxes}
+                        <input
+                            type="checkbox"
+                            checked={isControlEnabled(control)}
+                            onchange={() => toggleControlEnabled(control)}
+                            class="control-checkbox"
+                        />
+                    {/if}
+                    <label>{components[control.components.r].name}</label>
+                </div>
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={values[rChannel]}
                         oninput={(e) => !rDisabled && handleSliderChange(rChannel, parseInt(e.target.value))}
@@ -319,22 +317,6 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
-    }
-
-    .control-group-label {
-        margin-top: 12px;
-        margin-bottom: 4px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .control-group-label label {
-        font-size: 10pt;
-        font-weight: 700;
-        color: #333;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
     }
 
     .control {
