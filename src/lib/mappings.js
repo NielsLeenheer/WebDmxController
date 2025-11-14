@@ -653,8 +653,6 @@ export class TriggerManager {
 		this.notPressedClasses = new Set(); // Track not-pressed triggers
 		this.alwaysClasses = new Set(); // Track always triggers
 		this.container = null; // Will be set to the container element
-		this.setValueCallback = null; // Callback for setValue actions: (deviceId, channelValues) => void
-		this.activeSetValueMappings = new Map(); // Track active setValue mappings
 	}
 
 	/**
@@ -673,38 +671,22 @@ export class TriggerManager {
 	}
 
 	/**
-	 * Set callback for setValue actions
-	 * @param {Function} callback - (deviceId, channelValues) => void
-	 */
-	setSetValueCallback(callback) {
-		this.setValueCallback = callback;
-	}
-
-	/**
 	 * Register a trigger mapping
 	 */
 	register(mapping) {
 		if (mapping.mode !== 'trigger') return;
 
-		// Handle animation actions
-		if (mapping.actionType === 'animation') {
-			// For not-pressed and always types, add to permanent sets
-			if (mapping.triggerType === 'not-pressed') {
-				this.notPressedClasses.add(mapping.cssClassName);
-				if (this.container) {
-					this.container.classList.add(mapping.cssClassName);
-				}
-			} else if (mapping.triggerType === 'always') {
-				this.alwaysClasses.add(mapping.cssClassName);
-				if (this.container) {
-					this.container.classList.add(mapping.cssClassName);
-				}
+		// Both animation and setValue actions use CSS classes
+		// For not-pressed and always types, add to permanent sets
+		if (mapping.triggerType === 'not-pressed') {
+			this.notPressedClasses.add(mapping.cssClassName);
+			if (this.container) {
+				this.container.classList.add(mapping.cssClassName);
 			}
-		} else if (mapping.actionType === 'setValue') {
-			// For setValue with 'always' type, apply immediately
-			if (mapping.triggerType === 'always' && this.setValueCallback) {
-				this.setValueCallback(mapping.setValueDeviceId, mapping.channelValues);
-				this.activeSetValueMappings.set(mapping.id, mapping);
+		} else if (mapping.triggerType === 'always') {
+			this.alwaysClasses.add(mapping.cssClassName);
+			if (this.container) {
+				this.container.classList.add(mapping.cssClassName);
 			}
 		}
 	}
@@ -715,15 +697,12 @@ export class TriggerManager {
 	unregister(mapping) {
 		if (mapping.mode !== 'trigger') return;
 
-		if (mapping.actionType === 'animation') {
-			this.notPressedClasses.delete(mapping.cssClassName);
-			this.alwaysClasses.delete(mapping.cssClassName);
+		// Both animation and setValue actions use CSS classes
+		this.notPressedClasses.delete(mapping.cssClassName);
+		this.alwaysClasses.delete(mapping.cssClassName);
 
-			if (this.container) {
-				this.container.classList.remove(mapping.cssClassName);
-			}
-		} else if (mapping.actionType === 'setValue') {
-			this.activeSetValueMappings.delete(mapping.id);
+		if (this.container) {
+			this.container.classList.remove(mapping.cssClassName);
 		}
 	}
 
@@ -732,34 +711,20 @@ export class TriggerManager {
 	 */
 	trigger(mapping) {
 		if (mapping.mode !== 'trigger') return;
+		if (!this.container) return;
 
-		if (mapping.actionType === 'animation') {
-			if (!this.container) return;
+		// Both animation and setValue actions use CSS classes
+		const className = mapping.cssClassName;
 
-			const className = mapping.cssClassName;
-
-			if (mapping.triggerType === 'pressed') {
-				// Pressed: Add class when triggered
-				this.container.classList.add(className);
-				this.activeClasses.add(className);
-			} else if (mapping.triggerType === 'not-pressed') {
-				// Not-pressed: Remove class when triggered (pressed)
-				this.container.classList.remove(className);
-			}
-			// 'always' type is always on, no action needed on trigger
-		} else if (mapping.actionType === 'setValue') {
-			if (!this.setValueCallback) return;
-
-			if (mapping.triggerType === 'pressed') {
-				// Apply setValue when pressed
-				this.setValueCallback(mapping.setValueDeviceId, mapping.channelValues);
-				this.activeSetValueMappings.set(mapping.id, mapping);
-			} else if (mapping.triggerType === 'not-pressed') {
-				// Remove setValue when pressed (will restore on release)
-				this.activeSetValueMappings.delete(mapping.id);
-			}
-			// 'always' type is handled in register()
+		if (mapping.triggerType === 'pressed') {
+			// Pressed: Add class when triggered
+			this.container.classList.add(className);
+			this.activeClasses.add(className);
+		} else if (mapping.triggerType === 'not-pressed') {
+			// Not-pressed: Remove class when triggered (pressed)
+			this.container.classList.remove(className);
 		}
+		// 'always' type is always on, no action needed on trigger
 	}
 
 	/**
@@ -767,34 +732,20 @@ export class TriggerManager {
 	 */
 	release(mapping) {
 		if (mapping.mode !== 'trigger') return;
+		if (!this.container) return;
 
-		if (mapping.actionType === 'animation') {
-			if (!this.container) return;
+		// Both animation and setValue actions use CSS classes
+		const className = mapping.cssClassName;
 
-			const className = mapping.cssClassName;
-
-			if (mapping.triggerType === 'pressed') {
-				// Pressed: Remove class when released
-				this.container.classList.remove(className);
-				this.activeClasses.delete(className);
-			} else if (mapping.triggerType === 'not-pressed') {
-				// Not-pressed: Add class back when released
-				this.container.classList.add(className);
-			}
-			// 'always' type is always on, no action needed on release
-		} else if (mapping.actionType === 'setValue') {
-			if (!this.setValueCallback) return;
-
-			if (mapping.triggerType === 'pressed') {
-				// Remove setValue when released
-				this.activeSetValueMappings.delete(mapping.id);
-			} else if (mapping.triggerType === 'not-pressed') {
-				// Restore setValue when released
-				this.setValueCallback(mapping.setValueDeviceId, mapping.channelValues);
-				this.activeSetValueMappings.set(mapping.id, mapping);
-			}
-			// 'always' type is always on, no action needed on release
+		if (mapping.triggerType === 'pressed') {
+			// Pressed: Remove class when released
+			this.container.classList.remove(className);
+			this.activeClasses.delete(className);
+		} else if (mapping.triggerType === 'not-pressed') {
+			// Not-pressed: Add class back when released
+			this.container.classList.add(className);
 		}
+		// 'always' type is always on, no action needed on release
 	}
 
 	/**
