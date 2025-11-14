@@ -110,9 +110,10 @@ export class InputController {
 					.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
 					.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
 
-				// Normalize velocity (typically 0-127 for MIDI) to 0.0-1.0
+				// Normalize velocity (typically 0-127 for MIDI) to percentage (0% to 100%)
 				const normalizedVelocity = Math.max(0, Math.min(1, velocity / 127));
-				this.customPropertyManager.setProperty(`${propertyName}-pressure`, normalizedVelocity.toFixed(3));
+				const percentage = (normalizedVelocity * 100).toFixed(1);
+				this.customPropertyManager.setProperty(`${propertyName}-pressure`, `${percentage}%`);
 			}
 
 			for (const mapping of mappings) {
@@ -141,14 +142,14 @@ export class InputController {
 			const upClass = this._generateClassName(controlId, 'up');
 			this.triggerManager.addRawClass(upClass);
 
-			// Reset pressure custom property to 0
+			// Reset pressure custom property to 0%
 			const inputMapping = mappings.find(m => m.mode === 'input');
 			if (inputMapping && inputMapping.name) {
 				const propertyName = inputMapping.name
 					.toLowerCase()
 					.replace(/[^a-z0-9]+/g, '-')
 					.replace(/^-+|-+$/g, '');
-				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.000');
+				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
 			}
 
 			for (const mapping of mappings) {

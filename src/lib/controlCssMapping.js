@@ -155,11 +155,12 @@ export const CSS_TO_DMX_MAPPING = {
 	// Note: This is a pattern - actual property names are dynamic (e.g., --button-a-pressure)
 	// This serves as documentation and example for pressure properties
 	'--pressure': {
-		// Convert 0.0-1.0 → 0-255 DMX
+		// Convert 0% to 100% → 0-255 DMX
 		sample: (cssValue) => {
-			const value = parseFloat(cssValue) || 0;
-			const clamped = Math.max(0, Math.min(1, value));
-			const dmxValue = Math.round(clamped * 255);
+			const match = cssValue.match(/(\d+(?:\.\d+)?)/);
+			const percent = match ? parseFloat(match[1]) : 0;
+			const clamped = Math.max(0, Math.min(100, percent));
+			const dmxValue = Math.round((clamped / 100) * 255);
 
 			// Pressure can map to Intensity/Dimmer or custom channels
 			return { 'Intensity': dmxValue, 'Dimmer': dmxValue };
