@@ -177,6 +177,18 @@
         closeEditDialog();
     }
 
+    // Generate preview of CSS animation name for new animation
+    function getNewAnimationCSSName() {
+        if (!newAnimationName.trim()) return '';
+
+        const cssName = newAnimationName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+        return cssName;
+    }
+
     // Generate preview of CSS animation name based on current editing name
     function getPreviewCSSName() {
         if (!editingName.trim()) return '';
@@ -258,6 +270,7 @@
                 placeholder="e.g., rainbow, pulse, sweep"
                 autofocus
             />
+            <small class="css-preview">@keyframes {getNewAnimationCSSName()}</small>
         </div>
 
         <div class="dialog-input-group">

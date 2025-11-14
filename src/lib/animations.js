@@ -164,11 +164,54 @@ export class Animation {
 			return '';
 		}
 
-		const keyframeRules = this.keyframes
-			.map(kf => kf.toCSS())
-			.join('\n  ');
+		// Generate CSS based on controls being animated
+		const keyframeRules = this.keyframes.map(kf => {
+			const percent = Math.round(kf.time * 100);
+			const properties = this._getKeyframeProperties(kf);
+			const props = Object.entries(properties)
+				.map(([prop, value]) => `${prop}: ${value}`)
+				.join('; ');
+			return `${percent}% { ${props}; }`;
+		}).join('\n  ');
 
 		return `@keyframes ${this.cssName} {\n  ${keyframeRules}\n}`;
+	}
+
+	/**
+	 * Get CSS properties for a keyframe based on animated controls
+	 */
+	_getKeyframeProperties(keyframe) {
+		const properties = {};
+		const { controls, components } = this.getControlsForRendering();
+
+		// Map control names to CSS properties
+		for (const control of controls) {
+			if (control.name === 'Pan/Tilt' || control.type === 'xypad') {
+				// Pan/Tilt control - use custom properties
+				const xChannel = components[control.components.x].channel;
+				const yChannel = components[control.components.y].channel;
+				const panValue = keyframe.values[xChannel] || 0;
+				const tiltValue = keyframe.values[yChannel] || 0;
+				properties['--pan'] = panValue.toString();
+				properties['--tilt'] = tiltValue.toString();
+			} else if (control.name === 'Color' || control.type === 'rgb') {
+				// Color control - use color property
+				properties.color = getDeviceColor(keyframe.deviceType, keyframe.values);
+			} else if (control.name === 'Dimmer' || control.name === 'Intensity') {
+				// Dimmer control - use opacity or custom property
+				const channel = components[control.components.value].channel;
+				const value = keyframe.values[channel] || 0;
+				properties['--intensity'] = (value / 255).toFixed(3);
+			}
+			// Add more control type mappings as needed
+		}
+
+		// Fallback: if no properties generated, use color
+		if (Object.keys(properties).length === 0) {
+			properties.color = getDeviceColor(keyframe.deviceType, keyframe.values);
+		}
+
+		return properties;
 	}
 
 	/**
