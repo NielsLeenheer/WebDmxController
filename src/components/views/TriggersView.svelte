@@ -23,7 +23,6 @@
     let automaticTriggerDialog = $state(null);
     let newTriggerInput = $state(null);
     let newTriggerType = $state('pressed');
-    let newTriggerButtonMode = $state('momentary'); // 'momentary' or 'toggle'
     let newTriggerActionType = $state('animation'); // 'animation' or 'setValue'
     let newTriggerDevice = $state(null);
     let newTriggerAnimation = $state(null);
@@ -38,7 +37,6 @@
     let editingTrigger = $state(null);
     let editTriggerInput = $state(null);
     let editTriggerType = $state('pressed');
-    let editTriggerButtonMode = $state('momentary');
     let editTriggerActionType = $state('animation');
     let editTriggerDevice = $state(null);
     let editTriggerAnimation = $state(null);
@@ -48,15 +46,58 @@
     let editTriggerChannelValues = $state({});
     let editTriggerEnabledControls = $state([]);
 
-    const MANUAL_TRIGGER_TYPES = [
-        { value: 'pressed', label: 'Pressed' },
-        { value: 'not-pressed', label: 'Not Pressed' }
-    ];
+    // Get trigger type options based on the selected input's button mode
+    function getTriggerTypeOptions(inputId) {
+        const input = availableInputs.find(i => i.id === inputId);
+        if (!input || !input.isButtonInput()) {
+            return [
+                { value: 'pressed', label: 'Pressed' },
+                { value: 'not-pressed', label: 'Not Pressed' }
+            ];
+        }
 
-    const BUTTON_MODES = [
-        { value: 'momentary', label: 'Momentary (Pressed/Released)' },
-        { value: 'toggle', label: 'Toggle (On/Off)' }
-    ];
+        const buttonMode = input.buttonMode || 'momentary';
+
+        if (buttonMode === 'toggle') {
+            return [
+                { value: 'pressed', label: 'On' },
+                { value: 'not-pressed', label: 'Off' }
+            ];
+        } else {
+            return [
+                { value: 'pressed', label: 'Down' },
+                { value: 'not-pressed', label: 'Up' }
+            ];
+        }
+    }
+
+    // Get trigger type options for a trigger being edited
+    function getTriggerTypeOptionsForTrigger(trigger) {
+        const input = availableInputs.find(i =>
+            i.inputDeviceId === trigger.inputDeviceId &&
+            i.inputControlId === trigger.inputControlId
+        );
+        if (!input || !input.isButtonInput()) {
+            return [
+                { value: 'pressed', label: 'Pressed' },
+                { value: 'not-pressed', label: 'Not Pressed' }
+            ];
+        }
+
+        const buttonMode = input.buttonMode || 'momentary';
+
+        if (buttonMode === 'toggle') {
+            return [
+                { value: 'pressed', label: 'On' },
+                { value: 'not-pressed', label: 'Off' }
+            ];
+        } else {
+            return [
+                { value: 'pressed', label: 'Down' },
+                { value: 'not-pressed', label: 'Up' }
+            ];
+        }
+    }
 
     const ACTION_TYPES = [
         { value: 'animation', label: 'Run Animation' },
@@ -82,7 +123,6 @@
     function openManualTriggerDialog() {
         newTriggerInput = availableInputs[0]?.id || null;
         newTriggerType = 'pressed';
-        newTriggerButtonMode = 'momentary';
         newTriggerActionType = 'animation';
         newTriggerDevice = devices[0]?.id || null;
         newTriggerAnimation = availableAnimations[0]?.name || null;
@@ -122,13 +162,22 @@
         const inputMapping = mappingLibrary.get(newTriggerInput);
         if (!inputMapping) return;
 
+        // Get button mode from the input mapping
+        const buttonMode = inputMapping.buttonMode || 'momentary';
+
         // Generate CSS class name from input name with state suffix
         const baseClassName = inputMapping.name
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
             .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
 
-        const suffix = newTriggerType === 'pressed' ? 'down' : 'up';
+        // Determine suffix based on button mode
+        let suffix;
+        if (buttonMode === 'toggle') {
+            suffix = newTriggerType === 'pressed' ? 'on' : 'off';
+        } else {
+            suffix = newTriggerType === 'pressed' ? 'down' : 'up';
+        }
         const cssClassName = `${baseClassName}-${suffix}`;
 
         const triggerName = newTriggerActionType === 'animation'
@@ -140,7 +189,6 @@
             name: triggerName,
             mode: 'trigger',
             triggerType: newTriggerType,
-            buttonMode: newTriggerButtonMode,
             actionType: newTriggerActionType,
             inputDeviceId: inputMapping.inputDeviceId,
             inputControlId: inputMapping.inputControlId,
@@ -189,7 +237,6 @@
         editingTrigger = trigger;
         editTriggerInput = trigger.inputDeviceId + '_' + trigger.inputControlId;
         editTriggerType = trigger.triggerType;
-        editTriggerButtonMode = trigger.buttonMode || 'momentary';
         editTriggerActionType = trigger.actionType || 'animation';
 
         if (trigger.actionType === 'setValue') {
@@ -246,17 +293,25 @@
 
             if (!selectedInput) return;
 
+            // Get button mode from the input mapping
+            const buttonMode = selectedInput.buttonMode || 'momentary';
+
             // Generate new CSS class name
             const baseClassName = selectedInput.name
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')
                 .replace(/^-+|-+$/g, '');
 
-            const suffix = editTriggerType === 'pressed' ? 'down' : 'up';
+            // Determine suffix based on button mode
+            let suffix;
+            if (buttonMode === 'toggle') {
+                suffix = editTriggerType === 'pressed' ? 'on' : 'off';
+            } else {
+                suffix = editTriggerType === 'pressed' ? 'down' : 'up';
+            }
             const cssClassName = `${baseClassName}-${suffix}`;
 
             editingTrigger.triggerType = editTriggerType;
-            editingTrigger.buttonMode = editTriggerButtonMode;
             editingTrigger.actionType = editTriggerActionType;
 
             if (editTriggerActionType === 'animation') {
@@ -475,19 +530,10 @@
                 </div>
 
                 <div class="dialog-input-group">
-                    <label for="trigger-type">Type:</label>
+                    <label for="trigger-type">Trigger Type:</label>
                     <select id="trigger-type" bind:value={newTriggerType}>
-                        {#each MANUAL_TRIGGER_TYPES as type}
+                        {#each getTriggerTypeOptions(newTriggerInput) as type}
                             <option value={type.value}>{type.label}</option>
-                        {/each}
-                    </select>
-                </div>
-
-                <div class="dialog-input-group">
-                    <label for="trigger-button-mode">Button Mode:</label>
-                    <select id="trigger-button-mode" bind:value={newTriggerButtonMode}>
-                        {#each BUTTON_MODES as mode}
-                            <option value={mode.value}>{mode.label}</option>
                         {/each}
                     </select>
                 </div>
@@ -663,19 +709,10 @@
                 <!-- Column 1: Trigger Configuration (Manual only) -->
                 <div class="trigger-column">
                     <div class="dialog-input-group">
-                        <label for="edit-trigger-type">Type:</label>
+                        <label for="edit-trigger-type">Trigger Type:</label>
                         <select id="edit-trigger-type" bind:value={editTriggerType}>
-                            {#each MANUAL_TRIGGER_TYPES as type}
+                            {#each getTriggerTypeOptionsForTrigger(editingTrigger) as type}
                                 <option value={type.value}>{type.label}</option>
-                            {/each}
-                        </select>
-                    </div>
-
-                    <div class="dialog-input-group">
-                        <label for="edit-trigger-button-mode">Button Mode:</label>
-                        <select id="edit-trigger-button-mode" bind:value={editTriggerButtonMode}>
-                            {#each BUTTON_MODES as mode}
-                                <option value={mode.value}>{mode.label}</option>
                             {/each}
                         </select>
                     </div>
