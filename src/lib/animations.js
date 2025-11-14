@@ -7,73 +7,7 @@
 
 import { getDeviceColor } from './colorUtils.js';
 import { DEVICE_TYPES } from './devices.js';
-
-/**
- * Control to CSS mapping configuration
- * Defines how each control type maps to CSS properties and how values are converted
- */
-const CONTROL_CSS_MAPPING = {
-	// XY Pad controls (Pan/Tilt for moving heads)
-	xypad: {
-		properties: {
-			x: {
-				name: '--pan',
-				// Convert DMX 0-255 to -50% to +50%
-				convert: (value) => `${((value / 255) * 100 - 50).toFixed(1)}%`
-			},
-			y: {
-				name: '--tilt',
-				// Convert DMX 0-255 to 0% to 100%
-				convert: (value) => `${((value / 255) * 100).toFixed(1)}%`
-			}
-		}
-	},
-	// RGB Color controls
-	rgb: {
-		properties: {
-			// Uses all RGB values together to generate color
-			color: {
-				name: 'color',
-				// Special case: uses getDeviceColor with all values
-				convert: 'color'
-			}
-		}
-	},
-	// Slider controls (Dimmer, Intensity, White, Amber, etc.)
-	slider: {
-		properties: {
-			value: {
-				// Property name depends on control name
-				getName: (controlName) => {
-					if (controlName === 'Dimmer' || controlName === 'Intensity') {
-						return '--intensity';
-					}
-					if (controlName === 'White') {
-						return '--white';
-					}
-					if (controlName === 'Amber') {
-						return '--amber';
-					}
-					// Default for other sliders
-					return `--${controlName.toLowerCase().replace(/\s+/g, '-')}`;
-				},
-				// Convert DMX 0-255 based on control type
-				convert: (value, controlName) => {
-					if (controlName === 'Dimmer' || controlName === 'Intensity') {
-						// Convert to 0.0-1.0 for intensity
-						return (value / 255).toFixed(3);
-					}
-					if (controlName === 'White' || controlName === 'Amber') {
-						// Convert to 0.0-1.0 for white/amber
-						return (value / 255).toFixed(3);
-					}
-					// For other sliders, use raw DMX value
-					return value.toString();
-				}
-			}
-		}
-	}
-};
+import { CONTROL_CSS_MAPPING, generateCSSProperties } from './controlCssMapping.js';
 
 /**
  * Represents a single keyframe in an animation
@@ -248,40 +182,10 @@ export class Animation {
 	 * Get CSS properties for a keyframe based on animated controls
 	 */
 	_getKeyframeProperties(keyframe) {
-		const properties = {};
 		const { controls, components } = this.getControlsForRendering();
 
-		// Map controls to CSS properties using CONTROL_CSS_MAPPING
-		for (const control of controls) {
-			const mapping = CONTROL_CSS_MAPPING[control.type];
-			if (!mapping) continue;
-
-			// Handle each control type
-			if (control.type === 'xypad') {
-				// XY Pad control (e.g., Pan/Tilt)
-				const xChannel = components[control.components.x].channel;
-				const yChannel = components[control.components.y].channel;
-				const xValue = keyframe.values[xChannel] || 0;
-				const yValue = keyframe.values[yChannel] || 0;
-
-				properties[mapping.properties.x.name] = mapping.properties.x.convert(xValue);
-				properties[mapping.properties.y.name] = mapping.properties.y.convert(yValue);
-
-			} else if (control.type === 'rgb') {
-				// RGB Color control
-				// Special case: uses getDeviceColor with all values
-				properties.color = getDeviceColor(keyframe.deviceType, keyframe.values);
-
-			} else if (control.type === 'slider') {
-				// Slider control (Dimmer, Intensity, etc.)
-				const channel = components[control.components.value].channel;
-				const value = keyframe.values[channel] || 0;
-
-				const propName = mapping.properties.value.getName(control.name);
-				const propValue = mapping.properties.value.convert(value, control.name);
-				properties[propName] = propValue;
-			}
-		}
+		// Use shared mapping function
+		const properties = generateCSSProperties(controls, components, keyframe.values, keyframe.deviceType);
 
 		// Fallback: if no properties generated, use color
 		if (Object.keys(properties).length === 0) {
