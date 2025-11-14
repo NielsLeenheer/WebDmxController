@@ -7,6 +7,13 @@ export const DEVICE_TYPES = {
             { name: 'Red', type: 'slider', color: '#b83838' },
             { name: 'Green', type: 'slider', color: '#4a964a' },
             { name: 'Blue', type: 'slider', color: '#365fb4' }
+        ],
+        controlGroups: [
+            {
+                name: 'Color',
+                controlIndices: [0, 1, 2], // Red, Green, Blue controls
+                channelIndices: [0, 1, 2]  // Channels 0, 1, 2
+            }
         ]
     },
     RGBA: {
@@ -17,6 +24,13 @@ export const DEVICE_TYPES = {
             { name: 'Green', type: 'slider', color: '#4a964a' },
             { name: 'Blue', type: 'slider', color: '#365fb4' },
             { name: 'Amber', type: 'slider', color: '#a68522' }
+        ],
+        controlGroups: [
+            {
+                name: 'Color',
+                controlIndices: [0, 1, 2, 3], // Red, Green, Blue, Amber controls
+                channelIndices: [0, 1, 2, 3]  // Channels 0, 1, 2, 3
+            }
         ]
     },
     RGBW: {
@@ -27,6 +41,18 @@ export const DEVICE_TYPES = {
             { name: 'Green', type: 'slider', color: '#4a964a' },
             { name: 'Blue', type: 'slider', color: '#365fb4' },
             { name: 'White', type: 'slider', color: '#808080' }
+        ],
+        controlGroups: [
+            {
+                name: 'Color',
+                controlIndices: [0, 1, 2], // Red, Green, Blue controls
+                channelIndices: [0, 1, 2]  // Channels 0, 1, 2
+            },
+            {
+                name: 'White',
+                controlIndices: [3], // White control
+                channelIndices: [3]  // Channel 3
+            }
         ]
     },
     DIMMER: {
@@ -34,6 +60,13 @@ export const DEVICE_TYPES = {
         channels: 1,
         controls: [
             { name: 'Intensity', type: 'slider', color: '#888888' }
+        ],
+        controlGroups: [
+            {
+                name: 'Intensity',
+                controlIndices: [0],
+                channelIndices: [0]
+            }
         ]
     },
     SMOKE: {
@@ -41,6 +74,13 @@ export const DEVICE_TYPES = {
         channels: 1,
         controls: [
             { name: 'Output', type: 'slider', color: '#666666' }
+        ],
+        controlGroups: [
+            {
+                name: 'Output',
+                controlIndices: [0],
+                channelIndices: [0]
+            }
         ]
     },
     MOVING_HEAD: {
@@ -53,6 +93,28 @@ export const DEVICE_TYPES = {
             { name: 'Green', type: 'slider', color: '#4a964a' },
             { name: 'Blue', type: 'slider', color: '#365fb4' },
             { name: 'White', type: 'slider', color: '#808080' }
+        ],
+        controlGroups: [
+            {
+                name: 'Pan/Tilt',
+                controlIndices: [0], // XY pad control
+                channelIndices: [0, 1]  // Channels 0 (pan), 1 (tilt)
+            },
+            {
+                name: 'Dimmer',
+                controlIndices: [1], // Dimmer control
+                channelIndices: [2]  // Channel 2
+            },
+            {
+                name: 'Color',
+                controlIndices: [2, 3, 4], // Red, Green, Blue controls
+                channelIndices: [3, 4, 5]  // Channels 3, 4, 5
+            },
+            {
+                name: 'White',
+                controlIndices: [5], // White control
+                channelIndices: [6]  // Channel 6
+            }
         ]
     },
     FLAMETHROWER: {
@@ -61,6 +123,18 @@ export const DEVICE_TYPES = {
         controls: [
             { name: 'Safety', type: 'toggle', offValue: 0, onValue: 125 },
             { name: 'Fuel', type: 'slider', color: '#ff5722' }
+        ],
+        controlGroups: [
+            {
+                name: 'Safety',
+                controlIndices: [0],
+                channelIndices: [0]
+            },
+            {
+                name: 'Fuel',
+                controlIndices: [1],
+                channelIndices: [1]
+            }
         ]
     }
 };
