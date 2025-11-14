@@ -28,6 +28,20 @@ export class InputController {
 		// Initialize custom properties
 		this.customPropertyManager.initialize();
 
+		// Initialize pressure properties to 0% for all input mappings
+		this._initializePressureProperties();
+
+		// Listen for mapping changes to initialize pressure for new mappings
+		this.mappingLibrary.on('changed', ({ type, mapping }) => {
+			if (type === 'add' && mapping.mode === 'input' && mapping.name && mapping.isButtonInput()) {
+				const propertyName = mapping.name
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, '-')
+					.replace(/^-+|-+$/g, '');
+				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
+			}
+		});
+
 		// IMPORTANT: Set up device listeners BEFORE initializing devices
 		// Otherwise auto-reconnected devices won't have their listeners attached
 		this.inputDeviceManager.on('deviceadded', (device) => {
@@ -334,6 +348,28 @@ export class InputController {
 				if (device.sendNoteOff) {
 					device.sendNoteOff(i);
 				}
+			}
+		}
+	}
+
+	/**
+	 * Initialize pressure custom properties for all input mappings
+	 * Sets all pressure properties to 0% as default
+	 */
+	_initializePressureProperties() {
+		const allMappings = this.mappingLibrary.getAll();
+		const inputMappings = allMappings.filter(m => m.mode === 'input');
+
+		for (const mapping of inputMappings) {
+			if (mapping.name && mapping.isButtonInput()) {
+				// Generate CSS custom property name from input name
+				const propertyName = mapping.name
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+					.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+				// Initialize to 0%
+				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
 			}
 		}
 	}
