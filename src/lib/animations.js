@@ -58,10 +58,11 @@ class Keyframe {
  * Reusable animation definition (like CSS @keyframes)
  */
 export class Animation {
-	constructor(name = 'animation', deviceType = 'RGB', keyframes = [], cssName = null, controls = null) {
+	constructor(name = 'animation', deviceType = 'RGB', keyframes = [], cssName = null, controls = null, displayName = null) {
 		this.name = name;
 		this.deviceType = deviceType;
 		this.controls = controls; // Array of control names to animate, or null to animate all controls
+		this.displayName = displayName; // Display name for UI (e.g., "RGBW Light - Color")
 		this.keyframes = keyframes; // Array of Keyframe objects
 		// Stored CSS animation name (generated from name and stored)
 		this.cssName = cssName || this._generateCSSName();
@@ -263,13 +264,15 @@ export class Animation {
 	}
 
 	/**
-	 * Get display name for this animation (includes controls if specified)
+	 * Get display name for this animation
+	 * Uses stored displayName or falls back to generating from deviceType
 	 */
 	getDisplayName() {
-		if (this.controls && this.controls.length > 0) {
-			return `${this.name} (${this.controls.join(', ')})`;
+		if (this.displayName) {
+			return this.displayName;
 		}
-		return this.name;
+		// Fallback for old animations without displayName
+		return DEVICE_TYPES[this.deviceType]?.name || this.deviceType;
 	}
 
 	/**
@@ -287,6 +290,7 @@ export class Animation {
 			name: this.name,
 			deviceType: this.deviceType,
 			controls: this.controls,
+			displayName: this.displayName,
 			keyframes: this.keyframes.map(kf => ({
 				time: kf.time,
 				deviceType: kf.deviceType,
@@ -307,7 +311,9 @@ export class Animation {
 			controls = [json.controlName];
 		}
 
-		const animation = new Animation(json.name, deviceType, [], null, controls);
+		const displayName = json.displayName || null;
+
+		const animation = new Animation(json.name, deviceType, [], null, controls, displayName);
 
 		for (const kf of json.keyframes) {
 			// Handle old format (properties) and new format (values)

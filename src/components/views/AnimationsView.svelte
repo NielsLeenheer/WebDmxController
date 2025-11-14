@@ -20,8 +20,7 @@
     // Dialog states
     let newAnimationDialog = null; // DOM reference - should NOT be $state
     let newAnimationName = $state('');
-    let newAnimationDeviceType = $state('RGB');
-    let selectedAnimationOption = $state('__all__'); // Selected option from the list
+    let selectedAnimationTarget = $state('RGB|all'); // Format: "deviceType|all" or "deviceType|control|ControlName"
 
     // Edit dialog states
     let editDialog = null; // DOM reference - should NOT be $state
@@ -54,64 +53,80 @@
 
     function openNewAnimationDialog() {
         newAnimationName = '';
-        newAnimationDeviceType = 'RGB';
-        selectedAnimationOption = '__all__';
+        selectedAnimationTarget = 'RGB|all';
         newAnimationDialog?.showModal();
     }
 
-    // Get animation options for the selected device type
-    function getAnimationOptions() {
-        if (!newAnimationDeviceType) return [];
+    // Build complete list of animation targets (controls + device types)
+    function getAllAnimationTargets() {
+        const targets = [];
 
-        const deviceControls = DEVICE_TYPES[newAnimationDeviceType]?.controls || [];
-        const options = [];
-
-        // Add individual controls at the top
-        for (const control of deviceControls) {
-            options.push({
-                type: 'control',
-                value: control.name,
-                label: control.name
-            });
+        // First, add all individual controls from all device types
+        for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
+            for (const control of deviceDef.controls) {
+                targets.push({
+                    type: 'control',
+                    value: `${deviceKey}|control|${control.name}`,
+                    label: `${deviceDef.name} - ${control.name}`
+                });
+            }
         }
 
         // Add separator
-        if (deviceControls.length > 0) {
-            options.push({ type: 'separator' });
+        targets.push({ type: 'separator' });
+
+        // Add "all controls" options for each device type
+        for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
+            targets.push({
+                type: 'all',
+                value: `${deviceKey}|all`,
+                label: `${deviceDef.name} (all controls)`
+            });
         }
 
-        // Add "All controls" option
-        options.push({
-            type: 'all',
-            value: '__all__',
-            label: `All controls (${DEVICE_TYPES[newAnimationDeviceType].name})`
-        });
-
-        return options;
+        return targets;
     }
 
-    // Update animation options when device type changes
-    function handleDeviceTypeChange() {
-        selectedAnimationOption = '__all__';
+    // Parse selected target into deviceType and controls array
+    function parseAnimationTarget(target) {
+        const parts = target.split('|');
+        const deviceType = parts[0];
+
+        if (parts[1] === 'all') {
+            // All controls for this device type
+            return {
+                deviceType,
+                controls: null,
+                displayName: DEVICE_TYPES[deviceType].name
+            };
+        } else if (parts[1] === 'control') {
+            // Single control
+            const controlName = parts[2];
+            return {
+                deviceType,
+                controls: [controlName],
+                displayName: `${DEVICE_TYPES[deviceType].name} - ${controlName}`
+            };
+        }
+
+        // Fallback
+        return {
+            deviceType: 'RGB',
+            controls: null,
+            displayName: 'RGB Light'
+        };
     }
 
     function createNewAnimation() {
         if (!newAnimationName.trim()) return;
 
-        const deviceType = newAnimationDeviceType;
-
-        // Convert selected option to controls array
-        let controls = null;
-        if (selectedAnimationOption === '__all__') {
-            // Animate all controls
-            controls = null;
-        } else {
-            // Animate specific control
-            controls = [selectedAnimationOption];
-        }
+        // Parse selected target
+        const parsed = parseAnimationTarget(selectedAnimationTarget);
+        const { deviceType, controls, displayName } = parsed;
 
         // Create animation with controls array
         const animation = new Animation(newAnimationName.trim(), deviceType, [], null, controls);
+        animation.displayName = displayName; // Store for UI display
 
         // Determine number of channels based on control selection
         const numChannels = animation.getNumChannels();
@@ -202,10 +217,7 @@
                         <div class="animation-info">
                             <h3>{animation.name}</h3>
                             <div class="badges">
-                                <div class="device-type-badge">{DEVICE_TYPES[animation.deviceType].name}</div>
-                                {#each animation.getControlNames() as controlName}
-                                    <div class="control-badge">{controlName}</div>
-                                {/each}
+                                <div class="target-badge">{animation.getDisplayName()}</div>
                             </div>
                         </div>
                         <IconButton
@@ -243,26 +255,17 @@
         </div>
 
         <div class="dialog-input-group">
-            <label for="device-type">Device Type:</label>
-            <select id="device-type" bind:value={newAnimationDeviceType} onchange={handleDeviceTypeChange}>
-                {#each Object.entries(DEVICE_TYPES) as [key, deviceType]}
-                    <option value={key}>{deviceType.name}</option>
-                {/each}
-            </select>
-        </div>
-
-        <div class="dialog-input-group">
-            <label for="animation-target">Animate:</label>
-            <select id="animation-target" bind:value={selectedAnimationOption} class="animation-target-select">
-                {#each getAnimationOptions() as option}
-                    {#if option.type === 'separator'}
+            <label for="animation-target">Target:</label>
+            <select id="animation-target" bind:value={selectedAnimationTarget} class="animation-target-select">
+                {#each getAllAnimationTargets() as target}
+                    {#if target.type === 'separator'}
                         <option disabled>──────────</option>
                     {:else}
-                        <option value={option.value}>{option.label}</option>
+                        <option value={target.value}>{target.label}</option>
                     {/if}
                 {/each}
             </select>
-            <small class="help-text">Select a specific control or all controls together</small>
+            <small class="help-text">Select a specific control or entire device type</small>
         </div>
     </form>
 
@@ -378,18 +381,9 @@
         align-items: center;
     }
 
-    .device-type-badge {
+    .target-badge {
         background: #e3f2fd;
         color: #1976d2;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 9pt;
-        font-weight: 500;
-    }
-
-    .control-badge {
-        background: #f3e5f5;
-        color: #7b1fa2;
         padding: 4px 8px;
         border-radius: 4px;
         font-size: 9pt;
