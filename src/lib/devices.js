@@ -3,137 +3,146 @@ export const DEVICE_TYPES = {
     RGB: {
         name: 'RGB Light',
         channels: 3,
-        controls: [
-            { name: 'Red', type: 'slider', color: '#b83838' },
-            { name: 'Green', type: 'slider', color: '#4a964a' },
-            { name: 'Blue', type: 'slider', color: '#365fb4' }
+        components: [
+            { name: 'Red', channel: 0 },
+            { name: 'Green', channel: 1 },
+            { name: 'Blue', channel: 2 }
         ],
-        controlGroups: [
+        controls: [
             {
                 name: 'Color',
-                controlIndices: [0, 1, 2], // Red, Green, Blue controls
-                channelIndices: [0, 1, 2]  // Channels 0, 1, 2
+                type: 'rgb',
+                components: { r: 0, g: 1, b: 2 }
             }
         ]
     },
     RGBA: {
         name: 'RGBA Light',
         channels: 4,
-        controls: [
-            { name: 'Red', type: 'slider', color: '#b83838' },
-            { name: 'Green', type: 'slider', color: '#4a964a' },
-            { name: 'Blue', type: 'slider', color: '#365fb4' },
-            { name: 'Amber', type: 'slider', color: '#a68522' }
+        components: [
+            { name: 'Red', channel: 0 },
+            { name: 'Green', channel: 1 },
+            { name: 'Blue', channel: 2 },
+            { name: 'Amber', channel: 3 }
         ],
-        controlGroups: [
+        controls: [
             {
                 name: 'Color',
-                controlIndices: [0, 1, 2, 3], // Red, Green, Blue, Amber controls
-                channelIndices: [0, 1, 2, 3]  // Channels 0, 1, 2, 3
+                type: 'rgba',
+                components: { r: 0, g: 1, b: 2, a: 3 }
             }
         ]
     },
     RGBW: {
         name: 'RGBW Light',
         channels: 4,
-        controls: [
-            { name: 'Red', type: 'slider', color: '#b83838' },
-            { name: 'Green', type: 'slider', color: '#4a964a' },
-            { name: 'Blue', type: 'slider', color: '#365fb4' },
-            { name: 'White', type: 'slider', color: '#808080' }
+        components: [
+            { name: 'Red', channel: 0 },
+            { name: 'Green', channel: 1 },
+            { name: 'Blue', channel: 2 },
+            { name: 'White', channel: 3 }
         ],
-        controlGroups: [
+        controls: [
             {
                 name: 'Color',
-                controlIndices: [0, 1, 2], // Red, Green, Blue controls
-                channelIndices: [0, 1, 2]  // Channels 0, 1, 2
+                type: 'rgb',
+                components: { r: 0, g: 1, b: 2 }
             },
             {
                 name: 'White',
-                controlIndices: [3], // White control
-                channelIndices: [3]  // Channel 3
+                type: 'slider',
+                color: '#808080',
+                components: { value: 3 }
             }
         ]
     },
     DIMMER: {
         name: 'Dimmer',
         channels: 1,
-        controls: [
-            { name: 'Intensity', type: 'slider', color: '#888888' }
+        components: [
+            { name: 'Intensity', channel: 0 }
         ],
-        controlGroups: [
+        controls: [
             {
                 name: 'Intensity',
-                controlIndices: [0],
-                channelIndices: [0]
+                type: 'slider',
+                color: '#888888',
+                components: { value: 0 }
             }
         ]
     },
     SMOKE: {
         name: 'Smoke Machine',
         channels: 1,
-        controls: [
-            { name: 'Output', type: 'slider', color: '#666666' }
+        components: [
+            { name: 'Output', channel: 0 }
         ],
-        controlGroups: [
+        controls: [
             {
                 name: 'Output',
-                controlIndices: [0],
-                channelIndices: [0]
+                type: 'slider',
+                color: '#666666',
+                components: { value: 0 }
             }
         ]
     },
     MOVING_HEAD: {
         name: 'Moving Head (Basic)',
         channels: 7,
-        controls: [
-            { name: 'Pan/Tilt', type: 'xypad', panIndex: 0, tiltIndex: 1 },
-            { name: 'Dimmer', type: 'slider', color: '#888888' },
-            { name: 'Red', type: 'slider', color: '#b83838' },
-            { name: 'Green', type: 'slider', color: '#4a964a' },
-            { name: 'Blue', type: 'slider', color: '#365fb4' },
-            { name: 'White', type: 'slider', color: '#808080' }
+        components: [
+            { name: 'Pan', channel: 0 },
+            { name: 'Tilt', channel: 1 },
+            { name: 'Dimmer', channel: 2 },
+            { name: 'Red', channel: 3 },
+            { name: 'Green', channel: 4 },
+            { name: 'Blue', channel: 5 },
+            { name: 'White', channel: 6 }
         ],
-        controlGroups: [
+        controls: [
             {
                 name: 'Pan/Tilt',
-                controlIndices: [0], // XY pad control
-                channelIndices: [0, 1]  // Channels 0 (pan), 1 (tilt)
+                type: 'xypad',
+                components: { x: 0, y: 1 }
             },
             {
                 name: 'Dimmer',
-                controlIndices: [1], // Dimmer control
-                channelIndices: [2]  // Channel 2
+                type: 'slider',
+                color: '#888888',
+                components: { value: 2 }
             },
             {
                 name: 'Color',
-                controlIndices: [2, 3, 4], // Red, Green, Blue controls
-                channelIndices: [3, 4, 5]  // Channels 3, 4, 5
+                type: 'rgb',
+                components: { r: 3, g: 4, b: 5 }
             },
             {
                 name: 'White',
-                controlIndices: [5], // White control
-                channelIndices: [6]  // Channel 6
+                type: 'slider',
+                color: '#808080',
+                components: { value: 6 }
             }
         ]
     },
     FLAMETHROWER: {
         name: 'Flamethrower',
         channels: 2,
-        controls: [
-            { name: 'Safety', type: 'toggle', offValue: 0, onValue: 125 },
-            { name: 'Fuel', type: 'slider', color: '#ff5722' }
+        components: [
+            { name: 'Safety', channel: 0 },
+            { name: 'Fuel', channel: 1 }
         ],
-        controlGroups: [
+        controls: [
             {
                 name: 'Safety',
-                controlIndices: [0],
-                channelIndices: [0]
+                type: 'toggle',
+                offValue: 0,
+                onValue: 125,
+                components: { value: 0 }
             },
             {
                 name: 'Fuel',
-                controlIndices: [1],
-                channelIndices: [1]
+                type: 'slider',
+                color: '#ff5722',
+                components: { value: 1 }
             }
         ]
     }
