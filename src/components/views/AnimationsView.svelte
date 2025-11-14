@@ -122,17 +122,19 @@
         } else if (targetType === 'device') {
             // All controls for this device type
             const deviceType = parts[1];
+            const deviceDef = DEVICE_TYPES[deviceType];
+            const controlNames = deviceDef.controls.map(c => c.name);
             return {
                 deviceType,
-                controls: null,
-                displayName: DEVICE_TYPES[deviceType].name
+                controls: controlNames,  // Array of all control names from this device
+                displayName: deviceDef.name
             };
         }
 
         // Fallback
         return {
             deviceType: 'RGB',
-            controls: null,
+            controls: ['Color'],
             displayName: 'RGB Light'
         };
     }
