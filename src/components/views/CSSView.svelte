@@ -125,12 +125,19 @@
 
             // ALWAYS update preview colors (even when not active)
             if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
-                const alpha = channels.White !== undefined ? channels.White : 255;
-                const newColor = `rgba(${channels.Red}, ${channels.Green}, ${channels.Blue}, ${alpha / 255})`;
-                previewColors[device.id] = newColor;
-            } else if (channels.Intensity !== undefined) {
-                // Dimmer preview
-                const intensity = channels.Intensity / 255;
+                // Use getDeviceColor for consistent color calculation
+                const color = getDeviceColor(device.type, newValues);
+                previewColors[device.id] = color;
+
+                // For moving heads, dimmer controls opacity separately
+                if (device.type === 'MOVING_HEAD' && channels.Dimmer !== undefined) {
+                    deviceOpacities[device.id] = channels.Dimmer / 255;
+                } else {
+                    deviceOpacities[device.id] = 1;
+                }
+            } else if (channels.Intensity !== undefined || channels.Dimmer !== undefined) {
+                // Dimmer/Intensity for non-color devices
+                const intensity = (channels.Intensity || channels.Dimmer || 0) / 255;
                 deviceOpacities[device.id] = intensity;
             }
 
