@@ -426,6 +426,7 @@
 <Dialog bind:dialogRef={manualTriggerDialog} title="Create Manual Trigger" onclose={() => manualTriggerDialog?.close()}>
     <form id="manual-trigger-form" method="dialog" onsubmit={(e) => { e.preventDefault(); createManualTrigger(); }}>
         <div class="trigger-columns">
+            <!-- Column 1: Trigger Configuration -->
             <div class="trigger-column">
                 <div class="dialog-input-group">
                     <label for="trigger-input">Input:</label>
@@ -444,7 +445,10 @@
                         {/each}
                     </select>
                 </div>
+            </div>
 
+            <!-- Column 2: Device Configuration -->
+            <div class="trigger-column">
                 <div class="dialog-input-group">
                     <label for="trigger-action-type">Action:</label>
                     <select id="trigger-action-type" bind:value={newTriggerActionType}>
@@ -453,9 +457,7 @@
                         {/each}
                     </select>
                 </div>
-            </div>
 
-            <div class="trigger-column">
                 <div class="dialog-input-group">
                     <label for="trigger-device">Device:</label>
                     <select id="trigger-device" bind:value={newTriggerDevice}>
@@ -464,7 +466,10 @@
                         {/each}
                     </select>
                 </div>
+            </div>
 
+            <!-- Column 3: Action Configuration -->
+            <div class="trigger-column">
                 {#if newTriggerActionType === 'animation'}
                     <div class="dialog-input-group">
                         <label for="trigger-animation">Animation:</label>
@@ -505,11 +510,7 @@
                             {/each}
                         </select>
                     </div>
-                {/if}
-            </div>
-
-            <div class="trigger-column">
-                {#if newTriggerActionType === 'setValue' && newTriggerDevice}
+                {:else if newTriggerActionType === 'setValue' && newTriggerDevice}
                     {@const selectedDevice = devices.find(d => d.id === newTriggerDevice)}
                     {#if selectedDevice}
                         <div class="dialog-input-group">
@@ -536,6 +537,7 @@
 <Dialog bind:dialogRef={automaticTriggerDialog} title="Create Automatic Trigger" onclose={() => automaticTriggerDialog?.close()}>
     <form id="automatic-trigger-form" method="dialog" onsubmit={(e) => { e.preventDefault(); createAutomaticTrigger(); }}>
         <div class="trigger-columns">
+            <!-- Column 1: Device Configuration -->
             <div class="trigger-column">
                 <div class="dialog-input-group">
                     <label for="auto-trigger-device">Device:</label>
@@ -545,7 +547,10 @@
                         {/each}
                     </select>
                 </div>
+            </div>
 
+            <!-- Column 2: Action Configuration -->
+            <div class="trigger-column">
                 <div class="dialog-input-group">
                     <label for="auto-trigger-animation">Animation:</label>
                     <select id="auto-trigger-animation" bind:value={newTriggerAnimation}>
@@ -554,9 +559,7 @@
                         {/each}
                     </select>
                 </div>
-            </div>
 
-            <div class="trigger-column">
                 <div class="dialog-input-group">
                     <label for="auto-trigger-duration">Duration (ms):</label>
                     <div class="duration-with-loop">
@@ -603,6 +606,7 @@
     <form id="edit-trigger-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
         <div class="trigger-columns">
             {#if editingTrigger.triggerType !== 'always'}
+                <!-- Column 1: Trigger Configuration (Manual only) -->
                 <div class="trigger-column">
                     <div class="dialog-input-group">
                         <label for="edit-trigger-type">Type:</label>
@@ -612,7 +616,10 @@
                             {/each}
                         </select>
                     </div>
+                </div>
 
+                <!-- Column 2: Device Configuration (Manual) -->
+                <div class="trigger-column">
                     <div class="dialog-input-group">
                         <label for="edit-trigger-action-type">Action:</label>
                         <select id="edit-trigger-action-type" bind:value={editTriggerActionType}>
@@ -621,20 +628,89 @@
                             {/each}
                         </select>
                     </div>
-                </div>
-            {/if}
 
-            <div class="trigger-column">
-                <div class="dialog-input-group">
-                    <label for="edit-trigger-device">Device:</label>
-                    <select id="edit-trigger-device" bind:value={editTriggerDevice}>
-                        {#each devices as device}
-                            <option value={device.id}>{device.name}</option>
-                        {/each}
-                    </select>
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-device">Device:</label>
+                        <select id="edit-trigger-device" bind:value={editTriggerDevice}>
+                            {#each devices as device}
+                                <option value={device.id}>{device.name}</option>
+                            {/each}
+                        </select>
+                    </div>
                 </div>
 
-                {#if editTriggerActionType === 'animation'}
+                <!-- Column 3: Action Configuration (Manual) -->
+                <div class="trigger-column">
+                    {#if editTriggerActionType === 'animation'}
+                        <div class="dialog-input-group">
+                            <label for="edit-trigger-animation">Animation:</label>
+                            <select id="edit-trigger-animation" bind:value={editTriggerAnimation}>
+                                {#each availableAnimations as animation}
+                                    <option value={animation.cssName}>{animation.name}</option>
+                                {/each}
+                            </select>
+                        </div>
+
+                        <div class="dialog-input-group">
+                            <label for="edit-trigger-duration">Duration (ms):</label>
+                            <div class="duration-with-loop">
+                                <input
+                                    id="edit-trigger-duration"
+                                    type="number"
+                                    bind:value={editTriggerDuration}
+                                    min="100"
+                                    step="100"
+                                />
+                                <div class="checkbox-field">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            bind:checked={editTriggerLooping}
+                                        />
+                                        Loop
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dialog-input-group">
+                            <label for="edit-trigger-easing">Easing:</label>
+                            <select id="edit-trigger-easing" bind:value={editTriggerEasing}>
+                                {#each EASING_FUNCTIONS as easing}
+                                    <option value={easing}>{easing}</option>
+                                {/each}
+                            </select>
+                        </div>
+                    {:else if editTriggerActionType === 'setValue' && editTriggerDevice}
+                        {@const selectedDevice = devices.find(d => d.id === editTriggerDevice)}
+                        {#if selectedDevice}
+                            <div class="dialog-input-group">
+                                <label>Set Channel Values:</label>
+                                <DeviceControls
+                                    deviceType={selectedDevice.type}
+                                    values={getValuesArrayForDevice(editTriggerDevice, editTriggerChannelValues)}
+                                    onChange={handleEditSetValueChange}
+                                />
+                            </div>
+                        {/if}
+                    {/if}
+                </div>
+            {:else}
+                <!-- Automatic trigger: Only 2 columns -->
+                <!-- Column 1: Device Configuration (Automatic) -->
+                <div class="trigger-column">
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-device">Device:</label>
+                        <select id="edit-trigger-device" bind:value={editTriggerDevice}>
+                            {#each devices as device}
+                                <option value={device.id}>{device.name}</option>
+                            {/each}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Column 2: Action Configuration (Automatic) -->
+                <div class="trigger-column">
                     <div class="dialog-input-group">
                         <label for="edit-trigger-animation">Animation:</label>
                         <select id="edit-trigger-animation" bind:value={editTriggerAnimation}>
@@ -674,24 +750,8 @@
                             {/each}
                         </select>
                     </div>
-                {/if}
-            </div>
-
-            <div class="trigger-column">
-                {#if editTriggerActionType === 'setValue' && editTriggerDevice && editingTrigger.triggerType !== 'always'}
-                    {@const selectedDevice = devices.find(d => d.id === editTriggerDevice)}
-                    {#if selectedDevice}
-                        <div class="dialog-input-group">
-                            <label>Set Channel Values:</label>
-                            <DeviceControls
-                                deviceType={selectedDevice.type}
-                                values={getValuesArrayForDevice(editTriggerDevice, editTriggerChannelValues)}
-                                onChange={handleEditSetValueChange}
-                            />
-                        </div>
-                    {/if}
-                {/if}
-            </div>
+                </div>
+            {/if}
         </div>
     </form>
 
