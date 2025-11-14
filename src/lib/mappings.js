@@ -21,8 +21,12 @@ export class InputMapping {
 		this.inputDeviceName = config.inputDeviceName || null; // Store device name for display
 
 		// Visual color for the input (shown in UI and on hardware)
-		// If color is explicitly set (even to null), use it. Otherwise generate a random color.
-		this.color = 'color' in config ? config.color : this._generateRandomColor();
+		// undefined = generate random, null = no color support, string = use that color
+		if (!('color' in config) || config.color === undefined) {
+			this.color = this._generateRandomColor();
+		} else {
+			this.color = config.color; // Could be null or an actual color string
+		}
 
 		// Trigger mode settings
 		this.triggerType = config.triggerType || 'pressed'; // 'pressed', 'not-pressed', 'always'
