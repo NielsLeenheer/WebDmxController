@@ -151,21 +151,19 @@ export const CSS_TO_DMX_MAPPING = {
 		requiredComponents: ['Safety']
 	},
 
-	// Pressure custom property (for pressure-sensitive buttons)
+	// Pressure custom property (for velocity-sensitive buttons)
 	// Note: This is a pattern - actual property names are dynamic (e.g., --button-a-pressure)
-	// This serves as documentation and example for pressure properties
+	// These are CSS variables available for use in custom CSS rules
+	// They do NOT automatically map to device channels - use them explicitly if needed
+	// Example: #device-1 { --intensity: var(--button-a-pressure); }
 	'--pressure': {
-		// Convert 0% to 100% → 0-255 DMX
+		// Pressure properties don't automatically map to channels
+		// They're just CSS variables available for user's custom CSS
 		sample: (cssValue) => {
-			const match = cssValue.match(/(\d+(?:\.\d+)?)/);
-			const percent = match ? parseFloat(match[1]) : 0;
-			const clamped = Math.max(0, Math.min(100, percent));
-			const dmxValue = Math.round((clamped / 100) * 255);
-
-			// Pressure can map to Intensity/Dimmer or custom channels
-			return { 'Intensity': dmxValue, 'Dimmer': dmxValue };
+			// Return empty object - no automatic channel mapping
+			return {};
 		},
-		requiredComponents: [] // Generic - can map to any component
+		requiredComponents: []
 	}
 };
 
