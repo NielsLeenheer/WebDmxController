@@ -23,16 +23,10 @@ export class CSSGenerator {
 	generate(devices = []) {
 		const parts = [];
 
-		// Header comment
-		parts.push('/* DMX Controller - Generated CSS */');
-		parts.push('/* This stylesheet is auto-generated from your animations and input mappings */');
-		parts.push('/* You can edit this CSS and the changes will be reflected in the interface */');
-		parts.push('/* Note: @property definitions are in a separate, non-editable include */\n');
-
 		// Default device values
 		if (devices.length > 0) {
-			parts.push('/* === Default Device Values === */');
-			parts.push('/* These selectors set the default state for each device */');
+			parts.push('/* Default values ================== */');
+			parts.push('');
 
 			for (const device of devices) {
 				const deviceDefaults = this._generateDeviceDefaults(device);
@@ -47,7 +41,8 @@ export class CSSGenerator {
 		// Animations (@keyframes)
 		const animationsCSS = this.animationLibrary.toCSS();
 		if (animationsCSS) {
-			parts.push('/* === Animations === */');
+			parts.push('/* Animations ================== */');
+			parts.push('');
 			parts.push(animationsCSS);
 			parts.push('');
 		}
@@ -55,7 +50,8 @@ export class CSSGenerator {
 		// Input mappings (trigger mode)
 		const mappingsCSS = this.mappingLibrary.toCSS(devices);
 		if (mappingsCSS) {
-			parts.push('/* === Triggers === */');
+			parts.push('/* Triggers ================== */');
+			parts.push('');
 			parts.push(mappingsCSS);
 			parts.push('');
 		}
@@ -63,8 +59,7 @@ export class CSSGenerator {
 		// Custom properties for direct mode (documentation)
 		const directMappings = this.mappingLibrary.getDirectMappings();
 		if (directMappings.length > 0) {
-			parts.push('/* === Custom Properties (Direct Control) === */');
-			parts.push('/* These properties are updated live via JavaScript */');
+			parts.push('/* Custom Properties ================== */');
 			parts.push(':root {');
 
 			for (const mapping of directMappings) {
@@ -77,10 +72,7 @@ export class CSSGenerator {
 		}
 
 		// User customization section
-		parts.push('/* === Custom Styles === */');
 		parts.push('/* Add your custom CSS below to override device defaults and apply animations */');
-		parts.push('');
-
 		return parts.join('\n');
 	}
 
