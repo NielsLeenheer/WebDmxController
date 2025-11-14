@@ -134,6 +134,9 @@ export class InputController {
 						if (offClass) this.triggerManager.addRawClass(offClass);
 						if (onClass) this.triggerManager.removeRawClass(onClass);
 					}
+
+					// Emit event for toggle state change
+					this._emit('input-trigger', { mapping: inputMapping, velocity, toggleState: newState });
 				} else {
 					// Momentary mode: add down class, remove up class
 					const downClass = inputMapping.cssClassDown;
@@ -141,6 +144,9 @@ export class InputController {
 
 					if (downClass) this.triggerManager.addRawClass(downClass);
 					if (upClass) this.triggerManager.removeRawClass(upClass);
+
+					// Emit event for momentary button press
+					this._emit('input-trigger', { mapping: inputMapping, velocity });
 				}
 
 				// Set velocity as custom property (for velocity-sensitive buttons)
@@ -205,6 +211,9 @@ export class InputController {
 
 					if (downClass) this.triggerManager.removeRawClass(downClass);
 					if (upClass) this.triggerManager.addRawClass(upClass);
+
+					// Emit event for momentary button release
+					this._emit('input-release', { mapping: inputMapping });
 				}
 				// Toggle mode: do nothing on release (state was toggled on press)
 
@@ -256,6 +265,9 @@ export class InputController {
 			// Convert value (0-1) to percentage
 			const percentage = Math.round(value * 100);
 			this.customPropertyManager.setProperty(propertyName, `${percentage}%`);
+
+			// Emit event for input value change
+			this._emit('input-valuechange', { mapping: inputMapping, value });
 		}
 
 		// Process direct mode mappings

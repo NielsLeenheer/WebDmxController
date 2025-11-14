@@ -437,28 +437,25 @@
         refreshInputs();
 
         // Track input state changes for display
-        inputController.on('trigger', ({ mapping, velocity }) => {
-            if (mapping.mode === 'input') {
-                // For toggle buttons, flip the state
-                if (mapping.buttonMode === 'toggle') {
-                    const current = inputStates[mapping.id]?.state || 'off';
-                    inputStates[mapping.id] = { state: current === 'on' ? 'off' : 'on' };
-                } else if (mapping.isButtonInput()) {
-                    // For momentary buttons, show pressed state
-                    inputStates[mapping.id] = { state: 'pressed' };
-                }
+        inputController.on('input-trigger', ({ mapping, velocity, toggleState }) => {
+            // For toggle buttons, use the toggleState from the event
+            if (mapping.buttonMode === 'toggle') {
+                inputStates[mapping.id] = { state: toggleState ? 'on' : 'off' };
+            } else if (mapping.isButtonInput()) {
+                // For momentary buttons, show pressed state
+                inputStates[mapping.id] = { state: 'pressed' };
             }
         });
 
-        inputController.on('release', ({ mapping }) => {
-            if (mapping.mode === 'input' && mapping.isButtonInput() && mapping.buttonMode !== 'toggle') {
+        inputController.on('input-release', ({ mapping }) => {
+            if (mapping.isButtonInput() && mapping.buttonMode !== 'toggle') {
                 // For momentary buttons, clear pressed state
                 inputStates[mapping.id] = { state: 'released' };
             }
         });
 
-        inputController.on('valuechange', ({ mapping, value }) => {
-            if (mapping.mode === 'input' && !mapping.isButtonInput()) {
+        inputController.on('input-valuechange', ({ mapping, value }) => {
+            if (!mapping.isButtonInput()) {
                 // For knobs/sliders, store the value (0-1)
                 inputStates[mapping.id] = { value: Math.round(value * 100) };
             }
