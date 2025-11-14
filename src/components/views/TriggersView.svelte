@@ -51,7 +51,7 @@
 
     const ACTION_TYPES = [
         { value: 'animation', label: 'Run Animation' },
-        { value: 'setValue', label: 'Set Device Values' }
+        { value: 'setValue', label: 'Set values' }
     ];
 
     const EASING_FUNCTIONS = [
@@ -489,12 +489,14 @@
                                 bind:value={newTriggerDuration}
                                 min="100"
                                 step="100"
+                                disabled={!newTriggerAnimation}
                             />
                             <div class="checkbox-field">
                                 <label>
                                     <input
                                         type="checkbox"
                                         bind:checked={newTriggerLooping}
+                                        disabled={!newTriggerAnimation}
                                     />
                                     Loop
                                 </label>
@@ -504,7 +506,7 @@
 
                     <div class="dialog-input-group">
                         <label for="trigger-easing">Easing:</label>
-                        <select id="trigger-easing" bind:value={newTriggerEasing}>
+                        <select id="trigger-easing" bind:value={newTriggerEasing} disabled={!newTriggerAnimation}>
                             {#each EASING_FUNCTIONS as easing}
                                 <option value={easing}>{easing}</option>
                             {/each}
@@ -569,12 +571,14 @@
                             bind:value={newTriggerDuration}
                             min="100"
                             step="100"
+                            disabled={!newTriggerAnimation}
                         />
                         <div class="checkbox-field">
                             <label>
                                 <input
                                     type="checkbox"
                                     bind:checked={newTriggerLooping}
+                                    disabled={!newTriggerAnimation}
                                 />
                                 Loop
                             </label>
@@ -584,7 +588,7 @@
 
                 <div class="dialog-input-group">
                     <label for="auto-trigger-easing">Easing:</label>
-                    <select id="auto-trigger-easing" bind:value={newTriggerEasing}>
+                    <select id="auto-trigger-easing" bind:value={newTriggerEasing} disabled={!newTriggerAnimation}>
                         {#each EASING_FUNCTIONS as easing}
                             <option value={easing}>{easing}</option>
                         {/each}
@@ -660,12 +664,14 @@
                                     bind:value={editTriggerDuration}
                                     min="100"
                                     step="100"
+                                    disabled={!editTriggerAnimation}
                                 />
                                 <div class="checkbox-field">
                                     <label>
                                         <input
                                             type="checkbox"
                                             bind:checked={editTriggerLooping}
+                                            disabled={!editTriggerAnimation}
                                         />
                                         Loop
                                     </label>
@@ -675,7 +681,7 @@
 
                         <div class="dialog-input-group">
                             <label for="edit-trigger-easing">Easing:</label>
-                            <select id="edit-trigger-easing" bind:value={editTriggerEasing}>
+                            <select id="edit-trigger-easing" bind:value={editTriggerEasing} disabled={!editTriggerAnimation}>
                                 {#each EASING_FUNCTIONS as easing}
                                     <option value={easing}>{easing}</option>
                                 {/each}
@@ -729,12 +735,14 @@
                                 bind:value={editTriggerDuration}
                                 min="100"
                                 step="100"
+                                disabled={!editTriggerAnimation}
                             />
                             <div class="checkbox-field">
                                 <label>
                                     <input
                                         type="checkbox"
                                         bind:checked={editTriggerLooping}
+                                        disabled={!editTriggerAnimation}
                                     />
                                     Loop
                                 </label>
@@ -744,7 +752,7 @@
 
                     <div class="dialog-input-group">
                         <label for="edit-trigger-easing">Easing:</label>
-                        <select id="edit-trigger-easing" bind:value={editTriggerEasing}>
+                        <select id="edit-trigger-easing" bind:value={editTriggerEasing} disabled={!editTriggerAnimation}>
                             {#each EASING_FUNCTIONS as easing}
                                 <option value={easing}>{easing}</option>
                             {/each}
