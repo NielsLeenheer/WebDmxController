@@ -21,7 +21,7 @@
     let newAnimationDialog = null; // DOM reference - should NOT be $state
     let newAnimationName = $state('');
     let newAnimationDeviceType = $state('RGB');
-    let newAnimationControlName = $state(null); // null = animate all controls
+    let selectedAnimationOption = $state('__all__'); // Selected option from the list
 
     // Edit dialog states
     let editDialog = null; // DOM reference - should NOT be $state
@@ -55,27 +55,66 @@
     function openNewAnimationDialog() {
         newAnimationName = '';
         newAnimationDeviceType = 'RGB';
-        newAnimationControlName = null;
+        selectedAnimationOption = '__all__';
         newAnimationDialog?.showModal();
     }
 
-    // Get controls for selected device type
-    function getControlsForDeviceType() {
+    // Get animation options for the selected device type
+    function getAnimationOptions() {
         if (!newAnimationDeviceType) return [];
-        return DEVICE_TYPES[newAnimationDeviceType]?.controls || [];
+
+        const deviceControls = DEVICE_TYPES[newAnimationDeviceType]?.controls || [];
+        const options = [];
+
+        // Add individual controls at the top
+        for (const control of deviceControls) {
+            options.push({
+                type: 'control',
+                value: control.name,
+                label: control.name
+            });
+        }
+
+        // Add separator
+        if (deviceControls.length > 0) {
+            options.push({ type: 'separator' });
+        }
+
+        // Add "All controls" option
+        options.push({
+            type: 'all',
+            value: '__all__',
+            label: `All controls (${DEVICE_TYPES[newAnimationDeviceType].name})`
+        });
+
+        return options;
+    }
+
+    // Update animation options when device type changes
+    function handleDeviceTypeChange() {
+        selectedAnimationOption = '__all__';
     }
 
     function createNewAnimation() {
         if (!newAnimationName.trim()) return;
 
         const deviceType = newAnimationDeviceType;
-        const controlName = newAnimationControlName || null;
 
-        // Create animation with control name
-        const animation = new Animation(newAnimationName.trim(), deviceType, [], null, controlName);
+        // Convert selected option to controls array
+        let controls = null;
+        if (selectedAnimationOption === '__all__') {
+            // Animate all controls
+            controls = null;
+        } else {
+            // Animate specific control
+            controls = [selectedAnimationOption];
+        }
+
+        // Create animation with controls array
+        const animation = new Animation(newAnimationName.trim(), deviceType, [], null, controls);
 
         // Determine number of channels based on control selection
-        const numChannels = controlName ? animation.getNumChannels() : DEVICE_TYPES[deviceType].channels;
+        const numChannels = animation.getNumChannels();
         const defaultValues = new Array(numChannels).fill(0);
 
         // Add default keyframes at start and end
@@ -164,9 +203,9 @@
                             <h3>{animation.name}</h3>
                             <div class="badges">
                                 <div class="device-type-badge">{DEVICE_TYPES[animation.deviceType].name}</div>
-                                {#if animation.controlName}
-                                    <div class="control-badge">{animation.controlName}</div>
-                                {/if}
+                                {#each animation.getControlNames() as controlName}
+                                    <div class="control-badge">{controlName}</div>
+                                {/each}
                             </div>
                         </div>
                         <IconButton
@@ -205,7 +244,7 @@
 
         <div class="dialog-input-group">
             <label for="device-type">Device Type:</label>
-            <select id="device-type" bind:value={newAnimationDeviceType}>
+            <select id="device-type" bind:value={newAnimationDeviceType} onchange={handleDeviceTypeChange}>
                 {#each Object.entries(DEVICE_TYPES) as [key, deviceType]}
                     <option value={key}>{deviceType.name}</option>
                 {/each}
@@ -213,14 +252,17 @@
         </div>
 
         <div class="dialog-input-group">
-            <label for="control-select">Animate Control:</label>
-            <select id="control-select" bind:value={newAnimationControlName}>
-                <option value={null}>All controls (entire device)</option>
-                {#each getControlsForDeviceType() as control}
-                    <option value={control.name}>{control.name}</option>
+            <label for="animation-target">Animate:</label>
+            <select id="animation-target" bind:value={selectedAnimationOption} class="animation-target-select">
+                {#each getAnimationOptions() as option}
+                    {#if option.type === 'separator'}
+                        <option disabled>──────────</option>
+                    {:else}
+                        <option value={option.value}>{option.label}</option>
+                    {/if}
                 {/each}
             </select>
-            <small class="help-text">Select a specific control or animate all controls together</small>
+            <small class="help-text">Select a specific control or all controls together</small>
         </div>
     </form>
 

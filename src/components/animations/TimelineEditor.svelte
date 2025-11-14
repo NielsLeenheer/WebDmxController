@@ -322,7 +322,7 @@
         deviceType={animation.deviceType}
         bind:values={editingKeyframeValues}
         onChange={updateKeyframeValues}
-        controlFilter={animation.controlName ? [animation.controlName] : null}
+        controlFilter={animation.controls}
     />
 
     {#snippet tools()}

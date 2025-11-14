@@ -58,10 +58,10 @@ class Keyframe {
  * Reusable animation definition (like CSS @keyframes)
  */
 export class Animation {
-	constructor(name = 'animation', deviceType = 'RGB', keyframes = [], cssName = null, controlName = null) {
+	constructor(name = 'animation', deviceType = 'RGB', keyframes = [], cssName = null, controls = null) {
 		this.name = name;
 		this.deviceType = deviceType;
-		this.controlName = controlName; // Optional: animate only this control (e.g., 'Color', 'Dimmer'). null = animate all controls
+		this.controls = controls; // Array of control names to animate, or null to animate all controls
 		this.keyframes = keyframes; // Array of Keyframe objects
 		// Stored CSS animation name (generated from name and stored)
 		this.cssName = cssName || this._generateCSSName();
@@ -231,26 +231,28 @@ export class Animation {
 	 * Returns array of channel indices for the device type
 	 */
 	getAffectedChannels() {
-		if (!this.controlName) {
-			// Animate all channels
-			const numChannels = DEVICE_TYPES[this.deviceType]?.channels || 3;
-			return Array.from({ length: numChannels }, (_, i) => i);
-		}
-
-		// Animate only channels for the specified control
 		const deviceDef = DEVICE_TYPES[this.deviceType];
 		if (!deviceDef) return [];
 
-		const control = deviceDef.controls.find(c => c.name === this.controlName);
-		if (!control) return [];
-
-		const channels = [];
-		for (const componentIndex of Object.values(control.components)) {
-			const channel = deviceDef.components[componentIndex].channel;
-			channels.push(channel);
+		if (!this.controls || this.controls.length === 0) {
+			// Animate all channels
+			const numChannels = deviceDef.channels || 3;
+			return Array.from({ length: numChannels }, (_, i) => i);
 		}
 
-		return channels;
+		// Animate only channels for the specified controls
+		const channels = new Set(); // Use Set to avoid duplicates
+		for (const controlName of this.controls) {
+			const control = deviceDef.controls.find(c => c.name === controlName);
+			if (!control) continue;
+
+			for (const componentIndex of Object.values(control.components)) {
+				const channel = deviceDef.components[componentIndex].channel;
+				channels.add(channel);
+			}
+		}
+
+		return Array.from(channels).sort((a, b) => a - b);
 	}
 
 	/**
@@ -261,13 +263,20 @@ export class Animation {
 	}
 
 	/**
-	 * Get display name for this animation (includes control if specified)
+	 * Get display name for this animation (includes controls if specified)
 	 */
 	getDisplayName() {
-		if (this.controlName) {
-			return `${this.name} (${this.controlName})`;
+		if (this.controls && this.controls.length > 0) {
+			return `${this.name} (${this.controls.join(', ')})`;
 		}
 		return this.name;
+	}
+
+	/**
+	 * Get control names for display badges
+	 */
+	getControlNames() {
+		return this.controls || [];
 	}
 
 	/**
@@ -277,7 +286,7 @@ export class Animation {
 		return {
 			name: this.name,
 			deviceType: this.deviceType,
-			controlName: this.controlName,
+			controls: this.controls,
 			keyframes: this.keyframes.map(kf => ({
 				time: kf.time,
 				deviceType: kf.deviceType,
@@ -291,8 +300,14 @@ export class Animation {
 	 */
 	static fromJSON(json) {
 		const deviceType = json.deviceType || 'RGB'; // Default for backward compatibility
-		const controlName = json.controlName || null; // Optional control name
-		const animation = new Animation(json.name, deviceType, [], null, controlName);
+
+		// Handle backward compatibility: controlName (singular) → controls (array)
+		let controls = json.controls || null;
+		if (!controls && json.controlName) {
+			controls = [json.controlName];
+		}
+
+		const animation = new Animation(json.name, deviceType, [], null, controls);
 
 		for (const kf of json.keyframes) {
 			// Handle old format (properties) and new format (values)
