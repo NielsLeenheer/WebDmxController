@@ -56,13 +56,16 @@ export class InputMapping {
 	}
 
 	/**
-	 * Generate a random vibrant color
+	 * Generate a random named color
+	 * Named colors work across all devices (MIDI, Stream Deck)
 	 */
 	_generateRandomColor() {
-		const hue = Math.floor(Math.random() * 360);
-		const saturation = 70 + Math.floor(Math.random() * 30); // 70-100%
-		const lightness = 50 + Math.floor(Math.random() * 20); // 50-70%
-		return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+		const colors = [
+			'red', 'orange', 'yellow', 'lime', 'green', 'spring',
+			'turquoise', 'cyan', 'sky', 'blue', 'violet', 'purple',
+			'magenta', 'pink'
+		];
+		return colors[Math.floor(Math.random() * colors.length)];
 	}
 
 	/**
