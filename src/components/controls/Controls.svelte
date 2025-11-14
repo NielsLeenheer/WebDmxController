@@ -7,8 +7,32 @@
         components, // Array of component definitions (with channel mapping)
         values = $bindable([]),
         onChange = null,
-        disabledChannels = [] // Array of channel indices that should be disabled
+        disabledChannels = [], // Array of channel indices that should be disabled
+        enabledControls = $bindable(null), // Optional: array of enabled control names, null = show all without checkboxes
+        showCheckboxes = false // Whether to show enable/disable checkboxes
     } = $props();
+
+    // Initialize enabledControls if showCheckboxes is true and enabledControls is null
+    $effect(() => {
+        if (showCheckboxes && enabledControls === null) {
+            enabledControls = controls.map(c => c.name);
+        }
+    });
+
+    function isControlEnabled(control) {
+        if (!showCheckboxes || enabledControls === null) return true;
+        return enabledControls.includes(control.name);
+    }
+
+    function toggleControlEnabled(control) {
+        if (!showCheckboxes || enabledControls === null) return;
+
+        if (enabledControls.includes(control.name)) {
+            enabledControls = enabledControls.filter(name => name !== control.name);
+        } else {
+            enabledControls = [...enabledControls, control.name];
+        }
+    }
 
     function handleSliderChange(channelIndex, value) {
         values[channelIndex] = value;
@@ -115,8 +139,18 @@
             {@const xDisabled = isChannelDisabled(xChannel)}
             {@const yDisabled = isChannelDisabled(yChannel)}
             {@const bothDisabled = xDisabled && yDisabled}
-            <div class="control-xypad">
-                <label>{control.name}</label>
+            <div class="control-xypad" class:control-disabled={!isControlEnabled(control)}>
+                <div class="control-header">
+                    {#if showCheckboxes}
+                        <input
+                            type="checkbox"
+                            checked={isControlEnabled(control)}
+                            onchange={() => toggleControlEnabled(control)}
+                            class="control-checkbox"
+                        />
+                    {/if}
+                    <label>{control.name}</label>
+                </div>
                 <div class="xypad-wrapper" class:disabled={bothDisabled}>
                     <XYPad
                         panValue={values[xChannel]}
@@ -152,7 +186,15 @@
             {@const gChannel = getChannel(control.components.g)}
             {@const bChannel = getChannel(control.components.b)}
             <!-- Color label for the group -->
-            <div class="control-group-label">
+            <div class="control-group-label" class:control-disabled={!isControlEnabled(control)}>
+                {#if showCheckboxes}
+                    <input
+                        type="checkbox"
+                        checked={isControlEnabled(control)}
+                        onchange={() => toggleControlEnabled(control)}
+                        class="control-checkbox"
+                    />
+                {/if}
                 <label>{control.name}</label>
             </div>
             <!-- Red -->
@@ -201,8 +243,18 @@
             {@const channelIndex = getChannel(control.components.value)}
             {@const channelDisabled = isChannelDisabled(channelIndex)}
             {@const isOn = values[channelIndex] === control.onValue}
-            <div class="control">
-                <label>{control.name}</label>
+            <div class="control" class:control-disabled={!isControlEnabled(control)}>
+                <div class="control-header-inline">
+                    {#if showCheckboxes}
+                        <input
+                            type="checkbox"
+                            checked={isControlEnabled(control)}
+                            onchange={() => toggleControlEnabled(control)}
+                            class="control-checkbox"
+                        />
+                    {/if}
+                    <label>{control.name}</label>
+                </div>
                 <div class="toggle-wrapper">
                     <ToggleSwitch
                         checked={isOn}
@@ -224,8 +276,18 @@
         {:else if control.type === 'slider'}
             {@const channelIndex = getChannel(control.components.value)}
             {@const channelDisabled = isChannelDisabled(channelIndex)}
-            <div class="control">
-                <label>{control.name}</label>
+            <div class="control" class:control-disabled={!isControlEnabled(control)}>
+                <div class="control-header-inline">
+                    {#if showCheckboxes}
+                        <input
+                            type="checkbox"
+                            checked={isControlEnabled(control)}
+                            onchange={() => toggleControlEnabled(control)}
+                            class="control-checkbox"
+                        />
+                    {/if}
+                    <label>{control.name}</label>
+                </div>
                 <div class="slider-wrapper">
                     <input
                         type="range"
@@ -262,6 +324,9 @@
     .control-group-label {
         margin-top: 12px;
         margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .control-group-label label {
@@ -399,5 +464,34 @@
         display: flex;
         align-items: center;
         gap: 10px;
+    }
+
+    /* Checkbox support styles */
+    .control-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .control-header-inline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .control-checkbox {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        margin: 0;
+        flex-shrink: 0;
+    }
+
+    .control-disabled {
+        opacity: 0.4;
+    }
+
+    .control-disabled .control-checkbox {
+        opacity: 1;
     }
 </style>

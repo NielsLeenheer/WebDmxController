@@ -23,6 +23,7 @@
     let automaticTriggerDialog = $state(null);
     let newTriggerInput = $state(null);
     let newTriggerType = $state('pressed');
+    let newTriggerButtonMode = $state('momentary'); // 'momentary' or 'toggle'
     let newTriggerActionType = $state('animation'); // 'animation' or 'setValue'
     let newTriggerDevice = $state(null);
     let newTriggerAnimation = $state(null);
@@ -30,12 +31,14 @@
     let newTriggerLooping = $state(false);
     let newTriggerEasing = $state('linear');
     let newTriggerChannelValues = $state({}); // For setValue actions
+    let newTriggerEnabledControls = $state([]); // For setValue: which controls to set
 
     // Edit dialog states
     let editDialog = $state(null);
     let editingTrigger = $state(null);
     let editTriggerInput = $state(null);
     let editTriggerType = $state('pressed');
+    let editTriggerButtonMode = $state('momentary');
     let editTriggerActionType = $state('animation');
     let editTriggerDevice = $state(null);
     let editTriggerAnimation = $state(null);
@@ -43,10 +46,16 @@
     let editTriggerLooping = $state(false);
     let editTriggerEasing = $state('linear');
     let editTriggerChannelValues = $state({});
+    let editTriggerEnabledControls = $state([]);
 
     const MANUAL_TRIGGER_TYPES = [
         { value: 'pressed', label: 'Pressed' },
         { value: 'not-pressed', label: 'Not Pressed' }
+    ];
+
+    const BUTTON_MODES = [
+        { value: 'momentary', label: 'Momentary (Pressed/Released)' },
+        { value: 'toggle', label: 'Toggle (On/Off)' }
     ];
 
     const ACTION_TYPES = [
@@ -73,6 +82,7 @@
     function openManualTriggerDialog() {
         newTriggerInput = availableInputs[0]?.id || null;
         newTriggerType = 'pressed';
+        newTriggerButtonMode = 'momentary';
         newTriggerActionType = 'animation';
         newTriggerDevice = devices[0]?.id || null;
         newTriggerAnimation = availableAnimations[0]?.name || null;
@@ -80,6 +90,16 @@
         newTriggerLooping = false;
         newTriggerEasing = 'linear';
         newTriggerChannelValues = {};
+
+        // Initialize enabled controls with all controls for setValue
+        const device = devices.find(d => d.id === newTriggerDevice);
+        if (device) {
+            const deviceType = DEVICE_TYPES[device.type];
+            newTriggerEnabledControls = deviceType.controls.map(c => c.name);
+        } else {
+            newTriggerEnabledControls = [];
+        }
+
         manualTriggerDialog?.showModal();
     }
 
@@ -120,6 +140,7 @@
             name: triggerName,
             mode: 'trigger',
             triggerType: newTriggerType,
+            buttonMode: newTriggerButtonMode,
             actionType: newTriggerActionType,
             inputDeviceId: inputMapping.inputDeviceId,
             inputControlId: inputMapping.inputControlId,
@@ -132,6 +153,7 @@
             // SetValue action properties
             setValueDeviceId: newTriggerActionType === 'setValue' ? newTriggerDevice : null,
             channelValues: newTriggerActionType === 'setValue' ? {...newTriggerChannelValues} : {},
+            enabledControls: newTriggerActionType === 'setValue' ? [...newTriggerEnabledControls] : [],
             cssClassName: cssClassName
         });
 
@@ -167,14 +189,26 @@
         editingTrigger = trigger;
         editTriggerInput = trigger.inputDeviceId + '_' + trigger.inputControlId;
         editTriggerType = trigger.triggerType;
+        editTriggerButtonMode = trigger.buttonMode || 'momentary';
         editTriggerActionType = trigger.actionType || 'animation';
 
         if (trigger.actionType === 'setValue') {
             editTriggerDevice = trigger.setValueDeviceId;
             editTriggerChannelValues = {...trigger.channelValues};
+            editTriggerEnabledControls = trigger.enabledControls ? [...trigger.enabledControls] : [];
+
+            // If enabledControls is empty, initialize with all controls
+            if (editTriggerEnabledControls.length === 0 && editTriggerDevice) {
+                const device = devices.find(d => d.id === editTriggerDevice);
+                if (device) {
+                    const deviceType = DEVICE_TYPES[device.type];
+                    editTriggerEnabledControls = deviceType.controls.map(c => c.name);
+                }
+            }
         } else {
             editTriggerDevice = trigger.targetDeviceIds[0];
             editTriggerAnimation = trigger.animationName;
+            editTriggerEnabledControls = [];
         }
 
         editTriggerDuration = trigger.duration;
@@ -222,6 +256,7 @@
             const cssClassName = `${baseClassName}-${suffix}`;
 
             editingTrigger.triggerType = editTriggerType;
+            editingTrigger.buttonMode = editTriggerButtonMode;
             editingTrigger.actionType = editTriggerActionType;
 
             if (editTriggerActionType === 'animation') {
@@ -229,10 +264,12 @@
                 editingTrigger.targetDeviceIds = [editTriggerDevice];
                 editingTrigger.setValueDeviceId = null;
                 editingTrigger.channelValues = {};
+                editingTrigger.enabledControls = [];
                 editingTrigger.name = `${selectedInput.name}_${editTriggerType}_${editTriggerAnimation}`;
             } else {
                 editingTrigger.setValueDeviceId = editTriggerDevice;
                 editingTrigger.channelValues = {...editTriggerChannelValues};
+                editingTrigger.enabledControls = [...editTriggerEnabledControls];
                 editingTrigger.animationName = null;
                 editingTrigger.targetDeviceIds = [];
                 editingTrigger.name = `${selectedInput.name}_${editTriggerType}_setValue`;
@@ -445,6 +482,15 @@
                         {/each}
                     </select>
                 </div>
+
+                <div class="dialog-input-group">
+                    <label for="trigger-button-mode">Button Mode:</label>
+                    <select id="trigger-button-mode" bind:value={newTriggerButtonMode}>
+                        {#each BUTTON_MODES as mode}
+                            <option value={mode.value}>{mode.label}</option>
+                        {/each}
+                    </select>
+                </div>
             </div>
 
             <!-- Column 2: Device Configuration -->
@@ -517,11 +563,14 @@
                     {#if selectedDevice}
                         <div class="dialog-input-group">
                             <label>Set Channel Values:</label>
+                            <div class="controls-info">Select which controls to set when triggered:</div>
                             <Controls
                                 controls={DEVICE_TYPES[selectedDevice.type].controls}
                                 components={DEVICE_TYPES[selectedDevice.type].components}
                                 values={getValuesArrayForDevice(newTriggerDevice, newTriggerChannelValues)}
                                 onChange={handleSetValueChange}
+                                showCheckboxes={true}
+                                bind:enabledControls={newTriggerEnabledControls}
                             />
                         </div>
                     {/if}
@@ -621,6 +670,15 @@
                             {/each}
                         </select>
                     </div>
+
+                    <div class="dialog-input-group">
+                        <label for="edit-trigger-button-mode">Button Mode:</label>
+                        <select id="edit-trigger-button-mode" bind:value={editTriggerButtonMode}>
+                            {#each BUTTON_MODES as mode}
+                                <option value={mode.value}>{mode.label}</option>
+                            {/each}
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Column 2: Device Configuration (Manual) -->
@@ -693,11 +751,14 @@
                         {#if selectedDevice}
                             <div class="dialog-input-group">
                                 <label>Set Channel Values:</label>
+                                <div class="controls-info">Select which controls to set when triggered:</div>
                                 <Controls
                                     controls={DEVICE_TYPES[selectedDevice.type].controls}
                                     components={DEVICE_TYPES[selectedDevice.type].components}
                                     values={getValuesArrayForDevice(editTriggerDevice, editTriggerChannelValues)}
                                     onChange={handleEditSetValueChange}
+                                    showCheckboxes={true}
+                                    bind:enabledControls={editTriggerEnabledControls}
                                 />
                             </div>
                         {/if}
@@ -877,5 +938,12 @@
 
     .duration-with-loop .checkbox-field label {
         font-size: 10pt;
+    }
+
+    .controls-info {
+        font-size: 9pt;
+        color: #666;
+        margin-bottom: 8px;
+        font-style: italic;
     }
 </style>
