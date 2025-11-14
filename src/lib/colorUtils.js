@@ -43,21 +43,16 @@ export function getDeviceColor(deviceType, values) {
 
         case 'MOVING_HEAD': {
             // [0]=Pan, [1]=Tilt, [2]=Dimmer, [3]=Red, [4]=Green, [5]=Blue, [6]=White
-            const dimmer = values[2] || 0;
+            // Note: Dimmer is handled separately as --intensity, not applied to color
             const r = values[3] || 0;
             const g = values[4] || 0;
             const b = values[5] || 0;
             const w = values[6] || 0;
 
-            // Apply white
-            let finalR = Math.min(255, r + w);
-            let finalG = Math.min(255, g + w);
-            let finalB = Math.min(255, b + w);
-
-            // Apply dimmer
-            finalR = Math.round(finalR * dimmer / 255);
-            finalG = Math.round(finalG * dimmer / 255);
-            finalB = Math.round(finalB * dimmer / 255);
+            // Apply white channel (adds to all RGB)
+            const finalR = Math.min(255, r + w);
+            const finalG = Math.min(255, g + w);
+            const finalB = Math.min(255, b + w);
 
             return `rgb(${finalR}, ${finalG}, ${finalB})`;
         }
