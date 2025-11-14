@@ -146,8 +146,22 @@ export class InputController {
 
 			for (const mapping of mappings) {
 				if (mapping.mode === 'trigger') {
-					// Trigger animation via CSS class
-					this.triggerManager.trigger(mapping);
+					// For toggle buttons, handle trigger state differently
+					if (inputMapping && inputMapping.buttonMode === 'toggle') {
+						// Get current toggle state
+						const toggleKey = `${deviceId}:${controlId}`;
+						const isOn = this.toggleStates.get(toggleKey) || false;
+
+						// Manually toggle the trigger CSS class
+						if (isOn) {
+							this.triggerManager.addRawClass(mapping.cssClassName);
+						} else {
+							this.triggerManager.removeRawClass(mapping.cssClassName);
+						}
+					} else {
+						// Momentary buttons use normal trigger/release cycle
+						this.triggerManager.trigger(mapping);
+					}
 					this._emit('trigger', { mapping, velocity });
 				}
 			}
@@ -192,7 +206,12 @@ export class InputController {
 
 			for (const mapping of mappings) {
 				if (mapping.mode === 'trigger') {
-					// Call release for all trigger types (pressed, not-pressed)
+					// For toggle buttons, don't call release (state was toggled on press)
+					if (inputMapping && inputMapping.buttonMode === 'toggle') {
+						// Toggle mode: do nothing on release for triggers
+						continue;
+					}
+
 					// Always triggers don't respond to release
 					if (mapping.triggerType !== 'always') {
 						this.triggerManager.release(mapping);
