@@ -303,12 +303,14 @@ export class InputMapping {
 		if (!deviceType) return '';
 
 		// Convert channelValues object to array format
-		// channelValues: { 0: 255, 1: 128, 2: 0 } → [255, 128, 0]
-		const maxChannel = Math.max(...Object.keys(this.channelValues).map(Number), -1);
-		const valuesArray = new Array(maxChannel + 1).fill(0);
+		// Use the device's total channel count to ensure we have enough elements
+		// (e.g., RGBW needs 4 channels even if only RGB are set)
+		const valuesArray = new Array(deviceType.channels).fill(0);
 		for (const [channelStr, value] of Object.entries(this.channelValues)) {
 			const channel = parseInt(channelStr);
-			valuesArray[channel] = value;
+			if (channel < valuesArray.length) {
+				valuesArray[channel] = value;
+			}
 		}
 
 		// Filter controls to only include enabled ones
