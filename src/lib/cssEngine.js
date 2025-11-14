@@ -6,7 +6,7 @@
  */
 
 import { DEVICE_TYPES } from './devices.js';
-import { generateCSSProperties } from './controlCssMapping.js';
+import { generateCSSProperties, sampleCSSProperties } from './controlCssMapping.js';
 
 /**
  * Generates a complete CSS stylesheet from animations and mappings
@@ -190,41 +190,19 @@ export class CSSSampler {
 			return null;
 		}
 
+		const deviceType = DEVICE_TYPES[device.type];
+		if (!deviceType) {
+			console.warn(`[CSSSampler] Unknown device type: ${device.type}`);
+			return null;
+		}
+
 		// Force reflow to ensure getComputedStyle picks up changes
 		element.offsetHeight; // Reading offsetHeight forces a reflow
 
 		const computed = window.getComputedStyle(element);
-		const channels = {};
 
-		switch (device.type) {
-			case 'RGB':
-				Object.assign(channels, this._sampleRGB(computed));
-				break;
-
-			case 'RGBA':
-				Object.assign(channels, this._sampleRGBA(computed));
-				break;
-
-			case 'RGBW':
-				Object.assign(channels, this._sampleRGBW(computed));
-				break;
-
-			case 'DIMMER':
-				Object.assign(channels, this._sampleDimmer(computed));
-				break;
-
-			case 'SMOKE':
-				Object.assign(channels, this._sampleSmoke(computed));
-				break;
-
-			case 'MOVING_HEAD':
-				Object.assign(channels, this._sampleMovingHead(computed));
-				break;
-
-			case 'FLAMETHROWER':
-				Object.assign(channels, this._sampleFlamethrower(computed));
-				break;
-		}
+		// Use unified sampling function
+		const channels = sampleCSSProperties(computed, deviceType.components);
 
 		// Store current values for next comparison
 		this.previousValues.set(device.id, { ...channels });
@@ -246,194 +224,6 @@ export class CSSSampler {
 		}
 
 		return results;
-	}
-
-	/**
-	 * Sample RGB channels from color property
-	 */
-	_sampleRGB(computed) {
-		const color = this._parseComputedColor(computed.color);
-		return {
-			Red: color.r,
-			Green: color.g,
-			Blue: color.b
-		};
-	}
-
-	/**
-	 * Sample RGBA channels
-	 */
-	_sampleRGBA(computed) {
-		const color = this._parseComputedColor(computed.color);
-
-		// Parse --amber percentage to DMX value (0-100% -> 0-255)
-		const amber = computed.getPropertyValue('--amber') || '0%';
-		const amberMatch = amber.match(/(\d+(?:\.\d+)?)/);
-		const amberPercent = amberMatch ? parseFloat(amberMatch[1]) : 0;
-		const amberValue = Math.round(Math.max(0, Math.min(100, amberPercent)) * 255 / 100);
-
-		return {
-			Red: color.r,
-			Green: color.g,
-			Blue: color.b,
-			Amber: amberValue
-		};
-	}
-
-	/**
-	 * Sample RGBW channels
-	 */
-	_sampleRGBW(computed) {
-		const color = this._parseComputedColor(computed.color);
-
-		// Calculate white channel from RGB (use minimum value)
-		const white = Math.min(color.r, color.g, color.b);
-
-		return {
-			Red: color.r,
-			Green: color.g,
-			Blue: color.b,
-			White: white
-		};
-	}
-
-	/**
-	 * Sample dimmer from opacity
-	 */
-	_sampleDimmer(computed) {
-		const opacity = parseFloat(computed.opacity) || 1;
-		return {
-			Intensity: Math.round(opacity * 255)
-		};
-	}
-
-	/**
-	 * Sample smoke machine from custom property
-	 */
-	_sampleSmoke(computed) {
-		const smoke = computed.getPropertyValue('--smoke') || '0%';
-
-		// Parse percentage to DMX value (0-100% -> 0-255)
-		const smokeMatch = smoke.match(/(\d+(?:\.\d+)?)/);
-		const smokePercent = smokeMatch ? parseFloat(smokeMatch[1]) : 0;
-		const smokeValue = Math.round(Math.max(0, Math.min(100, smokePercent)) * 255 / 100);
-
-		return {
-			Output: smokeValue
-		};
-	}
-
-	/**
-	 * Sample moving head (pan/tilt from custom properties, colors, dimmer)
-	 */
-	_sampleMovingHead(computed) {
-		const color = this._parseComputedColor(computed.color);
-		const opacity = parseFloat(computed.opacity) || 1;
-
-		// Parse --pan and --tilt percentages to DMX values
-		const pan = computed.getPropertyValue('--pan') || '0%';
-		const tilt = computed.getPropertyValue('--tilt') || '0%';
-
-		// Pan: -50% to 50% -> 0-255 DMX (0% = center = 127.5)
-		const panMatch = pan.match(/(-?\d+(?:\.\d+)?)/);
-		const panPercent = panMatch ? parseFloat(panMatch[1]) : 0;
-		const panValue = Math.round(((Math.max(-50, Math.min(50, panPercent)) + 50) / 100) * 255);
-
-		// Tilt: 0% to 100% -> 0-255 DMX
-		const tiltMatch = tilt.match(/(\d+(?:\.\d+)?)/);
-		const tiltPercent = tiltMatch ? parseFloat(tiltMatch[1]) : 0;
-		const tiltValue = Math.round(Math.max(0, Math.min(100, tiltPercent)) * 255 / 100);
-
-		return {
-			Pan: panValue,
-			Tilt: tiltValue,
-			Dimmer: Math.round(opacity * 255),
-			Red: color.r,
-			Green: color.g,
-			Blue: color.b,
-			White: Math.min(color.r, color.g, color.b)
-		};
-	}
-
-	/**
-	 * Sample flamethrower from custom properties
-	 */
-	_sampleFlamethrower(computed) {
-		const safety = computed.getPropertyValue('--safety') || 'none';
-		const fuel = computed.getPropertyValue('--fuel') || '0%';
-
-		// Safety: parse "none" or "probably" to DMX values
-		const safetyValue = safety.trim() === 'probably' ? 125 : 0;
-
-		// Fuel: parse percentage to DMX value (0-100% -> 0-255)
-		const fuelMatch = fuel.match(/(\d+(?:\.\d+)?)/);
-		const fuelPercent = fuelMatch ? parseFloat(fuelMatch[1]) : 0;
-		const fuelValue = Math.round(Math.max(0, Math.min(100, fuelPercent)) * 255 / 100);
-
-		return {
-			Safety: safetyValue,
-			Fuel: fuelValue
-		};
-	}
-
-	/**
-	 * Parse computed CSS color (already normalized by browser to rgb/rgba format)
-	 * The browser converts all color formats (hex, hsl, named, etc.) to rgb() or rgba()
-	 */
-	_parseComputedColor(colorString) {
-		// getComputedStyle always returns colors in rgb() or rgba() format
-		// Parse rgb(r, g, b) or rgba(r, g, b, a)
-		const match = colorString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-
-		if (match) {
-			return {
-				r: parseInt(match[1]),
-				g: parseInt(match[2]),
-				b: parseInt(match[3]),
-				a: match[4] ? parseFloat(match[4]) : 1
-			};
-		}
-
-		// Fallback to black if parsing fails
-		return { r: 0, g: 0, b: 0, a: 1 };
-	}
-
-	/**
-	 * Parse CSS translate property to pan/tilt values (0-255)
-	 */
-	_parseTranslate(translateString) {
-		if (!translateString || translateString === 'none') {
-			return { x: 127, y: 127 }; // Default to center
-		}
-
-		// Parse translate(x, y) or translate(x y)
-		const match = translateString.match(/translate\(([^,)]+)(?:,?\s+([^)]+))?\)/);
-
-		if (match) {
-			const x = this._parsePercentage(match[1]);
-			const y = match[2] ? this._parsePercentage(match[2]) : x;
-
-			return {
-				x: Math.round(x * 255 / 100),
-				y: Math.round(y * 255 / 100)
-			};
-		}
-
-		return { x: 127, y: 127 };
-	}
-
-	/**
-	 * Parse percentage value
-	 */
-	_parsePercentage(value) {
-		const num = parseFloat(value);
-
-		if (value.includes('%')) {
-			return Math.max(0, Math.min(100, num));
-		}
-
-		// If not percentage, assume 0-255 range
-		return Math.max(0, Math.min(100, (num / 255) * 100));
 	}
 
 	/**
