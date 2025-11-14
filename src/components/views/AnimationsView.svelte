@@ -21,6 +21,7 @@
     let newAnimationDialog = null; // DOM reference - should NOT be $state
     let newAnimationName = $state('');
     let newAnimationDeviceType = $state('RGB');
+    let newAnimationControlName = $state(null); // null = animate all controls
 
     // Edit dialog states
     let editDialog = null; // DOM reference - should NOT be $state
@@ -54,17 +55,29 @@
     function openNewAnimationDialog() {
         newAnimationName = '';
         newAnimationDeviceType = 'RGB';
+        newAnimationControlName = null;
         newAnimationDialog?.showModal();
+    }
+
+    // Get controls for selected device type
+    function getControlsForDeviceType() {
+        if (!newAnimationDeviceType) return [];
+        return DEVICE_TYPES[newAnimationDeviceType]?.controls || [];
     }
 
     function createNewAnimation() {
         if (!newAnimationName.trim()) return;
 
         const deviceType = newAnimationDeviceType;
-        const numChannels = DEVICE_TYPES[deviceType].channels;
+        const controlName = newAnimationControlName || null;
+
+        // Create animation with control name
+        const animation = new Animation(newAnimationName.trim(), deviceType, [], null, controlName);
+
+        // Determine number of channels based on control selection
+        const numChannels = controlName ? animation.getNumChannels() : DEVICE_TYPES[deviceType].channels;
         const defaultValues = new Array(numChannels).fill(0);
 
-        const animation = new Animation(newAnimationName.trim(), deviceType);
         // Add default keyframes at start and end
         animation.addKeyframe(0, [...defaultValues]);
         animation.addKeyframe(1, [...defaultValues]);
@@ -149,7 +162,12 @@
                     <div class="animation-header">
                         <div class="animation-info">
                             <h3>{animation.name}</h3>
-                            <div class="device-type-badge">{DEVICE_TYPES[animation.deviceType].name}</div>
+                            <div class="badges">
+                                <div class="device-type-badge">{DEVICE_TYPES[animation.deviceType].name}</div>
+                                {#if animation.controlName}
+                                    <div class="control-badge">{animation.controlName}</div>
+                                {/if}
+                            </div>
                         </div>
                         <IconButton
                             icon={editIcon}
@@ -192,6 +210,17 @@
                     <option value={key}>{deviceType.name}</option>
                 {/each}
             </select>
+        </div>
+
+        <div class="dialog-input-group">
+            <label for="control-select">Animate Control:</label>
+            <select id="control-select" bind:value={newAnimationControlName}>
+                <option value={null}>All controls (entire device)</option>
+                {#each getControlsForDeviceType() as control}
+                    <option value={control.name}>{control.name}</option>
+                {/each}
+            </select>
+            <small class="help-text">Select a specific control or animate all controls together</small>
         </div>
     </form>
 
@@ -301,6 +330,12 @@
         color: #333;
     }
 
+    .badges {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
     .device-type-badge {
         background: #e3f2fd;
         color: #1976d2;
@@ -308,5 +343,21 @@
         border-radius: 4px;
         font-size: 9pt;
         font-weight: 500;
+    }
+
+    .control-badge {
+        background: #f3e5f5;
+        color: #7b1fa2;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 9pt;
+        font-weight: 500;
+    }
+
+    .help-text {
+        display: block;
+        margin-top: 4px;
+        font-size: 9pt;
+        color: #888;
     }
 </style>

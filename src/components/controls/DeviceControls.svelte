@@ -7,8 +7,16 @@
         deviceType,
         values = $bindable([]),
         onChange = null,
-        disabledChannels = [] // Array of channel indices that should be disabled
+        disabledChannels = [], // Array of channel indices that should be disabled
+        controlFilter = null // Optional: array of control names to show, or null to show all
     } = $props();
+
+    // Get controls to display (filtered if controlFilter is set)
+    function getControlsToDisplay() {
+        const allControls = DEVICE_TYPES[deviceType].controls;
+        if (!controlFilter) return allControls;
+        return allControls.filter(c => controlFilter.includes(c.name));
+    }
 
     function handleSliderChange(channelIndex, value) {
         values[channelIndex] = value;
@@ -109,7 +117,7 @@
 </script>
 
 <div class="device-controls">
-    {#each DEVICE_TYPES[deviceType].controls as control}
+    {#each getControlsToDisplay() as control}
         {#if control.type === 'xypad'}
             {@const xChannel = getChannel(control.components.x)}
             {@const yChannel = getChannel(control.components.y)}

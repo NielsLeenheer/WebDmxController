@@ -6,6 +6,7 @@
  */
 
 import { getDeviceColor } from './colorUtils.js';
+import { DEVICE_TYPES } from './devices.js';
 
 /**
  * Represents a single keyframe in an animation
@@ -57,9 +58,10 @@ class Keyframe {
  * Reusable animation definition (like CSS @keyframes)
  */
 export class Animation {
-	constructor(name = 'animation', deviceType = 'RGB', keyframes = [], cssName = null) {
+	constructor(name = 'animation', deviceType = 'RGB', keyframes = [], cssName = null, controlName = null) {
 		this.name = name;
 		this.deviceType = deviceType;
+		this.controlName = controlName; // Optional: animate only this control (e.g., 'Color', 'Dimmer'). null = animate all controls
 		this.keyframes = keyframes; // Array of Keyframe objects
 		// Stored CSS animation name (generated from name and stored)
 		this.cssName = cssName || this._generateCSSName();
@@ -225,12 +227,57 @@ export class Animation {
 	}
 
 	/**
+	 * Get channels that this animation affects
+	 * Returns array of channel indices for the device type
+	 */
+	getAffectedChannels() {
+		if (!this.controlName) {
+			// Animate all channels
+			const numChannels = DEVICE_TYPES[this.deviceType]?.channels || 3;
+			return Array.from({ length: numChannels }, (_, i) => i);
+		}
+
+		// Animate only channels for the specified control
+		const deviceDef = DEVICE_TYPES[this.deviceType];
+		if (!deviceDef) return [];
+
+		const control = deviceDef.controls.find(c => c.name === this.controlName);
+		if (!control) return [];
+
+		const channels = [];
+		for (const componentIndex of Object.values(control.components)) {
+			const channel = deviceDef.components[componentIndex].channel;
+			channels.push(channel);
+		}
+
+		return channels;
+	}
+
+	/**
+	 * Get number of channels that this animation uses
+	 */
+	getNumChannels() {
+		return this.getAffectedChannels().length;
+	}
+
+	/**
+	 * Get display name for this animation (includes control if specified)
+	 */
+	getDisplayName() {
+		if (this.controlName) {
+			return `${this.name} (${this.controlName})`;
+		}
+		return this.name;
+	}
+
+	/**
 	 * Serialize to JSON for storage
 	 */
 	toJSON() {
 		return {
 			name: this.name,
 			deviceType: this.deviceType,
+			controlName: this.controlName,
 			keyframes: this.keyframes.map(kf => ({
 				time: kf.time,
 				deviceType: kf.deviceType,
@@ -244,7 +291,8 @@ export class Animation {
 	 */
 	static fromJSON(json) {
 		const deviceType = json.deviceType || 'RGB'; // Default for backward compatibility
-		const animation = new Animation(json.name, deviceType);
+		const controlName = json.controlName || null; // Optional control name
+		const animation = new Animation(json.name, deviceType, [], null, controlName);
 
 		for (const kf of json.keyframes) {
 			// Handle old format (properties) and new format (values)
