@@ -186,7 +186,7 @@
             {@const gChannel = getChannel(control.components.g)}
             {@const bChannel = getChannel(control.components.b)}
             <!-- Red -->
-            {@const rDisabled = isChannelDisabled(rChannel)}
+            {@const rDisabled = isChannelDisabled(rChannel) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
                     <input
@@ -209,7 +209,7 @@
             </div>
             <!-- Green -->
             {@const gDisabled = isChannelDisabled(gChannel) || !isControlEnabled(control)}
-            <div class="control">
+            <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
                     <div></div>
                 {/if}
@@ -226,7 +226,7 @@
             </div>
             <!-- Blue -->
             {@const bDisabled = isChannelDisabled(bChannel) || !isControlEnabled(control)}
-            <div class="control">
+            <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
                     <div></div>
                 {/if}
