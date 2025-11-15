@@ -648,10 +648,63 @@ export class MappingLibrary {
 	 */
 	toCSS(devices = []) {
 		const allMappings = this.getTriggerMappings();
-		return allMappings
-			.map(mapping => mapping.toCSS(devices, allMappings))
-			.filter(css => css)
-			.join('\n\n');
+		const cssRules = [];
+
+		// Group automatic animation triggers by device to combine them
+		const automaticAnimationsByDevice = new Map(); // deviceId -> array of mappings
+
+		// Separate automatic animations from other triggers
+		const automaticAnimations = [];
+		const otherTriggers = [];
+
+		for (const mapping of allMappings) {
+			if (mapping.mode === 'trigger' &&
+			    mapping.actionType === 'animation' &&
+			    mapping.triggerType === 'always' &&
+			    mapping.animationName) {
+				automaticAnimations.push(mapping);
+			} else {
+				otherTriggers.push(mapping);
+			}
+		}
+
+		// Group automatic animations by device
+		for (const mapping of automaticAnimations) {
+			for (const deviceId of mapping.targetDeviceIds) {
+				if (!automaticAnimationsByDevice.has(deviceId)) {
+					automaticAnimationsByDevice.set(deviceId, []);
+				}
+				automaticAnimationsByDevice.get(deviceId).push(mapping);
+			}
+		}
+
+		// Generate combined CSS for automatic animations
+		for (const [deviceId, mappings] of automaticAnimationsByDevice.entries()) {
+			const device = devices.find(d => d.id === deviceId);
+			if (!device) continue;
+
+			// Combine all automatic animations for this device
+			const animationSpecs = mappings.map(mapping => {
+				const iterVal = mapping.iterations === 'infinite' ? 'infinite' : mapping.iterations;
+				const durSec = (mapping.duration / 1000).toFixed(3);
+				return `${mapping.animationName} ${durSec}s ${mapping.easing} ${iterVal}`;
+			});
+
+			const animationValue = animationSpecs.join(', ');
+			cssRules.push(`#${device.cssId} {
+  animation: ${animationValue};
+}`);
+		}
+
+		// Generate CSS for all other triggers (including manual animations)
+		for (const mapping of otherTriggers) {
+			const css = mapping.toCSS(devices, allMappings);
+			if (css) {
+				cssRules.push(css);
+			}
+		}
+
+		return cssRules.join('\n\n');
 	}
 
 	/**
