@@ -6,7 +6,10 @@
     import IconButton from '../common/IconButton.svelte';
     import Dialog from '../common/Dialog.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
+    import recordIcon from '../../assets/icons/record.svg?raw';
+    import stopIcon from '../../assets/icons/stop.svg?raw';
     import editIcon from '../../assets/glyphs/edit.svg?raw';
+
 
     let {
         inputController,
@@ -530,10 +533,12 @@
     <div class="listen-section">
         {#if isListening}
             <Button onclick={stopListening} variant="primary" pulsating={true}>
+                {@html stopIcon}
                 Stop Listening
             </Button>
         {:else}
             <Button onclick={startListening} variant="secondary">
+                {@html recordIcon}
                 Start Listening
             </Button>
         {/if}
