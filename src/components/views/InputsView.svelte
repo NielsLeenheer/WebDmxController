@@ -727,8 +727,8 @@
 
     .input-state {
         position: absolute;
-        bottom: 8px;
-        left: 12px;
+        bottom: 14px;
+        left: 14px;
         font-size: 9pt;
         font-weight: 600;
         color: #666;
