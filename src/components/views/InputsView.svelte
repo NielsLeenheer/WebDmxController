@@ -29,6 +29,7 @@
     let draggedInput = $state(null);
     let draggedIndex = $state(null);
     let dragOverIndex = $state(null);
+    let isAfterMidpoint = $state(false);
 
     const deviceColorUsage = new Map(); // deviceId -> Set(colors)
     const deviceColorIndices = new Map(); // deviceId -> last palette index used when cycling
@@ -44,15 +45,21 @@
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
         dragOverIndex = index;
+
+        // Calculate if mouse is in the second half of the card
+        const rect = event.currentTarget.getBoundingClientRect();
+        const mouseX = event.clientX;
+        const cardMidpoint = rect.left + rect.width / 2;
+        isAfterMidpoint = mouseX > cardMidpoint;
     }
 
     function isDragAfter(index) {
-        if (draggedIndex === null || dragOverIndex === null) return false;
-        return draggedIndex < index;
+        return dragOverIndex === index && isAfterMidpoint;
     }
 
     function handleDragLeave() {
         dragOverIndex = null;
+        isAfterMidpoint = false;
     }
 
     function handleDrop(event, targetIndex) {
@@ -61,16 +68,35 @@
         if (!draggedInput) return;
 
         const currentIndex = savedInputs.findIndex(i => i.id === draggedInput.id);
-        if (currentIndex === -1 || currentIndex === targetIndex) {
+        if (currentIndex === -1) {
             draggedInput = null;
+            draggedIndex = null;
             dragOverIndex = null;
+            isAfterMidpoint = false;
+            return;
+        }
+
+        // Adjust target index based on whether we're inserting after the midpoint
+        let insertIndex = targetIndex;
+        if (isAfterMidpoint) {
+            insertIndex = targetIndex + 1;
+        }
+
+        // If dragging from before to after in the same position, no change needed
+        if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
+            draggedInput = null;
+            draggedIndex = null;
+            dragOverIndex = null;
+            isAfterMidpoint = false;
             return;
         }
 
         // Reorder the savedInputs array
         const newInputs = [...savedInputs];
         const [removed] = newInputs.splice(currentIndex, 1);
-        newInputs.splice(targetIndex, 0, removed);
+        // Adjust insert position if we removed an item before it
+        const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
+        newInputs.splice(finalInsertIndex, 0, removed);
         savedInputs = newInputs;
 
         // Update the mapping library order
@@ -89,12 +115,14 @@
         draggedInput = null;
         draggedIndex = null;
         dragOverIndex = null;
+        isAfterMidpoint = false;
     }
 
     function handleDragEnd() {
         draggedInput = null;
         draggedIndex = null;
         dragOverIndex = null;
+        isAfterMidpoint = false;
     }
 
     function getInputStateDisplay(input) {

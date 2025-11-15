@@ -30,6 +30,7 @@
     let draggedDevice = $state(null);
     let draggedIndex = $state(null);
     let dragOverIndex = $state(null);
+    let isAfterMidpoint = $state(false);
 
     function handleDragStart(event, device) {
         draggedDevice = device;
@@ -41,15 +42,21 @@
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
         dragOverIndex = index;
+
+        // Calculate if mouse is in the second half of the card
+        const rect = event.currentTarget.getBoundingClientRect();
+        const mouseX = event.clientX;
+        const cardMidpoint = rect.left + rect.width / 2;
+        isAfterMidpoint = mouseX > cardMidpoint;
     }
 
     function isDragAfter(index) {
-        if (draggedIndex === null || dragOverIndex === null) return false;
-        return draggedIndex < index;
+        return dragOverIndex === index && isAfterMidpoint;
     }
 
     function handleDragLeave() {
         dragOverIndex = null;
+        isAfterMidpoint = false;
     }
 
     function handleDrop(event, targetIndex) {
@@ -58,27 +65,48 @@
         if (!draggedDevice) return;
 
         const currentIndex = devices.findIndex(d => d.id === draggedDevice.id);
-        if (currentIndex === -1 || currentIndex === targetIndex) {
+        if (currentIndex === -1) {
             draggedDevice = null;
+            draggedIndex = null;
             dragOverIndex = null;
+            isAfterMidpoint = false;
+            return;
+        }
+
+        // Adjust target index based on whether we're inserting after the midpoint
+        let insertIndex = targetIndex;
+        if (isAfterMidpoint) {
+            insertIndex = targetIndex + 1;
+        }
+
+        // If dragging from before to after in the same position, no change needed
+        if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
+            draggedDevice = null;
+            draggedIndex = null;
+            dragOverIndex = null;
+            isAfterMidpoint = false;
             return;
         }
 
         // Reorder the array
         const newDevices = [...devices];
         const [removed] = newDevices.splice(currentIndex, 1);
-        newDevices.splice(targetIndex, 0, removed);
+        // Adjust insert position if we removed an item before it
+        const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
+        newDevices.splice(finalInsertIndex, 0, removed);
         devices = newDevices;
 
         draggedDevice = null;
         draggedIndex = null;
         dragOverIndex = null;
+        isAfterMidpoint = false;
     }
 
     function handleDragEnd() {
         draggedDevice = null;
         draggedIndex = null;
         dragOverIndex = null;
+        isAfterMidpoint = false;
     }
 
     function openSettingsDialog(device) {

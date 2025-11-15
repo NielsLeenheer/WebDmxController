@@ -25,6 +25,7 @@
     let draggedTrigger = $state(null);
     let draggedIndex = $state(null);
     let dragOverIndex = $state(null);
+    let isAfterMidpoint = $state(false);
 
     let manualTriggerDialog = $state(null);
     let automaticTriggerDialog = $state(null);
@@ -167,15 +168,21 @@
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
         dragOverIndex = index;
+
+        // Calculate if mouse is in the second half of the card (vertically)
+        const rect = event.currentTarget.getBoundingClientRect();
+        const mouseY = event.clientY;
+        const cardMidpoint = rect.top + rect.height / 2;
+        isAfterMidpoint = mouseY > cardMidpoint;
     }
 
     function isDragAfter(index) {
-        if (draggedIndex === null || dragOverIndex === null) return false;
-        return draggedIndex < index;
+        return dragOverIndex === index && isAfterMidpoint;
     }
 
     function handleDragLeave() {
         dragOverIndex = null;
+        isAfterMidpoint = false;
     }
 
     function handleDrop(event, targetIndex) {
@@ -184,16 +191,35 @@
         if (!draggedTrigger) return;
 
         const currentIndex = triggers.findIndex(t => t.id === draggedTrigger.id);
-        if (currentIndex === -1 || currentIndex === targetIndex) {
+        if (currentIndex === -1) {
             draggedTrigger = null;
+            draggedIndex = null;
             dragOverIndex = null;
+            isAfterMidpoint = false;
+            return;
+        }
+
+        // Adjust target index based on whether we're inserting after the midpoint
+        let insertIndex = targetIndex;
+        if (isAfterMidpoint) {
+            insertIndex = targetIndex + 1;
+        }
+
+        // If dragging from before to after in the same position, no change needed
+        if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
+            draggedTrigger = null;
+            draggedIndex = null;
+            dragOverIndex = null;
+            isAfterMidpoint = false;
             return;
         }
 
         // Reorder the triggers array
         const newTriggers = [...triggers];
         const [removed] = newTriggers.splice(currentIndex, 1);
-        newTriggers.splice(targetIndex, 0, removed);
+        // Adjust insert position if we removed an item before it
+        const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
+        newTriggers.splice(finalInsertIndex, 0, removed);
         triggers = newTriggers;
 
         // Update the mapping library order
@@ -211,12 +237,14 @@
         draggedTrigger = null;
         draggedIndex = null;
         dragOverIndex = null;
+        isAfterMidpoint = false;
     }
 
     function handleDragEnd() {
         draggedTrigger = null;
         draggedIndex = null;
         dragOverIndex = null;
+        isAfterMidpoint = false;
     }
 
     function handleMappingChange() {
