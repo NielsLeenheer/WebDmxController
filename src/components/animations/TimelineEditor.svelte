@@ -379,7 +379,6 @@
         cursor: grab;
         z-index: 5;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        transition: all 0.15s ease;
     }
 
     .timeline-keyframe-marker:hover {
@@ -391,7 +390,6 @@
         cursor: grabbing;
         z-index: 15;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-        transition: none;
     }
 
     .keyframe-time {
