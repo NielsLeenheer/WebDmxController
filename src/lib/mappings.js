@@ -314,10 +314,13 @@ export class InputMapping {
 		}
 
 		// Filter controls to only include enabled ones
-		const enabledControlNames = new Set(this.enabledControls || []);
-		const filteredControls = deviceType.controls.filter(control =>
-			enabledControlNames.size === 0 || enabledControlNames.has(control.name)
-		);
+		// If enabledControls is null/undefined, include all controls
+		// If enabledControls is an array (even if empty), filter to only those controls
+		const filteredControls = Array.isArray(this.enabledControls)
+			? deviceType.controls.filter(control =>
+				this.enabledControls.includes(control.name)
+			)
+			: deviceType.controls;
 
 		// Generate CSS properties only for enabled controls
 		const properties = generateCSSProperties(
