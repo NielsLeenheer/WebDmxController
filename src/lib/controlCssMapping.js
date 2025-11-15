@@ -231,6 +231,30 @@ export const CONTROL_CSS_MAPPING = {
 				}
 			}
 		}
+	},
+	// Toggle controls (Safety, etc.)
+	toggle: {
+		properties: {
+			value: {
+				// Property name depends on control name
+				getName: (controlName) => {
+					return `--${controlName.toLowerCase().replace(/\s+/g, '-')}`;
+				},
+				// Convert DMX value based on control type
+				convert: (value, controlName, control) => {
+					if (controlName === 'Safety') {
+						// Special case: Safety uses "none" or "probably"
+						return value >= 125 ? 'probably' : 'none';
+					}
+					// For other toggles, use on/off based on onValue threshold
+					if (control && control.onValue !== undefined) {
+						return value >= control.onValue ? 'on' : 'off';
+					}
+					// Default: treat any value >= 128 as on
+					return value >= 128 ? 'on' : 'off';
+				}
+			}
+		}
 	}
 };
 
@@ -271,6 +295,15 @@ export function generateCSSProperties(controls, components, values, deviceType) 
 
 			const propName = mapping.properties.value.getName(control.name);
 			const propValue = mapping.properties.value.convert(value, control.name);
+			properties[propName] = propValue;
+
+		} else if (control.type === 'toggle') {
+			// Toggle control (Safety, etc.)
+			const channel = components[control.components.value].channel;
+			const value = values[channel] || 0;
+
+			const propName = mapping.properties.value.getName(control.name);
+			const propValue = mapping.properties.value.convert(value, control.name, control);
 			properties[propName] = propValue;
 		}
 	}

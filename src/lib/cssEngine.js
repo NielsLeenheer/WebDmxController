@@ -99,14 +99,6 @@ export class CSSGenerator {
 			device.type
 		);
 
-		// Handle special cases not covered by control mapping
-		if (device.type === 'FLAMETHROWER') {
-			const [safety, fuel] = defaultValues;
-			// Safety: map 0 to "none", 125+ to "probably"
-			properties['--safety'] = safety >= 125 ? 'probably' : 'none';
-			// Fuel is handled by standard slider mapping
-		}
-
 		if (Object.keys(properties).length === 0) return null;
 
 		// Convert properties object to CSS string
