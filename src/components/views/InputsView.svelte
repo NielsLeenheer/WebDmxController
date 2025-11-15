@@ -598,6 +598,19 @@
                 }}
                 autofocus
             />
+            <div class="css-identifiers">
+                {#if editingInput.isButtonInput()}
+                    {#if editingButtonMode === 'toggle'}
+                        <code class="css-identifier">.{getPreviewButtonOnClass()}</code>
+                        <code class="css-identifier">.{getPreviewButtonOffClass()}</code>
+                    {:else}
+                        <code class="css-identifier">.{getPreviewButtonDownClass()}</code>
+                        <code class="css-identifier">.{getPreviewButtonUpClass()}</code>
+                    {/if}
+                {:else}
+                    <code class="css-identifier">{getPreviewPropertyName()}</code>
+                {/if}
+            </div>
         </div>
 
         {#if editingInput.isButtonInput()}
@@ -607,20 +620,6 @@
                     <option value="momentary">Momentary (Down/Up)</option>
                     <option value="toggle">Toggle (On/Off)</option>
                 </select>
-            </div>
-
-            <div class="css-identifiers">
-                {#if editingButtonMode === 'toggle'}
-                    <code class="css-identifier">.{getPreviewButtonOnClass()}</code>
-                    <code class="css-identifier">.{getPreviewButtonOffClass()}</code>
-                {:else}
-                    <code class="css-identifier">.{getPreviewButtonDownClass()}</code>
-                    <code class="css-identifier">.{getPreviewButtonUpClass()}</code>
-                {/if}
-            </div>
-        {:else}
-            <div class="css-identifiers">
-                <code class="css-identifier">{getPreviewPropertyName()}</code>
             </div>
         {/if}
     </form>
