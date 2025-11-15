@@ -408,11 +408,9 @@
             {#if animations.length > 0}
                 <div class="reference-section">
                     <h4>Animations</h4>
-                    <div class="reference-list">
+                    <div class="css-identifiers">
                         {#each animations as animation (animation.name)}
-                            <div class="reference-item">
-                                <code>{animation.cssName}</code>
-                            </div>
+                            <code class="css-identifier">{animation.cssName}</code>
                         {/each}
                     </div>
                 </div>
@@ -422,38 +420,26 @@
             {#if allMappings.length > 0}
                 <div class="reference-section">
                     <h4>Inputs</h4>
-                    <div class="reference-list">
+                    <div class="css-identifiers">
                         {#each allMappings as mapping (mapping.id)}
                             {#if mapping.mode === 'input'}
                                 {#if mapping.isButtonInput()}
                                     <!-- Buttons show classes based on mode -->
                                     {#if mapping.buttonMode === 'toggle'}
                                         <!-- Toggle buttons show on and off classes -->
-                                        <div class="reference-item">
-                                            <code>.{mapping.getButtonOnClass()}</code>
-                                        </div>
-                                        <div class="reference-item">
-                                            <code>.{mapping.getButtonOffClass()}</code>
-                                        </div>
+                                        <code class="css-identifier">.{mapping.getButtonOnClass()}</code>
+                                        <code class="css-identifier">.{mapping.getButtonOffClass()}</code>
                                     {:else}
                                         <!-- Momentary buttons show down and up classes -->
-                                        <div class="reference-item">
-                                            <code>.{mapping.getButtonDownClass()}</code>
-                                        </div>
-                                        <div class="reference-item">
-                                            <code>.{mapping.getButtonUpClass()}</code>
-                                        </div>
+                                        <code class="css-identifier">.{mapping.getButtonDownClass()}</code>
+                                        <code class="css-identifier">.{mapping.getButtonUpClass()}</code>
                                     {/if}
                                 {:else}
                                     <!-- Sliders/Knobs show custom property -->
-                                    <div class="reference-item">
-                                        <code>{mapping.getInputPropertyName()}</code>
-                                    </div>
+                                    <code class="css-identifier">{mapping.getInputPropertyName()}</code>
                                 {/if}
                             {:else if mapping.mode === 'direct'}
-                                <div class="reference-item">
-                                    <code>{mapping.getPropertyName()}</code>
-                                </div>
+                                <code class="css-identifier">{mapping.getPropertyName()}</code>
                             {/if}
                         {/each}
                     </div>
@@ -562,19 +548,6 @@
         font-size: 8pt;
         color: #007acc;
         text-align: center;
-    }
-
-    .reference-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .reference-item code {
-        display: inline-block;
-        font-family: var(--font-stack-mono);
-        font-size: 8pt;
-        color: #007acc;
     }
 
     .animation-targets {

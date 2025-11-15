@@ -611,16 +611,16 @@
 
             <div class="css-identifiers">
                 {#if editingButtonMode === 'toggle'}
-                    <code class="css-id">.{getPreviewButtonOnClass()}</code>
-                    <code class="css-id">.{getPreviewButtonOffClass()}</code>
+                    <code class="css-identifier">.{getPreviewButtonOnClass()}</code>
+                    <code class="css-identifier">.{getPreviewButtonOffClass()}</code>
                 {:else}
-                    <code class="css-id">.{getPreviewButtonDownClass()}</code>
-                    <code class="css-id">.{getPreviewButtonUpClass()}</code>
+                    <code class="css-identifier">.{getPreviewButtonDownClass()}</code>
+                    <code class="css-identifier">.{getPreviewButtonUpClass()}</code>
                 {/if}
             </div>
         {:else}
             <div class="css-identifiers">
-                <code class="css-id">{getPreviewPropertyName()}</code>
+                <code class="css-identifier">{getPreviewPropertyName()}</code>
             </div>
         {/if}
     </form>
@@ -786,19 +786,4 @@
         font-size: 10pt;
     }
 
-    .css-identifiers {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 8px;
-    }
-
-    .css-id {
-        font-family: var(--font-stack-mono);
-        font-size: 8pt;
-        color: #007acc;
-        background: #f5f5f5;
-        padding: 4px 8px;
-        border-radius: 4px;
-    }
 </style>

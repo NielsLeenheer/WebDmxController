@@ -270,7 +270,10 @@
                 placeholder="e.g., rainbow, pulse, sweep"
                 autofocus
             />
-            <small class="css-preview">@keyframes {getNewAnimationCSSName()}</small>
+        </div>
+
+        <div class="css-identifiers">
+            <code class="css-identifier">@keyframes {getNewAnimationCSSName()}</code>
         </div>
 
         <div class="dialog-input-group">
@@ -307,7 +310,10 @@
                 placeholder="Animation name"
                 autofocus
             />
-            <small class="css-preview">@keyframes {getPreviewCSSName()}</small>
+        </div>
+
+        <div class="css-identifiers">
+            <code class="css-identifier">@keyframes {getPreviewCSSName()}</code>
         </div>
     </form>
 

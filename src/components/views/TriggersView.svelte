@@ -709,6 +709,16 @@
                 <!-- Column 1: Trigger Configuration (Manual only) -->
                 <div class="trigger-column">
                     <div class="dialog-input-group">
+                        <label for="edit-trigger-input">Input:</label>
+                        <input
+                            id="edit-trigger-input"
+                            type="text"
+                            value={getInputName(editingTrigger.inputDeviceId, editingTrigger.inputControlId)}
+                            disabled
+                        />
+                    </div>
+
+                    <div class="dialog-input-group">
                         <label for="edit-trigger-type">Trigger Type:</label>
                         <select id="edit-trigger-type" bind:value={editTriggerType}>
                             {#each getTriggerTypeOptionsForTrigger(editingTrigger) as type}
