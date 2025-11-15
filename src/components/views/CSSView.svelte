@@ -157,8 +157,8 @@
                 };
             }
 
-            // Only update DMX hardware when active
-            if (dmxController && isActive) {
+            // Always update DMX hardware with CSS-sampled values
+            if (dmxController) {
                 updateDeviceToDMX(device, newValues);
             }
         });
@@ -337,8 +337,8 @@
             }
         });
 
-        // Start animation loop (for preview updates, always running)
-        // DMX output is controlled by isActive prop from parent
+        // Start animation loop (for preview updates and DMX output, always running)
+        // DMX controller is always updated with CSS-sampled values
         if (!animationFrameId) {
             updateDMXFromCSS();
         }
