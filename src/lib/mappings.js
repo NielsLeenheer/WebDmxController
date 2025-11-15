@@ -283,7 +283,13 @@ export class InputMapping {
 		const iterationsValue = this.iterations === 'infinite' ? 'infinite' : this.iterations;
 		const durationSec = (this.duration / 1000).toFixed(3);
 
-		return `.${this.cssClassName} ${targetSelectors} {
+		// For automatic triggers (always), don't use a class selector
+		// For input triggers, use the class selector
+		const selector = this.triggerType === 'always'
+			? targetSelectors
+			: `.${this.cssClassName} ${targetSelectors}`;
+
+		return `${selector} {
   animation: ${this.animationName} ${durationSec}s ${this.easing} ${iterationsValue};
 }`;
 	}
@@ -337,7 +343,13 @@ export class InputMapping {
 			.map(([prop, value]) => `  ${prop}: ${value};`)
 			.join('\n');
 
-		return `.${this.cssClassName} #${device.cssId} {
+		// For automatic triggers (always), don't use a class selector
+		// For input triggers, use the class selector
+		const selector = this.triggerType === 'always'
+			? `#${device.cssId}`
+			: `.${this.cssClassName} #${device.cssId}`;
+
+		return `${selector} {
 ${props}
 }`;
 	}
