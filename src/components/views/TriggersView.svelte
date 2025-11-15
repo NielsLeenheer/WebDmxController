@@ -507,6 +507,30 @@
         return getDeviceColor(device.type, values);
     }
 
+    // Get device ID from trigger (works for both animation and setValue actions)
+    function getTriggerDeviceId(trigger) {
+        if (trigger.actionType === 'animation') {
+            return trigger.targetDeviceIds?.[0];
+        } else {
+            return trigger.setValueDeviceId;
+        }
+    }
+
+    // Get device preview based on default values
+    function getDevicePreview(trigger) {
+        const deviceId = getTriggerDeviceId(trigger);
+        const device = devices.find(d => d.id === deviceId);
+        if (!device) return '#888';
+
+        return getDeviceColor(device.type, device.defaultValues);
+    }
+
+    // Get device name from trigger
+    function getTriggerDeviceName(trigger) {
+        const deviceId = getTriggerDeviceId(trigger);
+        return getDeviceName(deviceId);
+    }
+
     // Helper functions for channel value management
     function getSelectedDevice(deviceId) {
         return devices.find(d => d.id === deviceId);
@@ -630,7 +654,18 @@
                         {/if}
                     </div>
 
-                    <!-- Column 2: Action -->
+                    <!-- Column 2: Device -->
+                    <div class="trigger-column trigger-device-column">
+                        <div
+                            class="trigger-preview"
+                            style="background: {getDevicePreview(trigger)}"
+                        ></div>
+                        <div class="trigger-text">
+                            {getTriggerDeviceName(trigger)}
+                        </div>
+                    </div>
+
+                    <!-- Column 3: Action -->
                     <div class="trigger-column trigger-action-column">
                         {#if trigger.actionType === 'animation'}
                             <div
@@ -1099,6 +1134,10 @@
 
     .trigger-input-column {
         min-width: 200px;
+    }
+
+    .trigger-device-column {
+        min-width: 150px;
     }
 
     .trigger-action-column {
