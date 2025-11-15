@@ -682,19 +682,7 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
-        animation: slideIn 0.2s ease-out;
         position: relative;
-    }
-
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
     }
 
     .input-color-badge {
