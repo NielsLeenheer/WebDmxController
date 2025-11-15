@@ -570,15 +570,17 @@
         position: absolute;
         left: 0;
         right: 0;
-        top: -10px;
+        top: 0;
         height: 4px;
         background: #2196F3;
-        border-radius: 2px;
+        border-radius: 2px 2px 0 0;
+        z-index: 10;
     }
 
     .animation-card.drag-after::before {
         top: auto;
-        bottom: -10px;
+        bottom: 0;
+        border-radius: 0 0 2px 2px;
     }
 
     .animation-header {
