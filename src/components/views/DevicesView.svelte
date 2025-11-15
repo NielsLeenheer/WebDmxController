@@ -588,7 +588,7 @@
     }
 
     .add-device-section {
-        padding: 20px 20px 30px;
+        padding: 20px;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -608,7 +608,7 @@
 
     .devices-list {
         overflow-y: auto;
-        padding: 0 40px 20px 40px;
+        padding: 20px 40px;
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(16em, 1fr));
         gap: 15px;

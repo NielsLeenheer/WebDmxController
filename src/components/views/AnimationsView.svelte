@@ -347,7 +347,7 @@
     .animations-list {
         flex: 1;
         overflow-y: auto;
-        padding: 0 20px 20px 20px;
+        padding: 20px;
         display: flex;
         flex-direction: column;
         align-items: center;
