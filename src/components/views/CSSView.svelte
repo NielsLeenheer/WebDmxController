@@ -498,6 +498,7 @@
         background: #f5f5f5;
         border-radius: 8px;
         overflow: hidden;
+        overflow-y: auto;
         display: flex;
         flex-direction: column;
         height: 100%;
@@ -510,8 +511,6 @@
 
     .reference-section:last-child {
         border-bottom: none;
-        flex: 1;
-        overflow-y: auto;
     }
 
     .reference-section h4 {
