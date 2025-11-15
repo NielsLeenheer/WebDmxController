@@ -439,6 +439,10 @@
         width: 4em;
     }
 
+    .xypad-wrapper {
+        padding-left: 6px;
+        padding-bottom: 6px;
+    }
     .xypad-wrapper.disabled {
         opacity: 0.5;
         pointer-events: none;
