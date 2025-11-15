@@ -246,17 +246,17 @@ export class InputMapping {
 	 * Trigger mode: generates CSS class with animation
 	 * Direct mode: not used (values set via JS)
 	 */
-	toCSS(devices = []) {
+	toCSS(devices = [], allMappings = []) {
 		if (this.mode === 'trigger') {
-			return this._generateTriggerCSS(devices);
+			return this._generateTriggerCSS(devices, allMappings);
 		}
 		// Direct mode doesn't generate static CSS - values are updated live via custom properties
 		return '';
 	}
 
-	_generateTriggerCSS(devices = []) {
+	_generateTriggerCSS(devices = [], allMappings = []) {
 		if (this.actionType === 'animation') {
-			return this._generateAnimationCSS(devices);
+			return this._generateAnimationCSS(devices, allMappings);
 		} else if (this.actionType === 'setValue') {
 			return this._generateSetValueCSS(devices);
 		}
@@ -266,7 +266,7 @@ export class InputMapping {
 	/**
 	 * Generate CSS for animation actions
 	 */
-	_generateAnimationCSS(devices = []) {
+	_generateAnimationCSS(devices = [], allMappings = []) {
 		if (!this.animationName) return '';
 
 		// Map device IDs to CSS IDs
@@ -283,6 +283,35 @@ export class InputMapping {
 		const iterationsValue = this.iterations === 'infinite' ? 'infinite' : this.iterations;
 		const durationSec = (this.duration / 1000).toFixed(3);
 
+		// Build the animation specification for this trigger
+		const thisAnimation = `${this.animationName} ${durationSec}s ${this.easing} ${iterationsValue}`;
+
+		// For manual triggers (non-automatic), check for automatic triggers on the same devices
+		// and prepend their animations to preserve them
+		let animationValue = thisAnimation;
+		if (this.triggerType !== 'always') {
+			// Find all automatic triggers that target any of the same devices
+			const automaticAnimations = allMappings
+				.filter(mapping =>
+					mapping.mode === 'trigger' &&
+					mapping.actionType === 'animation' &&
+					mapping.triggerType === 'always' &&
+					mapping.animationName &&
+					// Check if this automatic trigger targets any of our devices
+					mapping.targetDeviceIds.some(deviceId => this.targetDeviceIds.includes(deviceId))
+				)
+				.map(mapping => {
+					const iterVal = mapping.iterations === 'infinite' ? 'infinite' : mapping.iterations;
+					const durSec = (mapping.duration / 1000).toFixed(3);
+					return `${mapping.animationName} ${durSec}s ${mapping.easing} ${iterVal}`;
+				});
+
+			// Combine automatic animations with this animation
+			if (automaticAnimations.length > 0) {
+				animationValue = [...automaticAnimations, thisAnimation].join(', ');
+			}
+		}
+
 		// For automatic triggers (always), don't use a class selector
 		// For input triggers, use the class selector
 		const selector = this.triggerType === 'always'
@@ -290,7 +319,7 @@ export class InputMapping {
 			: `.${this.cssClassName} ${targetSelectors}`;
 
 		return `${selector} {
-  animation: ${this.animationName} ${durationSec}s ${this.easing} ${iterationsValue};
+  animation: ${animationValue};
 }`;
 	}
 
@@ -618,8 +647,9 @@ export class MappingLibrary {
 	 * Generate CSS for all trigger mappings
 	 */
 	toCSS(devices = []) {
-		return this.getTriggerMappings()
-			.map(mapping => mapping.toCSS(devices))
+		const allMappings = this.getTriggerMappings();
+		return allMappings
+			.map(mapping => mapping.toCSS(devices, allMappings))
 			.filter(css => css)
 			.join('\n\n');
 	}
