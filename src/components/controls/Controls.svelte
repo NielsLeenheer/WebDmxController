@@ -187,18 +187,16 @@
             {@const bChannel = getChannel(control.components.b)}
             <!-- Red -->
             {@const rDisabled = isChannelDisabled(rChannel)}
-            <div class="control">
-                <div class="control-header-inline">
-                    {#if showCheckboxes}
-                        <input
-                            type="checkbox"
-                            checked={isControlEnabled(control)}
-                            onchange={() => toggleControlEnabled(control)}
-                            class="control-checkbox"
-                        />
-                    {/if}
-                    <label>{components[control.components.r].name}</label>
-                </div>
+            <div class="control" class:no-checkbox={!showCheckboxes}>
+                {#if showCheckboxes}
+                    <input
+                        type="checkbox"
+                        checked={isControlEnabled(control)}
+                        onchange={() => toggleControlEnabled(control)}
+                        class="control-checkbox"
+                    />
+                {/if}
+                <label>{components[control.components.r].name}</label>
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={values[rChannel]}
                         oninput={(e) => !rDisabled && handleSliderChange(rChannel, parseInt(e.target.value))}
@@ -210,8 +208,11 @@
                     class="value-input" disabled={rDisabled} maxlength="3" />
             </div>
             <!-- Green -->
-            {@const gDisabled = isChannelDisabled(gChannel)}
+            {@const gDisabled = isChannelDisabled(gChannel) || !isControlEnabled(control)}
             <div class="control">
+                {#if showCheckboxes}
+                    <div></div>
+                {/if}
                 <label>{components[control.components.g].name}</label>
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={values[gChannel]}
@@ -224,8 +225,11 @@
                     class="value-input" disabled={gDisabled} maxlength="3" />
             </div>
             <!-- Blue -->
-            {@const bDisabled = isChannelDisabled(bChannel)}
+            {@const bDisabled = isChannelDisabled(bChannel) || !isControlEnabled(control)}
             <div class="control">
+                {#if showCheckboxes}
+                    <div></div>
+                {/if}
                 <label>{components[control.components.b].name}</label>
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={values[bChannel]}
@@ -241,18 +245,16 @@
             {@const channelIndex = getChannel(control.components.value)}
             {@const channelDisabled = isChannelDisabled(channelIndex)}
             {@const isOn = values[channelIndex] === control.onValue}
-            <div class="control" class:control-disabled={!isControlEnabled(control)}>
-                <div class="control-header-inline">
-                    {#if showCheckboxes}
-                        <input
-                            type="checkbox"
-                            checked={isControlEnabled(control)}
-                            onchange={() => toggleControlEnabled(control)}
-                            class="control-checkbox"
-                        />
-                    {/if}
-                    <label>{control.name}</label>
-                </div>
+            <div class="control" class:control-disabled={!isControlEnabled(control)} class:no-checkbox={!showCheckboxes}>
+                {#if showCheckboxes}
+                    <input
+                        type="checkbox"
+                        checked={isControlEnabled(control)}
+                        onchange={() => toggleControlEnabled(control)}
+                        class="control-checkbox"
+                    />
+                {/if}
+                <label>{control.name}</label>
                 <div class="toggle-wrapper">
                     <ToggleSwitch
                         checked={isOn}
@@ -274,18 +276,16 @@
         {:else if control.type === 'slider'}
             {@const channelIndex = getChannel(control.components.value)}
             {@const channelDisabled = isChannelDisabled(channelIndex)}
-            <div class="control" class:control-disabled={!isControlEnabled(control)}>
-                <div class="control-header-inline">
-                    {#if showCheckboxes}
-                        <input
-                            type="checkbox"
-                            checked={isControlEnabled(control)}
-                            onchange={() => toggleControlEnabled(control)}
-                            class="control-checkbox"
-                        />
-                    {/if}
-                    <label>{control.name}</label>
-                </div>
+            <div class="control" class:control-disabled={!isControlEnabled(control)} class:no-checkbox={!showCheckboxes}>
+                {#if showCheckboxes}
+                    <input
+                        type="checkbox"
+                        checked={isControlEnabled(control)}
+                        onchange={() => toggleControlEnabled(control)}
+                        class="control-checkbox"
+                    />
+                {/if}
+                <label>{control.name}</label>
                 <div class="slider-wrapper">
                     <input
                         type="range"
@@ -321,9 +321,13 @@
 
     .control {
         display: grid;
-        grid-template-columns: 4em 1fr 3em;
+        grid-template-columns: auto 4em 1fr 3em;
         gap: 8px;
         align-items: center;
+    }
+
+    .control.no-checkbox {
+        grid-template-columns: 4em 1fr 3em;
     }
 
     .control label {
@@ -450,12 +454,6 @@
 
     /* Checkbox support styles */
     .control-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .control-header-inline {
         display: flex;
         align-items: center;
         gap: 8px;
