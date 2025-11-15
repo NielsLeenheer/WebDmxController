@@ -310,7 +310,7 @@
                 autofocus
             />
             <div class="css-identifiers">
-                <code class="css-identifier">@keyframes {getPreviewCSSName()}</code>
+                <code class="css-identifier">@keyframes {getPreviewCSSName()} &lbrace; &rbrace;</code>
             </div>
         </div>
     </form>

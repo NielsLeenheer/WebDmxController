@@ -484,7 +484,10 @@
                 bind:value={dialogName}
                 placeholder="Device name"
             />
-            <small class="css-id-preview">#{getPreviewCssId()}</small>
+
+            <div class="css-identifiers">
+                <code class="css-identifier">#{getPreviewCssId()}</code>
+            </div>
         </div>
 
         <div class="dialog-input-group">
@@ -659,38 +662,6 @@
     /* Dialog-specific overrides */
     .dialog-input-group input[type="number"] {
         width: 10ch;
-    }
-
-    .dialog-input-group input.valid {
-        border-color: #4caf50;
-        background: #f0fdf0;
-    }
-
-    .dialog-input-group input.invalid {
-        border-color: #ff4444;
-        background: #fff5f5;
-    }
-
-    .dialog-input-group input[type="text"] {
-        font-family: inherit;
-    }
-
-    .dialog-input-group select {
-        background: white;
-        cursor: pointer;
-    }
-
-    .dialog-input-group small {
-        display: block;
-        margin-top: 6px;
-        font-size: 9pt;
-        color: #888;
-    }
-
-    .css-id-preview {
-        text-align: right;
-        font-family: var(--font-stack-mono);
-        color: #666;
     }
 
     .no-devices {

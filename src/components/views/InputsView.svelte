@@ -776,13 +776,4 @@
         height: 20px;
     }
 
-    /* Dialog content styles */
-    .dialog-input-group {
-        margin-bottom: 16px;
-    }
-
-    .dialog-input-group input {
-        font-size: 10pt;
-    }
-
 </style>
