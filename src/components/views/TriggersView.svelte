@@ -21,6 +21,10 @@
     let availableAnimations = $state([]);
     let triggers = $state([]);
 
+    // Drag and drop state
+    let draggedTrigger = $state(null);
+    let dragOverIndex = $state(null);
+
     let manualTriggerDialog = $state(null);
     let automaticTriggerDialog = $state(null);
     let newTriggerInput = $state(null);
@@ -101,6 +105,40 @@
         }
     }
 
+    // Get trigger type options based on the currently selected edit input
+    function getTriggerTypeOptionsForEditInput() {
+        if (!editTriggerInput) return [
+            { value: 'pressed', label: 'Pressed' },
+            { value: 'not-pressed', label: 'Not Pressed' }
+        ];
+
+        const [deviceId, controlId] = editTriggerInput.split('_');
+        const input = availableInputs.find(i =>
+            i.inputDeviceId === deviceId && i.inputControlId === controlId
+        );
+
+        if (!input || !input.isButtonInput()) {
+            return [
+                { value: 'pressed', label: 'Pressed' },
+                { value: 'not-pressed', label: 'Not Pressed' }
+            ];
+        }
+
+        const buttonMode = input.buttonMode || 'momentary';
+
+        if (buttonMode === 'toggle') {
+            return [
+                { value: 'pressed', label: 'On' },
+                { value: 'not-pressed', label: 'Off' }
+            ];
+        } else {
+            return [
+                { value: 'pressed', label: 'Down' },
+                { value: 'not-pressed', label: 'Up' }
+            ];
+        }
+    }
+
     const ACTION_TYPES = [
         { value: 'animation', label: 'Run Animation' },
         { value: 'setValue', label: 'Set values' }
@@ -116,6 +154,60 @@
         availableInputs = mappingLibrary.getAll().filter(m => m.mode === 'input');
         availableAnimations = animationLibrary.getAll();
         triggers = mappingLibrary.getAll().filter(m => m.mode === 'trigger');
+    }
+
+    function handleDragStart(event, trigger) {
+        draggedTrigger = trigger;
+        event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(event, index) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        dragOverIndex = index;
+    }
+
+    function handleDragLeave() {
+        dragOverIndex = null;
+    }
+
+    function handleDrop(event, targetIndex) {
+        event.preventDefault();
+
+        if (!draggedTrigger) return;
+
+        const currentIndex = triggers.findIndex(t => t.id === draggedTrigger.id);
+        if (currentIndex === -1 || currentIndex === targetIndex) {
+            draggedTrigger = null;
+            dragOverIndex = null;
+            return;
+        }
+
+        // Reorder the triggers array
+        const newTriggers = [...triggers];
+        const [removed] = newTriggers.splice(currentIndex, 1);
+        newTriggers.splice(targetIndex, 0, removed);
+        triggers = newTriggers;
+
+        // Update the mapping library order
+        const allMappings = mappingLibrary.getAll();
+        const triggerMappings = newTriggers;
+        const nonTriggerMappings = allMappings.filter(m => m.mode !== 'trigger');
+
+        // Clear and rebuild the library with new order
+        mappingLibrary.mappings.clear();
+        [...nonTriggerMappings, ...triggerMappings].forEach(m => {
+            mappingLibrary.mappings.set(m.id, m);
+        });
+        mappingLibrary.save();
+
+        draggedTrigger = null;
+        dragOverIndex = null;
+    }
+
+    function handleDragEnd() {
+        draggedTrigger = null;
+        dragOverIndex = null;
     }
 
     function handleMappingChange() {
@@ -287,13 +379,18 @@
             editingTrigger.iterations = editTriggerLooping ? 'infinite' : 1;
             editingTrigger.name = `always_${editTriggerAnimation}`;
         } else {
-            // Manual trigger
+            // Manual trigger - parse the selected input
+            const [newInputDeviceId, newInputControlId] = editTriggerInput.split('_');
             const selectedInput = availableInputs.find(input =>
-                input.inputDeviceId === editingTrigger.inputDeviceId &&
-                input.inputControlId === editingTrigger.inputControlId
+                input.inputDeviceId === newInputDeviceId &&
+                input.inputControlId === newInputControlId
             );
 
             if (!selectedInput) return;
+
+            // Update the trigger's input references
+            editingTrigger.inputDeviceId = newInputDeviceId;
+            editingTrigger.inputControlId = newInputControlId;
 
             // Get button mode from the input mapping
             const buttonMode = selectedInput.buttonMode || 'momentary';
@@ -637,8 +734,18 @@
                 <p>No triggers created yet. Click Add Trigger to create one!</p>
             </div>
         {:else}
-            {#each triggers as trigger (trigger.id)}
-                <div class="trigger-card">
+            {#each triggers as trigger, index (trigger.id)}
+                <div
+                    class="trigger-card"
+                    class:dragging={draggedTrigger?.id === trigger.id}
+                    class:drag-over={dragOverIndex === index}
+                    draggable="true"
+                    ondragstart={(e) => handleDragStart(e, trigger)}
+                    ondragover={(e) => handleDragOver(e, index)}
+                    ondragleave={handleDragLeave}
+                    ondrop={(e) => handleDrop(e, index)}
+                    ondragend={handleDragEnd}
+                >
                     <!-- Column 1: Input -->
                     <div class="trigger-column trigger-input-column">
                         {#if trigger.triggerType === 'always'}
@@ -894,18 +1001,19 @@
                 <div class="trigger-column">
                     <div class="dialog-input-group">
                         <label for="edit-trigger-input">Input:</label>
-                        <input
-                            id="edit-trigger-input"
-                            type="text"
-                            value={getInputName(editingTrigger.inputDeviceId, editingTrigger.inputControlId)}
-                            disabled
-                        />
+                        <select id="edit-trigger-input" bind:value={editTriggerInput}>
+                            {#each availableInputs as input}
+                                <option value={input.inputDeviceId + '_' + input.inputControlId}>
+                                    {input.name}
+                                </option>
+                            {/each}
+                        </select>
                     </div>
 
                     <div class="dialog-input-group">
                         <label for="edit-trigger-type">Trigger Type:</label>
                         <select id="edit-trigger-type" bind:value={editTriggerType}>
-                            {#each getTriggerTypeOptionsForTrigger(editingTrigger) as type}
+                            {#each getTriggerTypeOptionsForEditInput() as type}
                                 <option value={type.value}>{type.label}</option>
                             {/each}
                         </select>
@@ -1123,6 +1231,21 @@
         align-items: center;
         padding: 15px 20px;
         gap: 20px;
+        cursor: grab;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .trigger-card:active {
+        cursor: grabbing;
+    }
+
+    .trigger-card.dragging {
+        opacity: 0.5;
+    }
+
+    .trigger-card.drag-over {
+        transform: scale(1.01);
+        box-shadow: 0 0 0 2px #2196F3;
     }
 
     .trigger-column {

@@ -30,6 +30,10 @@
     // Animation version for forcing re-renders
     let animationVersion = $state(0);
 
+    // Drag and drop state
+    let draggedAnimation = $state(null);
+    let dragOverIndex = $state(null);
+
     // Load animations from library
     function refreshAnimationsList() {
         animationsList = animationLibrary.getAll();
@@ -44,6 +48,55 @@
                 editingAnimation = null;
             }
         }
+    }
+
+    function handleDragStart(event, animation) {
+        draggedAnimation = animation;
+        event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(event, index) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        dragOverIndex = index;
+    }
+
+    function handleDragLeave() {
+        dragOverIndex = null;
+    }
+
+    function handleDrop(event, targetIndex) {
+        event.preventDefault();
+
+        if (!draggedAnimation) return;
+
+        const currentIndex = animationsList.findIndex(a => a.name === draggedAnimation.name);
+        if (currentIndex === -1 || currentIndex === targetIndex) {
+            draggedAnimation = null;
+            dragOverIndex = null;
+            return;
+        }
+
+        // Reorder the array
+        const newAnimations = [...animationsList];
+        const [removed] = newAnimations.splice(currentIndex, 1);
+        newAnimations.splice(targetIndex, 0, removed);
+        animationsList = newAnimations;
+
+        // Update the animation library order
+        animationLibrary.animations.clear();
+        newAnimations.forEach(a => {
+            animationLibrary.animations.set(a.name, a);
+        });
+        animationLibrary.save();
+
+        draggedAnimation = null;
+        dragOverIndex = null;
+    }
+
+    function handleDragEnd() {
+        draggedAnimation = null;
+        dragOverIndex = null;
     }
 
     // Initialize on mount
@@ -299,8 +352,18 @@
                 <p>No animations yet. Create one to get started!</p>
             </div>
         {:else}
-            {#each animationsList as animation (animation.name)}
-                <div class="animation-card">
+            {#each animationsList as animation, index (animation.name)}
+                <div
+                    class="animation-card"
+                    class:dragging={draggedAnimation?.name === animation.name}
+                    class:drag-over={dragOverIndex === index}
+                    draggable="true"
+                    ondragstart={(e) => handleDragStart(e, animation)}
+                    ondragover={(e) => handleDragOver(e, index)}
+                    ondragleave={handleDragLeave}
+                    ondrop={(e) => handleDrop(e, index)}
+                    ondragend={handleDragEnd}
+                >
                     <div class="animation-header">
                         <div
                             class="animation-preview"
@@ -448,6 +511,21 @@
         background: #f0f0f0;
         border-radius: 8px;
         overflow: hidden;
+        cursor: grab;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .animation-card:active {
+        cursor: grabbing;
+    }
+
+    .animation-card.dragging {
+        opacity: 0.5;
+    }
+
+    .animation-card.drag-over {
+        transform: scale(1.01);
+        box-shadow: 0 0 0 2px #2196F3;
     }
 
     .animation-header {

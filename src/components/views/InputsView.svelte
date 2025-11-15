@@ -21,12 +21,72 @@
     let editingInput = $state(null);
     let editingName = $state('');
     let editingButtonMode = $state('momentary');
+    let editingColor = $state(null);
     let editDialog = null; // DOM reference - should NOT be $state
     let inputStates = $state({}); // Track state/value for each input: { inputId: { state: 'on'|'off', value: number } }
+
+    // Drag and drop state
+    let draggedInput = $state(null);
+    let dragOverIndex = $state(null);
 
     const deviceColorUsage = new Map(); // deviceId -> Set(colors)
     const deviceColorIndices = new Map(); // deviceId -> last palette index used when cycling
     const COLOR_CAPABLE_PREFIXES = ['button-', 'note-'];
+
+    function handleDragStart(event, input) {
+        draggedInput = input;
+        event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(event, index) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        dragOverIndex = index;
+    }
+
+    function handleDragLeave() {
+        dragOverIndex = null;
+    }
+
+    function handleDrop(event, targetIndex) {
+        event.preventDefault();
+
+        if (!draggedInput) return;
+
+        const currentIndex = savedInputs.findIndex(i => i.id === draggedInput.id);
+        if (currentIndex === -1 || currentIndex === targetIndex) {
+            draggedInput = null;
+            dragOverIndex = null;
+            return;
+        }
+
+        // Reorder the savedInputs array
+        const newInputs = [...savedInputs];
+        const [removed] = newInputs.splice(currentIndex, 1);
+        newInputs.splice(targetIndex, 0, removed);
+        savedInputs = newInputs;
+
+        // Update the mapping library order
+        // Get all mappings and reorder them
+        const allMappings = mappingLibrary.getAll();
+        const inputMappings = newInputs;
+        const nonInputMappings = allMappings.filter(m => m.mode !== 'input');
+
+        // Clear and rebuild the library with new order
+        mappingLibrary.mappings.clear();
+        [...inputMappings, ...nonInputMappings].forEach(m => {
+            mappingLibrary.mappings.set(m.id, m);
+        });
+        mappingLibrary.save();
+
+        draggedInput = null;
+        dragOverIndex = null;
+    }
+
+    function handleDragEnd() {
+        draggedInput = null;
+        dragOverIndex = null;
+    }
 
     function getInputStateDisplay(input) {
         const state = inputStates[input.id];
@@ -265,23 +325,69 @@
         editingInput = input;
         editingName = input.name;
         editingButtonMode = input.buttonMode || 'momentary';
+        editingColor = input.color;
 
         requestAnimationFrame(() => {
             editDialog?.showModal();
         });
     }
 
-    function saveEdit() {
+    async function saveEdit() {
         if (!editingInput || !editingName.trim()) return;
 
         // Get the mapping from the library and update it
         const mapping = mappingLibrary.get(editingInput.id);
         if (mapping) {
+            const oldColor = mapping.color;
             mapping.name = editingName.trim();
 
             // Update button mode for button inputs
             if (mapping.mode === 'input' && mapping.isButtonInput()) {
                 mapping.buttonMode = editingButtonMode;
+            }
+
+            // Update color if it changed and device supports colors
+            if (editingColor !== oldColor && shouldAssignColor(
+                inputController.getInputDevice(mapping.inputDeviceId),
+                mapping.inputControlId
+            )) {
+                // Release old color usage
+                if (oldColor) {
+                    releaseColorUsage(mapping.inputDeviceId, mapping.inputControlId, oldColor);
+                }
+
+                // Update color
+                mapping.color = editingColor;
+
+                // Register new color usage
+                if (editingColor) {
+                    registerColorUsage(mapping.inputDeviceId, mapping.inputControlId, editingColor);
+                }
+
+                // Update color on hardware
+                const inputDevice = inputController.getInputDevice(mapping.inputDeviceId);
+                if (inputDevice && editingColor) {
+                    // For toggle buttons, respect current state
+                    let color = editingColor;
+                    if (mapping.isButtonInput() && mapping.buttonMode === 'toggle') {
+                        const state = inputStates[mapping.id];
+                        color = (state?.state === 'on') ? editingColor : 'black';
+                    }
+
+                    if (inputDevice.type === 'hid' && inputDevice.id !== 'keyboard' && mapping.inputControlId.startsWith('button-')) {
+                        const buttonIndex = parseInt(mapping.inputControlId.replace('button-', ''));
+                        if (!isNaN(buttonIndex) && buttonIndex >= 0) {
+                            const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
+                            const serialNumber = mapping.inputDeviceId;
+                            await streamDeckManager.setButtonColor(serialNumber, buttonIndex, color);
+                        }
+                    } else if (inputDevice.type === 'midi' && mapping.inputControlId.startsWith('note-')) {
+                        const noteNumber = parseInt(mapping.inputControlId.replace('note-', ''));
+                        if (!isNaN(noteNumber) && noteNumber >= 0) {
+                            inputDevice.setButtonColor(noteNumber, color);
+                        }
+                    }
+                }
             }
 
             // Update CSS identifiers based on new name and button mode
@@ -301,6 +407,7 @@
         editDialog?.close();
         editingInput = null;
         editingName = '';
+        editingColor = null;
     }
 
     // Generate preview of CSS property name based on current editing name
@@ -550,8 +657,18 @@
                 <p>No inputs detected yet. Start listening to detect inputs!</p>
             </div>
         {:else}
-            {#each savedInputs as input (input.id)}
-                <div class="input-card">
+            {#each savedInputs as input, index (input.id)}
+                <div
+                    class="input-card"
+                    class:dragging={draggedInput?.id === input.id}
+                    class:drag-over={dragOverIndex === index}
+                    draggable="true"
+                    ondragstart={(e) => handleDragStart(e, input)}
+                    ondragover={(e) => handleDragOver(e, index)}
+                    ondragleave={handleDragLeave}
+                    ondrop={(e) => handleDrop(e, index)}
+                    ondragend={handleDragEnd}
+                >
                     {#if input.color && isColorCapableControl(input.inputControlId)}
                         <div
                             class="input-color-badge"
@@ -627,6 +744,23 @@
                 </select>
             </div>
         {/if}
+
+        {#if editingInput && shouldAssignColor(inputController.getInputDevice(editingInput.inputDeviceId), editingInput.inputControlId)}
+            <div class="dialog-input-group">
+                <label for="input-color">Color:</label>
+                <select id="input-color" bind:value={editingColor}>
+                    {#each INPUT_COLOR_PALETTE as color}
+                        <option value={color}>{color.charAt(0).toUpperCase() + color.slice(1)}</option>
+                    {/each}
+                </select>
+                <div class="color-preview-wrapper">
+                    <div
+                        class="color-preview-large"
+                        style="background-color: {getInputColorCSS(editingColor)}"
+                    ></div>
+                </div>
+            </div>
+        {/if}
     </form>
 
     {#snippet tools()}
@@ -688,6 +822,21 @@
         flex-direction: column;
         gap: 10px;
         position: relative;
+        cursor: grab;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .input-card:active {
+        cursor: grabbing;
+    }
+
+    .input-card.dragging {
+        opacity: 0.5;
+    }
+
+    .input-card.drag-over {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 2px #2196F3;
     }
 
     .input-color-badge {
@@ -767,6 +916,17 @@
     .edit-button :global(svg) {
         width: 20px;
         height: 20px;
+    }
+
+    .color-preview-wrapper {
+        margin-top: 8px;
+    }
+
+    .color-preview-large {
+        width: 64px;
+        height: 32px;
+        border-radius: 4px;
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
 </style>

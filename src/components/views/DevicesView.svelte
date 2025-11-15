@@ -26,6 +26,52 @@
     let selectedSyncControls = $state(null); // Array of control names, or null for all
     let mirrorPan = $state(false);
 
+    // Drag and drop state
+    let draggedDevice = $state(null);
+    let dragOverIndex = $state(null);
+
+    function handleDragStart(event, device) {
+        draggedDevice = device;
+        event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(event, index) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        dragOverIndex = index;
+    }
+
+    function handleDragLeave() {
+        dragOverIndex = null;
+    }
+
+    function handleDrop(event, targetIndex) {
+        event.preventDefault();
+
+        if (!draggedDevice) return;
+
+        const currentIndex = devices.findIndex(d => d.id === draggedDevice.id);
+        if (currentIndex === -1 || currentIndex === targetIndex) {
+            draggedDevice = null;
+            dragOverIndex = null;
+            return;
+        }
+
+        // Reorder the array
+        const newDevices = [...devices];
+        const [removed] = newDevices.splice(currentIndex, 1);
+        newDevices.splice(targetIndex, 0, removed);
+        devices = newDevices;
+
+        draggedDevice = null;
+        dragOverIndex = null;
+    }
+
+    function handleDragEnd() {
+        draggedDevice = null;
+        dragOverIndex = null;
+    }
+
     function openSettingsDialog(device) {
         editingDevice = device;
         dialogName = device.name;
@@ -439,8 +485,18 @@
             </div>
         {/if}
 
-        {#each devices as device (device.id)}
-            <div class="device-card">
+        {#each devices as device, index (device.id)}
+            <div
+                class="device-card"
+                class:dragging={draggedDevice?.id === device.id}
+                class:drag-over={dragOverIndex === index}
+                draggable="true"
+                ondragstart={(e) => handleDragStart(e, device)}
+                ondragover={(e) => handleDragOver(e, index)}
+                ondragleave={handleDragLeave}
+                ondrop={(e) => handleDrop(e, index)}
+                ondragend={handleDragEnd}
+            >
                 <div class="device-header">
                     <div
                         class="color-preview"
@@ -627,6 +683,21 @@
         background: #f0f0f0;
         border-radius: 8px;
         padding: 15px;
+        cursor: grab;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .device-card:active {
+        cursor: grabbing;
+    }
+
+    .device-card.dragging {
+        opacity: 0.5;
+    }
+
+    .device-card.drag-over {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 2px #2196F3;
     }
 
     .device-header {
