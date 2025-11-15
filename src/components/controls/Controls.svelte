@@ -211,7 +211,7 @@
             {@const gDisabled = isChannelDisabled(gChannel) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
-                    <div></div>
+                    <div class="checkbox-placeholder"></div>
                 {/if}
                 <label class:disabled={gDisabled}>{components[control.components.g].name}</label>
                 <div class="slider-wrapper">
@@ -228,7 +228,7 @@
             {@const bDisabled = isChannelDisabled(bChannel) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
-                    <div></div>
+                    <div class="checkbox-placeholder"></div>
                 {/if}
                 <label class:disabled={bDisabled}>{components[control.components.b].name}</label>
                 <div class="slider-wrapper">
@@ -468,6 +468,13 @@
         width: 16px;
         height: 16px;
         cursor: pointer;
+        margin: 0;
+        flex-shrink: 0;
+    }
+
+    .checkbox-placeholder {
+        width: 16px;
+        height: 16px;
         margin: 0;
         flex-shrink: 0;
     }
