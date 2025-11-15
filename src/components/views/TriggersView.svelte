@@ -2,6 +2,8 @@
     import { onMount, onDestroy } from 'svelte';
     import { InputMapping } from '../../lib/mappings.js';
     import { DEVICE_TYPES } from '../../lib/devices.js';
+    import { getInputColorCSS } from '../../lib/inputColors.js';
+    import { getDeviceColor } from '../../lib/colorUtils.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
@@ -391,6 +393,120 @@
         }
     }
 
+    // Get input preview color
+    function getInputPreview(trigger) {
+        const input = availableInputs.find(
+            i => i.inputDeviceId === trigger.inputDeviceId &&
+                 i.inputControlId === trigger.inputControlId
+        );
+        return input?.color ? getInputColorCSS(input.color) : '#888';
+    }
+
+    // Get input type label (On/Off/Up/Down)
+    function getInputTypeLabel(trigger) {
+        const input = availableInputs.find(
+            i => i.inputDeviceId === trigger.inputDeviceId &&
+                 i.inputControlId === trigger.inputControlId
+        );
+
+        if (!input) return trigger.triggerType === 'pressed' ? 'Down' : 'Up';
+
+        // Check if it's toggle mode
+        if (input.buttonMode === 'toggle') {
+            return trigger.triggerType === 'pressed' ? 'On' : 'Off';
+        } else {
+            return trigger.triggerType === 'pressed' ? 'Down' : 'Up';
+        }
+    }
+
+    // Get animation preview (stepped gradient)
+    function getAnimationPreview(animationCssName) {
+        const animation = availableAnimations.find(a => a.cssName === animationCssName);
+        if (!animation) return '#888';
+
+        // Check if animation has color-related controls
+        const hasColor = animation.controls && (
+            animation.controls.includes('Color') ||
+            animation.controls.includes('Amber') ||
+            animation.controls.includes('White')
+        );
+
+        if (!hasColor || !animation.keyframes || animation.keyframes.length === 0) {
+            return '#888';
+        }
+
+        // Get control and component data for the animation
+        const { controls, components } = animation.getControlsForRendering();
+
+        // Extract colors from each keyframe
+        const colors = animation.keyframes.map(keyframe => {
+            const values = keyframe.values || [];
+
+            // Find Color control
+            const colorControl = controls.find(c => c.name === 'Color' && c.type === 'rgb');
+            let r = 0, g = 0, b = 0;
+
+            if (colorControl) {
+                const rIdx = colorControl.components.r;
+                const gIdx = colorControl.components.g;
+                const bIdx = colorControl.components.b;
+                r = values[rIdx] || 0;
+                g = values[gIdx] || 0;
+                b = values[bIdx] || 0;
+            }
+
+            // Add Amber if present
+            const amberControl = controls.find(c => c.name === 'Amber' && c.type === 'slider');
+            if (amberControl) {
+                const amberIdx = amberControl.components.value;
+                const amber = values[amberIdx] || 0;
+                r = Math.min(255, r + (255 * amber / 255));
+                g = Math.min(255, g + (191 * amber / 255));
+            }
+
+            // Add White if present
+            const whiteControl = controls.find(c => c.name === 'White' && c.type === 'slider');
+            if (whiteControl) {
+                const whiteIdx = whiteControl.components.value;
+                const white = values[whiteIdx] || 0;
+                r = Math.min(255, r + white);
+                g = Math.min(255, g + white);
+                b = Math.min(255, b + white);
+            }
+
+            return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+        });
+
+        // Create stepped gradient with equal steps
+        const numSteps = colors.length;
+        const stepSize = 100 / numSteps;
+
+        const gradientStops = colors.map((color, index) => {
+            const start = index * stepSize;
+            const end = (index + 1) * stepSize;
+            return `${color} ${start}% ${end}%`;
+        }).join(', ');
+
+        return `linear-gradient(90deg, ${gradientStops})`;
+    }
+
+    // Get preview for value-based trigger
+    function getValuePreview(trigger) {
+        const device = devices.find(d => d.id === trigger.setValueDeviceId);
+        if (!device) return '#888';
+
+        const deviceType = DEVICE_TYPES[device.type];
+        if (!deviceType) return '#888';
+
+        // Build values array from channelValues
+        const values = new Array(deviceType.channels).fill(0);
+        for (const [channelIndex, value] of Object.entries(trigger.channelValues || {})) {
+            values[parseInt(channelIndex)] = value;
+        }
+
+        return getDeviceColor(device.type, values);
+    }
+
     // Helper functions for channel value management
     function getSelectedDevice(deviceId) {
         return devices.find(d => d.id === deviceId);
@@ -499,15 +615,49 @@
         {:else}
             {#each triggers as trigger (trigger.id)}
                 <div class="trigger-card">
-                    <div class="trigger-content">
-                        <span class="trigger-text">{getTriggerDisplayText(trigger)}</span>
-                        <IconButton
-                            icon={editIcon}
-                            onclick={() => openEditDialog(trigger)}
-                            title="Edit trigger"
-                            size="small"
-                        />
+                    <!-- Column 1: Input -->
+                    <div class="trigger-column trigger-input-column">
+                        {#if trigger.triggerType === 'always'}
+                            <div class="trigger-label">Always</div>
+                        {:else}
+                            <div
+                                class="trigger-preview"
+                                style="background: {getInputPreview(trigger)}"
+                            ></div>
+                            <div class="trigger-info">
+                                <div class="trigger-name">{getInputName(trigger.inputDeviceId, trigger.inputControlId)}</div>
+                                <div class="trigger-type">→ {getInputTypeLabel(trigger)}</div>
+                            </div>
+                        {/if}
                     </div>
+
+                    <!-- Column 2: Action -->
+                    <div class="trigger-column trigger-action-column">
+                        {#if trigger.actionType === 'animation'}
+                            <div
+                                class="trigger-preview"
+                                style="background: {getAnimationPreview(trigger.animationName)}"
+                            ></div>
+                            <div class="trigger-info">
+                                <div class="trigger-name">{getAnimationDisplayName(trigger.animationName)}</div>
+                            </div>
+                        {:else}
+                            <div
+                                class="trigger-preview"
+                                style="background: {getValuePreview(trigger)}"
+                            ></div>
+                            <div class="trigger-info">
+                                <div class="trigger-name">{Object.keys(trigger.channelValues || {}).length} values</div>
+                            </div>
+                        {/if}
+                    </div>
+
+                    <IconButton
+                        icon={editIcon}
+                        onclick={() => openEditDialog(trigger)}
+                        title="Edit trigger"
+                        size="small"
+                    />
                 </div>
             {/each}
         {/if}
@@ -935,20 +1085,60 @@
         width: 80vw;
         background: #f0f0f0;
         border-radius: 8px;
-    }
-
-    .trigger-content {
         display: flex;
         align-items: center;
-        justify-content: space-between;
         padding: 15px 20px;
-        gap: 15px;
+        gap: 20px;
     }
 
-    .trigger-text {
+    .trigger-column {
+        display: flex;
+        align-items: center;
+        gap: 12px;
         flex: 1;
+    }
+
+    .trigger-input-column {
+        min-width: 200px;
+    }
+
+    .trigger-action-column {
+        min-width: 200px;
+    }
+
+    .trigger-preview {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+    }
+
+    .trigger-label {
         font-size: 11pt;
+        font-weight: 600;
         color: #333;
+    }
+
+    .trigger-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .trigger-name {
+        font-size: 10pt;
+        font-weight: 600;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .trigger-type {
+        font-size: 9pt;
+        color: #666;
     }
 
     /* Dialog column layout */
