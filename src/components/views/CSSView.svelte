@@ -526,20 +526,17 @@
         width: 50px;
         height: 50px;
         border-radius: 6px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .pan-tilt-indicator {
         position: absolute;
         width: 10px;
         height: 10px;
-        background: transparent;
-        outline: 2px solid white;
+        background: #888;
         border-radius: 50%;
         transform: translate(-50%, -50%);
         pointer-events: none;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
         z-index: 10;
     }
 
