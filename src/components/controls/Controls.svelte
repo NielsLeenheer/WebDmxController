@@ -139,7 +139,7 @@
             {@const xDisabled = isChannelDisabled(xChannel)}
             {@const yDisabled = isChannelDisabled(yChannel)}
             {@const bothDisabled = xDisabled && yDisabled}
-            <div class="control-xypad" class:control-disabled={!isControlEnabled(control)}>
+            <div class="control-xypad">
                 <div class="control-header">
                     {#if showCheckboxes}
                         <input
@@ -239,7 +239,7 @@
             {@const channelIndex = getChannel(control.components.value)}
             {@const channelDisabled = isChannelDisabled(channelIndex) || !isControlEnabled(control)}
             {@const isOn = values[channelIndex] === control.onValue}
-            <div class="control" class:control-disabled={!isControlEnabled(control)} class:no-checkbox={!showCheckboxes}>
+            <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
                     <input
                         type="checkbox"
@@ -270,7 +270,7 @@
         {:else if control.type === 'slider'}
             {@const channelIndex = getChannel(control.components.value)}
             {@const channelDisabled = isChannelDisabled(channelIndex) || !isControlEnabled(control)}
-            <div class="control" class:control-disabled={!isControlEnabled(control)} class:no-checkbox={!showCheckboxes}>
+            <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
                     <input
                         type="checkbox"
@@ -464,13 +464,5 @@
         cursor: pointer;
         margin: 0;
         flex-shrink: 0;
-    }
-
-    .control-disabled {
-        opacity: 0.4;
-    }
-
-    .control-disabled .control-checkbox {
-        opacity: 1;
     }
 </style>
