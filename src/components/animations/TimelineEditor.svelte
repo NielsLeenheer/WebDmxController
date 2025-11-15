@@ -340,7 +340,6 @@
 <style>
     .timeline-container {
         padding: 20px;
-        border-bottom: 1px solid #ddd;
         display: flex;
         flex-direction: column;
         align-items: stretch;

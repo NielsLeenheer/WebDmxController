@@ -587,6 +587,7 @@
         padding: 15px 20px;
         background: #e6e6e6;
         gap: 15px;
+        border-radius: 8px 8px 0 0;
     }
 
     .animation-preview {
