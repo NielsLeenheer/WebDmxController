@@ -210,7 +210,7 @@
             <!-- Green -->
             {@const gDisabled = isChannelDisabled(gChannel) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
-                <label class:disabled={gDisabled}>{components[control.components.g].name}</label>
+                <label class:disabled={gDisabled} style={showCheckboxes ? 'grid-column-start: 2' : ''}>{components[control.components.g].name}</label>
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={values[gChannel]}
                         oninput={(e) => !gDisabled && handleSliderChange(gChannel, parseInt(e.target.value))}
@@ -224,7 +224,7 @@
             <!-- Blue -->
             {@const bDisabled = isChannelDisabled(bChannel) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
-                <label class:disabled={bDisabled}>{components[control.components.b].name}</label>
+                <label class:disabled={bDisabled} style={showCheckboxes ? 'grid-column-start: 2' : ''}>{components[control.components.b].name}</label>
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={values[bChannel]}
                         oninput={(e) => !bDisabled && handleSliderChange(bChannel, parseInt(e.target.value))}
