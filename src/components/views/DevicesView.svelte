@@ -692,12 +692,22 @@
     }
 
     .device-card.dragging {
-        opacity: 0.5;
+        opacity: 0.4;
     }
 
     .device-card.drag-over {
-        transform: scale(1.02);
-        box-shadow: 0 0 0 2px #2196F3;
+        position: relative;
+    }
+
+    .device-card.drag-over::before {
+        content: '';
+        position: absolute;
+        left: -8px;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: #2196F3;
+        border-radius: 2px;
     }
 
     .device-header {
