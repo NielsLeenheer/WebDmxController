@@ -23,6 +23,7 @@
 
     // Drag and drop state
     let draggedTrigger = $state(null);
+    let draggedIndex = $state(null);
     let dragOverIndex = $state(null);
 
     let manualTriggerDialog = $state(null);
@@ -158,6 +159,7 @@
 
     function handleDragStart(event, trigger) {
         draggedTrigger = trigger;
+        draggedIndex = triggers.findIndex(t => t.id === trigger.id);
         event.dataTransfer.effectAllowed = 'move';
     }
 
@@ -165,6 +167,11 @@
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
         dragOverIndex = index;
+    }
+
+    function isDragAfter(index) {
+        if (draggedIndex === null || dragOverIndex === null) return false;
+        return draggedIndex < index;
     }
 
     function handleDragLeave() {
@@ -202,11 +209,13 @@
         mappingLibrary.save();
 
         draggedTrigger = null;
+        draggedIndex = null;
         dragOverIndex = null;
     }
 
     function handleDragEnd() {
         draggedTrigger = null;
+        draggedIndex = null;
         dragOverIndex = null;
     }
 
@@ -739,6 +748,7 @@
                     class="trigger-card"
                     class:dragging={draggedTrigger?.id === trigger.id}
                     class:drag-over={dragOverIndex === index}
+                    class:drag-after={dragOverIndex === index && isDragAfter(index)}
                     draggable="true"
                     ondragstart={(e) => handleDragStart(e, trigger)}
                     ondragover={(e) => handleDragOver(e, index)}
@@ -1256,6 +1266,11 @@
         height: 4px;
         background: #2196F3;
         border-radius: 2px;
+    }
+
+    .trigger-card.drag-after::before {
+        top: auto;
+        bottom: -10px;
     }
 
     .trigger-column {

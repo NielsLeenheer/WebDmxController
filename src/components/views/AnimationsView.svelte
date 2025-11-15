@@ -32,6 +32,7 @@
 
     // Drag and drop state
     let draggedAnimation = $state(null);
+    let draggedIndex = $state(null);
     let dragOverIndex = $state(null);
 
     // Load animations from library
@@ -52,6 +53,7 @@
 
     function handleDragStart(event, animation) {
         draggedAnimation = animation;
+        draggedIndex = animationsList.findIndex(a => a.name === animation.name);
         event.dataTransfer.effectAllowed = 'move';
     }
 
@@ -59,6 +61,11 @@
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
         dragOverIndex = index;
+    }
+
+    function isDragAfter(index) {
+        if (draggedIndex === null || dragOverIndex === null) return false;
+        return draggedIndex < index;
     }
 
     function handleDragLeave() {
@@ -91,11 +98,13 @@
         animationLibrary.save();
 
         draggedAnimation = null;
+        draggedIndex = null;
         dragOverIndex = null;
     }
 
     function handleDragEnd() {
         draggedAnimation = null;
+        draggedIndex = null;
         dragOverIndex = null;
     }
 
@@ -357,6 +366,7 @@
                     class="animation-card"
                     class:dragging={draggedAnimation?.name === animation.name}
                     class:drag-over={dragOverIndex === index}
+                    class:drag-after={dragOverIndex === index && isDragAfter(index)}
                     draggable="true"
                     ondragstart={(e) => handleDragStart(e, animation)}
                     ondragover={(e) => handleDragOver(e, index)}
@@ -536,6 +546,11 @@
         height: 4px;
         background: #2196F3;
         border-radius: 2px;
+    }
+
+    .animation-card.drag-after::before {
+        top: auto;
+        bottom: -10px;
     }
 
     .animation-header {

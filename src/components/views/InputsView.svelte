@@ -27,6 +27,7 @@
 
     // Drag and drop state
     let draggedInput = $state(null);
+    let draggedIndex = $state(null);
     let dragOverIndex = $state(null);
 
     const deviceColorUsage = new Map(); // deviceId -> Set(colors)
@@ -35,6 +36,7 @@
 
     function handleDragStart(event, input) {
         draggedInput = input;
+        draggedIndex = savedInputs.findIndex(i => i.id === input.id);
         event.dataTransfer.effectAllowed = 'move';
     }
 
@@ -42,6 +44,11 @@
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
         dragOverIndex = index;
+    }
+
+    function isDragAfter(index) {
+        if (draggedIndex === null || dragOverIndex === null) return false;
+        return draggedIndex < index;
     }
 
     function handleDragLeave() {
@@ -80,11 +87,13 @@
         mappingLibrary.save();
 
         draggedInput = null;
+        draggedIndex = null;
         dragOverIndex = null;
     }
 
     function handleDragEnd() {
         draggedInput = null;
+        draggedIndex = null;
         dragOverIndex = null;
     }
 
@@ -662,6 +671,7 @@
                     class="input-card"
                     class:dragging={draggedInput?.id === input.id}
                     class:drag-over={dragOverIndex === index}
+                    class:drag-after={dragOverIndex === index && isDragAfter(index)}
                     draggable="true"
                     ondragstart={(e) => handleDragStart(e, input)}
                     ondragover={(e) => handleDragOver(e, index)}
@@ -847,6 +857,11 @@
         width: 4px;
         background: #2196F3;
         border-radius: 2px;
+    }
+
+    .input-card.drag-after::before {
+        left: auto;
+        right: -8px;
     }
 
     .input-color-badge {

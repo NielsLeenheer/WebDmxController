@@ -28,10 +28,12 @@
 
     // Drag and drop state
     let draggedDevice = $state(null);
+    let draggedIndex = $state(null);
     let dragOverIndex = $state(null);
 
     function handleDragStart(event, device) {
         draggedDevice = device;
+        draggedIndex = devices.findIndex(d => d.id === device.id);
         event.dataTransfer.effectAllowed = 'move';
     }
 
@@ -39,6 +41,11 @@
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
         dragOverIndex = index;
+    }
+
+    function isDragAfter(index) {
+        if (draggedIndex === null || dragOverIndex === null) return false;
+        return draggedIndex < index;
     }
 
     function handleDragLeave() {
@@ -64,11 +71,13 @@
         devices = newDevices;
 
         draggedDevice = null;
+        draggedIndex = null;
         dragOverIndex = null;
     }
 
     function handleDragEnd() {
         draggedDevice = null;
+        draggedIndex = null;
         dragOverIndex = null;
     }
 
@@ -490,6 +499,7 @@
                 class="device-card"
                 class:dragging={draggedDevice?.id === device.id}
                 class:drag-over={dragOverIndex === index}
+                class:drag-after={dragOverIndex === index && isDragAfter(index)}
                 draggable="true"
                 ondragstart={(e) => handleDragStart(e, device)}
                 ondragover={(e) => handleDragOver(e, index)}
@@ -708,6 +718,11 @@
         width: 4px;
         background: #2196F3;
         border-radius: 2px;
+    }
+
+    .device-card.drag-after::before {
+        left: auto;
+        right: -8px;
     }
 
     .device-header {
