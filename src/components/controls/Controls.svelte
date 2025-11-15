@@ -210,9 +210,6 @@
             <!-- Green -->
             {@const gDisabled = isChannelDisabled(gChannel) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
-                {#if showCheckboxes}
-                    <div class="checkbox-placeholder"></div>
-                {/if}
                 <label class:disabled={gDisabled}>{components[control.components.g].name}</label>
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={values[gChannel]}
@@ -227,9 +224,6 @@
             <!-- Blue -->
             {@const bDisabled = isChannelDisabled(bChannel) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
-                {#if showCheckboxes}
-                    <div class="checkbox-placeholder"></div>
-                {/if}
                 <label class:disabled={bDisabled}>{components[control.components.b].name}</label>
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={values[bChannel]}
@@ -321,7 +315,7 @@
 
     .control {
         display: grid;
-        grid-template-columns: auto 4em 1fr 3em;
+        grid-template-columns: 16px 4em 1fr 3em;
         gap: 8px;
         align-items: center;
     }
@@ -468,13 +462,6 @@
         width: 16px;
         height: 16px;
         cursor: pointer;
-        margin: 0;
-        flex-shrink: 0;
-    }
-
-    .checkbox-placeholder {
-        width: 16px;
-        height: 16px;
         margin: 0;
         flex-shrink: 0;
     }
