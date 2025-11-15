@@ -548,7 +548,6 @@
         width: 80vw;
         background: #f0f0f0;
         border-radius: 8px;
-        overflow: hidden;
         cursor: grab;
         transition: opacity 0.2s, transform 0.2s;
     }
@@ -570,17 +569,15 @@
         position: absolute;
         left: 0;
         right: 0;
-        top: 0;
+        top: -10px;
         height: 4px;
         background: #2196F3;
-        border-radius: 2px 2px 0 0;
-        z-index: 10;
+        border-radius: 2px;
     }
 
     .animation-card.drag-after::before {
         top: auto;
-        bottom: 0;
-        border-radius: 0 0 2px 2px;
+        bottom: -10px;
     }
 
     .animation-header {

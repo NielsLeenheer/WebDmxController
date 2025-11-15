@@ -1290,17 +1290,15 @@
         position: absolute;
         left: 0;
         right: 0;
-        top: 0;
+        top: -10px;
         height: 4px;
         background: #2196F3;
-        border-radius: 2px 2px 0 0;
-        z-index: 10;
+        border-radius: 2px;
     }
 
     .trigger-card.drag-after::before {
         top: auto;
-        bottom: 0;
-        border-radius: 0 0 2px 2px;
+        bottom: -10px;
     }
 
     .trigger-column {
