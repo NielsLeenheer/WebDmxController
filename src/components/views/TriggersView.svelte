@@ -618,15 +618,14 @@
                     <!-- Column 1: Input -->
                     <div class="trigger-column trigger-input-column">
                         {#if trigger.triggerType === 'always'}
-                            <div class="trigger-label">Always</div>
+                            <div class="trigger-text">Always</div>
                         {:else}
                             <div
                                 class="trigger-preview"
                                 style="background: {getInputPreview(trigger)}"
                             ></div>
-                            <div class="trigger-info">
-                                <div class="trigger-name">{getInputName(trigger.inputDeviceId, trigger.inputControlId)}</div>
-                                <div class="trigger-type">→ {getInputTypeLabel(trigger)}</div>
+                            <div class="trigger-text">
+                                {getInputName(trigger.inputDeviceId, trigger.inputControlId)} → {getInputTypeLabel(trigger)}
                             </div>
                         {/if}
                     </div>
@@ -638,16 +637,16 @@
                                 class="trigger-preview"
                                 style="background: {getAnimationPreview(trigger.animationName)}"
                             ></div>
-                            <div class="trigger-info">
-                                <div class="trigger-name">{getAnimationDisplayName(trigger.animationName)}</div>
+                            <div class="trigger-text">
+                                {getAnimationDisplayName(trigger.animationName)}
                             </div>
                         {:else}
                             <div
                                 class="trigger-preview"
                                 style="background: {getValuePreview(trigger)}"
                             ></div>
-                            <div class="trigger-info">
-                                <div class="trigger-name">{Object.keys(trigger.channelValues || {}).length} values</div>
+                            <div class="trigger-text">
+                                {Object.keys(trigger.channelValues || {}).length} values
                             </div>
                         {/if}
                     </div>
@@ -1114,31 +1113,12 @@
         flex-shrink: 0;
     }
 
-    .trigger-label {
-        font-size: 11pt;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .trigger-info {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        min-width: 0;
-    }
-
-    .trigger-name {
+    .trigger-text {
         font-size: 10pt;
-        font-weight: 600;
         color: #333;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-    }
-
-    .trigger-type {
-        font-size: 9pt;
-        color: #666;
     }
 
     /* Dialog column layout */
@@ -1148,7 +1128,7 @@
         gap: 20px;
     }
 
-    .trigger-column {
+    .trigger-columns .trigger-column {
         display: flex;
         flex-direction: column;
         gap: 0;
