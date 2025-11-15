@@ -107,7 +107,8 @@ svg {
   color: #555;
 }
 
-.dialog-input-group input {
+.dialog-input-group input[type="text"],
+.dialog-input-group input[type="number"] {
   width: 100%;
   padding: 8px 12px;
   font-size: 11pt;
