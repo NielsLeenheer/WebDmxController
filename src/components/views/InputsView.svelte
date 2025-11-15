@@ -656,7 +656,7 @@
     .inputs-grid {
         flex: 1;
         overflow-y: auto;
-        padding: 20px;
+        padding: 20px 40px;
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(15em, 1fr));
         gap: 15px;

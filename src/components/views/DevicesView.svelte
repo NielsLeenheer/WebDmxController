@@ -604,11 +604,10 @@
     }
 
     .devices-list {
-        flex: 1;
         overflow-y: auto;
-        padding: 0 20px 20px 20px;
+        padding: 0 40px 20px 40px;
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(20em, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(16em, 1fr));
         gap: 15px;
     }
 
