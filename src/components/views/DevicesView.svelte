@@ -526,8 +526,8 @@
             <div
                 class="device-card"
                 class:dragging={draggedDevice?.id === device.id}
-                class:drag-over={dragOverIndex === index}
-                class:drag-after={dragOverIndex === index && isDragAfter(index)}
+                class:drag-over={dragOverIndex === index && !isAfterMidpoint}
+                class:drag-after={isDragAfter(index)}
                 draggable="true"
                 ondragstart={(e) => handleDragStart(e, device)}
                 ondragover={(e) => handleDragOver(e, index)}

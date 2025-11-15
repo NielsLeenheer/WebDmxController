@@ -698,8 +698,8 @@
                 <div
                     class="input-card"
                     class:dragging={draggedInput?.id === input.id}
-                    class:drag-over={dragOverIndex === index}
-                    class:drag-after={dragOverIndex === index && isDragAfter(index)}
+                    class:drag-over={dragOverIndex === index && !isAfterMidpoint}
+                    class:drag-after={isDragAfter(index)}
                     draggable="true"
                     ondragstart={(e) => handleDragStart(e, input)}
                     ondragover={(e) => handleDragOver(e, index)}
