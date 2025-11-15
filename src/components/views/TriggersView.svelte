@@ -542,19 +542,19 @@
             <!-- Column 2: Device Configuration -->
             <div class="trigger-column">
                 <div class="dialog-input-group">
-                    <label for="trigger-action-type">Action:</label>
-                    <select id="trigger-action-type" bind:value={newTriggerActionType}>
-                        {#each ACTION_TYPES as type}
-                            <option value={type.value}>{type.label}</option>
+                    <label for="trigger-device">Device:</label>
+                    <select id="trigger-device" bind:value={newTriggerDevice}>
+                        {#each devices as device}
+                            <option value={device.id}>{device.name}</option>
                         {/each}
                     </select>
                 </div>
 
                 <div class="dialog-input-group">
-                    <label for="trigger-device">Device:</label>
-                    <select id="trigger-device" bind:value={newTriggerDevice}>
-                        {#each devices as device}
-                            <option value={device.id}>{device.name}</option>
+                    <label for="trigger-action-type">Action:</label>
+                    <select id="trigger-action-type" bind:value={newTriggerActionType}>
+                        {#each ACTION_TYPES as type}
+                            <option value={type.value}>{type.label}</option>
                         {/each}
                     </select>
                 </div>
@@ -721,19 +721,19 @@
                 <!-- Column 2: Device Configuration (Manual) -->
                 <div class="trigger-column">
                     <div class="dialog-input-group">
-                        <label for="edit-trigger-action-type">Action:</label>
-                        <select id="edit-trigger-action-type" bind:value={editTriggerActionType}>
-                            {#each ACTION_TYPES as type}
-                                <option value={type.value}>{type.label}</option>
+                        <label for="edit-trigger-device">Device:</label>
+                        <select id="edit-trigger-device" bind:value={editTriggerDevice}>
+                            {#each devices as device}
+                                <option value={device.id}>{device.name}</option>
                             {/each}
                         </select>
                     </div>
 
                     <div class="dialog-input-group">
-                        <label for="edit-trigger-device">Device:</label>
-                        <select id="edit-trigger-device" bind:value={editTriggerDevice}>
-                            {#each devices as device}
-                                <option value={device.id}>{device.name}</option>
+                        <label for="edit-trigger-action-type">Action:</label>
+                        <select id="edit-trigger-action-type" bind:value={editTriggerActionType}>
+                            {#each ACTION_TYPES as type}
+                                <option value={type.value}>{type.label}</option>
                             {/each}
                         </select>
                     </div>
@@ -787,8 +787,7 @@
                         {@const selectedDevice = devices.find(d => d.id === editTriggerDevice)}
                         {#if selectedDevice}
                             <div class="dialog-input-group">
-                                <label>Set Channel Values:</label>
-                                <div class="controls-info">Select which controls to set when triggered:</div>
+                                <label>Values:</label>
                                 <Controls
                                     controls={DEVICE_TYPES[selectedDevice.type].controls}
                                     components={DEVICE_TYPES[selectedDevice.type].components}
@@ -919,10 +918,6 @@
     .empty-state p {
         margin: 0;
         padding: 12px;
-        background: #fff3cd;
-        border: 1px solid #ffc107;
-        border-radius: 4px;
-        color: #856404;
         max-width: 500px;
     }
 
@@ -948,12 +943,12 @@
 
     /* Dialog column layout */
     .trigger-columns {
-        display: flex;
+        display: grid;
+        grid-template-columns: 220px 220px 1fr;
         gap: 20px;
     }
 
     .trigger-column {
-        flex: 1;
         display: flex;
         flex-direction: column;
         gap: 0;
