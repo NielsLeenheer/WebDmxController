@@ -21,6 +21,9 @@
     let bluetoothDevices = $derived(connectedDevices.filter(d => d.type === 'bluetooth'));
     let midiDevices = $derived(connectedDevices.filter(d => d.type === 'midi'));
 
+    // Unified list of all connected devices
+    let allConnectedDevices = $derived([...streamDeckDevices, ...hidDevices, ...bluetoothDevices, ...midiDevices]);
+
     // MIDI button should be disabled if we already have MIDI access
     let hasMidiAccess = $derived(midiDevices.length > 0);
 
@@ -116,76 +119,42 @@
     lightDismiss={true}
     onclose={closeDevicesDialog}
 >
-    <!-- Stream Deck Section -->
-    <div class="device-section">
-        <button class="connect-device-btn" onclick={connectStreamDeck}>
-            <Icon data={streamdeckIcon} />
-            Connect Stream Deck
-        </button>
-        {#if streamDeckDevices.length > 0}
-            <div class="device-list">
-                {#each streamDeckDevices as device (device.id)}
-                    <div class="device-item">
-                        <span class="device-name">{device.name}</span>
-                    </div>
-                {/each}
-            </div>
-        {/if}
-    </div>
+    <div class="devices-dialog-content">
+        <!-- Left Column: Connect Buttons Grid -->
+        <div class="connect-buttons-grid">
+            <button class="device-connect-btn" onclick={connectStreamDeck}>
+                <Icon data={streamdeckIcon} />
+                <span>Stream Deck</span>
+            </button>
+            <button class="device-connect-btn" onclick={connectMIDI} disabled={hasMidiAccess}>
+                <Icon data={midiIcon} />
+                <span>MIDI</span>
+            </button>
+            <button class="device-connect-btn" onclick={connectHID}>
+                <Icon data={inputsIcon} />
+                <span>HID</span>
+            </button>
+            <button class="device-connect-btn" onclick={connectThingy52}>
+                <Icon data={thingyIcon} />
+                <span>Thingy:52</span>
+            </button>
+        </div>
 
-    <!-- HID Section -->
-    <div class="device-section">
-        <button class="connect-device-btn" onclick={connectHID}>
-            <Icon data={inputsIcon} />
-            Connect HID Device
-        </button>
-        {#if hidDevices.length > 0}
-            <div class="device-list">
-                {#each hidDevices as device (device.id)}
-                    <div class="device-item">
-                        <span class="device-name">{device.name}</span>
-                    </div>
-                {/each}
-            </div>
-        {/if}
-    </div>
-
-    <!-- Thingy:52 Section -->
-    <div class="device-section">
-        <button class="connect-device-btn" onclick={connectThingy52}>
-            <Icon data={thingyIcon} />
-            Connect Thingy:52
-        </button>
-        {#if bluetoothDevices.length > 0}
-            <div class="device-list">
-                {#each bluetoothDevices as device (device.id)}
-                    <div class="device-item">
-                        <span class="device-name">{device.name}</span>
-                    </div>
-                {/each}
-            </div>
-        {/if}
-    </div>
-
-    <!-- MIDI Section -->
-    <div class="device-section">
-        <button
-            class="connect-device-btn"
-            onclick={connectMIDI}
-            disabled={hasMidiAccess}
-        >
-            <Icon data={midiIcon} />
-            Connect MIDI Device
-        </button>
-        {#if midiDevices.length > 0}
-            <div class="device-list">
-                {#each midiDevices as device (device.id)}
-                    <div class="device-item">
-                        <span class="device-name">{device.name}</span>
-                    </div>
-                {/each}
-            </div>
-        {/if}
+        <!-- Right Column: Connected Devices List -->
+        <div class="connected-devices-column">
+            <h3>Connected Devices</h3>
+            {#if allConnectedDevices.length > 0}
+                <div class="device-list">
+                    {#each allConnectedDevices as device (device.id)}
+                        <div class="device-item">
+                            <span class="device-name">{device.name}</span>
+                        </div>
+                    {/each}
+                </div>
+            {:else}
+                <p class="no-devices-message">No devices connected</p>
+            {/if}
+        </div>
     </div>
 </Dialog>
 {/if}
@@ -228,55 +197,80 @@
         color: #333;
     }
 
-    /* Device sections within dialog */
-    .device-section {
+    /* Devices Dialog Content */
+    .devices-dialog-content {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 24px;
+        min-width: 500px;
     }
 
-    .device-section:not(:last-child) {
-        border-bottom: 1px solid #f0f0f0;
-        padding-bottom: 15px;
-        margin-bottom: 15px;
+    /* Connect Buttons Grid (2x2) */
+    .connect-buttons-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 12px;
     }
 
-    .connect-device-btn {
-        width: 100%;
-        padding: 0px 10px;
-        height: 36px;
+    .device-connect-btn {
+        width: 120px;
+        height: 120px;
         background: #eee;
         color: #333;
         border: none;
-        border-radius: 4px;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 10pt;
         font-weight: 500;
         transition: background 0.2s, opacity 0.2s;
         display: flex;
+        flex-direction: column;
         align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px;
     }
 
-    .connect-device-btn :global(svg) {
-        height: 75%;
-        margin-right: 3px;
+    .device-connect-btn :global(svg) {
+        height: 48px;
+        width: 48px;
     }
 
-    .connect-device-btn:hover:not(:disabled) {
+    .device-connect-btn span {
+        text-align: center;
+        line-height: 1.2;
+    }
+
+    .device-connect-btn:hover:not(:disabled) {
         background: #90caf9;
     }
 
-    .connect-device-btn:disabled {
+    .device-connect-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
     }
 
+    /* Connected Devices Column */
+    .connected-devices-column {
+        min-width: 200px;
+    }
+
+    .connected-devices-column h3 {
+        margin: 0 0 12px 0;
+        font-size: 11pt;
+        font-weight: 600;
+        color: #333;
+    }
+
     .device-list {
-        margin-top: 10px;
         display: flex;
         flex-direction: column;
         gap: 6px;
     }
 
     .device-item {
-        padding: 8px 10px;
+        padding: 8px 12px;
         background: #f9f9f9;
         border-radius: 4px;
         font-size: 9pt;
@@ -285,5 +279,14 @@
     .device-name {
         color: #333;
         font-weight: 500;
+    }
+
+    .no-devices-message {
+        margin: 0;
+        padding: 20px;
+        text-align: center;
+        color: #999;
+        font-size: 9pt;
+        font-style: italic;
     }
 </style>
