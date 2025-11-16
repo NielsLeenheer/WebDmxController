@@ -360,12 +360,24 @@ export class BluetoothInputDevice extends InputDevice {
 		super(thingyDevice.id, thingyDevice.name, 'bluetooth');
 		this.thingyDevice = thingyDevice;
 
+		// Set up button handlers
+		this.thingyDevice.on('button-press', this._handleButtonPress.bind(this));
+		this.thingyDevice.on('button-release', this._handleButtonRelease.bind(this));
+
 		// Set up sensor data handlers
 		this.thingyDevice.on('euler', this._handleEuler.bind(this));
 		this.thingyDevice.on('quaternion', this._handleQuaternion.bind(this));
 		this.thingyDevice.on('accelerometer', this._handleAccelerometer.bind(this));
 		this.thingyDevice.on('gyroscope', this._handleGyroscope.bind(this));
 		this.thingyDevice.on('compass', this._handleCompass.bind(this));
+	}
+
+	_handleButtonPress() {
+		this._trigger('button', 127);
+	}
+
+	_handleButtonRelease() {
+		this._emit('release', { controlId: 'button' });
 	}
 
 	_handleEuler({ roll, pitch, yaw }) {

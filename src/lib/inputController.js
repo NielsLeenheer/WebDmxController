@@ -98,9 +98,19 @@ export class InputController {
 
 	/**
 	 * Setup listeners for Thingy:52 devices
-	 * These expose multiple CSS properties from a single composite input
+	 * These expose multiple CSS properties and button as inputs
 	 */
 	_setupThingyListeners(device) {
+		// Handle button triggers (just like other buttons)
+		device.on('trigger', ({ controlId, velocity }) => {
+			this._handleTrigger(device.id, controlId, velocity);
+		});
+
+		// Handle button releases
+		device.on('release', ({ controlId }) => {
+			this._handleRelease(device.id, controlId);
+		});
+
 		// Handle all sensor value changes and expose as CSS properties
 		device.on('change', ({ controlId, value, control }) => {
 			// Convert sensor control ID to CSS property name
@@ -148,30 +158,6 @@ export class InputController {
 
 			this.customPropertyManager.setProperty(propertyName, propertyValue);
 		});
-
-		// Auto-create an InputMapping for this Thingy so it appears in the Inputs tab
-		// Check if mapping already exists
-		const existingMappings = this.mappingLibrary.getAll().filter(
-			m => m.inputDeviceId === device.id && m.inputControlId === 'composite'
-		);
-
-		if (existingMappings.length === 0) {
-			// Create a composite input mapping for the Thingy
-			const mapping = new InputMapping({
-				name: device.name,
-				mode: 'input',
-				inputDeviceId: device.id,
-				inputControlId: 'composite',  // Special control ID for composite inputs
-				inputDeviceName: device.name,
-				color: null // No color support for Thingy
-			});
-
-			// Mark it as a composite input with special handling
-			mapping.isComposite = true;
-			mapping.compositeType = 'thingy52';
-
-			this.mappingLibrary.add(mapping);
-		}
 	}
 
 	/**

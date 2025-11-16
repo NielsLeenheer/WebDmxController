@@ -4,9 +4,13 @@
  */
 
 // Thingy:52 Service UUIDs
+const THINGY_UI_SERVICE = 'ef680300-9b35-4933-9b10-52ffa9740042';
 const THINGY_MOTION_SERVICE = 'ef680400-9b35-4933-9b10-52ffa9740042';
 
-// Thingy:52 Characteristic UUIDs
+// Thingy:52 UI Characteristic UUIDs
+const THINGY_UI_BUTTON = 'ef680302-9b35-4933-9b10-52ffa9740042';
+
+// Thingy:52 Motion Characteristic UUIDs
 const THINGY_MOTION_CONFIG = 'ef680401-9b35-4933-9b10-52ffa9740042';
 const THINGY_MOTION_TAP = 'ef680402-9b35-4933-9b10-52ffa9740042';
 const THINGY_MOTION_ORIENTATION = 'ef680403-9b35-4933-9b10-52ffa9740042';
@@ -25,6 +29,7 @@ export class Thingy52Device {
 	constructor(bluetoothDevice) {
 		this.bluetoothDevice = bluetoothDevice;
 		this.server = null;
+		this.uiService = null;
 		this.motionService = null;
 		this.characteristics = new Map();
 		this.listeners = new Map();
@@ -58,8 +63,14 @@ export class Thingy52Device {
 			console.log('Connecting to GATT Server...');
 			this.server = await this.bluetoothDevice.gatt.connect();
 
+			console.log('Getting UI Service...');
+			this.uiService = await this.server.getPrimaryService(THINGY_UI_SERVICE);
+
 			console.log('Getting Motion Service...');
 			this.motionService = await this.server.getPrimaryService(THINGY_MOTION_SERVICE);
+
+			// Subscribe to button
+			await this._subscribeToButton();
 
 			// Enable sensors by configuring the motion service
 			await this._configureMotionService();
@@ -102,6 +113,33 @@ export class Thingy52Device {
 			console.log('Motion service configured');
 		} catch (error) {
 			console.warn('Failed to configure motion service:', error);
+		}
+	}
+
+	/**
+	 * Subscribe to button notifications
+	 */
+	async _subscribeToButton() {
+		try {
+			const char = await this.uiService.getCharacteristic(THINGY_UI_BUTTON);
+			this.characteristics.set('button', char);
+
+			await char.startNotifications();
+			char.addEventListener('characteristicvaluechanged', (event) => {
+				const value = event.target.value;
+				// Button state: 0 = released, 1 = pressed
+				const pressed = value.getUint8(0) === 1;
+
+				if (pressed) {
+					this._emit('button-press');
+				} else {
+					this._emit('button-release');
+				}
+			});
+
+			console.log('Subscribed to button');
+		} catch (error) {
+			console.warn('Failed to subscribe to button:', error);
 		}
 	}
 
@@ -259,13 +297,13 @@ export class Thingy52Manager {
 		}
 
 		try {
-			// Request device with motion service filter
+			// Request device with motion and UI services
 			const device = await navigator.bluetooth.requestDevice({
 				filters: [
 					{ services: [THINGY_MOTION_SERVICE] },
 					{ namePrefix: 'Thingy' }
 				],
-				optionalServices: [THINGY_MOTION_SERVICE]
+				optionalServices: [THINGY_MOTION_SERVICE, THINGY_UI_SERVICE]
 			});
 
 			return await this.connectDevice(device);

@@ -24,6 +24,7 @@
     let editingColor = $state(null);
     let editDialog = null; // DOM reference - should NOT be $state
     let inputStates = $state({}); // Track state/value for each input: { inputId: { state: 'on'|'off', value: number } }
+    let thingyEulerAngles = $state({}); // Track Euler angles for Thingy devices: { deviceId: { roll, pitch, yaw } }
 
     // Drag and drop state
     let draggedInput = $state(null);
@@ -628,6 +629,16 @@
     onMount(() => {
         refreshInputs();
 
+        // Track Euler angles for Thingy:52 devices
+        const devices = inputController.getInputDevices();
+        for (const device of devices) {
+            if (device.type === 'bluetooth' && device.thingyDevice) {
+                device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
+                    thingyEulerAngles[device.id] = { roll, pitch, yaw };
+                });
+            }
+        }
+
         // Track input state changes for display
         inputController.on('input-trigger', ({ mapping, velocity, toggleState }) => {
             // For toggle buttons, use the toggleState from the event
@@ -658,6 +669,13 @@
 
         // Apply colors when devices connect
         inputController.on('deviceadded', (device) => {
+            // Track Euler angles for Thingy:52 devices
+            if (device.type === 'bluetooth' && device.thingyDevice) {
+                device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
+                    thingyEulerAngles[device.id] = { roll, pitch, yaw };
+                });
+            }
+
             if (device.type === 'hid' || device.type === 'midi') {
                 // Small delay to ensure device is fully initialized
                 setTimeout(() => applyColorsToDevices(), 500);
@@ -719,6 +737,23 @@
                             {input.inputDeviceName || input.inputDeviceId}
                         </div>
                     </div>
+                    {#if input.inputControlId === 'button' && thingyEulerAngles[input.inputDeviceId]}
+                        {@const euler = thingyEulerAngles[input.inputDeviceId]}
+                        <div class="thingy-euler-preview">
+                            <div class="euler-axis">
+                                <span class="euler-label">Roll:</span>
+                                <span class="euler-value">{euler.roll.toFixed(0)}°</span>
+                            </div>
+                            <div class="euler-axis">
+                                <span class="euler-label">Pitch:</span>
+                                <span class="euler-value">{euler.pitch.toFixed(0)}°</span>
+                            </div>
+                            <div class="euler-axis">
+                                <span class="euler-label">Yaw:</span>
+                                <span class="euler-value">{euler.yaw.toFixed(0)}°</span>
+                            </div>
+                        </div>
+                    {/if}
                     <div class="input-state">
                         {getInputStateDisplay(input)}
                     </div>
@@ -980,6 +1015,36 @@
         height: 32px;
         border-radius: 4px;
         box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Thingy:52 Euler angle preview */
+    .thingy-euler-preview {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 12px;
+        background: #f6f6f6;
+        border-radius: 4px;
+        margin: 8px 0;
+        font-family: var(--font-stack-mono);
+    }
+
+    .euler-axis {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10pt;
+    }
+
+    .euler-label {
+        color: #666;
+        font-weight: 500;
+    }
+
+    .euler-value {
+        color: #2563eb;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
     }
 
 </style>
