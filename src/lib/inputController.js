@@ -158,6 +158,27 @@ export class InputController {
 
 			this.customPropertyManager.setProperty(propertyName, propertyValue);
 		});
+
+		// Auto-create a button InputMapping for the Thingy
+		// Check if mapping already exists
+		const existingMappings = this.mappingLibrary.getAll().filter(
+			m => m.inputDeviceId === device.id && m.inputControlId === 'button'
+		);
+
+		if (existingMappings.length === 0) {
+			// Create button input mapping
+			const mapping = new InputMapping({
+				name: `${device.name} Button`,
+				mode: 'input',
+				inputDeviceId: device.id,
+				inputControlId: 'button',
+				inputDeviceName: device.name,
+				buttonMode: 'momentary', // Default to momentary, user can change to toggle
+				color: null // No color support for Thingy
+			});
+
+			this.mappingLibrary.add(mapping);
+		}
 	}
 
 	/**
