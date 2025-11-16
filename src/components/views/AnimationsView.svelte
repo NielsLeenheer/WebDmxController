@@ -53,32 +53,34 @@
     }
 
     function handleDragStart(event, animation) {
-        // Walk up the DOM tree to check if we're in the header
-        let element = event.target;
-        let inHeader = false;
-        let isButton = false;
+        // Don't allow drag from interactive elements
+        let el = event.target;
 
-        // Walk up to find if we're in header or if we hit a blocking element
-        while (element && element !== event.currentTarget) {
-            // Check if we found the header
-            if (element.classList && element.classList.contains('animation-header')) {
-                inHeader = true;
-            }
-
-            // Check if we're on a button or in timeline (should block drag)
-            if (element.tagName === 'BUTTON' ||
-                element.tagName === 'INPUT' ||
-                (element.classList && element.classList.contains('icon-button')) ||
-                (element.classList && element.classList.contains('timeline-container'))) {
-                isButton = true;
-                break;
-            }
-
-            element = element.parentElement;
+        // Check if clicking on an input or button directly
+        if (el.tagName === 'INPUT' || el.tagName === 'BUTTON' || el.tagName === 'TEXTAREA') {
+            event.preventDefault();
+            return;
         }
 
-        // Only allow drag if in header and not on a button
-        if (!inHeader || isButton) {
+        // Walk up the tree to check if we're in header or timeline
+        let foundHeader = false;
+        let foundBlocking = false;
+
+        while (el && el !== event.currentTarget) {
+            if (el.classList) {
+                if (el.classList.contains('animation-header')) {
+                    foundHeader = true;
+                }
+                if (el.classList.contains('timeline-container') ||
+                    el.classList.contains('icon-button')) {
+                    foundBlocking = true;
+                }
+            }
+            el = el.parentElement;
+        }
+
+        // Only allow drag from header, not from timeline
+        if (!foundHeader || foundBlocking) {
             event.preventDefault();
             return;
         }

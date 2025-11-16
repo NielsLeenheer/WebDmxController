@@ -33,32 +33,35 @@
     let isAfterMidpoint = $state(false);
 
     function handleDragStart(event, device) {
-        // Walk up the DOM tree to check if we're in the header
-        let element = event.target;
-        let inHeader = false;
-        let isButton = false;
+        // Don't allow drag from interactive elements
+        let el = event.target;
 
-        // Walk up to find if we're in header or if we hit a blocking element
-        while (element && element !== event.currentTarget) {
-            // Check if we found the header
-            if (element.classList && element.classList.contains('device-header')) {
-                inHeader = true;
-            }
-
-            // Check if we're on a button or in controls (should block drag)
-            if (element.tagName === 'BUTTON' ||
-                element.tagName === 'INPUT' ||
-                (element.classList && element.classList.contains('icon-button')) ||
-                (element.classList && element.classList.contains('controls'))) {
-                isButton = true;
-                break;
-            }
-
-            element = element.parentElement;
+        // Check if clicking on an input or button directly
+        if (el.tagName === 'INPUT' || el.tagName === 'BUTTON' || el.tagName === 'TEXTAREA') {
+            event.preventDefault();
+            return;
         }
 
-        // Only allow drag if in header and not on a button
-        if (!inHeader || isButton) {
+        // Walk up the tree to check if we're in header or controls
+        let foundHeader = false;
+        let foundControls = false;
+
+        while (el && el !== event.currentTarget) {
+            if (el.classList) {
+                if (el.classList.contains('device-header')) {
+                    foundHeader = true;
+                }
+                if (el.classList.contains('controls') ||
+                    el.classList.contains('control') ||
+                    el.classList.contains('icon-button')) {
+                    foundControls = true;
+                }
+            }
+            el = el.parentElement;
+        }
+
+        // Only allow drag from header, not from controls
+        if (!foundHeader || foundControls) {
             event.preventDefault();
             return;
         }
