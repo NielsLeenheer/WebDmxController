@@ -633,6 +633,7 @@
             radial-gradient(circle at 78% 38%, rgba(172, 172, 172, 0.53) 0%, rgba(172, 172, 172, 0.53) 36%, transparent 37%),
             radial-gradient(circle at 42% 25%, rgba(165, 165, 165, 0.47) 0%, rgba(165, 165, 165, 0.47) 30%, transparent 31%);
         border-radius: 6px;
+        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
         pointer-events: none;
         transition: opacity 0.2s ease-out;
         z-index: 5;
