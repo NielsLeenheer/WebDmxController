@@ -117,6 +117,7 @@
     anchorId="devices-button"
     showArrow={true}
     lightDismiss={true}
+    width="450px"
     onclose={closeDevicesDialog}
 >
     <div class="devices-dialog-content">
@@ -202,7 +203,6 @@
         display: grid;
         grid-template-columns: auto 1fr;
         gap: 24px;
-        min-width: 500px;
     }
 
     /* Connect Buttons Grid (2x2) */
