@@ -499,7 +499,7 @@
             <pre class="css-editor readonly">{generatedCSS}</pre>
             <pre
                 class="css-editor editable"
-                contenteditable="true"
+                contenteditable="plaintext-only"
                 oninput={handleCustomCSSInput}
                 spellcheck="false"
                 bind:this={customCSSEditor}
