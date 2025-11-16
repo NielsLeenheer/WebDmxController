@@ -19,6 +19,7 @@
 
     // Settings dialog state
     let settingsDialog = null; // DOM reference - should NOT be $state
+    let customizeControlsDialog = null; // DOM reference - should NOT be $state
     let editingDevice = $state(null);
     let dialogName = $state('');
     let dialogChannel = $state(1);
@@ -177,6 +178,14 @@
         selectedLinkTarget = null;
         selectedSyncControls = null;
         mirrorPan = false;
+    }
+
+    function openCustomizeControlsDialog() {
+        customizeControlsDialog?.showModal();
+    }
+
+    function closeCustomizeControlsDialog() {
+        customizeControlsDialog?.close();
     }
 
     function confirmRemoveDevice() {
@@ -652,51 +661,26 @@
         <div class="dialog-input-group">
             <label for="link-select">Link to device:</label>
             {#if getLinkableDevices(editingDevice).length > 0 || editingDevice.isLinked()}
-                <select id="link-select" bind:value={selectedLinkTarget}>
-                    <option value={null}>None</option>
-                    {#each getLinkableDevices(editingDevice) as linkableDevice}
-                        <option value={linkableDevice.id}>
-                            {linkableDevice.name} ({DEVICE_TYPES[linkableDevice.type].name})
-                        </option>
-                    {/each}
-                </select>
+                <div class="link-select-row">
+                    <select id="link-select" bind:value={selectedLinkTarget}>
+                        <option value={null}>None</option>
+                        {#each getLinkableDevices(editingDevice) as linkableDevice}
+                            <option value={linkableDevice.id}>
+                                {linkableDevice.name} ({DEVICE_TYPES[linkableDevice.type].name})
+                            </option>
+                        {/each}
+                    </select>
+                    {#if selectedLinkTarget !== null}
+                        <Button onclick={openCustomizeControlsDialog} variant="secondary">
+                            Customize
+                        </Button>
+                    {/if}
+                </div>
                 <small class="link-help">Link this device to follow another device's values</small>
             {:else}
                 <p class="no-devices">No compatible devices available to link</p>
             {/if}
         </div>
-
-        {#if selectedLinkTarget !== null}
-            <div class="dialog-input-group">
-                <label>Sync controls:</label>
-                <div class="sync-controls-list">
-                    {#each getAvailableControlsForLink() as control}
-                        <label class="sync-control-item">
-                            <input
-                                type="checkbox"
-                                checked={isSyncControlSelected(control.controlName)}
-                                onchange={() => toggleSyncControl(control.controlName)}
-                            />
-                            <span>{control.controlName}</span>
-                        </label>
-                    {/each}
-                </div>
-                <small class="link-help">Select which controls to sync from the linked device</small>
-            </div>
-
-            {#if isPanTiltControlAvailable()}
-                <div class="dialog-input-group">
-                    <label class="checkbox-label">
-                        <input
-                            type="checkbox"
-                            bind:checked={mirrorPan}
-                        />
-                        <span>Mirror pan (invert pan values)</span>
-                    </label>
-                    <small class="link-help">Useful for moving heads facing each other</small>
-                </div>
-            {/if}
-        {/if}
     </form>
 
     {#snippet tools()}
@@ -719,6 +703,44 @@
     {/snippet}
 </Dialog>
 {/if}
+
+<Dialog
+    bind:dialogRef={customizeControlsDialog}
+    title="Customize Synced Controls"
+    onclose={closeCustomizeControlsDialog}
+>
+    <div class="customize-controls-content">
+        <p class="dialog-description">Select which controls to sync from the linked device:</p>
+        <div class="sync-controls-vertical">
+            {#each getAvailableControlsForLink() as control}
+                <div class="sync-control-row">
+                    <label class="sync-control-item">
+                        <input
+                            type="checkbox"
+                            checked={isSyncControlSelected(control.controlName)}
+                            onchange={() => toggleSyncControl(control.controlName)}
+                        />
+                        <span>{control.controlName}</span>
+                    </label>
+                    {#if control.controlName === 'Pan/Tilt'}
+                        <label class="mirror-option">
+                            <input
+                                type="checkbox"
+                                bind:checked={mirrorPan}
+                                disabled={!isSyncControlSelected('Pan/Tilt')}
+                            />
+                            <span>Mirror pan</span>
+                        </label>
+                    {/if}
+                </div>
+            {/each}
+        </div>
+    </div>
+
+    {#snippet buttons()}
+        <Button onclick={closeCustomizeControlsDialog} variant="primary">Done</Button>
+    {/snippet}
+</Dialog>
 </div>
 
 <style>
@@ -893,5 +915,63 @@
     .checkbox-label span {
         font-size: 10pt;
         color: #333;
+    }
+
+    .link-select-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .link-select-row select {
+        flex: 1;
+    }
+
+    .customize-controls-content {
+        min-width: 400px;
+    }
+
+    .dialog-description {
+        margin: 0 0 16px 0;
+        font-size: 10pt;
+        color: #666;
+    }
+
+    .sync-controls-vertical {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .sync-control-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 8px 12px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+    }
+
+    .mirror-option {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        user-select: none;
+        margin-left: auto;
+        font-size: 9pt;
+        color: #666;
+    }
+
+    .mirror-option input[type="checkbox"]:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .mirror-option input[type="checkbox"] {
+        cursor: pointer;
+        width: 14px;
+        height: 14px;
     }
 </style>
