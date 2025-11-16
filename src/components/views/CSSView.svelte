@@ -145,8 +145,9 @@
                 } else {
                     deviceOpacities[device.id] = 1;
                 }
-            } else if (channels.Intensity !== undefined || channels.Dimmer !== undefined) {
-                // Dimmer/Intensity for non-color devices
+            } else if ((channels.Intensity !== undefined || channels.Dimmer !== undefined) &&
+                       device.type !== 'SMOKE' && device.type !== 'FLAMETHROWER') {
+                // Dimmer/Intensity for non-color devices (excluding SMOKE and FLAMETHROWER which handle their own effects)
                 const intensity = (channels.Intensity || channels.Dimmer || 0) / 255;
                 deviceOpacities[device.id] = intensity;
             }
