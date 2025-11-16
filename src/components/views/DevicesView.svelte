@@ -33,12 +33,32 @@
     let isAfterMidpoint = $state(false);
 
     function handleDragStart(event, device) {
-        // Only allow dragging from the header (but not from buttons in the header)
-        const target = event.target;
-        const isInHeader = target.closest('.device-header');
-        const isButton = target.closest('.icon-button') || target.tagName === 'BUTTON';
+        // Walk up the DOM tree to check if we're in the header
+        let element = event.target;
+        let inHeader = false;
+        let isButton = false;
 
-        if (!isInHeader || isButton) {
+        // Walk up to find if we're in header or if we hit a blocking element
+        while (element && element !== event.currentTarget) {
+            // Check if we found the header
+            if (element.classList && element.classList.contains('device-header')) {
+                inHeader = true;
+            }
+
+            // Check if we're on a button or in controls (should block drag)
+            if (element.tagName === 'BUTTON' ||
+                element.tagName === 'INPUT' ||
+                (element.classList && element.classList.contains('icon-button')) ||
+                (element.classList && element.classList.contains('controls'))) {
+                isButton = true;
+                break;
+            }
+
+            element = element.parentElement;
+        }
+
+        // Only allow drag if in header and not on a button
+        if (!inHeader || isButton) {
             event.preventDefault();
             return;
         }
