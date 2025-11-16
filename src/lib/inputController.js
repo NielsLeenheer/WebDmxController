@@ -6,7 +6,7 @@
  */
 
 import { InputDeviceManager } from './inputs.js';
-import { MappingLibrary, TriggerManager } from './mappings.js';
+import { InputMapping, MappingLibrary, TriggerManager } from './mappings.js';
 import { CustomPropertyManager } from './cssEngine.js';
 
 export class InputController {
@@ -157,17 +157,18 @@ export class InputController {
 
 		if (existingMappings.length === 0) {
 			// Create a composite input mapping for the Thingy
-			const mapping = this.mappingLibrary.createInput(
-				device.id,
-				'composite',  // Special control ID for composite inputs
-				device.name,
-				device.name
-			);
+			const mapping = new InputMapping({
+				name: device.name,
+				mode: 'input',
+				inputDeviceId: device.id,
+				inputControlId: 'composite',  // Special control ID for composite inputs
+				inputDeviceName: device.name,
+				color: null // No color support for Thingy
+			});
 
 			// Mark it as a composite input with special handling
 			mapping.isComposite = true;
 			mapping.compositeType = 'thingy52';
-			mapping.color = null; // No color support for Thingy
 
 			this.mappingLibrary.add(mapping);
 		}
