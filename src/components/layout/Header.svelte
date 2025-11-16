@@ -210,18 +210,18 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         grid-template-rows: 1fr 1fr;
-        gap: 0;
+        gap: 4px;
     }
 
     .device-connect-btn {
-        width: 120px;
-        height: 120px;
+        width: 100px;
+        height: 100px;
         background: #eee;
         color: #333;
         border: none;
         border-radius: 0;
         cursor: pointer;
-        font-size: 10pt;
+        font-size: 9pt;
         font-weight: 500;
         transition: background 0.2s, opacity 0.2s;
         display: flex;
@@ -229,7 +229,7 @@
         align-items: center;
         justify-content: center;
         gap: 8px;
-        padding: 12px;
+        padding: 4px;
     }
 
     /* Rounded corners only on outer edges of grid */
@@ -250,8 +250,8 @@
     }
 
     .device-connect-btn :global(svg) {
-        height: 48px;
-        width: 48px;
+        height: 42px;
+        width: 42px;
     }
 
     .device-connect-btn span {
@@ -269,9 +269,6 @@
     }
 
     /* Connected Devices Column */
-    .connected-devices-column {
-        min-width: 300px;
-    }
 
     .connected-devices-column h3 {
         margin: 0 0 12px 0;
@@ -300,7 +297,7 @@
 
     .no-devices-message {
         margin: 0;
-        padding: 20px;
+        padding: 60px 20px 0;
         text-align: center;
         color: #999;
         font-size: 9pt;
