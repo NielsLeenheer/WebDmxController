@@ -33,11 +33,18 @@
     let isAfterMidpoint = $state(false);
 
     function handleDragStart(event, device) {
+        console.log('=== DRAG START DEBUG ===');
+        console.log('event.target:', event.target);
+        console.log('event.target.tagName:', event.target.tagName);
+        console.log('event.target.className:', event.target.className);
+        console.log('event.currentTarget:', event.currentTarget);
+
         // Don't allow drag from interactive elements
         let el = event.target;
 
         // Check if clicking on an input or button directly
         if (el.tagName === 'INPUT' || el.tagName === 'BUTTON' || el.tagName === 'TEXTAREA') {
+            console.log('PREVENTED: Direct click on interactive element');
             event.preventDefault();
             return;
         }
@@ -46,26 +53,35 @@
         let foundHeader = false;
         let foundControls = false;
 
-        while (el && el !== event.currentTarget) {
-            if (el.classList) {
-                if (el.classList.contains('device-header')) {
+        let walkEl = el;
+        while (walkEl && walkEl !== event.currentTarget) {
+            console.log('Checking element:', walkEl.tagName, walkEl.className);
+            if (walkEl.classList) {
+                if (walkEl.classList.contains('device-header')) {
+                    console.log('  -> Found device-header!');
                     foundHeader = true;
                 }
-                if (el.classList.contains('controls') ||
-                    el.classList.contains('control') ||
-                    el.classList.contains('icon-button')) {
+                if (walkEl.classList.contains('controls') ||
+                    walkEl.classList.contains('control') ||
+                    walkEl.classList.contains('icon-button')) {
+                    console.log('  -> Found blocking element!');
                     foundControls = true;
                 }
             }
-            el = el.parentElement;
+            walkEl = walkEl.parentElement;
         }
+
+        console.log('foundHeader:', foundHeader);
+        console.log('foundControls:', foundControls);
 
         // Only allow drag from header, not from controls
         if (!foundHeader || foundControls) {
+            console.log('PREVENTED: !foundHeader || foundControls');
             event.preventDefault();
             return;
         }
 
+        console.log('ALLOWING DRAG');
         draggedDevice = device;
         draggedIndex = devices.findIndex(d => d.id === device.id);
         event.dataTransfer.effectAllowed = 'move';
