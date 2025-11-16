@@ -127,6 +127,21 @@
                 return `rgb(${value}, ${value}, ${value})`;
             case 'Output':
                 return `rgb(${Math.round(value * 0.784)}, ${Math.round(value * 0.784)}, ${Math.round(value * 0.784)})`;
+            case 'Fuel':
+                // Interpolate through flame gradient: black -> #ff5722 -> #ff9800 -> #ffc107
+                if (value <= 127) {
+                    // 0-127: black (0,0,0) to red-orange (255,87,34)
+                    const t = value / 127;
+                    return `rgb(${Math.round(255 * t)}, ${Math.round(87 * t)}, ${Math.round(34 * t)})`;
+                } else if (value <= 191) {
+                    // 128-191: red-orange (255,87,34) to orange (255,152,0)
+                    const t = (value - 127) / 64;
+                    return `rgb(255, ${Math.round(87 + (152 - 87) * t)}, ${Math.round(34 - 34 * t)})`;
+                } else {
+                    // 192-255: orange (255,152,0) to yellow-orange (255,193,7)
+                    const t = (value - 191) / 64;
+                    return `rgb(255, ${Math.round(152 + (193 - 152) * t)}, ${Math.round(7 * t)})`;
+                }
             default:
                 return `rgb(${Math.round(value * 0.5)}, ${Math.round(value * 0.5)}, ${Math.round(value * 0.5)})`;
         }
