@@ -413,20 +413,21 @@
                                         {@const dotY = (1 - panTilt.tilt / 255) * 100}
                                         <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
                                     {/if}
-                                    {#if device.type === 'FLAMETHROWER' && deviceFlamethrower[device.id]}
-                                        {@const flame = deviceFlamethrower[device.id]}
+                                    {#if device.type === 'FLAMETHROWER'}
+                                        {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
                                         {@const safetyOff = flame.safety < 125}
-                                        {@const fuelPercent = (flame.fuel / 255) * 100}
+                                        {@const fuelPercent = Math.max(5, (flame.fuel / 255) * 100)}
                                         {#if safetyOff}
                                             <div class="flamethrower-cross"></div>
                                         {:else}
                                             <div class="flamethrower-fire" style="height: {fuelPercent}%"></div>
                                         {/if}
                                     {/if}
-                                    {#if device.type === 'SMOKE' && deviceSmoke[device.id]}
-                                        {@const smoke = deviceSmoke[device.id]}
+                                    {#if device.type === 'SMOKE'}
+                                        {@const smoke = deviceSmoke[device.id] || { output: device.defaultValues[0] || 0 }}
                                         {@const smokePercent = (smoke.output / 255) * 100}
-                                        <div class="smoke-effect" style="opacity: {smokePercent / 100}"></div>
+                                        {@const smokeOpacity = Math.max(0.05, smokePercent / 100)}
+                                        <div class="smoke-effect" style="opacity: {smokeOpacity}"></div>
                                     {/if}
                                 </div>
                                 <code class="device-id">#{device.cssId}</code>
@@ -610,6 +611,8 @@
         border-radius: 0 0 6px 6px;
         pointer-events: none;
         transition: height 0.1s ease-out;
+        z-index: 5;
+        min-height: 2px; /* Ensure fire is always slightly visible when active */
     }
 
     .smoke-effect {
@@ -622,6 +625,7 @@
         border-radius: 6px;
         pointer-events: none;
         transition: opacity 0.2s ease-out;
+        z-index: 5;
     }
 
     .device-id {

@@ -395,14 +395,16 @@
                     class:dragging={draggedAnimation?.name === animation.name}
                     class:drag-over={dragOverIndex === index && !isAfterMidpoint}
                     class:drag-after={isDragAfter(index)}
-                    draggable="true"
-                    ondragstart={(e) => handleDragStart(e, animation)}
                     ondragover={(e) => handleDragOver(e, index)}
                     ondragleave={handleDragLeave}
                     ondrop={(e) => handleDrop(e, index)}
                     ondragend={handleDragEnd}
                 >
-                    <div class="animation-header">
+                    <div
+                        class="animation-header"
+                        draggable="true"
+                        ondragstart={(e) => handleDragStart(e, animation)}
+                    >
                         <div
                             class="animation-preview"
                             style="background: {getAnimationPreview(animation)}"
@@ -588,6 +590,11 @@
         background: #e6e6e6;
         gap: 15px;
         border-radius: 8px 8px 0 0;
+        cursor: grab;
+    }
+
+    .animation-header:active {
+        cursor: grabbing;
     }
 
     .animation-preview {

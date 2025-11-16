@@ -528,14 +528,16 @@
                 class:dragging={draggedDevice?.id === device.id}
                 class:drag-over={dragOverIndex === index && !isAfterMidpoint}
                 class:drag-after={isDragAfter(index)}
-                draggable="true"
-                ondragstart={(e) => handleDragStart(e, device)}
                 ondragover={(e) => handleDragOver(e, index)}
                 ondragleave={handleDragLeave}
                 ondrop={(e) => handleDrop(e, index)}
                 ondragend={handleDragEnd}
             >
-                <div class="device-header">
+                <div
+                    class="device-header"
+                    draggable="true"
+                    ondragstart={(e) => handleDragStart(e, device)}
+                >
                     <div
                         class="color-preview"
                         style="background-color: {getDeviceColor(device.type, device.defaultValues)}"
@@ -763,6 +765,11 @@
         padding: 12px 15px;
         border-top-left-radius: 8px;
         border-top-right-radius: 8px;
+        cursor: grab;
+    }
+
+    .device-header:active {
+        cursor: grabbing;
     }
 
     .color-preview {
