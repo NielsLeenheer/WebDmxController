@@ -28,6 +28,20 @@ export class InputController {
 		// Initialize custom properties
 		this.customPropertyManager.initialize();
 
+		// Initialize pressure properties to 0% for all input mappings
+		this._initializePressureProperties();
+
+		// Listen for mapping changes to initialize pressure for new mappings
+		this.mappingLibrary.on('changed', ({ type, mapping }) => {
+			if (type === 'add' && mapping.mode === 'input' && mapping.name && mapping.isButtonInput()) {
+				const propertyName = mapping.name
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, '-')
+					.replace(/^-+|-+$/g, '');
+				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
+			}
+		});
+
 		// IMPORTANT: Set up device listeners BEFORE initializing devices
 		// Otherwise auto-reconnected devices won't have their listeners attached
 		this.inputDeviceManager.on('deviceadded', (device) => {
@@ -120,6 +134,9 @@ export class InputController {
 						if (offClass) this.triggerManager.addRawClass(offClass);
 						if (onClass) this.triggerManager.removeRawClass(onClass);
 					}
+
+					// Emit event for toggle state change
+					this._emit('input-trigger', { mapping: inputMapping, velocity, toggleState: newState });
 				} else {
 					// Momentary mode: add down class, remove up class
 					const downClass = inputMapping.cssClassDown;
@@ -127,9 +144,12 @@ export class InputController {
 
 					if (downClass) this.triggerManager.addRawClass(downClass);
 					if (upClass) this.triggerManager.removeRawClass(upClass);
+
+					// Emit event for momentary button press
+					this._emit('input-trigger', { mapping: inputMapping, velocity });
 				}
 
-				// Set pressure as custom property (for pressure-sensitive buttons)
+				// Set velocity as custom property (for velocity-sensitive buttons)
 				if (inputMapping.name) {
 					// Generate CSS custom property name from input name
 					const propertyName = inputMapping.name
@@ -137,8 +157,8 @@ export class InputController {
 						.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
 						.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
 
-					// Normalize velocity (typically 0-127 for MIDI) to percentage (0% to 100%)
-					const normalizedVelocity = Math.max(0, Math.min(1, velocity / 127));
+					// Velocity is already normalized to 0-1 by input devices
+					const normalizedVelocity = Math.max(0, Math.min(1, velocity));
 					const percentage = (normalizedVelocity * 100).toFixed(1);
 					this.customPropertyManager.setProperty(`${propertyName}-pressure`, `${percentage}%`);
 				}
@@ -146,8 +166,22 @@ export class InputController {
 
 			for (const mapping of mappings) {
 				if (mapping.mode === 'trigger') {
-					// Trigger animation via CSS class
-					this.triggerManager.trigger(mapping);
+					// For toggle buttons, handle trigger state differently
+					if (inputMapping && inputMapping.buttonMode === 'toggle') {
+						// Get current toggle state
+						const toggleKey = `${deviceId}:${controlId}`;
+						const isOn = this.toggleStates.get(toggleKey) || false;
+
+						// Manually toggle the trigger CSS class
+						if (isOn) {
+							this.triggerManager.addRawClass(mapping.cssClassName);
+						} else {
+							this.triggerManager.removeRawClass(mapping.cssClassName);
+						}
+					} else {
+						// Momentary buttons use normal trigger/release cycle
+						this.triggerManager.trigger(mapping);
+					}
 					this._emit('trigger', { mapping, velocity });
 				}
 			}
@@ -177,6 +211,9 @@ export class InputController {
 
 					if (downClass) this.triggerManager.removeRawClass(downClass);
 					if (upClass) this.triggerManager.addRawClass(upClass);
+
+					// Emit event for momentary button release
+					this._emit('input-release', { mapping: inputMapping });
 				}
 				// Toggle mode: do nothing on release (state was toggled on press)
 
@@ -192,7 +229,12 @@ export class InputController {
 
 			for (const mapping of mappings) {
 				if (mapping.mode === 'trigger') {
-					// Call release for all trigger types (pressed, not-pressed)
+					// For toggle buttons, don't call release (state was toggled on press)
+					if (inputMapping && inputMapping.buttonMode === 'toggle') {
+						// Toggle mode: do nothing on release for triggers
+						continue;
+					}
+
 					// Always triggers don't respond to release
 					if (mapping.triggerType !== 'always') {
 						this.triggerManager.release(mapping);
@@ -223,6 +265,9 @@ export class InputController {
 			// Convert value (0-1) to percentage
 			const percentage = Math.round(value * 100);
 			this.customPropertyManager.setProperty(propertyName, `${percentage}%`);
+
+			// Emit event for input value change
+			this._emit('input-valuechange', { mapping: inputMapping, value });
 		}
 
 		// Process direct mode mappings
@@ -315,6 +360,28 @@ export class InputController {
 				if (device.sendNoteOff) {
 					device.sendNoteOff(i);
 				}
+			}
+		}
+	}
+
+	/**
+	 * Initialize pressure custom properties for all input mappings
+	 * Sets all pressure properties to 0% as default
+	 */
+	_initializePressureProperties() {
+		const allMappings = this.mappingLibrary.getAll();
+		const inputMappings = allMappings.filter(m => m.mode === 'input');
+
+		for (const mapping of inputMappings) {
+			if (mapping.name && mapping.isButtonInput()) {
+				// Generate CSS custom property name from input name
+				const propertyName = mapping.name
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+					.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+				// Initialize to 0%
+				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
 			}
 		}
 	}

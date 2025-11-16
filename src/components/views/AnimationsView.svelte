@@ -30,6 +30,12 @@
     // Animation version for forcing re-renders
     let animationVersion = $state(0);
 
+    // Drag and drop state
+    let draggedAnimation = $state(null);
+    let draggedIndex = $state(null);
+    let dragOverIndex = $state(null);
+    let isAfterMidpoint = $state(false);
+
     // Load animations from library
     function refreshAnimationsList() {
         animationsList = animationLibrary.getAll();
@@ -44,6 +50,90 @@
                 editingAnimation = null;
             }
         }
+    }
+
+    function handleDragStart(event, animation) {
+        draggedAnimation = animation;
+        draggedIndex = animationsList.findIndex(a => a.name === animation.name);
+        event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(event, index) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        dragOverIndex = index;
+
+        // Calculate if mouse is in the second half of the card (vertically)
+        const rect = event.currentTarget.getBoundingClientRect();
+        const mouseY = event.clientY;
+        const cardMidpoint = rect.top + rect.height / 2;
+        isAfterMidpoint = mouseY > cardMidpoint;
+    }
+
+    function isDragAfter(index) {
+        return dragOverIndex === index && isAfterMidpoint;
+    }
+
+    function handleDragLeave() {
+        dragOverIndex = null;
+        isAfterMidpoint = false;
+    }
+
+    function handleDrop(event, targetIndex) {
+        event.preventDefault();
+
+        if (!draggedAnimation) return;
+
+        const currentIndex = animationsList.findIndex(a => a.name === draggedAnimation.name);
+        if (currentIndex === -1) {
+            draggedAnimation = null;
+            draggedIndex = null;
+            dragOverIndex = null;
+            isAfterMidpoint = false;
+            return;
+        }
+
+        // Adjust target index based on whether we're inserting after the midpoint
+        let insertIndex = targetIndex;
+        if (isAfterMidpoint) {
+            insertIndex = targetIndex + 1;
+        }
+
+        // If dragging from before to after in the same position, no change needed
+        if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
+            draggedAnimation = null;
+            draggedIndex = null;
+            dragOverIndex = null;
+            isAfterMidpoint = false;
+            return;
+        }
+
+        // Reorder the array
+        const newAnimations = [...animationsList];
+        const [removed] = newAnimations.splice(currentIndex, 1);
+        // Adjust insert position if we removed an item before it
+        const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
+        newAnimations.splice(finalInsertIndex, 0, removed);
+        animationsList = newAnimations;
+
+        // Update the animation library order
+        animationLibrary.animations.clear();
+        newAnimations.forEach(a => {
+            animationLibrary.animations.set(a.name, a);
+        });
+        animationLibrary.save();
+
+        draggedAnimation = null;
+        draggedIndex = null;
+        dragOverIndex = null;
+        isAfterMidpoint = false;
+    }
+
+    function handleDragEnd() {
+        draggedAnimation = null;
+        draggedIndex = null;
+        dragOverIndex = null;
+        isAfterMidpoint = false;
     }
 
     // Initialize on mount
@@ -214,6 +304,76 @@
     function handleAnimationUpdate() {
         animationVersion++;
     }
+
+    // Generate preview gradient for animation
+    function getAnimationPreview(animation) {
+        // Check if animation has color-related controls
+        const hasColor = animation.controls && (
+            animation.controls.includes('Color') ||
+            animation.controls.includes('Amber') ||
+            animation.controls.includes('White')
+        );
+
+        if (!hasColor || !animation.keyframes || animation.keyframes.length === 0) {
+            return '#888';
+        }
+
+        // Get control and component data for the animation
+        const { controls, components } = animation.getControlsForRendering();
+
+        // Extract colors from each keyframe
+        const colors = animation.keyframes.map(keyframe => {
+            const values = keyframe.values || [];
+
+            // Find Color control
+            const colorControl = controls.find(c => c.name === 'Color' && c.type === 'rgb');
+            let r = 0, g = 0, b = 0;
+
+            if (colorControl) {
+                const rIdx = colorControl.components.r;
+                const gIdx = colorControl.components.g;
+                const bIdx = colorControl.components.b;
+                r = values[rIdx] || 0;
+                g = values[gIdx] || 0;
+                b = values[bIdx] || 0;
+            }
+
+            // Add Amber if present
+            const amberControl = controls.find(c => c.name === 'Amber' && c.type === 'slider');
+            if (amberControl) {
+                const amberIdx = amberControl.components.value;
+                const amber = values[amberIdx] || 0;
+                // Amber is #FFBF00 - adds to red and green
+                r = Math.min(255, r + (255 * amber / 255));
+                g = Math.min(255, g + (191 * amber / 255));
+            }
+
+            // Add White if present
+            const whiteControl = controls.find(c => c.name === 'White' && c.type === 'slider');
+            if (whiteControl) {
+                const whiteIdx = whiteControl.components.value;
+                const white = values[whiteIdx] || 0;
+                // White adds equally to all channels
+                r = Math.min(255, r + white);
+                g = Math.min(255, g + white);
+                b = Math.min(255, b + white);
+            }
+
+            return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+        });
+
+        // Create stepped gradient with equal steps
+        const numSteps = colors.length;
+        const stepSize = 100 / numSteps;
+
+        const gradientStops = colors.map((color, index) => {
+            const start = index * stepSize;
+            const end = (index + 1) * stepSize;
+            return `${color} ${start}% ${end}%`;
+        }).join(', ');
+
+        return `linear-gradient(90deg, ${gradientStops})`;
+    }
 </script>
 
 <div class="animations-view">
@@ -229,9 +389,24 @@
                 <p>No animations yet. Create one to get started!</p>
             </div>
         {:else}
-            {#each animationsList as animation (animation.name)}
-                <div class="animation-card">
+            {#each animationsList as animation, index (animation.name)}
+                <div
+                    class="animation-card"
+                    class:dragging={draggedAnimation?.name === animation.name}
+                    class:drag-over={dragOverIndex === index && !isAfterMidpoint}
+                    class:drag-after={isDragAfter(index)}
+                    draggable="true"
+                    ondragstart={(e) => handleDragStart(e, animation)}
+                    ondragover={(e) => handleDragOver(e, index)}
+                    ondragleave={handleDragLeave}
+                    ondrop={(e) => handleDrop(e, index)}
+                    ondragend={handleDragEnd}
+                >
                     <div class="animation-header">
+                        <div
+                            class="animation-preview"
+                            style="background: {getAnimationPreview(animation)}"
+                        ></div>
                         <div class="animation-info">
                             <h3>{animation.name}</h3>
                             <div class="badges">
@@ -270,7 +445,9 @@
                 placeholder="e.g., rainbow, pulse, sweep"
                 autofocus
             />
-            <small class="css-preview">@keyframes {getNewAnimationCSSName()}</small>
+            <div class="css-identifiers">
+                <code class="css-identifier">@keyframes {getNewAnimationCSSName()}</code>
+            </div>
         </div>
 
         <div class="dialog-input-group">
@@ -307,7 +484,9 @@
                 placeholder="Animation name"
                 autofocus
             />
-            <small class="css-preview">@keyframes {getPreviewCSSName()}</small>
+            <div class="css-identifiers">
+                <code class="css-identifier">@keyframes {getPreviewCSSName()} &lbrace; &rbrace;</code>
+            </div>
         </div>
     </form>
 
@@ -343,7 +522,7 @@
     .animations-list {
         flex: 1;
         overflow-y: auto;
-        padding: 0 20px 20px 20px;
+        padding: 20px;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -369,7 +548,36 @@
         width: 80vw;
         background: #f0f0f0;
         border-radius: 8px;
-        overflow: hidden;
+        cursor: grab;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .animation-card:active {
+        cursor: grabbing;
+    }
+
+    .animation-card.dragging {
+        opacity: 0.4;
+    }
+
+    .animation-card.drag-over {
+        position: relative;
+    }
+
+    .animation-card.drag-over::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -10px;
+        height: 4px;
+        background: #2196F3;
+        border-radius: 2px;
+    }
+
+    .animation-card.drag-after::before {
+        top: auto;
+        bottom: -10px;
     }
 
     .animation-header {
@@ -379,6 +587,15 @@
         padding: 15px 20px;
         background: #e6e6e6;
         gap: 15px;
+        border-radius: 8px 8px 0 0;
+    }
+
+    .animation-preview {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
     }
 
     .animation-info {

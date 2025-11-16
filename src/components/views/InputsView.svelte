@@ -6,7 +6,10 @@
     import IconButton from '../common/IconButton.svelte';
     import Dialog from '../common/Dialog.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
+    import recordIcon from '../../assets/icons/record.svg?raw';
+    import stopIcon from '../../assets/icons/stop.svg?raw';
     import editIcon from '../../assets/glyphs/edit.svg?raw';
+
 
     let {
         inputController,
@@ -18,11 +21,131 @@
     let editingInput = $state(null);
     let editingName = $state('');
     let editingButtonMode = $state('momentary');
+    let editingColor = $state(null);
     let editDialog = null; // DOM reference - should NOT be $state
+    let inputStates = $state({}); // Track state/value for each input: { inputId: { state: 'on'|'off', value: number } }
+
+    // Drag and drop state
+    let draggedInput = $state(null);
+    let draggedIndex = $state(null);
+    let dragOverIndex = $state(null);
+    let isAfterMidpoint = $state(false);
 
     const deviceColorUsage = new Map(); // deviceId -> Set(colors)
     const deviceColorIndices = new Map(); // deviceId -> last palette index used when cycling
     const COLOR_CAPABLE_PREFIXES = ['button-', 'note-'];
+
+    function handleDragStart(event, input) {
+        draggedInput = input;
+        draggedIndex = savedInputs.findIndex(i => i.id === input.id);
+        event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(event, index) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        dragOverIndex = index;
+
+        // Calculate if mouse is in the second half of the card
+        const rect = event.currentTarget.getBoundingClientRect();
+        const mouseX = event.clientX;
+        const cardMidpoint = rect.left + rect.width / 2;
+        isAfterMidpoint = mouseX > cardMidpoint;
+    }
+
+    function isDragAfter(index) {
+        return dragOverIndex === index && isAfterMidpoint;
+    }
+
+    function handleDragLeave() {
+        dragOverIndex = null;
+        isAfterMidpoint = false;
+    }
+
+    function handleDrop(event, targetIndex) {
+        event.preventDefault();
+
+        if (!draggedInput) return;
+
+        const currentIndex = savedInputs.findIndex(i => i.id === draggedInput.id);
+        if (currentIndex === -1) {
+            draggedInput = null;
+            draggedIndex = null;
+            dragOverIndex = null;
+            isAfterMidpoint = false;
+            return;
+        }
+
+        // Adjust target index based on whether we're inserting after the midpoint
+        let insertIndex = targetIndex;
+        if (isAfterMidpoint) {
+            insertIndex = targetIndex + 1;
+        }
+
+        // If dragging from before to after in the same position, no change needed
+        if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
+            draggedInput = null;
+            draggedIndex = null;
+            dragOverIndex = null;
+            isAfterMidpoint = false;
+            return;
+        }
+
+        // Reorder the savedInputs array
+        const newInputs = [...savedInputs];
+        const [removed] = newInputs.splice(currentIndex, 1);
+        // Adjust insert position if we removed an item before it
+        const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
+        newInputs.splice(finalInsertIndex, 0, removed);
+        savedInputs = newInputs;
+
+        // Update the mapping library order
+        // Get all mappings and reorder them
+        const allMappings = mappingLibrary.getAll();
+        const inputMappings = newInputs;
+        const nonInputMappings = allMappings.filter(m => m.mode !== 'input');
+
+        // Clear and rebuild the library with new order
+        mappingLibrary.mappings.clear();
+        [...inputMappings, ...nonInputMappings].forEach(m => {
+            mappingLibrary.mappings.set(m.id, m);
+        });
+        mappingLibrary.save();
+
+        draggedInput = null;
+        draggedIndex = null;
+        dragOverIndex = null;
+        isAfterMidpoint = false;
+    }
+
+    function handleDragEnd() {
+        draggedInput = null;
+        draggedIndex = null;
+        dragOverIndex = null;
+        isAfterMidpoint = false;
+    }
+
+    function getInputStateDisplay(input) {
+        const state = inputStates[input.id];
+        if (!state) return '';
+
+        // For buttons (toggle or momentary)
+        if (input.isButtonInput()) {
+            if (input.buttonMode === 'toggle') {
+                return state.state === 'on' ? 'On' : 'Off';
+            } else {
+                // Momentary buttons - only show when pressed
+                return state.state === 'pressed' ? '●' : '';
+            }
+        }
+
+        // For knobs/sliders
+        if (state.value !== undefined) {
+            return `${state.value}%`;
+        }
+
+        return '';
+    }
 
     function isColorCapableControl(controlId) {
         if (!controlId || typeof controlId !== 'string') return false;
@@ -239,23 +362,69 @@
         editingInput = input;
         editingName = input.name;
         editingButtonMode = input.buttonMode || 'momentary';
+        editingColor = input.color;
 
         requestAnimationFrame(() => {
             editDialog?.showModal();
         });
     }
 
-    function saveEdit() {
+    async function saveEdit() {
         if (!editingInput || !editingName.trim()) return;
 
         // Get the mapping from the library and update it
         const mapping = mappingLibrary.get(editingInput.id);
         if (mapping) {
+            const oldColor = mapping.color;
             mapping.name = editingName.trim();
 
             // Update button mode for button inputs
             if (mapping.mode === 'input' && mapping.isButtonInput()) {
                 mapping.buttonMode = editingButtonMode;
+            }
+
+            // Update color if it changed and device supports colors
+            if (editingColor !== oldColor && shouldAssignColor(
+                inputController.getInputDevice(mapping.inputDeviceId),
+                mapping.inputControlId
+            )) {
+                // Release old color usage
+                if (oldColor) {
+                    releaseColorUsage(mapping.inputDeviceId, mapping.inputControlId, oldColor);
+                }
+
+                // Update color
+                mapping.color = editingColor;
+
+                // Register new color usage
+                if (editingColor) {
+                    registerColorUsage(mapping.inputDeviceId, mapping.inputControlId, editingColor);
+                }
+
+                // Update color on hardware
+                const inputDevice = inputController.getInputDevice(mapping.inputDeviceId);
+                if (inputDevice && editingColor) {
+                    // For toggle buttons, respect current state
+                    let color = editingColor;
+                    if (mapping.isButtonInput() && mapping.buttonMode === 'toggle') {
+                        const state = inputStates[mapping.id];
+                        color = (state?.state === 'on') ? editingColor : 'black';
+                    }
+
+                    if (inputDevice.type === 'hid' && inputDevice.id !== 'keyboard' && mapping.inputControlId.startsWith('button-')) {
+                        const buttonIndex = parseInt(mapping.inputControlId.replace('button-', ''));
+                        if (!isNaN(buttonIndex) && buttonIndex >= 0) {
+                            const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
+                            const serialNumber = mapping.inputDeviceId;
+                            await streamDeckManager.setButtonColor(serialNumber, buttonIndex, color);
+                        }
+                    } else if (inputDevice.type === 'midi' && mapping.inputControlId.startsWith('note-')) {
+                        const noteNumber = parseInt(mapping.inputControlId.replace('note-', ''));
+                        if (!isNaN(noteNumber) && noteNumber >= 0) {
+                            inputDevice.setButtonColor(noteNumber, color);
+                        }
+                    }
+                }
             }
 
             // Update CSS identifiers based on new name and button mode
@@ -275,6 +444,7 @@
         editDialog?.close();
         editingInput = null;
         editingName = '';
+        editingColor = null;
     }
 
     // Generate preview of CSS property name based on current editing name
@@ -383,6 +553,20 @@
         savedInputs = mappingLibrary.getAll()
             .filter(m => m.mode === 'input');
 
+        // Initialize input states for all inputs
+        for (const input of savedInputs) {
+            if (input.isButtonInput()) {
+                // Initialize toggle buttons to 'off', momentary buttons have no initial state
+                if (input.buttonMode === 'toggle') {
+                    inputStates[input.id] = { state: 'off' };
+                    // Note: Initial color will be set by applyColorsToDevices()
+                }
+            } else {
+                // Initialize knobs/sliders to 0%
+                inputStates[input.id] = { value: 0 };
+            }
+        }
+
         rebuildDeviceColorUsage();
     }
 
@@ -392,26 +576,85 @@
             const inputDevice = inputController.getInputDevice(input.inputDeviceId);
             if (!inputDevice || !input.color || !isColorCapableControl(input.inputControlId)) continue;
 
+            // For toggle buttons, respect the current toggle state
+            let color = input.color;
+            if (input.isButtonInput() && input.buttonMode === 'toggle') {
+                const state = inputStates[input.id];
+                color = (state?.state === 'on') ? input.color : 'black';
+            }
+
             if (inputDevice.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
                 // Stream Deck button
                 const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
                 if (!isNaN(buttonIndex) && buttonIndex >= 0) {
                     const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
                     const serialNumber = input.inputDeviceId;
-                    await streamDeckManager.setButtonColor(serialNumber, buttonIndex, input.color);
+                    await streamDeckManager.setButtonColor(serialNumber, buttonIndex, color);
                 }
             } else if (inputDevice.type === 'midi' && input.inputControlId.startsWith('note-')) {
                 // MIDI note/button
                 const noteNumber = parseInt(input.inputControlId.replace('note-', ''));
                 if (!isNaN(noteNumber) && noteNumber >= 0) {
-                    inputDevice.setButtonColor(noteNumber, input.color);
+                    inputDevice.setButtonColor(noteNumber, color);
                 }
+            }
+        }
+    }
+
+    async function updateButtonColorForToggleState(input, isOn) {
+        // Update button color based on toggle state (on = full color, off = black)
+        const inputDevice = inputController.getInputDevice(input.inputDeviceId);
+        if (!inputDevice || !input.color || !isColorCapableControl(input.inputControlId)) return;
+
+        const color = isOn ? input.color : 'black';
+
+        if (inputDevice.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
+            // Stream Deck button
+            const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
+            if (!isNaN(buttonIndex) && buttonIndex >= 0) {
+                const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
+                const serialNumber = input.inputDeviceId;
+                await streamDeckManager.setButtonColor(serialNumber, buttonIndex, color);
+            }
+        } else if (inputDevice.type === 'midi' && input.inputControlId.startsWith('note-')) {
+            // MIDI note/button
+            const noteNumber = parseInt(input.inputControlId.replace('note-', ''));
+            if (!isNaN(noteNumber) && noteNumber >= 0) {
+                inputDevice.setButtonColor(noteNumber, color);
             }
         }
     }
 
     onMount(() => {
         refreshInputs();
+
+        // Track input state changes for display
+        inputController.on('input-trigger', ({ mapping, velocity, toggleState }) => {
+            // For toggle buttons, use the toggleState from the event
+            if (mapping.buttonMode === 'toggle') {
+                inputStates[mapping.id] = { state: toggleState ? 'on' : 'off' };
+
+                // Update button color based on toggle state
+                updateButtonColorForToggleState(mapping, toggleState);
+            } else if (mapping.isButtonInput()) {
+                // For momentary buttons, show pressed state
+                inputStates[mapping.id] = { state: 'pressed' };
+            }
+        });
+
+        inputController.on('input-release', ({ mapping }) => {
+            if (mapping.isButtonInput() && mapping.buttonMode !== 'toggle') {
+                // For momentary buttons, clear pressed state
+                inputStates[mapping.id] = { state: 'released' };
+            }
+        });
+
+        inputController.on('input-valuechange', ({ mapping, value }) => {
+            if (!mapping.isButtonInput()) {
+                // For knobs/sliders, store the value (0-1)
+                inputStates[mapping.id] = { value: Math.round(value * 100) };
+            }
+        });
 
         // Apply colors when devices connect
         inputController.on('deviceadded', (device) => {
@@ -434,10 +677,12 @@
     <div class="listen-section">
         {#if isListening}
             <Button onclick={stopListening} variant="primary" pulsating={true}>
+                {@html stopIcon}
                 Stop Listening
             </Button>
         {:else}
             <Button onclick={startListening} variant="secondary">
+                {@html recordIcon}
                 Start Listening
             </Button>
         {/if}
@@ -449,8 +694,19 @@
                 <p>No inputs detected yet. Start listening to detect inputs!</p>
             </div>
         {:else}
-            {#each savedInputs as input (input.id)}
-                <div class="input-card">
+            {#each savedInputs as input, index (input.id)}
+                <div
+                    class="input-card"
+                    class:dragging={draggedInput?.id === input.id}
+                    class:drag-over={dragOverIndex === index && !isAfterMidpoint}
+                    class:drag-after={isDragAfter(index)}
+                    draggable="true"
+                    ondragstart={(e) => handleDragStart(e, input)}
+                    ondragover={(e) => handleDragOver(e, index)}
+                    ondragleave={handleDragLeave}
+                    ondrop={(e) => handleDrop(e, index)}
+                    ondragend={handleDragEnd}
+                >
                     {#if input.color && isColorCapableControl(input.inputControlId)}
                         <div
                             class="input-color-badge"
@@ -462,6 +718,9 @@
                         <div class="input-device-name">
                             {input.inputDeviceName || input.inputDeviceId}
                         </div>
+                    </div>
+                    <div class="input-state">
+                        {getInputStateDisplay(input)}
                     </div>
                     <div class="input-actions">
                         <button
@@ -499,6 +758,19 @@
                 }}
                 autofocus
             />
+            <div class="css-identifiers">
+                {#if editingInput.isButtonInput()}
+                    {#if editingButtonMode === 'toggle'}
+                        <code class="css-identifier">.{getPreviewButtonOnClass()}</code>
+                        <code class="css-identifier">.{getPreviewButtonOffClass()}</code>
+                    {:else}
+                        <code class="css-identifier">.{getPreviewButtonDownClass()}</code>
+                        <code class="css-identifier">.{getPreviewButtonUpClass()}</code>
+                    {/if}
+                {:else}
+                    <code class="css-identifier">{getPreviewPropertyName()}</code>
+                {/if}
+            </div>
         </div>
 
         {#if editingInput.isButtonInput()}
@@ -509,19 +781,22 @@
                     <option value="toggle">Toggle (On/Off)</option>
                 </select>
             </div>
+        {/if}
 
-            <div class="css-identifiers">
-                {#if editingButtonMode === 'toggle'}
-                    <code class="css-id">.{getPreviewButtonOnClass()}</code>
-                    <code class="css-id">.{getPreviewButtonOffClass()}</code>
-                {:else}
-                    <code class="css-id">.{getPreviewButtonDownClass()}</code>
-                    <code class="css-id">.{getPreviewButtonUpClass()}</code>
-                {/if}
-            </div>
-        {:else}
-            <div class="css-identifiers">
-                <code class="css-id">{getPreviewPropertyName()}</code>
+        {#if editingInput && shouldAssignColor(inputController.getInputDevice(editingInput.inputDeviceId), editingInput.inputControlId)}
+            <div class="dialog-input-group">
+                <label for="input-color">Color:</label>
+                <select id="input-color" bind:value={editingColor}>
+                    {#each INPUT_COLOR_PALETTE as color}
+                        <option value={color}>{color.charAt(0).toUpperCase() + color.slice(1)}</option>
+                    {/each}
+                </select>
+                <div class="color-preview-wrapper">
+                    <div
+                        class="color-preview-large"
+                        style="background-color: {getInputColorCSS(editingColor)}"
+                    ></div>
+                </div>
             </div>
         {/if}
     </form>
@@ -557,7 +832,7 @@
     .inputs-grid {
         flex: 1;
         overflow-y: auto;
-        padding: 20px;
+        padding: 20px 40px;
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(15em, 1fr));
         gap: 15px;
@@ -584,19 +859,37 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
-        animation: slideIn 0.2s ease-out;
+        position: relative;
+        cursor: grab;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .input-card:active {
+        cursor: grabbing;
+    }
+
+    .input-card.dragging {
+        opacity: 0.4;
+    }
+
+    .input-card.drag-over {
         position: relative;
     }
 
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    .input-card.drag-over::before {
+        content: '';
+        position: absolute;
+        left: -8px;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: #2196F3;
+        border-radius: 2px;
+    }
+
+    .input-card.drag-after::before {
+        left: auto;
+        right: -8px;
     }
 
     .input-color-badge {
@@ -607,7 +900,7 @@
         height: 32px;
         border-radius: 4px;
         flex-shrink: 0;
-        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .input-header {
@@ -639,6 +932,16 @@
         color: #666;
     }
 
+    .input-state {
+        position: absolute;
+        bottom: 14px;
+        left: 14px;
+        font-size: 9pt;
+        font-weight: 600;
+        color: #666;
+        min-height: 14px;
+    }
+
     .input-actions {
         display: flex;
         gap: 8px;
@@ -668,28 +971,15 @@
         height: 20px;
     }
 
-    /* Dialog content styles */
-    .dialog-input-group {
-        margin-bottom: 16px;
-    }
-
-    .dialog-input-group input {
-        font-size: 10pt;
-    }
-
-    .css-identifiers {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
+    .color-preview-wrapper {
         margin-top: 8px;
     }
 
-    .css-id {
-        font-family: var(--font-stack-mono);
-        font-size: 8pt;
-        color: #007acc;
-        background: #f5f5f5;
-        padding: 4px 8px;
+    .color-preview-large {
+        width: 64px;
+        height: 32px;
         border-radius: 4px;
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
+
 </style>

@@ -2,6 +2,8 @@
     import { onMount, onDestroy } from 'svelte';
     import { InputMapping } from '../../lib/mappings.js';
     import { DEVICE_TYPES } from '../../lib/devices.js';
+    import { getInputColorCSS } from '../../lib/inputColors.js';
+    import { getDeviceColor } from '../../lib/colorUtils.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
@@ -18,6 +20,12 @@
     let availableInputs = $state([]);
     let availableAnimations = $state([]);
     let triggers = $state([]);
+
+    // Drag and drop state
+    let draggedTrigger = $state(null);
+    let draggedIndex = $state(null);
+    let dragOverIndex = $state(null);
+    let isAfterMidpoint = $state(false);
 
     let manualTriggerDialog = $state(null);
     let automaticTriggerDialog = $state(null);
@@ -99,6 +107,40 @@
         }
     }
 
+    // Get trigger type options based on the currently selected edit input
+    function getTriggerTypeOptionsForEditInput() {
+        if (!editTriggerInput) return [
+            { value: 'pressed', label: 'Pressed' },
+            { value: 'not-pressed', label: 'Not Pressed' }
+        ];
+
+        const [deviceId, controlId] = editTriggerInput.split('_');
+        const input = availableInputs.find(i =>
+            i.inputDeviceId === deviceId && i.inputControlId === controlId
+        );
+
+        if (!input || !input.isButtonInput()) {
+            return [
+                { value: 'pressed', label: 'Pressed' },
+                { value: 'not-pressed', label: 'Not Pressed' }
+            ];
+        }
+
+        const buttonMode = input.buttonMode || 'momentary';
+
+        if (buttonMode === 'toggle') {
+            return [
+                { value: 'pressed', label: 'On' },
+                { value: 'not-pressed', label: 'Off' }
+            ];
+        } else {
+            return [
+                { value: 'pressed', label: 'Down' },
+                { value: 'not-pressed', label: 'Up' }
+            ];
+        }
+    }
+
     const ACTION_TYPES = [
         { value: 'animation', label: 'Run Animation' },
         { value: 'setValue', label: 'Set values' }
@@ -114,6 +156,95 @@
         availableInputs = mappingLibrary.getAll().filter(m => m.mode === 'input');
         availableAnimations = animationLibrary.getAll();
         triggers = mappingLibrary.getAll().filter(m => m.mode === 'trigger');
+    }
+
+    function handleDragStart(event, trigger) {
+        draggedTrigger = trigger;
+        draggedIndex = triggers.findIndex(t => t.id === trigger.id);
+        event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(event, index) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        dragOverIndex = index;
+
+        // Calculate if mouse is in the second half of the card (vertically)
+        const rect = event.currentTarget.getBoundingClientRect();
+        const mouseY = event.clientY;
+        const cardMidpoint = rect.top + rect.height / 2;
+        isAfterMidpoint = mouseY > cardMidpoint;
+    }
+
+    function isDragAfter(index) {
+        return dragOverIndex === index && isAfterMidpoint;
+    }
+
+    function handleDragLeave() {
+        dragOverIndex = null;
+        isAfterMidpoint = false;
+    }
+
+    function handleDrop(event, targetIndex) {
+        event.preventDefault();
+
+        if (!draggedTrigger) return;
+
+        const currentIndex = triggers.findIndex(t => t.id === draggedTrigger.id);
+        if (currentIndex === -1) {
+            draggedTrigger = null;
+            draggedIndex = null;
+            dragOverIndex = null;
+            isAfterMidpoint = false;
+            return;
+        }
+
+        // Adjust target index based on whether we're inserting after the midpoint
+        let insertIndex = targetIndex;
+        if (isAfterMidpoint) {
+            insertIndex = targetIndex + 1;
+        }
+
+        // If dragging from before to after in the same position, no change needed
+        if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
+            draggedTrigger = null;
+            draggedIndex = null;
+            dragOverIndex = null;
+            isAfterMidpoint = false;
+            return;
+        }
+
+        // Reorder the triggers array
+        const newTriggers = [...triggers];
+        const [removed] = newTriggers.splice(currentIndex, 1);
+        // Adjust insert position if we removed an item before it
+        const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
+        newTriggers.splice(finalInsertIndex, 0, removed);
+        triggers = newTriggers;
+
+        // Update the mapping library order
+        const allMappings = mappingLibrary.getAll();
+        const triggerMappings = newTriggers;
+        const nonTriggerMappings = allMappings.filter(m => m.mode !== 'trigger');
+
+        // Clear and rebuild the library with new order
+        mappingLibrary.mappings.clear();
+        [...nonTriggerMappings, ...triggerMappings].forEach(m => {
+            mappingLibrary.mappings.set(m.id, m);
+        });
+        mappingLibrary.save();
+
+        draggedTrigger = null;
+        draggedIndex = null;
+        dragOverIndex = null;
+        isAfterMidpoint = false;
+    }
+
+    function handleDragEnd() {
+        draggedTrigger = null;
+        draggedIndex = null;
+        dragOverIndex = null;
+        isAfterMidpoint = false;
     }
 
     function handleMappingChange() {
@@ -285,13 +416,18 @@
             editingTrigger.iterations = editTriggerLooping ? 'infinite' : 1;
             editingTrigger.name = `always_${editTriggerAnimation}`;
         } else {
-            // Manual trigger
+            // Manual trigger - parse the selected input
+            const [newInputDeviceId, newInputControlId] = editTriggerInput.split('_');
             const selectedInput = availableInputs.find(input =>
-                input.inputDeviceId === editingTrigger.inputDeviceId &&
-                input.inputControlId === editingTrigger.inputControlId
+                input.inputDeviceId === newInputDeviceId &&
+                input.inputControlId === newInputControlId
             );
 
             if (!selectedInput) return;
+
+            // Update the trigger's input references
+            editingTrigger.inputDeviceId = newInputDeviceId;
+            editingTrigger.inputControlId = newInputControlId;
 
             // Get button mode from the input mapping
             const buttonMode = selectedInput.buttonMode || 'momentary';
@@ -389,6 +525,144 @@
             const channelCount = Object.keys(trigger.channelValues || {}).length;
             return `${inputName} → ${typeLabel} → Set ${channelCount} channel(s) → ${deviceName}`;
         }
+    }
+
+    // Get input preview color
+    function getInputPreview(trigger) {
+        const input = availableInputs.find(
+            i => i.inputDeviceId === trigger.inputDeviceId &&
+                 i.inputControlId === trigger.inputControlId
+        );
+        return input?.color ? getInputColorCSS(input.color) : '#888';
+    }
+
+    // Get input type label (On/Off/Up/Down)
+    function getInputTypeLabel(trigger) {
+        const input = availableInputs.find(
+            i => i.inputDeviceId === trigger.inputDeviceId &&
+                 i.inputControlId === trigger.inputControlId
+        );
+
+        if (!input) return trigger.triggerType === 'pressed' ? 'Down' : 'Up';
+
+        // Check if it's toggle mode
+        if (input.buttonMode === 'toggle') {
+            return trigger.triggerType === 'pressed' ? 'On' : 'Off';
+        } else {
+            return trigger.triggerType === 'pressed' ? 'Down' : 'Up';
+        }
+    }
+
+    // Get animation preview (stepped gradient)
+    function getAnimationPreview(animationCssName) {
+        const animation = availableAnimations.find(a => a.cssName === animationCssName);
+        if (!animation) return '#888';
+
+        // Check if animation has color-related controls
+        const hasColor = animation.controls && (
+            animation.controls.includes('Color') ||
+            animation.controls.includes('Amber') ||
+            animation.controls.includes('White')
+        );
+
+        if (!hasColor || !animation.keyframes || animation.keyframes.length === 0) {
+            return '#888';
+        }
+
+        // Get control and component data for the animation
+        const { controls, components } = animation.getControlsForRendering();
+
+        // Extract colors from each keyframe
+        const colors = animation.keyframes.map(keyframe => {
+            const values = keyframe.values || [];
+
+            // Find Color control
+            const colorControl = controls.find(c => c.name === 'Color' && c.type === 'rgb');
+            let r = 0, g = 0, b = 0;
+
+            if (colorControl) {
+                const rIdx = colorControl.components.r;
+                const gIdx = colorControl.components.g;
+                const bIdx = colorControl.components.b;
+                r = values[rIdx] || 0;
+                g = values[gIdx] || 0;
+                b = values[bIdx] || 0;
+            }
+
+            // Add Amber if present
+            const amberControl = controls.find(c => c.name === 'Amber' && c.type === 'slider');
+            if (amberControl) {
+                const amberIdx = amberControl.components.value;
+                const amber = values[amberIdx] || 0;
+                r = Math.min(255, r + (255 * amber / 255));
+                g = Math.min(255, g + (191 * amber / 255));
+            }
+
+            // Add White if present
+            const whiteControl = controls.find(c => c.name === 'White' && c.type === 'slider');
+            if (whiteControl) {
+                const whiteIdx = whiteControl.components.value;
+                const white = values[whiteIdx] || 0;
+                r = Math.min(255, r + white);
+                g = Math.min(255, g + white);
+                b = Math.min(255, b + white);
+            }
+
+            return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+        });
+
+        // Create stepped gradient with equal steps
+        const numSteps = colors.length;
+        const stepSize = 100 / numSteps;
+
+        const gradientStops = colors.map((color, index) => {
+            const start = index * stepSize;
+            const end = (index + 1) * stepSize;
+            return `${color} ${start}% ${end}%`;
+        }).join(', ');
+
+        return `linear-gradient(90deg, ${gradientStops})`;
+    }
+
+    // Get preview for value-based trigger
+    function getValuePreview(trigger) {
+        const device = devices.find(d => d.id === trigger.setValueDeviceId);
+        if (!device) return '#888';
+
+        const deviceType = DEVICE_TYPES[device.type];
+        if (!deviceType) return '#888';
+
+        // Build values array from channelValues
+        const values = new Array(deviceType.channels).fill(0);
+        for (const [channelIndex, value] of Object.entries(trigger.channelValues || {})) {
+            values[parseInt(channelIndex)] = value;
+        }
+
+        return getDeviceColor(device.type, values);
+    }
+
+    // Get device ID from trigger (works for both animation and setValue actions)
+    function getTriggerDeviceId(trigger) {
+        if (trigger.actionType === 'animation') {
+            return trigger.targetDeviceIds?.[0];
+        } else {
+            return trigger.setValueDeviceId;
+        }
+    }
+
+    // Get device preview based on default values
+    function getDevicePreview(trigger) {
+        const deviceId = getTriggerDeviceId(trigger);
+        const device = devices.find(d => d.id === deviceId);
+        if (!device) return '#888';
+
+        return getDeviceColor(device.type, device.defaultValues);
+    }
+
+    // Get device name from trigger
+    function getTriggerDeviceName(trigger) {
+        const deviceId = getTriggerDeviceId(trigger);
+        return getDeviceName(deviceId);
     }
 
     // Helper functions for channel value management
@@ -497,17 +771,72 @@
                 <p>No triggers created yet. Click Add Trigger to create one!</p>
             </div>
         {:else}
-            {#each triggers as trigger (trigger.id)}
-                <div class="trigger-card">
-                    <div class="trigger-content">
-                        <span class="trigger-text">{getTriggerDisplayText(trigger)}</span>
-                        <IconButton
-                            icon={editIcon}
-                            onclick={() => openEditDialog(trigger)}
-                            title="Edit trigger"
-                            size="small"
-                        />
+            {#each triggers as trigger, index (trigger.id)}
+                <div
+                    class="trigger-card"
+                    class:dragging={draggedTrigger?.id === trigger.id}
+                    class:drag-over={dragOverIndex === index && !isAfterMidpoint}
+                    class:drag-after={isDragAfter(index)}
+                    draggable="true"
+                    ondragstart={(e) => handleDragStart(e, trigger)}
+                    ondragover={(e) => handleDragOver(e, index)}
+                    ondragleave={handleDragLeave}
+                    ondrop={(e) => handleDrop(e, index)}
+                    ondragend={handleDragEnd}
+                >
+                    <!-- Column 1: Input -->
+                    <div class="trigger-column trigger-input-column">
+                        {#if trigger.triggerType === 'always'}
+                            <div class="trigger-text">Always</div>
+                        {:else}
+                            <div
+                                class="trigger-preview"
+                                style="background: {getInputPreview(trigger)}"
+                            ></div>
+                            <div class="trigger-text">
+                                {getInputName(trigger.inputDeviceId, trigger.inputControlId)} → {getInputTypeLabel(trigger)}
+                            </div>
+                        {/if}
                     </div>
+
+                    <!-- Column 2: Device -->
+                    <div class="trigger-column trigger-device-column">
+                        <div
+                            class="trigger-preview"
+                            style="background: {getDevicePreview(trigger)}"
+                        ></div>
+                        <div class="trigger-text">
+                            {getTriggerDeviceName(trigger)}
+                        </div>
+                    </div>
+
+                    <!-- Column 3: Action -->
+                    <div class="trigger-column trigger-action-column">
+                        {#if trigger.actionType === 'animation'}
+                            <div
+                                class="trigger-preview"
+                                style="background: {getAnimationPreview(trigger.animationName)}"
+                            ></div>
+                            <div class="trigger-text">
+                                {getAnimationDisplayName(trigger.animationName)}
+                            </div>
+                        {:else}
+                            <div
+                                class="trigger-preview"
+                                style="background: {getValuePreview(trigger)}"
+                            ></div>
+                            <div class="trigger-text">
+                                {Object.keys(trigger.channelValues || {}).length} values
+                            </div>
+                        {/if}
+                    </div>
+
+                    <IconButton
+                        icon={editIcon}
+                        onclick={() => openEditDialog(trigger)}
+                        title="Edit trigger"
+                        size="small"
+                    />
                 </div>
             {/each}
         {/if}
@@ -542,19 +871,19 @@
             <!-- Column 2: Device Configuration -->
             <div class="trigger-column">
                 <div class="dialog-input-group">
-                    <label for="trigger-action-type">Action:</label>
-                    <select id="trigger-action-type" bind:value={newTriggerActionType}>
-                        {#each ACTION_TYPES as type}
-                            <option value={type.value}>{type.label}</option>
+                    <label for="trigger-device">Device:</label>
+                    <select id="trigger-device" bind:value={newTriggerDevice}>
+                        {#each devices as device}
+                            <option value={device.id}>{device.name}</option>
                         {/each}
                     </select>
                 </div>
 
                 <div class="dialog-input-group">
-                    <label for="trigger-device">Device:</label>
-                    <select id="trigger-device" bind:value={newTriggerDevice}>
-                        {#each devices as device}
-                            <option value={device.id}>{device.name}</option>
+                    <label for="trigger-action-type">Action:</label>
+                    <select id="trigger-action-type" bind:value={newTriggerActionType}>
+                        {#each ACTION_TYPES as type}
+                            <option value={type.value}>{type.label}</option>
                         {/each}
                     </select>
                 </div>
@@ -709,9 +1038,20 @@
                 <!-- Column 1: Trigger Configuration (Manual only) -->
                 <div class="trigger-column">
                     <div class="dialog-input-group">
+                        <label for="edit-trigger-input">Input:</label>
+                        <select id="edit-trigger-input" bind:value={editTriggerInput}>
+                            {#each availableInputs as input}
+                                <option value={input.inputDeviceId + '_' + input.inputControlId}>
+                                    {input.name}
+                                </option>
+                            {/each}
+                        </select>
+                    </div>
+
+                    <div class="dialog-input-group">
                         <label for="edit-trigger-type">Trigger Type:</label>
                         <select id="edit-trigger-type" bind:value={editTriggerType}>
-                            {#each getTriggerTypeOptionsForTrigger(editingTrigger) as type}
+                            {#each getTriggerTypeOptionsForEditInput() as type}
                                 <option value={type.value}>{type.label}</option>
                             {/each}
                         </select>
@@ -721,19 +1061,19 @@
                 <!-- Column 2: Device Configuration (Manual) -->
                 <div class="trigger-column">
                     <div class="dialog-input-group">
-                        <label for="edit-trigger-action-type">Action:</label>
-                        <select id="edit-trigger-action-type" bind:value={editTriggerActionType}>
-                            {#each ACTION_TYPES as type}
-                                <option value={type.value}>{type.label}</option>
+                        <label for="edit-trigger-device">Device:</label>
+                        <select id="edit-trigger-device" bind:value={editTriggerDevice}>
+                            {#each devices as device}
+                                <option value={device.id}>{device.name}</option>
                             {/each}
                         </select>
                     </div>
 
                     <div class="dialog-input-group">
-                        <label for="edit-trigger-device">Device:</label>
-                        <select id="edit-trigger-device" bind:value={editTriggerDevice}>
-                            {#each devices as device}
-                                <option value={device.id}>{device.name}</option>
+                        <label for="edit-trigger-action-type">Action:</label>
+                        <select id="edit-trigger-action-type" bind:value={editTriggerActionType}>
+                            {#each ACTION_TYPES as type}
+                                <option value={type.value}>{type.label}</option>
                             {/each}
                         </select>
                     </div>
@@ -787,8 +1127,7 @@
                         {@const selectedDevice = devices.find(d => d.id === editTriggerDevice)}
                         {#if selectedDevice}
                             <div class="dialog-input-group">
-                                <label>Set Channel Values:</label>
-                                <div class="controls-info">Select which controls to set when triggered:</div>
+                                <label>Values:</label>
                                 <Controls
                                     controls={DEVICE_TYPES[selectedDevice.type].controls}
                                     components={DEVICE_TYPES[selectedDevice.type].components}
@@ -896,7 +1235,7 @@
     .triggers-list {
         flex: 1;
         overflow-y: auto;
-        padding: 0 20px 20px 20px;
+        padding: 20px;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -919,10 +1258,6 @@
     .empty-state p {
         margin: 0;
         padding: 12px;
-        background: #fff3cd;
-        border: 1px solid #ffc107;
-        border-radius: 4px;
-        color: #856404;
         max-width: 500px;
     }
 
@@ -930,30 +1265,85 @@
         width: 80vw;
         background: #f0f0f0;
         border-radius: 8px;
-    }
-
-    .trigger-content {
         display: flex;
         align-items: center;
-        justify-content: space-between;
         padding: 15px 20px;
-        gap: 15px;
+        gap: 20px;
+        cursor: grab;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .trigger-card:active {
+        cursor: grabbing;
+    }
+
+    .trigger-card.dragging {
+        opacity: 0.4;
+    }
+
+    .trigger-card.drag-over {
+        position: relative;
+    }
+
+    .trigger-card.drag-over::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -10px;
+        height: 4px;
+        background: #2196F3;
+        border-radius: 2px;
+    }
+
+    .trigger-card.drag-after::before {
+        top: auto;
+        bottom: -10px;
+    }
+
+    .trigger-column {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+    }
+
+    .trigger-input-column {
+        min-width: 200px;
+    }
+
+    .trigger-device-column {
+        min-width: 150px;
+    }
+
+    .trigger-action-column {
+        min-width: 200px;
+    }
+
+    .trigger-preview {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
     }
 
     .trigger-text {
-        flex: 1;
-        font-size: 11pt;
+        font-size: 10pt;
         color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     /* Dialog column layout */
     .trigger-columns {
-        display: flex;
+        display: grid;
+        grid-template-columns: 220px 220px 1fr;
         gap: 20px;
     }
 
-    .trigger-column {
-        flex: 1;
+    .trigger-columns .trigger-column {
         display: flex;
         flex-direction: column;
         gap: 0;

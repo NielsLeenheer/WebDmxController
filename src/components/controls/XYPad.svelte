@@ -50,14 +50,25 @@
         isDragging = false;
     }
 
-    // Handle mouse up anywhere in window
+    // Handle mouse move and mouse up anywhere in window during drag
     $effect(() => {
+        const handleGlobalMouseMove = (e) => {
+            if (isDragging) {
+                updateValues(e.clientX, e.clientY);
+            }
+        };
+
         const handleGlobalMouseUp = () => {
             isDragging = false;
         };
 
+        window.addEventListener('mousemove', handleGlobalMouseMove);
         window.addEventListener('mouseup', handleGlobalMouseUp);
-        return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+
+        return () => {
+            window.removeEventListener('mousemove', handleGlobalMouseMove);
+            window.removeEventListener('mouseup', handleGlobalMouseUp);
+        };
     });
 
     // Calculate dot position for display

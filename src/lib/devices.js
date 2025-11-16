@@ -160,7 +160,19 @@ export class Device {
         this.type = type;
         this.startChannel = startChannel;
         this.name = name || `${DEVICE_TYPES[type].name} ${id}`;
+
+        // Initialize default values based on device type
         this.defaultValues = new Array(DEVICE_TYPES[type].channels).fill(0);
+
+        // Set intelligent defaults for certain channels
+        if (type === 'MOVING_HEAD') {
+            // Channel 2 is Dimmer - default to full brightness
+            this.defaultValues[2] = 255;
+        } else if (type === 'DIMMER') {
+            // Channel 0 is Intensity - default to full brightness
+            this.defaultValues[0] = 255;
+        }
+
         this.linkedTo = linkedTo; // ID of device to follow, or null
         this.syncedControls = syncedControls; // Array of control names to sync, or null for all
         this.mirrorPan = mirrorPan; // Whether to mirror pan values for linked devices

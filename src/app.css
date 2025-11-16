@@ -99,7 +99,7 @@ svg {
   margin-bottom: 20px;
 }
 
-.dialog-input-group label {
+.dialog-input-group > label {
   display: block;
   margin-bottom: 8px;
   font-size: 10pt;
@@ -107,7 +107,8 @@ svg {
   color: #555;
 }
 
-.dialog-input-group input {
+.dialog-input-group > input[type="text"],
+.dialog-input-group > input[type="number"] {
   width: 100%;
   padding: 8px 12px;
   font-size: 11pt;
@@ -116,7 +117,17 @@ svg {
   box-sizing: border-box;
 }
 
-.dialog-input-group select {
+.dialog-input-group > input.valid {
+    border-color: #4caf50;
+    background: #f0fdf0;
+}
+
+.dialog-input-group > input.invalid {
+    border-color: #ff4444;
+    background: #fff5f5;
+}
+
+.dialog-input-group > select {
   height: auto;
   padding: 8px 32px 8px 12px;
   font-size: 11pt;
@@ -125,10 +136,17 @@ svg {
   box-sizing: border-box;
 }
 
-.dialog-input-group input:focus,
-.dialog-input-group select:focus {
+.dialog-input-group > input:focus,
+.dialog-input-group > select:focus {
   outline: none;
   border-color: #2196F3;
+}
+
+.dialog-input-group > small {
+  display: block;
+  margin-top: 8px;
+  font-size: 8pt;
+  color: #888;
 }
 
 .checkbox-field label {
@@ -143,4 +161,20 @@ svg {
   width: auto;
   margin: 0;
   font-family: inherit;
+}
+
+/* CSS identifier preview styling */
+.css-identifiers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.css-identifier {
+  font-family: var(--font-stack-mono);
+  font-size: 8pt;
+  color: #888;
+  display: inline-block;
 }

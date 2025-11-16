@@ -39,6 +39,14 @@
         animationLibrary ? animationLibrary.getAll() : []
     );
 
+    // Filter devices to only show those with independent controls
+    // A device has independent controls if:
+    // - It's not linked to another device (linkedTo === null), OR
+    // - It's linked but not all controls are synced (syncedControls !== null)
+    let independentDevices = $derived(
+        devices.filter(device => !device.linkedTo || device.syncedControls !== null)
+    );
+
     // Get all mappings for display (trigger and direct modes)
     let allMappings = $state([]);
 
@@ -125,12 +133,19 @@
 
             // ALWAYS update preview colors (even when not active)
             if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
-                const alpha = channels.White !== undefined ? channels.White : 255;
-                const newColor = `rgba(${channels.Red}, ${channels.Green}, ${channels.Blue}, ${alpha / 255})`;
-                previewColors[device.id] = newColor;
-            } else if (channels.Intensity !== undefined) {
-                // Dimmer preview
-                const intensity = channels.Intensity / 255;
+                // Use getDeviceColor for consistent color calculation
+                const color = getDeviceColor(device.type, newValues);
+                previewColors[device.id] = color;
+
+                // For moving heads, dimmer controls opacity separately
+                if (device.type === 'MOVING_HEAD' && channels.Dimmer !== undefined) {
+                    deviceOpacities[device.id] = channels.Dimmer / 255;
+                } else {
+                    deviceOpacities[device.id] = 1;
+                }
+            } else if (channels.Intensity !== undefined || channels.Dimmer !== undefined) {
+                // Dimmer/Intensity for non-color devices
+                const intensity = (channels.Intensity || channels.Dimmer || 0) / 255;
                 deviceOpacities[device.id] = intensity;
             }
 
@@ -142,8 +157,8 @@
                 };
             }
 
-            // Only update DMX hardware when active
-            if (dmxController && isActive) {
+            // Always update DMX hardware with CSS-sampled values
+            if (dmxController) {
                 updateDeviceToDMX(device, newValues);
             }
         });
@@ -322,8 +337,8 @@
             }
         });
 
-        // Start animation loop (for preview updates, always running)
-        // DMX output is controlled by isActive prop from parent
+        // Start animation loop (for preview updates and DMX output, always running)
+        // DMX controller is always updated with CSS-sampled values
         if (!animationFrameId) {
             updateDMXFromCSS();
         }
@@ -364,11 +379,11 @@
     <div class="left-column">
         <div class="reference-card">
             <!-- Devices Section -->
-            {#if devices.length > 0}
+            {#if independentDevices.length > 0}
                 <div class="reference-section">
                     <h4>Devices</h4>
                     <div class="device-previews">
-                        {#each devices as device (device.id)}
+                        {#each independentDevices as device (device.id)}
                             <div class="device-preview-item">
                                 <div
                                     class="device-preview"
@@ -393,11 +408,9 @@
             {#if animations.length > 0}
                 <div class="reference-section">
                     <h4>Animations</h4>
-                    <div class="reference-list">
+                    <div class="css-identifiers">
                         {#each animations as animation (animation.name)}
-                            <div class="reference-item">
-                                <code>{animation.cssName}</code>
-                            </div>
+                            <code class="css-identifier">{animation.cssName}</code>
                         {/each}
                     </div>
                 </div>
@@ -407,27 +420,26 @@
             {#if allMappings.length > 0}
                 <div class="reference-section">
                     <h4>Inputs</h4>
-                    <div class="reference-list">
+                    <div class="css-identifiers">
                         {#each allMappings as mapping (mapping.id)}
                             {#if mapping.mode === 'input'}
                                 {#if mapping.isButtonInput()}
-                                    <!-- Buttons show down and up classes -->
-                                    <div class="reference-item">
-                                        <code>.{mapping.getButtonDownClass()}</code>
-                                    </div>
-                                    <div class="reference-item">
-                                        <code>.{mapping.getButtonUpClass()}</code>
-                                    </div>
+                                    <!-- Buttons show classes based on mode -->
+                                    {#if mapping.buttonMode === 'toggle'}
+                                        <!-- Toggle buttons show on and off classes -->
+                                        <code class="css-identifier">.{mapping.getButtonOnClass()}</code>
+                                        <code class="css-identifier">.{mapping.getButtonOffClass()}</code>
+                                    {:else}
+                                        <!-- Momentary buttons show down and up classes -->
+                                        <code class="css-identifier">.{mapping.getButtonDownClass()}</code>
+                                        <code class="css-identifier">.{mapping.getButtonUpClass()}</code>
+                                    {/if}
                                 {:else}
                                     <!-- Sliders/Knobs show custom property -->
-                                    <div class="reference-item">
-                                        <code>{mapping.getInputPropertyName()}</code>
-                                    </div>
+                                    <code class="css-identifier">{mapping.getInputPropertyName()}</code>
                                 {/if}
                             {:else if mapping.mode === 'direct'}
-                                <div class="reference-item">
-                                    <code>{mapping.getPropertyName()}</code>
-                                </div>
+                                <code class="css-identifier">{mapping.getPropertyName()}</code>
                             {/if}
                         {/each}
                     </div>
@@ -472,6 +484,7 @@
         background: #f5f5f5;
         border-radius: 8px;
         overflow: hidden;
+        overflow-y: auto;
         display: flex;
         flex-direction: column;
         height: 100%;
@@ -484,8 +497,6 @@
 
     .reference-section:last-child {
         border-bottom: none;
-        flex: 1;
-        overflow-y: auto;
     }
 
     .reference-section h4 {
@@ -515,20 +526,17 @@
         width: 50px;
         height: 50px;
         border-radius: 6px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .pan-tilt-indicator {
         position: absolute;
         width: 10px;
         height: 10px;
-        background: transparent;
-        outline: 2px solid white;
+        background: #888;
         border-radius: 50%;
         transform: translate(-50%, -50%);
         pointer-events: none;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
         z-index: 10;
     }
 
@@ -537,19 +545,6 @@
         font-size: 8pt;
         color: #007acc;
         text-align: center;
-    }
-
-    .reference-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .reference-item code {
-        display: inline-block;
-        font-family: var(--font-stack-mono);
-        font-size: 8pt;
-        color: #007acc;
     }
 
     .animation-targets {

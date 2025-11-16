@@ -26,6 +26,89 @@
     let selectedSyncControls = $state(null); // Array of control names, or null for all
     let mirrorPan = $state(false);
 
+    // Drag and drop state
+    let draggedDevice = $state(null);
+    let draggedIndex = $state(null);
+    let dragOverIndex = $state(null);
+    let isAfterMidpoint = $state(false);
+
+    function handleDragStart(event, device) {
+        draggedDevice = device;
+        draggedIndex = devices.findIndex(d => d.id === device.id);
+        event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(event, index) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        dragOverIndex = index;
+
+        // Calculate if mouse is in the second half of the card
+        const rect = event.currentTarget.getBoundingClientRect();
+        const mouseX = event.clientX;
+        const cardMidpoint = rect.left + rect.width / 2;
+        isAfterMidpoint = mouseX > cardMidpoint;
+    }
+
+    function isDragAfter(index) {
+        return dragOverIndex === index && isAfterMidpoint;
+    }
+
+    function handleDragLeave() {
+        dragOverIndex = null;
+        isAfterMidpoint = false;
+    }
+
+    function handleDrop(event, targetIndex) {
+        event.preventDefault();
+
+        if (!draggedDevice) return;
+
+        const currentIndex = devices.findIndex(d => d.id === draggedDevice.id);
+        if (currentIndex === -1) {
+            draggedDevice = null;
+            draggedIndex = null;
+            dragOverIndex = null;
+            isAfterMidpoint = false;
+            return;
+        }
+
+        // Adjust target index based on whether we're inserting after the midpoint
+        let insertIndex = targetIndex;
+        if (isAfterMidpoint) {
+            insertIndex = targetIndex + 1;
+        }
+
+        // If dragging from before to after in the same position, no change needed
+        if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
+            draggedDevice = null;
+            draggedIndex = null;
+            dragOverIndex = null;
+            isAfterMidpoint = false;
+            return;
+        }
+
+        // Reorder the array
+        const newDevices = [...devices];
+        const [removed] = newDevices.splice(currentIndex, 1);
+        // Adjust insert position if we removed an item before it
+        const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
+        newDevices.splice(finalInsertIndex, 0, removed);
+        devices = newDevices;
+
+        draggedDevice = null;
+        draggedIndex = null;
+        dragOverIndex = null;
+        isAfterMidpoint = false;
+    }
+
+    function handleDragEnd() {
+        draggedDevice = null;
+        draggedIndex = null;
+        dragOverIndex = null;
+        isAfterMidpoint = false;
+    }
+
     function openSettingsDialog(device) {
         editingDevice = device;
         dialogName = device.name;
@@ -439,8 +522,19 @@
             </div>
         {/if}
 
-        {#each devices as device (device.id)}
-            <div class="device-card">
+        {#each devices as device, index (device.id)}
+            <div
+                class="device-card"
+                class:dragging={draggedDevice?.id === device.id}
+                class:drag-over={dragOverIndex === index && !isAfterMidpoint}
+                class:drag-after={isDragAfter(index)}
+                draggable="true"
+                ondragstart={(e) => handleDragStart(e, device)}
+                ondragover={(e) => handleDragOver(e, index)}
+                ondragleave={handleDragLeave}
+                ondrop={(e) => handleDrop(e, index)}
+                ondragend={handleDragEnd}
+            >
                 <div class="device-header">
                     <div
                         class="color-preview"
@@ -484,7 +578,10 @@
                 bind:value={dialogName}
                 placeholder="Device name"
             />
-            <small class="css-id-preview">#{getPreviewCssId()}</small>
+
+            <div class="css-identifiers">
+                <code class="css-identifier">#{getPreviewCssId()}</code>
+            </div>
         </div>
 
         <div class="dialog-input-group">
@@ -585,7 +682,7 @@
     }
 
     .add-device-section {
-        padding: 20px 20px 30px;
+        padding: 20px;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -604,11 +701,10 @@
     }
 
     .devices-list {
-        flex: 1;
         overflow-y: auto;
-        padding: 0 20px 20px 20px;
+        padding: 20px 40px;
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(20em, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(16em, 1fr));
         gap: 15px;
     }
 
@@ -625,6 +721,36 @@
         background: #f0f0f0;
         border-radius: 8px;
         padding: 15px;
+        cursor: grab;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .device-card:active {
+        cursor: grabbing;
+    }
+
+    .device-card.dragging {
+        opacity: 0.4;
+    }
+
+    .device-card.drag-over {
+        position: relative;
+    }
+
+    .device-card.drag-over::before {
+        content: '';
+        position: absolute;
+        left: -8px;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: #2196F3;
+        border-radius: 2px;
+    }
+
+    .device-card.drag-after::before {
+        left: auto;
+        right: -8px;
     }
 
     .device-header {
@@ -643,7 +769,7 @@
         width: 24px;
         height: 24px;
         border-radius: 4px;
-        border: 1px solid rgba(0, 0, 0, 0.15);
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
         flex-shrink: 0;
     }
 
@@ -660,38 +786,6 @@
     /* Dialog-specific overrides */
     .dialog-input-group input[type="number"] {
         width: 10ch;
-    }
-
-    .dialog-input-group input.valid {
-        border-color: #4caf50;
-        background: #f0fdf0;
-    }
-
-    .dialog-input-group input.invalid {
-        border-color: #ff4444;
-        background: #fff5f5;
-    }
-
-    .dialog-input-group input[type="text"] {
-        font-family: inherit;
-    }
-
-    .dialog-input-group select {
-        background: white;
-        cursor: pointer;
-    }
-
-    .dialog-input-group small {
-        display: block;
-        margin-top: 6px;
-        font-size: 9pt;
-        color: #888;
-    }
-
-    .css-id-preview {
-        text-align: right;
-        font-family: var(--font-stack-mono);
-        color: #666;
     }
 
     .no-devices {
