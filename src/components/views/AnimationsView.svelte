@@ -53,15 +53,16 @@
     }
 
     function handleDragStart(event, animation) {
-        // Prevent dragging if started from timeline or interactive controls
+        // Only allow dragging from the header (but not from buttons in the header)
         const target = event.target;
-        if (target.tagName === 'INPUT' ||
-            target.tagName === 'BUTTON' ||
-            target.closest('.timeline-container') ||
-            target.closest('.icon-button')) {
+        const isInHeader = target.closest('.animation-header');
+        const isButton = target.closest('.icon-button') || target.tagName === 'BUTTON';
+
+        if (!isInHeader || isButton) {
             event.preventDefault();
             return;
         }
+
         draggedAnimation = animation;
         draggedIndex = animationsList.findIndex(a => a.name === animation.name);
         event.dataTransfer.effectAllowed = 'move';
