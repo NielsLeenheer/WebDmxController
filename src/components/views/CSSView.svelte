@@ -402,34 +402,43 @@
                     <div class="device-previews">
                         {#each independentDevices as device (device.id)}
                             <div class="device-preview-item">
-                                <div
-                                    class="device-preview"
-                                    style="background-color: {previewColors[device.id] || getDeviceColor(device.type, device.defaultValues)}; opacity: {deviceOpacities[device.id] || 1}"
-                                    title={device.name}
-                                >
-                                    {#if device.type === 'MOVING_HEAD' && devicePanTilt[device.id]}
-                                        {@const panTilt = devicePanTilt[device.id]}
-                                        {@const dotX = (panTilt.pan / 255) * 100}
-                                        {@const dotY = (1 - panTilt.tilt / 255) * 100}
-                                        <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
-                                    {/if}
-                                    {#if device.type === 'FLAMETHROWER'}
-                                        {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
-                                        {@const safetyOff = flame.safety < 125}
-                                        {@const fuelPercent = Math.max(5, (flame.fuel / 255) * 100)}
+                                {#if device.type === 'FLAMETHROWER'}
+                                    {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
+                                    {@const safetyOff = flame.safety < 125}
+                                    {@const fuelPercent = (flame.fuel / 255) * 100}
+                                    <div
+                                        class="device-preview"
+                                        style="background: {safetyOff ? '#222222' : `linear-gradient(to top, #ff5722 0%, #ff9800 ${fuelPercent/2}%, #ffc107 ${fuelPercent}%, #1a1a1a ${fuelPercent}%, #1a1a1a 100%)`}; opacity: {deviceOpacities[device.id] || 1}"
+                                        title={device.name}
+                                    >
                                         {#if safetyOff}
                                             <div class="flamethrower-cross"></div>
-                                        {:else}
-                                            <div class="flamethrower-fire" style="height: {fuelPercent}%"></div>
                                         {/if}
-                                    {/if}
-                                    {#if device.type === 'SMOKE'}
-                                        {@const smoke = deviceSmoke[device.id] || { output: device.defaultValues[0] || 0 }}
-                                        {@const smokePercent = (smoke.output / 255) * 100}
-                                        {@const smokeOpacity = Math.max(0.05, smokePercent / 100)}
-                                        <div class="smoke-effect" style="opacity: {smokeOpacity}"></div>
-                                    {/if}
-                                </div>
+                                    </div>
+                                {:else if device.type === 'SMOKE'}
+                                    {@const smoke = deviceSmoke[device.id] || { output: device.defaultValues[0] || 0 }}
+                                    {@const smokePercent = (smoke.output / 255) * 100}
+                                    <div
+                                        class="device-preview"
+                                        style="background: #1a1a1a; opacity: {deviceOpacities[device.id] || 1}"
+                                        title={device.name}
+                                    >
+                                        <div class="smoke-effect" style="opacity: {smokePercent / 100}"></div>
+                                    </div>
+                                {:else}
+                                    <div
+                                        class="device-preview"
+                                        style="background-color: {previewColors[device.id] || getDeviceColor(device.type, device.defaultValues)}; opacity: {deviceOpacities[device.id] || 1}"
+                                        title={device.name}
+                                    >
+                                        {#if device.type === 'MOVING_HEAD' && devicePanTilt[device.id]}
+                                            {@const panTilt = devicePanTilt[device.id]}
+                                            {@const dotX = (panTilt.pan / 255) * 100}
+                                            {@const dotY = (1 - panTilt.tilt / 255) * 100}
+                                            <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
+                                        {/if}
+                                    </div>
+                                {/if}
                                 <code class="device-id">#{device.cssId}</code>
                             </div>
                         {/each}
@@ -600,19 +609,6 @@
 
     .flamethrower-cross::after {
         transform: translateY(-50%) rotate(-45deg);
-    }
-
-    .flamethrower-fire {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(to top, #ff5722 0%, #ff9800 50%, #ffc107 100%);
-        border-radius: 0 0 6px 6px;
-        pointer-events: none;
-        transition: height 0.1s ease-out;
-        z-index: 5;
-        min-height: 2px; /* Ensure fire is always slightly visible when active */
     }
 
     .smoke-effect {
