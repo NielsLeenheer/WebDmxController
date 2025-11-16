@@ -33,8 +33,12 @@
     let isAfterMidpoint = $state(false);
 
     function handleDragStart(event, device) {
-        // Only allow dragging if initiated from the header
-        if (!event.target.closest('.device-header')) {
+        // Prevent dragging if started from interactive controls
+        const target = event.target;
+        if (target.tagName === 'INPUT' ||
+            target.tagName === 'BUTTON' ||
+            target.closest('.control') ||
+            target.closest('.icon-button')) {
             event.preventDefault();
             return;
         }

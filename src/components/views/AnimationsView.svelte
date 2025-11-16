@@ -53,8 +53,12 @@
     }
 
     function handleDragStart(event, animation) {
-        // Only allow dragging if initiated from the header
-        if (!event.target.closest('.animation-header')) {
+        // Prevent dragging if started from timeline or interactive controls
+        const target = event.target;
+        if (target.tagName === 'INPUT' ||
+            target.tagName === 'BUTTON' ||
+            target.closest('.timeline-container') ||
+            target.closest('.icon-button')) {
             event.preventDefault();
             return;
         }
