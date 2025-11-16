@@ -109,6 +109,11 @@
         }
     }
 
+    // Check if a control should have a visual preview
+    function shouldShowPreview(controlName) {
+        return ['Safety', 'Fuel', 'Output'].includes(controlName);
+    }
+
     // Get thumb color based on control name and current value
     function getThumbColor(controlName, value) {
         switch (controlName) {
@@ -287,7 +292,9 @@
         {:else if control.type === 'slider'}
             {@const channelIndex = getChannel(control.components.value)}
             {@const channelDisabled = isChannelDisabled(channelIndex) || !isControlEnabled(control)}
-            <div class="control" class:no-checkbox={!showCheckboxes}>
+            {@const controlName = components[control.components.value].name}
+            {@const hasPreview = shouldShowPreview(controlName)}
+            <div class="control" class:no-checkbox={!showCheckboxes} class:has-preview={hasPreview}>
                 {#if showCheckboxes}
                     <input
                         type="checkbox"
@@ -297,6 +304,28 @@
                     />
                 {/if}
                 <label class:disabled={channelDisabled}>{control.name}</label>
+                {#if hasPreview}
+                    <div class="control-preview">
+                        {#if controlName === 'Safety'}
+                            {@const safetyOn = values[channelIndex] >= 125}
+                            <div class="safety-preview" style="background: {safetyOn ? '#2a5a2a' : '#222222'}">
+                                {#if safetyOn}
+                                    <div class="safety-checkmark"></div>
+                                {:else}
+                                    <div class="flamethrower-cross"></div>
+                                {/if}
+                            </div>
+                        {:else if controlName === 'Fuel'}
+                            {@const fuelPercent = (values[channelIndex] / 255) * 100}
+                            <div class="fuel-preview" style="background: linear-gradient(to top, #ff5722 0%, #ff9800 {fuelPercent/2}%, #ffc107 {fuelPercent}%, #1a1a1a {fuelPercent}%, #1a1a1a 100%)"></div>
+                        {:else if controlName === 'Output'}
+                            {@const smokePercent = (values[channelIndex] / 255) * 100}
+                            <div class="output-preview" style="background: #1a1a1a">
+                                <div class="smoke-effect" style="opacity: {smokePercent / 100}"></div>
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
                 <div class="slider-wrapper">
                     <input
                         type="range"
@@ -304,7 +333,7 @@
                         max="255"
                         value={values[channelIndex]}
                         oninput={(e) => !channelDisabled && handleSliderChange(channelIndex, parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient(components[control.components.value].name)}; --thumb-color: {getThumbColor(components[control.components.value].name, values[channelIndex])}"
+                        style="--slider-gradient: {getSliderGradient(controlName)}; --thumb-color: {getThumbColor(controlName, values[channelIndex])}"
                         disabled={channelDisabled}
                         class="color-slider"
                     />
@@ -339,6 +368,14 @@
 
     .control.no-checkbox {
         grid-template-columns: 4em 1fr 3em;
+    }
+
+    .control.has-preview {
+        grid-template-columns: 16px 4em 20px 1fr 3em;
+    }
+
+    .control.has-preview.no-checkbox {
+        grid-template-columns: 4em 20px 1fr 3em;
     }
 
     .control label {
@@ -485,5 +522,111 @@
         cursor: pointer;
         margin: 0;
         flex-shrink: 0;
+    }
+
+    /* Control preview styles */
+    .control-preview {
+        width: 20px;
+        height: 20px;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .safety-preview,
+    .fuel-preview,
+    .output-preview {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        border-radius: 3px;
+    }
+
+    /* Flamethrower cross (reused from device previews) */
+    .flamethrower-cross {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 70%;
+        height: 70%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+    }
+
+    .flamethrower-cross::before,
+    .flamethrower-cross::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        background-color: #ff4444;
+        top: 50%;
+        left: 0;
+    }
+
+    .flamethrower-cross::before {
+        transform: translateY(-50%) rotate(45deg);
+    }
+
+    .flamethrower-cross::after {
+        transform: translateY(-50%) rotate(-45deg);
+    }
+
+    /* Safety checkmark */
+    .safety-checkmark {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 70%;
+        height: 70%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+    }
+
+    .safety-checkmark::before {
+        content: '';
+        position: absolute;
+        width: 40%;
+        height: 2px;
+        background-color: #4ade80;
+        bottom: 50%;
+        left: 15%;
+        transform: rotate(-45deg);
+        transform-origin: left bottom;
+    }
+
+    .safety-checkmark::after {
+        content: '';
+        position: absolute;
+        width: 80%;
+        height: 2px;
+        background-color: #4ade80;
+        bottom: 50%;
+        left: 15%;
+        transform: rotate(45deg);
+        transform-origin: left bottom;
+    }
+
+    /* Smoke effect (reused from device previews) */
+    .smoke-effect {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background:
+            radial-gradient(circle at 12% 18%, rgba(180, 180, 180, 0.6) 0%, rgba(180, 180, 180, 0.6) 42%, transparent 43%),
+            radial-gradient(circle at 72% 12%, rgba(160, 160, 160, 0.5) 0%, rgba(160, 160, 160, 0.5) 28%, transparent 29%),
+            radial-gradient(circle at 88% 58%, rgba(170, 170, 170, 0.55) 0%, rgba(170, 170, 170, 0.55) 35%, transparent 36%),
+            radial-gradient(circle at 24% 88%, rgba(175, 175, 175, 0.6) 0%, rgba(175, 175, 175, 0.6) 38%, transparent 39%),
+            radial-gradient(circle at 42% 48%, rgba(165, 165, 165, 0.5) 0%, rgba(165, 165, 165, 0.5) 32%, transparent 33%),
+            radial-gradient(circle at 58% 78%, rgba(170, 170, 170, 0.55) 0%, rgba(170, 170, 170, 0.55) 30%, transparent 31%),
+            radial-gradient(circle at 78% 38%, rgba(180, 180, 180, 0.5) 0%, rgba(180, 180, 180, 0.5) 26%, transparent 27%),
+            radial-gradient(circle at 32% 28%, rgba(175, 175, 175, 0.55) 0%, rgba(175, 175, 175, 0.55) 33%, transparent 34%),
+            radial-gradient(circle at 62% 22%, rgba(170, 170, 170, 0.5) 0%, rgba(170, 170, 170, 0.5) 29%, transparent 30%),
+            radial-gradient(circle at 48% 68%, rgba(165, 165, 165, 0.6) 0%, rgba(165, 165, 165, 0.6) 36%, transparent 37%);
+        border-radius: 3px;
+        box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+        transition: opacity 0.2s ease-out;
     }
 </style>
