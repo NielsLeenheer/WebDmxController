@@ -31,57 +31,55 @@
     let draggedIndex = $state(null);
     let dragOverIndex = $state(null);
     let isAfterMidpoint = $state(false);
+    let lastMouseDownTarget = null;
+
+    function handleMouseDown(event) {
+        // Track where the mouse was pressed down
+        lastMouseDownTarget = event.target;
+    }
 
     function handleDragStart(event, device) {
-        console.log('=== DRAG START DEBUG ===');
-        console.log('event.target:', event.target);
-        console.log('event.target.tagName:', event.target.tagName);
-        console.log('event.target.className:', event.target.className);
-        console.log('event.currentTarget:', event.currentTarget);
+        // Check where the mousedown happened (not where drag started)
+        let clickedElement = lastMouseDownTarget;
 
-        // Don't allow drag from interactive elements
-        let el = event.target;
-
-        // Check if clicking on an input or button directly
-        if (el.tagName === 'INPUT' || el.tagName === 'BUTTON' || el.tagName === 'TEXTAREA') {
-            console.log('PREVENTED: Direct click on interactive element');
+        if (!clickedElement) {
             event.preventDefault();
             return;
         }
 
-        // Walk up the tree to check if we're in header or controls
+        // Check if mousedown was on an interactive element
+        if (clickedElement.tagName === 'INPUT' ||
+            clickedElement.tagName === 'BUTTON' ||
+            clickedElement.tagName === 'TEXTAREA') {
+            event.preventDefault();
+            return;
+        }
+
+        // Walk up from the mousedown target to see if we're in header or controls
         let foundHeader = false;
         let foundControls = false;
 
-        let walkEl = el;
-        while (walkEl && walkEl !== event.currentTarget) {
-            console.log('Checking element:', walkEl.tagName, walkEl.className);
-            if (walkEl.classList) {
-                if (walkEl.classList.contains('device-header')) {
-                    console.log('  -> Found device-header!');
+        let el = clickedElement;
+        while (el && el !== event.currentTarget) {
+            if (el.classList) {
+                if (el.classList.contains('device-header')) {
                     foundHeader = true;
                 }
-                if (walkEl.classList.contains('controls') ||
-                    walkEl.classList.contains('control') ||
-                    walkEl.classList.contains('icon-button')) {
-                    console.log('  -> Found blocking element!');
+                if (el.classList.contains('controls') ||
+                    el.classList.contains('control') ||
+                    el.classList.contains('icon-button')) {
                     foundControls = true;
                 }
             }
-            walkEl = walkEl.parentElement;
+            el = el.parentElement;
         }
-
-        console.log('foundHeader:', foundHeader);
-        console.log('foundControls:', foundControls);
 
         // Only allow drag from header, not from controls
         if (!foundHeader || foundControls) {
-            console.log('PREVENTED: !foundHeader || foundControls');
             event.preventDefault();
             return;
         }
 
-        console.log('ALLOWING DRAG');
         draggedDevice = device;
         draggedIndex = devices.findIndex(d => d.id === device.id);
         event.dataTransfer.effectAllowed = 'move';
@@ -578,6 +576,7 @@
                 class:drag-over={dragOverIndex === index && !isAfterMidpoint}
                 class:drag-after={isDragAfter(index)}
                 draggable="true"
+                onmousedown={handleMouseDown}
                 ondragstart={(e) => handleDragStart(e, device)}
                 ondragover={(e) => handleDragOver(e, index)}
                 ondragleave={handleDragLeave}
