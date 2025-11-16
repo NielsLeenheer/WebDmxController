@@ -339,7 +339,7 @@
 
 <style>
     .timeline-container {
-        padding: 20px;
+        padding: 20px 40px;
         display: flex;
         flex-direction: column;
         align-items: stretch;
@@ -368,12 +368,12 @@
     .timeline-keyframe-marker {
         position: absolute;
         top: 50%;
-        width: 16px;
-        height: 16px;
-        margin-left: -8px;
-        margin-top: -8px;
+        width: 12px;
+        height: 12px;
+        margin-left: -6px;
+        margin-top: -6px;
         background: var(--keyframe-color, #2196f3);
-        border: 2px solid white;
+        outline: 2px solid rgba(255,255,255,0.6);
         border-radius: 50%;
         cursor: grab;
         z-index: 5;

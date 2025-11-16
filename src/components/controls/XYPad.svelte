@@ -136,8 +136,8 @@
         position: absolute;
         width: 12px;
         height: 12px;
-        background: #2196F3;
-        outline: 2px solid white;
+        background: #888;
+        outline: 2px solid rgba(255,255,255,0.6);
         border-radius: 50%;
         transform: translate(-50%, -50%);
         pointer-events: none;
@@ -147,6 +147,6 @@
 
     .crosshair.active {
         transform: translate(-50%, -50%) scale(1.2);
-        background: #1976D2;
+        background: #aaa;
     }
 </style>

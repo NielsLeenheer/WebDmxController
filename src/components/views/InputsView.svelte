@@ -777,8 +777,8 @@
             <div class="dialog-input-group">
                 <label for="button-mode">Button Mode:</label>
                 <select id="button-mode" bind:value={editingButtonMode}>
-                    <option value="momentary">Momentary (Down/Up)</option>
-                    <option value="toggle">Toggle (On/Off)</option>
+                    <option value="momentary">Down/Up</option>
+                    <option value="toggle">On/Off</option>
                 </select>
             </div>
         {/if}

@@ -665,12 +665,13 @@
     }
 
     .target-badge {
-        background: #e3f2fd;
+        background: #f6f6f6;
         color: #1976d2;
         padding: 4px 8px;
         border-radius: 4px;
         font-size: 9pt;
         font-weight: 500;
+        box-shadow: 0px 2px 0px rgba(0,0,0,0.2)
     }
 
     .help-text {

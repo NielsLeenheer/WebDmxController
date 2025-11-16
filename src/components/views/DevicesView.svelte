@@ -682,19 +682,21 @@
 
         <div class="dialog-input-group">
             <label for="channel-input">Starting channel (1-512):</label>
-            <input
-                id="channel-input"
-                type="number"
-                min="1"
-                max="512"
-                bind:value={dialogChannel}
-                class:valid={isChannelValid(editingDevice, dialogChannel - 1)}
-                class:invalid={!isChannelValid(editingDevice, dialogChannel - 1)}
-            />
-            <small class="channel-range">
-                Device uses {DEVICE_TYPES[editingDevice.type].channels} channels:
-                {dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1}
-            </small>
+            <div>
+                <input
+                    id="channel-input"
+                    type="number"
+                    min="1"
+                    max="512"
+                    bind:value={dialogChannel}
+                    class:valid={isChannelValid(editingDevice, dialogChannel - 1)}
+                    class:invalid={!isChannelValid(editingDevice, dialogChannel - 1)}
+                />
+                <small class="channel-range">
+                    Device uses {DEVICE_TYPES[editingDevice.type].channels} channels:
+                    {dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1}
+                </small>
+            </div>
         </div>
 
         <div class="dialog-input-group">
@@ -715,7 +717,6 @@
                         </Button>
                     {/if}
                 </div>
-                <small class="link-help">Link this device to follow another device's values</small>
             {:else}
                 <p class="no-devices">No compatible devices available to link</p>
             {/if}
@@ -745,7 +746,7 @@
 
 <Dialog
     bind:dialogRef={customizeControlsDialog}
-    title="Customize Synced Controls"
+    title="Synced controls"
     onclose={closeCustomizeControlsDialog}
 >
     <div class="customize-controls-content">
@@ -763,12 +764,13 @@
                     </label>
                     {#if control.controlName === 'Pan/Tilt'}
                         <label class="mirror-option">
+                            — 
                             <input
                                 type="checkbox"
                                 bind:checked={mirrorPan}
                                 disabled={!isSyncControlSelected('Pan/Tilt')}
                             />
-                            <span>Mirror pan</span>
+                            <span>Mirror</span>
                         </label>
                     {/if}
                 </div>
@@ -938,6 +940,7 @@
     .device-header h3 {
         margin: 0;
         font-size: 11pt;
+        font-weight: 600;
         color: #333;
     }
 
@@ -1016,7 +1019,7 @@
     }
 
     .link-select-row select {
-        flex: 1;
+        width: 200px;
     }
 
     .customize-controls-content {
@@ -1039,10 +1042,6 @@
         display: flex;
         align-items: center;
         gap: 16px;
-        padding: 8px 12px;
-        background: #f9f9f9;
-        border-radius: 4px;
-        border: 1px solid #e0e0e0;
     }
 
     .mirror-option {
@@ -1051,7 +1050,6 @@
         gap: 6px;
         cursor: pointer;
         user-select: none;
-        margin-left: auto;
         font-size: 9pt;
         color: #666;
     }

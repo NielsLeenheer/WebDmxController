@@ -962,65 +962,65 @@
 
             <!-- Column 3: Action Configuration -->
             <div class="trigger-column">
-                {#if newTriggerActionType === 'animation'}
-                    <div class="dialog-input-group">
-                        <label for="trigger-animation">Animation:</label>
-                        <select id="trigger-animation" bind:value={newTriggerAnimation}>
-                            {#each availableAnimations as animation}
-                                <option value={animation.cssName}>{animation.name}</option>
-                            {/each}
-                        </select>
-                    </div>
+                <div class="trigger-card">
+                    {#if newTriggerActionType === 'animation'}
+                        <div class="dialog-input-group">
+                            <label for="trigger-animation">Animation:</label>
+                            <select id="trigger-animation" bind:value={newTriggerAnimation}>
+                                {#each availableAnimations as animation}
+                                    <option value={animation.cssName}>{animation.name}</option>
+                                {/each}
+                            </select>
+                        </div>
 
-                    <div class="dialog-input-group">
-                        <label for="trigger-duration">Duration (ms):</label>
-                        <div class="duration-with-loop">
-                            <input
-                                id="trigger-duration"
-                                type="number"
-                                bind:value={newTriggerDuration}
-                                min="100"
-                                step="100"
-                                disabled={!newTriggerAnimation}
-                            />
-                            <div class="checkbox-field">
-                                <label>
-                                    <input
-                                        type="checkbox"
-                                        bind:checked={newTriggerLooping}
-                                        disabled={!newTriggerAnimation}
-                                    />
-                                    Loop
-                                </label>
+                        <div class="dialog-input-group">
+                            <label for="trigger-duration">Duration (ms):</label>
+                            <div class="duration-with-loop">
+                                <input
+                                    id="trigger-duration"
+                                    type="number"
+                                    bind:value={newTriggerDuration}
+                                    min="100"
+                                    step="100"
+                                    disabled={!newTriggerAnimation}
+                                />
+                                <div class="checkbox-field">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            bind:checked={newTriggerLooping}
+                                            disabled={!newTriggerAnimation}
+                                        />
+                                        Loop
+                                    </label>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="dialog-input-group">
-                        <label for="trigger-easing">Easing:</label>
-                        <select id="trigger-easing" bind:value={newTriggerEasing} disabled={!newTriggerAnimation}>
-                            {#each EASING_FUNCTIONS as easing}
-                                <option value={easing}>{easing}</option>
-                            {/each}
-                        </select>
-                    </div>
-                {:else if newTriggerActionType === 'setValue' && newTriggerDevice}
-                    {@const selectedDevice = devices.find(d => d.id === newTriggerDevice)}
-                    {#if selectedDevice}
                         <div class="dialog-input-group">
-                            <label>Set Channel Values:</label>
-                            <div class="controls-info">Select which controls to set when triggered:</div>
-                            <Controls
-                                controls={DEVICE_TYPES[selectedDevice.type].controls}
-                                components={DEVICE_TYPES[selectedDevice.type].components}
-                                values={getValuesArrayForDevice(newTriggerDevice, newTriggerChannelValues)}
-                                onChange={handleSetValueChange}
-                                showCheckboxes={true}
-                                bind:enabledControls={newTriggerEnabledControls}
-                            />
+                            <label for="trigger-easing">Easing:</label>
+                            <select id="trigger-easing" bind:value={newTriggerEasing} disabled={!newTriggerAnimation}>
+                                {#each EASING_FUNCTIONS as easing}
+                                    <option value={easing}>{easing}</option>
+                                {/each}
+                            </select>
                         </div>
+                    {:else if newTriggerActionType === 'setValue' && newTriggerDevice}
+                        {@const selectedDevice = devices.find(d => d.id === newTriggerDevice)}
+                        {#if selectedDevice}
+                            <div class="dialog-input-group">
+                                <Controls
+                                    controls={DEVICE_TYPES[selectedDevice.type].controls}
+                                    components={DEVICE_TYPES[selectedDevice.type].components}
+                                    values={getValuesArrayForDevice(newTriggerDevice, newTriggerChannelValues)}
+                                    onChange={handleSetValueChange}
+                                    showCheckboxes={true}
+                                    bind:enabledControls={newTriggerEnabledControls}
+                                />
+                            </div>
+                        {/if}
                     {/if}
-                {/if}
+                </div>
             </div>
         </div>
     </form>
@@ -1049,46 +1049,48 @@
 
             <!-- Column 2: Action Configuration -->
             <div class="trigger-column">
-                <div class="dialog-input-group">
-                    <label for="auto-trigger-animation">Animation:</label>
-                    <select id="auto-trigger-animation" bind:value={newTriggerAnimation}>
-                        {#each availableAnimations as animation}
-                            <option value={animation.cssName}>{animation.name}</option>
-                        {/each}
-                    </select>
-                </div>
+                <div class="trigger-card">
+                    <div class="dialog-input-group">
+                        <label for="auto-trigger-animation">Animation:</label>
+                        <select id="auto-trigger-animation" bind:value={newTriggerAnimation}>
+                            {#each availableAnimations as animation}
+                                <option value={animation.cssName}>{animation.name}</option>
+                            {/each}
+                        </select>
+                    </div>
 
-                <div class="dialog-input-group">
-                    <label for="auto-trigger-duration">Duration (ms):</label>
-                    <div class="duration-with-loop">
-                        <input
-                            id="auto-trigger-duration"
-                            type="number"
-                            bind:value={newTriggerDuration}
-                            min="100"
-                            step="100"
-                            disabled={!newTriggerAnimation}
-                        />
-                        <div class="checkbox-field">
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    bind:checked={newTriggerLooping}
-                                    disabled={!newTriggerAnimation}
-                                />
-                                Loop
-                            </label>
+                    <div class="dialog-input-group">
+                        <label for="auto-trigger-duration">Duration (ms):</label>
+                        <div class="duration-with-loop">
+                            <input
+                                id="auto-trigger-duration"
+                                type="number"
+                                bind:value={newTriggerDuration}
+                                min="100"
+                                step="100"
+                                disabled={!newTriggerAnimation}
+                            />
+                            <div class="checkbox-field">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        bind:checked={newTriggerLooping}
+                                        disabled={!newTriggerAnimation}
+                                    />
+                                    Loop
+                                </label>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="dialog-input-group">
-                    <label for="auto-trigger-easing">Easing:</label>
-                    <select id="auto-trigger-easing" bind:value={newTriggerEasing} disabled={!newTriggerAnimation}>
-                        {#each EASING_FUNCTIONS as easing}
-                            <option value={easing}>{easing}</option>
-                        {/each}
-                    </select>
+                    <div class="dialog-input-group">
+                        <label for="auto-trigger-easing">Easing:</label>
+                        <select id="auto-trigger-easing" bind:value={newTriggerEasing} disabled={!newTriggerAnimation}>
+                            {#each EASING_FUNCTIONS as easing}
+                                <option value={easing}>{easing}</option>
+                            {/each}
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1130,7 +1132,7 @@
                 </div>
 
                 <!-- Column 2: Device Configuration (Manual) -->
-                <div class="trigger-column">
+                <div class="trigger-column with-divider">
                     <div class="dialog-input-group">
                         <label for="edit-trigger-device">Device:</label>
                         <select id="edit-trigger-device" bind:value={editTriggerDevice}>
@@ -1152,6 +1154,7 @@
 
                 <!-- Column 3: Action Configuration (Manual) -->
                 <div class="trigger-column">
+                    <div class="trigger-card">
                     {#if editTriggerActionType === 'animation'}
                         <div class="dialog-input-group">
                             <label for="edit-trigger-animation">Animation:</label>
@@ -1198,7 +1201,6 @@
                         {@const selectedDevice = devices.find(d => d.id === editTriggerDevice)}
                         {#if selectedDevice}
                             <div class="dialog-input-group">
-                                <label>Values:</label>
                                 <Controls
                                     controls={DEVICE_TYPES[selectedDevice.type].controls}
                                     components={DEVICE_TYPES[selectedDevice.type].components}
@@ -1210,6 +1212,7 @@
                             </div>
                         {/if}
                     {/if}
+                    </div>
                 </div>
             {:else}
                 <!-- Automatic trigger: Only 2 columns -->
@@ -1227,46 +1230,48 @@
 
                 <!-- Column 2: Action Configuration (Automatic) -->
                 <div class="trigger-column">
-                    <div class="dialog-input-group">
-                        <label for="edit-trigger-animation">Animation:</label>
-                        <select id="edit-trigger-animation" bind:value={editTriggerAnimation}>
-                            {#each availableAnimations as animation}
-                                <option value={animation.cssName}>{animation.name}</option>
-                            {/each}
-                        </select>
-                    </div>
+                    <div class="trigger-card">
+                        <div class="dialog-input-group">
+                            <label for="edit-trigger-animation">Animation:</label>
+                            <select id="edit-trigger-animation" bind:value={editTriggerAnimation}>
+                                {#each availableAnimations as animation}
+                                    <option value={animation.cssName}>{animation.name}</option>
+                                {/each}
+                            </select>
+                        </div>
 
-                    <div class="dialog-input-group">
-                        <label for="edit-trigger-duration">Duration (ms):</label>
-                        <div class="duration-with-loop">
-                            <input
-                                id="edit-trigger-duration"
-                                type="number"
-                                bind:value={editTriggerDuration}
-                                min="100"
-                                step="100"
-                                disabled={!editTriggerAnimation}
-                            />
-                            <div class="checkbox-field">
-                                <label>
-                                    <input
-                                        type="checkbox"
-                                        bind:checked={editTriggerLooping}
-                                        disabled={!editTriggerAnimation}
-                                    />
-                                    Loop
-                                </label>
+                        <div class="dialog-input-group">
+                            <label for="edit-trigger-duration">Duration (ms):</label>
+                            <div class="duration-with-loop">
+                                <input
+                                    id="edit-trigger-duration"
+                                    type="number"
+                                    bind:value={editTriggerDuration}
+                                    min="100"
+                                    step="100"
+                                    disabled={!editTriggerAnimation}
+                                />
+                                <div class="checkbox-field">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            bind:checked={editTriggerLooping}
+                                            disabled={!editTriggerAnimation}
+                                        />
+                                        Loop
+                                    </label>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="dialog-input-group">
-                        <label for="edit-trigger-easing">Easing:</label>
-                        <select id="edit-trigger-easing" bind:value={editTriggerEasing} disabled={!editTriggerAnimation}>
-                            {#each EASING_FUNCTIONS as easing}
-                                <option value={easing}>{easing}</option>
-                            {/each}
-                        </select>
+                        <div class="dialog-input-group">
+                            <label for="edit-trigger-easing">Easing:</label>
+                            <select id="edit-trigger-easing" bind:value={editTriggerEasing} disabled={!editTriggerAnimation}>
+                                {#each EASING_FUNCTIONS as easing}
+                                    <option value={easing}>{easing}</option>
+                                {/each}
+                            </select>
+                        </div>
                     </div>
                 </div>
             {/if}
@@ -1410,24 +1415,45 @@
     /* Dialog column layout */
     .trigger-columns {
         display: grid;
-        grid-template-columns: 220px 220px 1fr;
+        grid-template-columns: 180px 200px 1fr;
         gap: 20px;
+    }
+
+    #automatic-trigger-form .trigger-columns {
+        grid-template-columns: 180px 1fr;
     }
 
     .trigger-columns .trigger-column {
         display: flex;
         flex-direction: column;
+        align-items: start;
         gap: 0;
+    }
+
+    .trigger-column.with-divider {
+        border-left: 2px solid #eee;
+        padding-left: 20px;
+    }
+
+    .trigger-column .trigger-card {
+        background: #f6f6f6;
+        width: 340px;
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+        gap: 0;
+        flex: 1;
     }
 
     .duration-with-loop {
         display: flex;
-        flex-direction: column;
-        gap: 10px;
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
     }
 
-    .duration-with-loop input {
-        width: 100%;
+    .duration-with-loop input[type="number"] {
+        width: 100px;
     }
 
     .duration-with-loop .checkbox-field {

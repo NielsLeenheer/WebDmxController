@@ -343,7 +343,7 @@
 
     .control label {
         font-size: 9pt;
-        font-weight: 600;
+        font-weight: 500;
         color: #555;
     }
 
@@ -382,7 +382,7 @@
         height: 12px;
         border-radius: 50%;
         background: var(--thumb-color, #888);
-        outline: 2px solid white;
+        outline: 2px solid rgba(255,255,255,0.6);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         cursor: pointer;
     }
@@ -397,7 +397,7 @@
         height: 12px;
         border-radius: 50%;
         background: var(--thumb-color, #888);
-        outline: 2px solid white;
+        outline: 2px solid rgba(255,255,255,0.6);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         cursor: pointer;
     }
@@ -414,10 +414,10 @@
 
     .value-input {
         width: 4em;
-        border: none;
+        border: none !important;
         background: transparent;
-        padding: 4px;
-        font-size: 9pt;
+        padding: 4px !important;
+        font-size: 9pt !important;
         font-family: var(--font-stack-mono);
         text-align: right;
         border-radius: 5px;
@@ -437,12 +437,12 @@
         display: grid;
         grid-template-columns: 4em 1fr 3em;
         gap: 8px;
-        align-items: center;
+        align-items: start;
     }
 
     .control-xypad label {
         font-size: 9pt;
-        font-weight: 600;
+        font-weight: 500;
         color: #555;
     }
 
@@ -457,7 +457,7 @@
     }
 
     .xypad-wrapper {
-        padding-left: 6px;
+        padding-left: 7px;
         padding-bottom: 6px;
     }
     .xypad-wrapper.disabled {
