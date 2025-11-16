@@ -6,6 +6,7 @@
     import streamdeckIcon from '../../assets/icons/streamdeck.svg?raw';
     import midiIcon from '../../assets/icons/midi.svg?raw';
     import inputsIcon from '../../assets/icons/inputs.svg?raw';
+    import thingyIcon from '../../assets/icons/thingy.svg?raw';
     import Dialog from '../common/Dialog.svelte';
 
     let { onconnect, ondisconnect, connected, inputController } = $props();
@@ -152,7 +153,7 @@
     <!-- Thingy:52 Section -->
     <div class="device-section">
         <button class="connect-device-btn" onclick={connectThingy52}>
-            <Icon data={inputsIcon} />
+            <Icon data={thingyIcon} />
             Connect Thingy:52
         </button>
         {#if bluetoothDevices.length > 0}
