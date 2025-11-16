@@ -629,6 +629,20 @@
     onMount(() => {
         refreshInputs();
 
+        // Listen for mapping changes (add/update/remove)
+        mappingLibrary.on('changed', ({ type, mapping }) => {
+            if (type === 'add' || type === 'remove') {
+                refreshInputs();
+            } else if (type === 'update') {
+                // Update the specific input in the list
+                const index = savedInputs.findIndex(i => i.id === mapping.id);
+                if (index !== -1) {
+                    savedInputs[index] = mapping;
+                    savedInputs = [...savedInputs]; // Trigger reactivity
+                }
+            }
+        });
+
         // Track Euler angles for Thingy:52 devices
         const devices = inputController.getInputDevices();
         for (const device of devices) {
