@@ -5,6 +5,7 @@
     import addIcon from '../../assets/icons/add.svg?raw';
     import streamdeckIcon from '../../assets/icons/streamdeck.svg?raw';
     import midiIcon from '../../assets/icons/midi.svg?raw';
+    import inputsIcon from '../../assets/icons/inputs.svg?raw';
     import Dialog from '../common/Dialog.svelte';
 
     let { onconnect, ondisconnect, connected, inputController } = $props();
@@ -14,7 +15,8 @@
     let connectedDevices = $state([]);
 
     // Filter devices by type
-    let streamDeckDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && d.id !== 'keyboard'));
+    let streamDeckDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && d.streamDeck));
+    let hidDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && !d.streamDeck && d.id !== 'keyboard'));
     let midiDevices = $derived(connectedDevices.filter(d => d.type === 'midi'));
 
     // MIDI button should be disabled if we already have MIDI access
@@ -54,6 +56,16 @@
             connectedDevices = inputController?.getInputDevices() || [];
         } catch (error) {
             alert(`Failed to connect MIDI: ${error.message}`);
+        }
+    }
+
+    async function connectHID() {
+        try {
+            await inputController?.requestHIDDevice();
+            // Update device list
+            connectedDevices = inputController?.getInputDevices() || [];
+        } catch (error) {
+            alert(`Failed to connect HID device: ${error.message}`);
         }
     }
 </script>
@@ -101,6 +113,23 @@
         {#if streamDeckDevices.length > 0}
             <div class="device-list">
                 {#each streamDeckDevices as device (device.id)}
+                    <div class="device-item">
+                        <span class="device-name">{device.name}</span>
+                    </div>
+                {/each}
+            </div>
+        {/if}
+    </div>
+
+    <!-- HID Section -->
+    <div class="device-section">
+        <button class="connect-device-btn" onclick={connectHID}>
+            <Icon data={inputsIcon} />
+            Connect HID Device
+        </button>
+        {#if hidDevices.length > 0}
+            <div class="device-list">
+                {#each hidDevices as device (device.id)}
                     <div class="device-item">
                         <span class="device-name">{device.name}</span>
                     </div>
