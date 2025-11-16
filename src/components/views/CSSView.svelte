@@ -622,12 +622,16 @@
         right: 0;
         bottom: 0;
         background:
-            radial-gradient(circle at 15% 20%, rgba(180, 180, 180, 0.6) 0%, rgba(180, 180, 180, 0.6) 45%, transparent 50%),
-            radial-gradient(circle at 70% 15%, rgba(160, 160, 160, 0.5) 0%, rgba(160, 160, 160, 0.5) 40%, transparent 45%),
-            radial-gradient(circle at 50% 50%, rgba(170, 170, 170, 0.55) 0%, rgba(170, 170, 170, 0.55) 48%, transparent 52%),
-            radial-gradient(circle at 85% 75%, rgba(175, 175, 175, 0.5) 0%, rgba(175, 175, 175, 0.5) 42%, transparent 47%),
-            radial-gradient(circle at 10% 85%, rgba(165, 165, 165, 0.5) 0%, rgba(165, 165, 165, 0.5) 38%, transparent 43%),
-            radial-gradient(circle at 35% 70%, rgba(170, 170, 170, 0.45) 0%, rgba(170, 170, 170, 0.45) 35%, transparent 40%);
+            radial-gradient(circle at 12% 18%, rgba(180, 180, 180, 0.6) 0%, rgba(180, 180, 180, 0.6) 42%, transparent 43%),
+            radial-gradient(circle at 72% 12%, rgba(160, 160, 160, 0.5) 0%, rgba(160, 160, 160, 0.5) 28%, transparent 29%),
+            radial-gradient(circle at 45% 45%, rgba(170, 170, 170, 0.55) 0%, rgba(170, 170, 170, 0.55) 38%, transparent 39%),
+            radial-gradient(circle at 88% 72%, rgba(175, 175, 175, 0.5) 0%, rgba(175, 175, 175, 0.5) 35%, transparent 36%),
+            radial-gradient(circle at 8% 88%, rgba(165, 165, 165, 0.5) 0%, rgba(165, 165, 165, 0.5) 30%, transparent 31%),
+            radial-gradient(circle at 33% 75%, rgba(170, 170, 170, 0.45) 0%, rgba(170, 170, 170, 0.45) 25%, transparent 26%),
+            radial-gradient(circle at 58% 55%, rgba(175, 175, 175, 0.52) 0%, rgba(175, 175, 175, 0.52) 32%, transparent 33%),
+            radial-gradient(circle at 25% 62%, rgba(168, 168, 168, 0.48) 0%, rgba(168, 168, 168, 0.48) 27%, transparent 28%),
+            radial-gradient(circle at 78% 38%, rgba(172, 172, 172, 0.53) 0%, rgba(172, 172, 172, 0.53) 36%, transparent 37%),
+            radial-gradient(circle at 42% 25%, rgba(165, 165, 165, 0.47) 0%, rgba(165, 165, 165, 0.47) 30%, transparent 31%);
         border-radius: 6px;
         pointer-events: none;
         transition: opacity 0.2s ease-out;
