@@ -150,6 +150,9 @@
                 // Dimmer/Intensity for non-color devices (excluding SMOKE and FLAMETHROWER which handle their own effects)
                 const intensity = (channels.Intensity || channels.Dimmer || 0) / 255;
                 deviceOpacities[device.id] = intensity;
+            } else if (device.type === 'SMOKE' || device.type === 'FLAMETHROWER') {
+                // SMOKE and FLAMETHROWER always have opacity 1 (they handle their own effects internally)
+                deviceOpacities[device.id] = 1;
             }
 
             // Update pan/tilt preview for moving heads
