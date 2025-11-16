@@ -619,12 +619,12 @@
         right: 0;
         bottom: 0;
         background:
-            radial-gradient(circle at 25% 35%, rgba(180, 180, 180, 0.6) 0%, rgba(180, 180, 180, 0.6) 45%, transparent 50%),
-            radial-gradient(circle at 65% 25%, rgba(160, 160, 160, 0.5) 0%, rgba(160, 160, 160, 0.5) 40%, transparent 45%),
-            radial-gradient(circle at 50% 60%, rgba(170, 170, 170, 0.55) 0%, rgba(170, 170, 170, 0.55) 48%, transparent 52%),
-            radial-gradient(circle at 80% 70%, rgba(175, 175, 175, 0.5) 0%, rgba(175, 175, 175, 0.5) 42%, transparent 47%),
-            radial-gradient(circle at 15% 75%, rgba(165, 165, 165, 0.5) 0%, rgba(165, 165, 165, 0.5) 38%, transparent 43%),
-            radial-gradient(circle at 40% 20%, rgba(170, 170, 170, 0.45) 0%, rgba(170, 170, 170, 0.45) 35%, transparent 40%);
+            radial-gradient(circle at 15% 20%, rgba(180, 180, 180, 0.6) 0%, rgba(180, 180, 180, 0.6) 45%, transparent 50%),
+            radial-gradient(circle at 70% 15%, rgba(160, 160, 160, 0.5) 0%, rgba(160, 160, 160, 0.5) 40%, transparent 45%),
+            radial-gradient(circle at 50% 50%, rgba(170, 170, 170, 0.55) 0%, rgba(170, 170, 170, 0.55) 48%, transparent 52%),
+            radial-gradient(circle at 85% 75%, rgba(175, 175, 175, 0.5) 0%, rgba(175, 175, 175, 0.5) 42%, transparent 47%),
+            radial-gradient(circle at 10% 85%, rgba(165, 165, 165, 0.5) 0%, rgba(165, 165, 165, 0.5) 38%, transparent 43%),
+            radial-gradient(circle at 35% 70%, rgba(170, 170, 170, 0.45) 0%, rgba(170, 170, 170, 0.45) 35%, transparent 40%);
         border-radius: 6px;
         pointer-events: none;
         transition: opacity 0.2s ease-out;
