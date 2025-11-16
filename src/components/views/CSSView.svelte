@@ -133,8 +133,12 @@
             // Convert sampled channels to device channel array based on device type
             const newValues = convertChannelsToArray(device.type, channels);
 
+            // SMOKE and FLAMETHROWER always have opacity 1 (they handle their own effects internally)
+            if (device.type === 'SMOKE' || device.type === 'FLAMETHROWER') {
+                deviceOpacities[device.id] = 1;
+            }
             // ALWAYS update preview colors (even when not active)
-            if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
+            else if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
                 // Use getDeviceColor for consistent color calculation
                 const color = getDeviceColor(device.type, newValues);
                 previewColors[device.id] = color;
@@ -145,14 +149,10 @@
                 } else {
                     deviceOpacities[device.id] = 1;
                 }
-            } else if ((channels.Intensity !== undefined || channels.Dimmer !== undefined) &&
-                       device.type !== 'SMOKE' && device.type !== 'FLAMETHROWER') {
-                // Dimmer/Intensity for non-color devices (excluding SMOKE and FLAMETHROWER which handle their own effects)
+            } else if (channels.Intensity !== undefined || channels.Dimmer !== undefined) {
+                // Dimmer/Intensity for other non-color devices
                 const intensity = (channels.Intensity || channels.Dimmer || 0) / 255;
                 deviceOpacities[device.id] = intensity;
-            } else if (device.type === 'SMOKE' || device.type === 'FLAMETHROWER') {
-                // SMOKE and FLAMETHROWER always have opacity 1 (they handle their own effects internally)
-                deviceOpacities[device.id] = 1;
             }
 
             // Update pan/tilt preview for moving heads
