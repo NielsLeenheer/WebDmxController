@@ -63,10 +63,22 @@ export function getDeviceColor(deviceType, values) {
         }
 
         case 'SMOKE': {
-            const output = values[0] || 0;
-            // Show as a blue-gray for smoke
-            const blueIntensity = Math.round(output * 0.7);
-            return `rgb(${Math.round(output * 0.5)}, ${Math.round(output * 0.5)}, ${blueIntensity})`;
+            // Use a dark gray base - the smoke effect overlay will show the output level
+            return '#1a1a1a';
+        }
+
+        case 'FLAMETHROWER': {
+            const safety = values[0] || 0;
+            const fuel = values[1] || 0;
+            // When safety is off (< 125), show dark background
+            // When safety is on (>= 125), show dark background (fire gradient will overlay)
+            if (safety < 125) {
+                // Safety off - dark background
+                return '#222222';
+            } else {
+                // Safety on - dark background (fire will be shown as overlay)
+                return '#1a1a1a';
+            }
         }
 
         default:

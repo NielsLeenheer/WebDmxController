@@ -33,6 +33,8 @@
     let previewColors = $state({});
     let deviceOpacities = $state({});
     let devicePanTilt = $state({});
+    let deviceFlamethrower = $state({});
+    let deviceSmoke = $state({});
 
     // Get animations for display
     let animations = $derived(
@@ -154,6 +156,21 @@
                 devicePanTilt[device.id] = {
                     pan: channels.Pan,
                     tilt: channels.Tilt
+                };
+            }
+
+            // Update flamethrower preview
+            if (device.type === 'FLAMETHROWER' && channels.Safety !== undefined && channels.Fuel !== undefined) {
+                deviceFlamethrower[device.id] = {
+                    safety: channels.Safety,
+                    fuel: channels.Fuel
+                };
+            }
+
+            // Update smoke machine preview
+            if (device.type === 'SMOKE' && channels.Output !== undefined) {
+                deviceSmoke[device.id] = {
+                    output: channels.Output
                 };
             }
 
@@ -396,6 +413,21 @@
                                         {@const dotY = (1 - panTilt.tilt / 255) * 100}
                                         <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
                                     {/if}
+                                    {#if device.type === 'FLAMETHROWER' && deviceFlamethrower[device.id]}
+                                        {@const flame = deviceFlamethrower[device.id]}
+                                        {@const safetyOff = flame.safety < 125}
+                                        {@const fuelPercent = (flame.fuel / 255) * 100}
+                                        {#if safetyOff}
+                                            <div class="flamethrower-cross"></div>
+                                        {:else}
+                                            <div class="flamethrower-fire" style="height: {fuelPercent}%"></div>
+                                        {/if}
+                                    {/if}
+                                    {#if device.type === 'SMOKE' && deviceSmoke[device.id]}
+                                        {@const smoke = deviceSmoke[device.id]}
+                                        {@const smokePercent = (smoke.output / 255) * 100}
+                                        <div class="smoke-effect" style="opacity: {smokePercent / 100}"></div>
+                                    {/if}
                                 </div>
                                 <code class="device-id">#{device.cssId}</code>
                             </div>
@@ -538,6 +570,58 @@
         transform: translate(-50%, -50%);
         pointer-events: none;
         z-index: 10;
+    }
+
+    .flamethrower-cross {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 70%;
+        height: 70%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+    }
+
+    .flamethrower-cross::before,
+    .flamethrower-cross::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        background: #666;
+        top: 50%;
+        left: 0;
+    }
+
+    .flamethrower-cross::before {
+        transform: translateY(-50%) rotate(45deg);
+    }
+
+    .flamethrower-cross::after {
+        transform: translateY(-50%) rotate(-45deg);
+    }
+
+    .flamethrower-fire {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to top, #ff5722 0%, #ff9800 50%, #ffc107 100%);
+        border-radius: 0 0 6px 6px;
+        pointer-events: none;
+        transition: height 0.1s ease-out;
+    }
+
+    .smoke-effect {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(ellipse at center, rgba(200, 200, 220, 0.9) 0%, rgba(150, 150, 180, 0.6) 50%, rgba(100, 100, 140, 0.3) 100%);
+        border-radius: 6px;
+        pointer-events: none;
+        transition: opacity 0.2s ease-out;
     }
 
     .device-id {
