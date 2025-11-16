@@ -128,17 +128,20 @@
 
         devices.forEach(device => {
             const channels = sampledValues.get(device.id);
+
+            // SMOKE and FLAMETHROWER always have opacity 1 (they handle their own effects internally)
+            // Set this BEFORE checking if channels exist to ensure it's always set
+            if (device.type === 'SMOKE' || device.type === 'FLAMETHROWER') {
+                deviceOpacities[device.id] = 1;
+            }
+
             if (!channels) return;
 
             // Convert sampled channels to device channel array based on device type
             const newValues = convertChannelsToArray(device.type, channels);
 
-            // SMOKE and FLAMETHROWER always have opacity 1 (they handle their own effects internally)
-            if (device.type === 'SMOKE' || device.type === 'FLAMETHROWER') {
-                deviceOpacities[device.id] = 1;
-            }
             // ALWAYS update preview colors (even when not active)
-            else if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
+            if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
                 // Use getDeviceColor for consistent color calculation
                 const color = getDeviceColor(device.type, newValues);
                 previewColors[device.id] = color;
