@@ -33,6 +33,11 @@
     let isAfterMidpoint = $state(false);
 
     function handleDragStart(event, device) {
+        // Only allow dragging if initiated from the header
+        if (!event.target.closest('.device-header')) {
+            event.preventDefault();
+            return;
+        }
         draggedDevice = device;
         draggedIndex = devices.findIndex(d => d.id === device.id);
         event.dataTransfer.effectAllowed = 'move';
@@ -528,16 +533,14 @@
                 class:dragging={draggedDevice?.id === device.id}
                 class:drag-over={dragOverIndex === index && !isAfterMidpoint}
                 class:drag-after={isDragAfter(index)}
+                draggable="true"
+                ondragstart={(e) => handleDragStart(e, device)}
                 ondragover={(e) => handleDragOver(e, index)}
                 ondragleave={handleDragLeave}
                 ondrop={(e) => handleDrop(e, index)}
                 ondragend={handleDragEnd}
             >
-                <div
-                    class="device-header"
-                    draggable="true"
-                    ondragstart={(e) => handleDragStart(e, device)}
-                >
+                <div class="device-header">
                     <div
                         class="color-preview"
                         style="background-color: {getDeviceColor(device.type, device.defaultValues)}"

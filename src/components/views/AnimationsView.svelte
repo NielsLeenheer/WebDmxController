@@ -53,6 +53,11 @@
     }
 
     function handleDragStart(event, animation) {
+        // Only allow dragging if initiated from the header
+        if (!event.target.closest('.animation-header')) {
+            event.preventDefault();
+            return;
+        }
         draggedAnimation = animation;
         draggedIndex = animationsList.findIndex(a => a.name === animation.name);
         event.dataTransfer.effectAllowed = 'move';
@@ -395,16 +400,14 @@
                     class:dragging={draggedAnimation?.name === animation.name}
                     class:drag-over={dragOverIndex === index && !isAfterMidpoint}
                     class:drag-after={isDragAfter(index)}
+                    draggable="true"
+                    ondragstart={(e) => handleDragStart(e, animation)}
                     ondragover={(e) => handleDragOver(e, index)}
                     ondragleave={handleDragLeave}
                     ondrop={(e) => handleDrop(e, index)}
                     ondragend={handleDragEnd}
                 >
-                    <div
-                        class="animation-header"
-                        draggable="true"
-                        ondragstart={(e) => handleDragStart(e, animation)}
-                    >
+                    <div class="animation-header">
                         <div
                             class="animation-preview"
                             style="background: {getAnimationPreview(animation)}"
