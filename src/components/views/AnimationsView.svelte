@@ -595,12 +595,7 @@
         width: 80vw;
         background: #f0f0f0;
         border-radius: 8px;
-        cursor: grab;
         transition: opacity 0.2s, transform 0.2s;
-    }
-
-    .animation-card:active {
-        cursor: grabbing;
     }
 
     .animation-card.dragging {

@@ -769,12 +769,7 @@
         background: #f0f0f0;
         border-radius: 8px;
         padding: 15px;
-        cursor: grab;
         transition: opacity 0.2s, transform 0.2s;
-    }
-
-    .device-card:active {
-        cursor: grabbing;
     }
 
     .device-card.dragging {
