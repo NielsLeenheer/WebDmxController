@@ -44,6 +44,7 @@
     class="dialog"
     class:anchored
     class:show-arrow={showArrow && anchored}
+    class:explicit-width={width !== null}
     style="{anchored && anchorId ? `position-anchor: --${anchorId};` : ''}{width ? `width: ${width};` : ''}"
     onclick={handleClick}
 >
@@ -77,9 +78,13 @@
         border-radius: 8px;
         padding: 0;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-height: 90vh;
+    }
+
+    /* Default sizing for implicitly sized dialogs */
+    .dialog:not(.explicit-width) {
         min-width: 400px;
         max-width: 90vw;
-        max-height: 90vh;
     }
 
     .dialog::backdrop {
@@ -95,9 +100,13 @@
         translate: -50% 16px;
         margin: 0;
         z-index: 100;
+        overflow: visible;
+    }
+
+    /* Default sizing for implicitly sized anchored dialogs */
+    .dialog.anchored:not(.explicit-width) {
         min-width: 300px;
         max-width: 400px;
-        overflow: visible;
     }
 
     .dialog.anchored::backdrop {
