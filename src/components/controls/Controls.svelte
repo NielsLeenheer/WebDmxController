@@ -102,6 +102,8 @@
                 return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,255,255) 100%)';
             case 'Output':
                 return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(200,200,200) 100%)';
+            case 'Fuel':
+                return 'linear-gradient(to right, rgb(0,0,0) 0%, #ff5722 50%, #ff9800 75%, #ffc107 100%)';
             default:
                 return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(128,128,128) 100%)';
         }
