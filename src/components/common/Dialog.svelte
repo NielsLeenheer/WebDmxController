@@ -9,6 +9,7 @@
      * @prop {string} anchorId - Anchor name (CSS anchor-name value)
      * @prop {boolean} showArrow - Show arrow pointing to anchor (default true for anchored)
      * @prop {boolean} lightDismiss - Enable light dismiss on backdrop click (default true for anchored)
+     * @prop {string} width - Explicit width for the dialog (optional)
      * @snippet tools - Optional snippet for tool buttons (e.g., Delete)
      * @snippet buttons - Optional snippet for action buttons (e.g., Cancel, Save)
      */
@@ -20,6 +21,7 @@
         anchorId = null,
         showArrow = true,
         lightDismiss = true,
+        width = null,
         children,
         tools,
         buttons
@@ -42,7 +44,7 @@
     class="dialog"
     class:anchored
     class:show-arrow={showArrow && anchored}
-    style={anchored && anchorId ? `position-anchor: --${anchorId}` : ''}
+    style="{anchored && anchorId ? `position-anchor: --${anchorId};` : ''}{width ? `width: ${width};` : ''}"
     onclick={handleClick}
 >
     {#if title}
