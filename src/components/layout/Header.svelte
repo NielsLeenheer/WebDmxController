@@ -17,6 +17,7 @@
     // Filter devices by type
     let streamDeckDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && d.streamDeck));
     let hidDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && !d.streamDeck && d.id !== 'keyboard'));
+    let bluetoothDevices = $derived(connectedDevices.filter(d => d.type === 'bluetooth'));
     let midiDevices = $derived(connectedDevices.filter(d => d.type === 'midi'));
 
     // MIDI button should be disabled if we already have MIDI access
@@ -66,6 +67,16 @@
             connectedDevices = inputController?.getInputDevices() || [];
         } catch (error) {
             alert(`Failed to connect HID device: ${error.message}`);
+        }
+    }
+
+    async function connectThingy52() {
+        try {
+            await inputController?.requestThingy52();
+            // Update device list
+            connectedDevices = inputController?.getInputDevices() || [];
+        } catch (error) {
+            alert(`Failed to connect Thingy:52: ${error.message}\n\nMake sure your device is powered on and in range.`);
         }
     }
 </script>
@@ -130,6 +141,23 @@
         {#if hidDevices.length > 0}
             <div class="device-list">
                 {#each hidDevices as device (device.id)}
+                    <div class="device-item">
+                        <span class="device-name">{device.name}</span>
+                    </div>
+                {/each}
+            </div>
+        {/if}
+    </div>
+
+    <!-- Thingy:52 Section -->
+    <div class="device-section">
+        <button class="connect-device-btn" onclick={connectThingy52}>
+            <Icon data={inputsIcon} />
+            Connect Thingy:52
+        </button>
+        {#if bluetoothDevices.length > 0}
+            <div class="device-list">
+                {#each bluetoothDevices as device (device.id)}
                     <div class="device-item">
                         <span class="device-name">{device.name}</span>
                     </div>

@@ -298,6 +298,13 @@ export class InputController {
 	}
 
 	/**
+	 * Request Thingy:52 device
+	 */
+	async requestThingy52() {
+		return await this.inputDeviceManager.requestThingy52();
+	}
+
+	/**
 	 * Get all input devices
 	 */
 	getInputDevices() {
