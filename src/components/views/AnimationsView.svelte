@@ -5,6 +5,7 @@
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
+    import Preview from '../common/Preview.svelte';
     import TimelineEditor from '../animations/TimelineEditor.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
     import editIcon from '../../assets/glyphs/edit.svg?raw';
@@ -450,10 +451,11 @@
                     ondragend={handleDragEnd}
                 >
                     <div class="animation-header">
-                        <div
-                            class="animation-preview"
-                            style="background: {getAnimationPreview(animation)}"
-                        ></div>
+                        <Preview
+                            type="animation"
+                            size="medium"
+                            data={{ color: getAnimationPreview(animation) }}
+                        />
                         <div class="animation-info">
                             <h3>{animation.name}</h3>
                             <div class="badges">
@@ -635,14 +637,6 @@
 
     .animation-header:active {
         cursor: grabbing;
-    }
-
-    .animation-preview {
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
-        flex-shrink: 0;
     }
 
     .animation-info {
