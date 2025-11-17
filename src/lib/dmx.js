@@ -207,6 +207,197 @@ export class EnttecDMXUSBProDriver extends DMXDriver {
 }
 
 /**
+ * FT232R Driver
+ * Supports generic FTDI FT232R USB to DMX cables
+ * Uses FTDI serial protocol over USB
+ */
+export class FT232RDriver extends DMXDriver {
+	// FTDI SIO Commands
+	static FTDI_SIO_RESET = 0;
+	static FTDI_SIO_SET_BAUD_RATE = 3;
+	static FTDI_SIO_SET_DATA = 4;
+	static FTDI_SIO_SET_FLOW_CTRL = 2;
+
+	// Data format bits for 8N2 (8 data bits, no parity, 2 stop bits)
+	static DATA_BITS_8 = 0x08;
+	static PARITY_NONE = 0x00 << 8;
+	static STOP_BITS_2 = 0x02 << 11;
+	static DATA_FORMAT_8N2 = 0x1008; // 8 data bits | no parity | 2 stop bits
+
+	// Break control
+	static BREAK_ON = 0x4000;  // Bit 14
+	static BREAK_OFF = 0x0000;
+
+	constructor() {
+		super('FT232R USB-DMX', [
+			{ vendorId: 0x0403, productId: 0x6001 } // FTDI FT232R
+		]);
+		this.updateRate = 1000 / 40; // ~40 Hz (conservative for DMX timing)
+		this.interval = null;
+		this.universeData = null;
+	}
+
+	async connect(device) {
+		try {
+			this.device = device;
+
+			if (!this.device.opened) {
+				await this.device.open();
+			}
+
+			// Select configuration if needed
+			if (this.device.configuration === null) {
+				await this.device.selectConfiguration(1);
+			}
+
+			await this.device.claimInterface(0);
+
+			// Reset the FTDI chip
+			await this.device.controlTransferOut({
+				requestType: 'vendor',
+				recipient: 'device',
+				request: FT232RDriver.FTDI_SIO_RESET,
+				value: 0, // Reset
+				index: 0
+			});
+
+			// Set baud rate to 250,000 (DMX512 standard)
+			// Divisor = 3000000 / 250000 = 12
+			await this.device.controlTransferOut({
+				requestType: 'vendor',
+				recipient: 'device',
+				request: FT232RDriver.FTDI_SIO_SET_BAUD_RATE,
+				value: 12,  // Baud rate divisor (250,000 baud)
+				index: 0
+			});
+
+			// Set data format to 8N2 (8 data bits, no parity, 2 stop bits)
+			await this.device.controlTransferOut({
+				requestType: 'vendor',
+				recipient: 'device',
+				request: FT232RDriver.FTDI_SIO_SET_DATA,
+				value: FT232RDriver.DATA_FORMAT_8N2,
+				index: 0
+			});
+
+			// Disable flow control
+			await this.device.controlTransferOut({
+				requestType: 'vendor',
+				recipient: 'device',
+				request: FT232RDriver.FTDI_SIO_SET_FLOW_CTRL,
+				value: 0, // No flow control
+				index: 0
+			});
+
+			this.connected = true;
+			this._emit('connected', { driver: this });
+
+			return true;
+		} catch (error) {
+			console.error('FT232R: Failed to connect:', error);
+			this._emit('error', { error, driver: this });
+			throw error;
+		}
+	}
+
+	disconnect() {
+		if (this.interval) {
+			clearInterval(this.interval);
+			this.interval = null;
+		}
+
+		if (this.device) {
+			try {
+				this.device.close();
+			} catch (error) {
+				console.warn('FT232R: Error closing device:', error);
+			}
+			this.device = null;
+		}
+
+		this.connected = false;
+		this.universeData = null;
+		this._emit('disconnected', { driver: this });
+	}
+
+	/**
+	 * Start continuous DMX output
+	 * @param {Uint8Array} universeData - Reference to the 512-byte universe array
+	 */
+	startOutput(universeData) {
+		this.universeData = universeData;
+
+		if (this.interval) {
+			clearInterval(this.interval);
+		}
+
+		// Start sending DMX data at regular intervals
+		this.interval = setInterval(() => {
+			this.sendUniverse(this.universeData);
+		}, this.updateRate);
+	}
+
+	/**
+	 * Stop continuous DMX output
+	 */
+	stopOutput() {
+		if (this.interval) {
+			clearInterval(this.interval);
+			this.interval = null;
+		}
+	}
+
+	async sendUniverse(universeData) {
+		if (!this.device || !this.connected || !universeData) return;
+
+		try {
+			// DMX packet structure:
+			// 1. Send BREAK (by asserting break condition)
+			// 2. Send Mark After Break (MAB) (by clearing break)
+			// 3. Send START code (0x00)
+			// 4. Send 512 channel bytes
+
+			// Assert BREAK
+			await this.device.controlTransferOut({
+				requestType: 'vendor',
+				recipient: 'device',
+				request: FT232RDriver.FTDI_SIO_SET_DATA,
+				value: FT232RDriver.DATA_FORMAT_8N2 | FT232RDriver.BREAK_ON,
+				index: 0
+			});
+
+			// Small delay for break timing (ideally 88-176 microseconds, but JS timing is imprecise)
+			// The break will be held until the next command
+
+			// Clear BREAK (this creates the Mark After Break)
+			await this.device.controlTransferOut({
+				requestType: 'vendor',
+				recipient: 'device',
+				request: FT232RDriver.FTDI_SIO_SET_DATA,
+				value: FT232RDriver.DATA_FORMAT_8N2 | FT232RDriver.BREAK_OFF,
+				index: 0
+			});
+
+			// Prepare DMX packet: start code (0x00) + 512 channels
+			const dmxPacket = new Uint8Array(513);
+			dmxPacket[0] = 0x00; // DMX512 start code
+			dmxPacket.set(universeData, 1);
+
+			// Send the DMX packet via bulk transfer
+			// FT232R uses endpoint 2 for OUT (host to device)
+			await this.device.transferOut(2, dmxPacket);
+
+		} catch (error) {
+			// Avoid spamming console with network errors
+			if (error.name !== 'NetworkError') {
+				console.error('FT232R: Failed to send DMX data:', error);
+				this._emit('error', { error, driver: this });
+			}
+		}
+	}
+}
+
+/**
  * uDMX Driver (Anyma uDMX)
  * Supports uDMX USB to wireless DMX controllers
  * Uses USB control transfers instead of bulk transfers
@@ -336,6 +527,9 @@ export class DMXOutputManager {
 		this.listeners = new Map();
 
 		// Register built-in drivers
+		// Note: FT232R is registered before ENTTEC because both use vendor ID 0x0403,
+		// but FT232R specifically matches product ID 0x6001
+		this.registerDriver(new FT232RDriver());
 		this.registerDriver(new EnttecDMXUSBProDriver());
 		this.registerDriver(new uDMXDriver());
 	}

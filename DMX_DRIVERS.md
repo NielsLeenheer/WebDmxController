@@ -24,6 +24,20 @@ Supports ENTTEC DMX USB Pro and compatible devices using the FTDI chipset (vendo
 - Uses USB bulk transfers
 - Automatic device detection
 
+### FT232R USB-DMX Driver
+
+Location: `src/lib/dmx.js`
+
+Supports generic FTDI FT232R-based USB to DMX cables (vendor ID `0x0403`, product ID `0x6001`).
+
+**Features:**
+- ~40 Hz continuous output
+- 512-channel DMX universe
+- Uses FTDI serial protocol with proper DMX break/MAB timing
+- Configures FTDI chip for 250,000 baud, 8N2 format
+- Uses USB control transfers for configuration + bulk transfers for data
+- Automatic device detection
+
 ### uDMX Driver (Anyma)
 
 Location: `src/lib/dmx.js`
@@ -312,6 +326,67 @@ DMX controllers typically use one of two transfer types:
 - Use `device.controlTransferOut({...}, data)` to send data
 - Example: Anyma uDMX
 
+**Hybrid: FTDI Serial Protocol** (FT232R):
+- Uses control transfers for configuration (baud rate, data format, break)
+- Uses bulk transfers for actual data transmission
+- Common for generic USB-DMX cables
+- Example: FT232R-based cables
+
+### FTDI Serial Protocol (FT232R)
+
+For FTDI FT232R chips, use vendor-specific control transfers to configure the chip:
+
+```javascript
+// Reset FTDI chip
+await device.controlTransferOut({
+    requestType: 'vendor',
+    recipient: 'device',
+    request: 0, // FTDI_SIO_RESET
+    value: 0,
+    index: 0
+});
+
+// Set baud rate to 250,000 for DMX
+// Divisor = 3,000,000 / 250,000 = 12
+await device.controlTransferOut({
+    requestType: 'vendor',
+    recipient: 'device',
+    request: 3, // FTDI_SIO_SET_BAUD_RATE
+    value: 12,  // Baud rate divisor
+    index: 0
+});
+
+// Set data format to 8N2 (8 data bits, no parity, 2 stop bits)
+await device.controlTransferOut({
+    requestType: 'vendor',
+    recipient: 'device',
+    request: 4, // FTDI_SIO_SET_DATA
+    value: 0x1008, // 8 bits | no parity | 2 stop bits
+    index: 0
+});
+
+// Send DMX break (assert break condition)
+await device.controlTransferOut({
+    requestType: 'vendor',
+    recipient: 'device',
+    request: 4, // FTDI_SIO_SET_DATA
+    value: 0x1008 | 0x4000, // Data format | BREAK_ON
+    index: 0
+});
+
+// Clear break
+await device.controlTransferOut({
+    requestType: 'vendor',
+    recipient: 'device',
+    request: 4, // FTDI_SIO_SET_DATA
+    value: 0x1008, // Data format | BREAK_OFF
+    index: 0
+});
+
+// Send DMX data via bulk transfer
+await device.transferOut(2, dmxPacket);
+```
+
 ### Common USB Operations
 
 ```javascript
@@ -355,16 +430,19 @@ await device.close();
 
 ### Supported Controllers
 
-1. **ENTTEC DMX USB Pro** ✅ - USB vendor ID: 0x0403 (Built-in driver)
-2. **Anyma uDMX** ✅ - USB vendor ID: 0x16c0, product ID: 0x05dc (Built-in driver)
-3. **Eurolite USB-DMX512-PRO** ✅ - Often compatible with ENTTEC protocol (uses ENTTEC driver)
+1. **FTDI FT232R USB-DMX cables** ✅ - USB vendor ID: 0x0403, product ID: 0x6001 (Built-in driver)
+   - Generic USB to DMX cables using FT232R chip
+   - Compatible with many DIY DMX interfaces
+2. **ENTTEC DMX USB Pro** ✅ - USB vendor ID: 0x0403 (Built-in driver)
+3. **Anyma uDMX** ✅ - USB vendor ID: 0x16c0, product ID: 0x05dc (Built-in driver)
+4. **Eurolite USB-DMX512-PRO** ✅ - Often compatible with ENTTEC protocol (uses ENTTEC driver)
 
 ### Controllers to Add Support For
 
-4. **DMXking ultraDMX Micro** - USB vendor ID: 0x04d8
-5. **DMXking ultraDMX Pro** - USB vendor ID: 0x04d8
-6. **Chauvet DJ Xpress 512** - Check vendor documentation
-7. **ADJ MyDMX** - Proprietary protocol, may require reverse engineering
+5. **DMXking ultraDMX Micro** - USB vendor ID: 0x04d8
+6. **DMXking ultraDMX Pro** - USB vendor ID: 0x04d8
+7. **Chauvet DJ Xpress 512** - Check vendor documentation
+8. **ADJ MyDMX** - Proprietary protocol, may require reverse engineering
 
 ## Debugging
 
