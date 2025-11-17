@@ -67,19 +67,22 @@ The devices differ only in their **communication protocol**:
 
 ### How Detection Works
 
-When both drivers match a device (`0x0403:0x6001`), the system uses the USB **product name** to differentiate:
+When both drivers match a device (`0x0403:0x6001`), the system uses the USB **manufacturer name** and **product name** to differentiate:
 
 1. Detects that multiple drivers match (logs device info to console)
-2. Checks the device `productName`:
+2. Checks the device `manufacturerName` first (most reliable):
+   - If manufacturer contains "ENTTEC" → Use **ENTTEC driver**
+3. Falls back to checking `productName`:
    - If name contains "DMX USB PRO" → Use **ENTTEC driver**
    - If name contains "FT232R" → Use **FT232R driver**
-3. Fallback: If product name is unclear, prefer ENTTEC
+4. Final fallback: Prefer ENTTEC if still unclear
 
-**Example device names:**
-- ENTTEC: `"DMX USB PRO"`
-- FT232R: `"FT232R USB UART"`
+**Example device identifiers:**
+- ENTTEC: Manufacturer: `"ENTTEC"`, Product: `"DMX USB PRO"`
+- FT232R: Manufacturer: `"FTDI"`, Product: `"FT232R USB UART"`
 
-This approach provides accurate automatic detection without requiring device probing.
+**Why check manufacturer first?**
+Clone devices might copy the product name, but they cannot fake the manufacturer name in the USB descriptor. Checking manufacturer first provides the most reliable identification.
 
 ### Future Improvement: Device Probing
 
