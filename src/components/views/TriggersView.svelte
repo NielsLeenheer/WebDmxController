@@ -838,10 +838,12 @@
                         {#if trigger.triggerType === 'always'}
                             <div class="trigger-text">Always</div>
                         {:else}
-                            <div
+                            <Preview
+                                type="device"
+                                size="medium"
+                                data={{ color: getInputPreview(trigger) }}
                                 class="trigger-preview"
-                                style="background: {getInputPreview(trigger)}"
-                            ></div>
+                            />
                             <div class="trigger-text">
                                 {getInputName(trigger.inputDeviceId, trigger.inputControlId)} → {getInputTypeLabel(trigger)}
                             </div>
@@ -850,10 +852,12 @@
 
                     <!-- Column 2: Device -->
                     <div class="trigger-column trigger-device-column">
-                        <div
+                        <Preview
+                            type="device"
+                            size="medium"
+                            data={{ color: getDevicePreview(trigger) }}
                             class="trigger-preview"
-                            style="background: {getDevicePreview(trigger)}"
-                        ></div>
+                        />
                         <div class="trigger-text">
                             {getTriggerDeviceName(trigger)}
                         </div>
@@ -1406,10 +1410,6 @@
     }
 
     .trigger-preview {
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
         flex-shrink: 0;
     }
 
