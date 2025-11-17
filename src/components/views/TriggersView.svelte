@@ -662,16 +662,16 @@
             name: comp.name
         }));
 
-        // Collect all special controls being set
+        // Collect which special controls are being set
+        const hasFuel = channelIndices.some(idx => controls[idx]?.name === 'Fuel');
+        const hasSafety = channelIndices.some(idx => controls[idx]?.name === 'Safety');
+        const hasOutput = channelIndices.some(idx => controls[idx]?.name === 'Output');
+
+        // Build array in correct stacking order (bottom to top)
         const specialControls = [];
-        for (const channelIndex of channelIndices) {
-            const control = controls.find(c => c.index === channelIndex);
-            if (control) {
-                if (control.name === 'Safety') specialControls.push('safety');
-                if (control.name === 'Fuel') specialControls.push('fuel');
-                if (control.name === 'Output') specialControls.push('output');
-            }
-        }
+        if (hasFuel) specialControls.push('fuel');
+        if (hasOutput) specialControls.push('output');
+        if (hasSafety) specialControls.push('safety');  // Safety always on top
 
         return specialControls.length > 0 ? specialControls : null;
     }
@@ -880,21 +880,15 @@
                         {:else}
                             {@const specialControls = getSpecialControls(trigger)}
                             {#if specialControls}
-                                {@const previewData = {}}
-                                {#if specialControls.includes('fuel')}
-                                    {@const _ = previewData.fuel = getControlValue(trigger, 'Fuel')}
-                                {/if}
-                                {#if specialControls.includes('safety')}
-                                    {@const _ = previewData.safety = getControlValue(trigger, 'Safety')}
-                                {/if}
-                                {#if specialControls.includes('output')}
-                                    {@const _ = previewData.output = getControlValue(trigger, 'Output')}
-                                {/if}
                                 <Preview
                                     type="device"
                                     size="medium"
                                     controls={specialControls}
-                                    data={previewData}
+                                    data={{
+                                        fuel: getControlValue(trigger, 'Fuel'),
+                                        safety: getControlValue(trigger, 'Safety'),
+                                        output: getControlValue(trigger, 'Output')
+                                    }}
                                     class="trigger-preview"
                                 />
                             {:else}
