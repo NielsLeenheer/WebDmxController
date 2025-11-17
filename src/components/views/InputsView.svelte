@@ -305,6 +305,9 @@
                     if (!isNaN(noteNumber) && noteNumber >= 0) {
                         device.setButtonColor(noteNumber, inputMapping.color);
                     }
+                } else if (device.type === 'bluetooth' && controlId === 'button' && device.thingyDevice) {
+                    // Thingy:52 button
+                    device.thingyDevice.setLEDColor(inputMapping.color);
                 }
             }
         }
@@ -547,6 +550,9 @@
                 }
                 inputDevice.sendNoteOff(noteNumber);
             }
+        } else if (inputDevice?.type === 'bluetooth' && input.inputControlId === 'button' && inputDevice.thingyDevice) {
+            // Thingy:52 button - turn off LED
+            await inputDevice.thingyDevice.setLEDColor('off');
         }
 
         mappingLibrary.remove(inputId);
@@ -602,6 +608,9 @@
                 if (!isNaN(noteNumber) && noteNumber >= 0) {
                     inputDevice.setButtonColor(noteNumber, color);
                 }
+            } else if (inputDevice.type === 'bluetooth' && input.inputControlId === 'button' && inputDevice.thingyDevice) {
+                // Thingy:52 button
+                await inputDevice.thingyDevice.setLEDColor(color);
             }
         }
     }
@@ -627,6 +636,9 @@
             if (!isNaN(noteNumber) && noteNumber >= 0) {
                 inputDevice.setButtonColor(noteNumber, color);
             }
+        } else if (inputDevice.type === 'bluetooth' && input.inputControlId === 'button' && inputDevice.thingyDevice) {
+            // Thingy:52 button
+            await inputDevice.thingyDevice.setLEDColor(color);
         }
     }
 

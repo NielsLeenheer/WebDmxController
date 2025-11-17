@@ -3,6 +3,8 @@
  * Provides access to Thingy:52 sensors for use as input controls
  */
 
+import { getInputColorCSS } from './inputColors.js';
+
 // Thingy:52 Service UUIDs
 const THINGY_UI_SERVICE = 'ef680300-9b35-4933-9b10-52ffa9740042';
 const THINGY_MOTION_SERVICE = 'ef680400-9b35-4933-9b10-52ffa9740042';
@@ -253,19 +255,18 @@ export class Thingy52Device {
 
 			const ledChar = await this.uiService.getCharacteristic(THINGY_UI_LED);
 
-			// Parse CSS color to RGB
-			const rgb = this._parseColor(color);
+		// Parse CSS color to RGB
+		const rgb = this._parseColor(color);
 
-			// LED mode: 1 = constant, 2 = breathe, 3 = one-shot
-			// We use mode 1 (constant) with the specified color
-			const ledData = new Uint8Array([
-				0x01,      // Mode: constant
-				rgb.r,     // Red
-				rgb.g,     // Green
-				rgb.b      // Blue
-			]);
-
-			await ledChar.writeValue(ledData);
+		// LED mode: 1 = constant, 2 = breathe, 3 = one-shot
+		// We use mode 1 (constant) with the specified color
+		// Firmware analysis confirms BLE protocol expects RGB order
+		const ledData = new Uint8Array([
+			0x01,      // Mode: constant
+			rgb.r,     // Red
+			rgb.g,     // Green
+			rgb.b      // Blue
+		]);			await ledChar.writeValue(ledData);
 			console.log(`Set Thingy LED to ${color}`, rgb);
 		} catch (error) {
 			console.warn('Failed to set LED color:', error);
@@ -276,6 +277,11 @@ export class Thingy52Device {
 	 * Parse CSS color string to RGB values
 	 */
 	_parseColor(color) {
+		// Handle named colors from our input color palette
+		if (typeof color === 'string' && !color.startsWith('#') && !color.startsWith('rgb')) {
+			color = getInputColorCSS(color);
+		}
+
 		// Create a temporary element to parse the color
 		const div = document.createElement('div');
 		div.style.color = color;
@@ -286,15 +292,18 @@ export class Thingy52Device {
 		// Parse rgb(r, g, b) or rgba(r, g, b, a)
 		const match = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
 		if (match) {
+			// Thingy:52 LED brightness compensation
+			// Compensate for LED brightness differences and blue plastic housing
+			const clamp = (val) => Math.max(0, Math.min(255, val));
 			return {
-				r: parseInt(match[1]),
-				g: parseInt(match[2]),
-				b: parseInt(match[3])
+				r: clamp(parseInt(match[1]) + 16),              // Red: +16 for housing
+				g: clamp(Math.round(parseInt(match[2]) / 2) + 16), // Green: /2 + 16
+				b: clamp(Math.round(parseInt(match[3]) / 3) - 32)  // Blue: /3 - 32 for housing
 			};
 		}
 
 		// Default to white if parsing fails
-		return { r: 255, g: 255, b: 255 };
+		return { r: 255, g: 128, b: 53 };
 	}
 
 	/**
