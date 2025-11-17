@@ -8,6 +8,7 @@
      * @prop {string} size - Size: 'small', 'medium', 'large' (default: 'medium')
      * @prop {Array<string>} controls - Array of control types to stack (for type='device')
      * @prop {Object} data - Data for rendering the preview
+     * @prop {Object} euler - Euler angles for 3D rotation: { roll, pitch, yaw } (optional)
      */
 
     let {
@@ -15,14 +16,57 @@
         size = 'medium',
         controls = [],
         data = {},
+        euler = null,
         class: className = '',
     } = $props();
 
     // Determine the CSS class based on size
     const sizeClass = $derived(`preview-${size}`);
+
+    // Calculate 3D transform from Euler angles
+    const transform3D = $derived(() => {
+        if (!euler) return '';
+        
+        // Transform pitch and roll from device coordinates to screen coordinates
+        // based on yaw rotation
+        const yawRad = (euler.yaw * Math.PI) / 180;
+        
+        // Rotate pitch/roll vector by yaw to get screen-space rotations
+        const screenPitch = euler.pitch * Math.cos(yawRad) + euler.roll * Math.sin(yawRad);
+        const screenRoll = -euler.pitch * Math.sin(yawRad) + euler.roll * Math.cos(yawRad);
+        
+        // Apply rotations: X (pitch), Y (roll), Z (yaw)
+        // Negate for more intuitive rotation
+        return `rotateX(${-screenPitch}deg) rotateY(${-screenRoll}deg) rotateZ(${euler.yaw}deg)`;
+    });
+
+    // Calculate dynamic box shadow based on orientation to keep shadow from bottom
+    const dynamicShadow = $derived(() => {
+        if (!euler) return '';
+        
+        // Convert angles to radians
+        const pitchRad = (euler.pitch * Math.PI) / 180;
+        const rollRad = (euler.roll * Math.PI) / 180;
+        const yawRad = (euler.yaw * Math.PI) / 180;
+        
+        // Calculate shadow offset and size based on device orientation
+        // Shadow should appear to come from below and grow when tilted (showing thickness)
+        // Base shadow offset - grows with tilt to show device thickness
+        const tiltAmount = Math.abs(Math.sin(pitchRad)) + Math.abs(Math.sin(rollRad));
+        const shadowSize = 3 + (tiltAmount * 5); // Grow from 3px to 8px based on tilt
+        
+        // Shadow direction based on which physical edge is lifted:
+        // Pitch: positive pitch = front/top up = shadow appears on top (negative Y in CSS)
+        // Roll: positive roll = left side up = shadow appears on left (negative X in CSS)
+        // Note: Transform uses -pitch and -roll, so shadow needs positive values
+        const shadowX = Math.sin(rollRad) * shadowSize;
+        const shadowY = Math.sin(pitchRad) * shadowSize;
+        
+        return `inset ${shadowX}px ${shadowY}px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1)`;
+    });
 </script>
 
-<div class="preview {sizeClass} {className}">
+<div class="preview {sizeClass} {className}" class:with-3d={euler !== null} style="transform: {transform3D()}">
     <!-- Dark gray background (always present for devices) -->
     <div class="preview-base"></div>
 
@@ -30,7 +74,10 @@
         <!-- Stack device controls in order -->
         {#each controls as control}
             {#if control === 'color'}
-                <div class="control-layer control-color" style="background-color: {data.color || '#888'}"></div>
+                <div 
+                    class="control-layer control-color" 
+                    style="background-color: {data.color || '#888'}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
+                ></div>
 
             {:else if control === 'amber'}
                 {@const amberOpacity = ((data.amber ?? 0) / 255)}
@@ -74,11 +121,22 @@
 
     {:else if type === 'animation'}
         <!-- Animation color/gradient preview -->
-        <div class="preview-animation" style="background: {data.color || '#888'}"></div>
+        <div 
+            class="preview-animation" 
+            style="background: {data.color || '#888'}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
+        ></div>
 
     {:else if type === 'input'}
         <!-- Input color preview -->
-        <div class="preview-input" style="background: {data.color || '#888'}"></div>
+        <div 
+            class="preview-input" 
+            style="background: {data.color || '#888'}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
+        ></div>
+        
+        <!-- Orientation indicator dot for Thingy:52 (represents the hole) -->
+        {#if euler}
+            <div class="orientation-indicator"></div>
+        {/if}
     {/if}
 </div>
 
@@ -88,6 +146,12 @@
         border-radius: 4px;
         overflow: hidden;
         position: relative;
+        transform-style: preserve-3d;
+    }
+
+    /* Enable 3D perspective for rotating previews */
+    .preview.with-3d {
+        perspective: 200px;
     }
 
     /* Size variants */
@@ -244,6 +308,19 @@
         background: #888;
         border-radius: 50%;
         transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    /* Orientation indicator (Thingy:52 hole marker) */
+    .orientation-indicator {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        width: 6px;
+        height: 6px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 50%;
         pointer-events: none;
         z-index: 10;
     }

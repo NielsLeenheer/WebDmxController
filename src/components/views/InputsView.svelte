@@ -718,6 +718,12 @@
 
     onDestroy(() => {
         stopListening();
+        
+        // Clear all stability timers
+        for (const timerId of thingyStabilityTimers.values()) {
+            clearTimeout(timerId);
+        }
+        thingyStabilityTimers.clear();
     });
 </script>
 
@@ -760,6 +766,7 @@
                             type="input"
                             size="medium"
                             data={{ color: getInputColorCSS(input.color) }}
+                            euler={input.inputControlId === 'button' && thingyEulerAngles[input.inputDeviceId] ? thingyEulerAngles[input.inputDeviceId] : null}
                             class="input-color-badge"
                         />
                     {/if}

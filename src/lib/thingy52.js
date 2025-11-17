@@ -44,8 +44,16 @@ export class Thingy52Device {
 			compass: { x: 0, y: 0, z: 0 }
 		};
 
+		// Auto-calibration state
+		this.yawCalibrationOffset = 0;
+		this.lastAngles = null;
+		this.stabilityTimer = null;
+		this.STABILITY_THRESHOLD = 2; // degrees
+		this.STABILITY_DURATION = 5000; // 5 seconds
+
 		// Handle device disconnection
 		this.bluetoothDevice.addEventListener('gattserverdisconnected', () => {
+			this._clearStabilityTimer();
 			this._emit('disconnected');
 		});
 	}
@@ -160,10 +168,16 @@ export class Thingy52Device {
 				// Euler angles are sent as 3 x int32 (little endian) in degrees * 65536
 				const roll = value.getInt32(0, true) / 65536;
 				const pitch = value.getInt32(4, true) / 65536;
-				const yaw = value.getInt32(8, true) / 65536;
+				const rawYaw = value.getInt32(8, true) / 65536;
 
-				this.sensorData.euler = { roll, pitch, yaw };
-				this._emit('euler', { roll, pitch, yaw });
+				// Check for stability and auto-calibrate
+				this._checkStabilityAndCalibrate(roll, pitch, rawYaw);
+
+				// Apply calibration offset to yaw
+				const calibratedYaw = rawYaw - this.yawCalibrationOffset;
+
+				this.sensorData.euler = { roll, pitch, yaw: calibratedYaw };
+				this._emit('euler', { roll, pitch, yaw: calibratedYaw });
 			});
 
 			console.log('Subscribed to Euler angles');
@@ -274,6 +288,57 @@ export class Thingy52Device {
 	}
 
 	/**
+	 * Check if device orientation is stable and calibrate yaw if needed
+	 */
+	_checkStabilityAndCalibrate(roll, pitch, yaw) {
+		// Check if angles are stable (within threshold)
+		const isStable = this.lastAngles && 
+			Math.abs(roll - this.lastAngles.roll) < this.STABILITY_THRESHOLD &&
+			Math.abs(pitch - this.lastAngles.pitch) < this.STABILITY_THRESHOLD &&
+			Math.abs(yaw - this.lastAngles.yaw) < this.STABILITY_THRESHOLD;
+		
+		if (isStable) {
+			// If stable and no timer running, start one
+			if (!this.stabilityTimer) {
+				this.stabilityTimer = setTimeout(() => {
+					// Device has been stable for the required duration - calibrate!
+					console.log(`Calibrating Thingy:52 ${this.id} yaw offset: ${yaw}°`);
+					this.yawCalibrationOffset = yaw;
+					this._emit('calibrated', { yawOffset: yaw });
+					this.stabilityTimer = null;
+				}, this.STABILITY_DURATION);
+			}
+		} else {
+			// Not stable - cancel any existing timer
+			this._clearStabilityTimer();
+		}
+		
+		// Update last known angles
+		this.lastAngles = { roll, pitch, yaw };
+	}
+
+	/**
+	 * Clear the stability timer
+	 */
+	_clearStabilityTimer() {
+		if (this.stabilityTimer) {
+			clearTimeout(this.stabilityTimer);
+			this.stabilityTimer = null;
+		}
+	}
+
+	/**
+	 * Manually calibrate the yaw offset (set current orientation as forward)
+	 */
+	calibrateYaw() {
+		if (this.lastAngles) {
+			this.yawCalibrationOffset = this.lastAngles.yaw;
+			console.log(`Manually calibrated Thingy:52 ${this.id} yaw offset: ${this.lastAngles.yaw}°`);
+			this._emit('calibrated', { yawOffset: this.lastAngles.yaw });
+		}
+	}
+
+	/**
 	 * Parse CSS color string to RGB values
 	 */
 	_parseColor(color) {
@@ -310,6 +375,7 @@ export class Thingy52Device {
 	 * Disconnect from device
 	 */
 	disconnect() {
+		this._clearStabilityTimer();
 		if (this.server && this.server.connected) {
 			this.bluetoothDevice.gatt.disconnect();
 		}
