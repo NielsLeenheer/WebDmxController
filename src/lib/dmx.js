@@ -596,11 +596,31 @@ export class DMXOutputManager {
 		}
 
 		// Multiple drivers match (e.g., ENTTEC and FT232R both match 0x0403:0x6001)
-		// Prefer ENTTEC over FT232R if ENTTEC is in the list
-		// This is because ENTTEC DMX USB Pro also uses 0x0403:0x6001 but has a proprietary protocol
+		// Use the device name to differentiate between them
+		console.log(`Multiple drivers match device ${device.productName} (0x${device.vendorId.toString(16)}:0x${device.productId.toString(16)})`);
+
+		// Check device name for ENTTEC identification
+		if (device.productName && device.productName.includes('DMX USB PRO')) {
+			const enttecDriver = matchingDrivers.find(d => d.name === 'ENTTEC DMX USB Pro');
+			if (enttecDriver) {
+				console.log('Device name matches ENTTEC DMX USB Pro - using ENTTEC driver');
+				return enttecDriver;
+			}
+		}
+
+		// Check device name for FT232R identification
+		if (device.productName && device.productName.includes('FT232R')) {
+			const ft232rDriver = matchingDrivers.find(d => d.name === 'FT232R USB-DMX');
+			if (ft232rDriver) {
+				console.log('Device name matches FT232R - using FT232R driver');
+				return ft232rDriver;
+			}
+		}
+
+		// Fallback: prefer ENTTEC over FT232R if we couldn't determine from name
 		const enttecDriver = matchingDrivers.find(d => d.name === 'ENTTEC DMX USB Pro');
 		if (enttecDriver) {
-			console.log('Multiple drivers match - preferring ENTTEC DMX USB Pro (use FT232R if this fails)');
+			console.log('Could not determine from device name - defaulting to ENTTEC driver');
 			return enttecDriver;
 		}
 

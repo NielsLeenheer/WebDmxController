@@ -67,12 +67,19 @@ The devices differ only in their **communication protocol**:
 
 ### How Detection Works
 
-When both drivers match a device (`0x0403:0x6001`), the system:
+When both drivers match a device (`0x0403:0x6001`), the system uses the USB **product name** to differentiate:
 
-1. Detects that multiple drivers match
-2. Prefers ENTTEC DMX USB Pro (logs a message to console)
-3. Attempts connection with ENTTEC protocol
-4. If ENTTEC fails to connect or work properly, the device is likely a generic FT232R cable
+1. Detects that multiple drivers match (logs device info to console)
+2. Checks the device `productName`:
+   - If name contains "DMX USB PRO" → Use **ENTTEC driver**
+   - If name contains "FT232R" → Use **FT232R driver**
+3. Fallback: If product name is unclear, prefer ENTTEC
+
+**Example device names:**
+- ENTTEC: `"DMX USB PRO"`
+- FT232R: `"FT232R USB UART"`
+
+This approach provides accurate automatic detection without requiring device probing.
 
 ### Future Improvement: Device Probing
 
