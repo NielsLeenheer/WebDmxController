@@ -7,6 +7,7 @@
     import Dialog from '../common/Dialog.svelte';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
+    import Preview from '../common/Preview.svelte';
 
     import editIcon from '../../assets/glyphs/edit.svg?raw';
     import linkedIcon from '../../assets/icons/linked.svg?raw';
@@ -611,30 +612,27 @@
                 <div class="device-header">
                     {#if device.type === 'FLAMETHROWER'}
                         {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
-                        {@const safetyOff = flame.safety < 125}
-                        {@const fuelPercent = (flame.fuel / 255) * 100}
-                        <div
+                        <Preview
+                            type="flamethrower"
+                            size="medium"
+                            data={{ safety: flame.safety, fuel: flame.fuel }}
                             class="color-preview"
-                            style="background: {safetyOff ? '#222222' : `linear-gradient(to top, #ff5722 0%, #ff9800 ${fuelPercent/2}%, #ffc107 ${fuelPercent}%, #1a1a1a ${fuelPercent}%, #1a1a1a 100%)`}"
-                        >
-                            {#if safetyOff}
-                                <div class="flamethrower-cross"></div>
-                            {/if}
-                        </div>
+                        />
                     {:else if device.type === 'SMOKE'}
                         {@const smoke = deviceSmoke[device.id] || { output: device.defaultValues[0] || 0 }}
-                        {@const smokePercent = (smoke.output / 255) * 100}
-                        <div
+                        <Preview
+                            type="smoke"
+                            size="medium"
+                            data={{ output: smoke.output }}
                             class="color-preview"
-                            style="background: #1a1a1a"
-                        >
-                            <div class="smoke-effect" style="opacity: {smokePercent / 100}"></div>
-                        </div>
+                        />
                     {:else}
-                        <div
+                        <Preview
+                            type="device"
+                            size="medium"
+                            data={{ color: getDeviceColor(device.type, device.defaultValues) }}
                             class="color-preview"
-                            style="background-color: {getDeviceColor(device.type, device.defaultValues)}"
-                        ></div>
+                        />
                     {/if}
                     <h3>{device.name}</h3>
                     {#if device.isLinked()}
@@ -883,58 +881,6 @@
         box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
         flex-shrink: 0;
         position: relative;
-    }
-
-    .flamethrower-cross {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 70%;
-        height: 70%;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-    }
-
-    .flamethrower-cross::before,
-    .flamethrower-cross::after {
-        content: '';
-        position: absolute;
-        width: 100%;
-        height: 2px;
-        background: #666;
-        top: 50%;
-        left: 0;
-    }
-
-    .flamethrower-cross::before {
-        transform: translateY(-50%) rotate(45deg);
-    }
-
-    .flamethrower-cross::after {
-        transform: translateY(-50%) rotate(-45deg);
-    }
-
-    .smoke-effect {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background:
-            radial-gradient(circle at 12% 18%, rgba(180, 180, 180, 0.6) 0%, rgba(180, 180, 180, 0.6) 42%, transparent 43%),
-            radial-gradient(circle at 72% 12%, rgba(160, 160, 160, 0.5) 0%, rgba(160, 160, 160, 0.5) 28%, transparent 29%),
-            radial-gradient(circle at 45% 45%, rgba(170, 170, 170, 0.55) 0%, rgba(170, 170, 170, 0.55) 38%, transparent 39%),
-            radial-gradient(circle at 88% 72%, rgba(175, 175, 175, 0.5) 0%, rgba(175, 175, 175, 0.5) 35%, transparent 36%),
-            radial-gradient(circle at 8% 88%, rgba(165, 165, 165, 0.5) 0%, rgba(165, 165, 165, 0.5) 30%, transparent 31%),
-            radial-gradient(circle at 33% 75%, rgba(170, 170, 170, 0.45) 0%, rgba(170, 170, 170, 0.45) 25%, transparent 26%),
-            radial-gradient(circle at 58% 55%, rgba(175, 175, 175, 0.52) 0%, rgba(175, 175, 175, 0.52) 32%, transparent 33%),
-            radial-gradient(circle at 25% 62%, rgba(168, 168, 168, 0.48) 0%, rgba(168, 168, 168, 0.48) 27%, transparent 28%),
-            radial-gradient(circle at 78% 38%, rgba(172, 172, 172, 0.53) 0%, rgba(172, 172, 172, 0.53) 36%, transparent 37%),
-            radial-gradient(circle at 42% 25%, rgba(165, 165, 165, 0.47) 0%, rgba(165, 165, 165, 0.47) 30%, transparent 31%);
-        border-radius: 4px;
-        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
-        pointer-events: none;
-        transition: opacity 0.2s ease-out;
     }
 
     .device-header h3 {
