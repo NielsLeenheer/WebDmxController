@@ -414,17 +414,19 @@
                                     {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
                                     <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
                                         <Preview
-                                            type="flamethrower"
+                                            type="device"
                                             size="large"
-                                            data={{ safety: flame.safety, fuel: flame.fuel }}
+                                            controls={['fuel', 'safety']}
+                                            data={{ fuel: flame.fuel, safety: flame.safety }}
                                         />
                                     </div>
                                 {:else if device.type === 'SMOKE'}
                                     {@const smoke = deviceSmoke[device.id] || { output: device.defaultValues[0] || 0 }}
                                     <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
                                         <Preview
-                                            type="smoke"
+                                            type="device"
                                             size="large"
+                                            controls={['output']}
                                             data={{ output: smoke.output }}
                                         />
                                     </div>
@@ -432,8 +434,9 @@
                                     {@const panTilt = devicePanTilt[device.id]}
                                     <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
                                         <Preview
-                                            type="pantilt"
+                                            type="device"
                                             size="large"
+                                            controls={['color', 'pantilt']}
                                             data={{
                                                 color: previewColors[device.id] || getDeviceColor(device.type, device.defaultValues),
                                                 pan: panTilt.pan,
@@ -446,6 +449,7 @@
                                         <Preview
                                             type="device"
                                             size="large"
+                                            controls={['color']}
                                             data={{ color: previewColors[device.id] || getDeviceColor(device.type, device.defaultValues) }}
                                         />
                                     </div>

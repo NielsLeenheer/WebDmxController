@@ -839,7 +839,7 @@
                             <div class="trigger-text">Always</div>
                         {:else}
                             <Preview
-                                type="device"
+                                type="input"
                                 size="medium"
                                 data={{ color: getInputPreview(trigger) }}
                                 class="trigger-preview"
@@ -855,6 +855,7 @@
                         <Preview
                             type="device"
                             size="medium"
+                            controls={['color']}
                             data={{ color: getDevicePreview(trigger) }}
                             class="trigger-preview"
                         />
@@ -880,31 +881,35 @@
                             {#if specialType === 'safety'}
                                 {@const safetyValue = getControlValue(trigger, 'Safety')}
                                 <Preview
-                                    type="safety"
+                                    type="device"
                                     size="medium"
-                                    data={{ value: safetyValue }}
+                                    controls={['safety']}
+                                    data={{ safety: safetyValue }}
                                     class="trigger-preview"
                                 />
                             {:else if specialType === 'fuel'}
                                 {@const fuelValue = getControlValue(trigger, 'Fuel')}
                                 <Preview
-                                    type="fuel"
+                                    type="device"
                                     size="medium"
-                                    data={{ value: fuelValue }}
+                                    controls={['fuel']}
+                                    data={{ fuel: fuelValue }}
                                     class="trigger-preview"
                                 />
                             {:else if specialType === 'output'}
                                 {@const outputValue = getControlValue(trigger, 'Output')}
                                 <Preview
-                                    type="output"
+                                    type="device"
                                     size="medium"
-                                    data={{ value: outputValue }}
+                                    controls={['output']}
+                                    data={{ output: outputValue }}
                                     class="trigger-preview"
                                 />
                             {:else}
                                 <Preview
                                     type="device"
                                     size="medium"
+                                    controls={['color']}
                                     data={{ color: getValuePreview(trigger) }}
                                     class="trigger-preview"
                                 />

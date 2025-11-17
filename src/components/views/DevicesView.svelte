@@ -613,21 +613,24 @@
                     {#if device.type === 'FLAMETHROWER'}
                         {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
                         <Preview
-                            type="flamethrower"
+                            type="device"
                             size="medium"
-                            data={{ safety: flame.safety, fuel: flame.fuel }}
+                            controls={['fuel', 'safety']}
+                            data={{ fuel: flame.fuel, safety: flame.safety }}
                         />
                     {:else if device.type === 'SMOKE'}
                         {@const smoke = deviceSmoke[device.id] || { output: device.defaultValues[0] || 0 }}
                         <Preview
-                            type="smoke"
+                            type="device"
                             size="medium"
+                            controls={['output']}
                             data={{ output: smoke.output }}
                         />
                     {:else}
                         <Preview
                             type="device"
                             size="medium"
+                            controls={['color']}
                             data={{ color: getDeviceColor(device.type, device.defaultValues) }}
                         />
                     {/if}
