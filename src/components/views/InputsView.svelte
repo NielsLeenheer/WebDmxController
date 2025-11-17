@@ -742,7 +742,7 @@
                 >
                     {#if input.color && isColorCapableControl(input.inputControlId)}
                         <Preview
-                            type="device"
+                            type="input"
                             size="medium"
                             data={{ color: getInputColorCSS(input.color) }}
                             class="input-color-badge"
@@ -756,11 +756,20 @@
                     </div>
                     {#if input.inputControlId === 'button' && thingyEulerAngles[input.inputDeviceId]}
                         {@const euler = thingyEulerAngles[input.inputDeviceId]}
-                        <Preview
-                            type="euler"
-                            size="medium"
-                            data={{ roll: euler.roll, pitch: euler.pitch, yaw: euler.yaw }}
-                        />
+                        <div class="thingy-euler-preview">
+                            <div class="euler-axis">
+                                <span class="euler-label">Roll:</span>
+                                <span class="euler-value">{euler.roll.toFixed(0)}°</span>
+                            </div>
+                            <div class="euler-axis">
+                                <span class="euler-label">Pitch:</span>
+                                <span class="euler-value">{euler.pitch.toFixed(0)}°</span>
+                            </div>
+                            <div class="euler-axis">
+                                <span class="euler-label">Yaw:</span>
+                                <span class="euler-value">{euler.yaw.toFixed(0)}°</span>
+                            </div>
+                        </div>
                     {/if}
                     <div class="input-state">
                         {getInputStateDisplay(input)}
@@ -1020,5 +1029,34 @@
         box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
+    /* Thingy:52 Euler angle preview */
+    .thingy-euler-preview {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 12px;
+        background: #f6f6f6;
+        border-radius: 4px;
+        margin: 8px 0;
+        font-family: var(--font-stack-mono);
+    }
+
+    .euler-axis {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10pt;
+    }
+
+    .euler-label {
+        color: #666;
+        font-weight: 500;
+    }
+
+    .euler-value {
+        color: #2563eb;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
 
 </style>

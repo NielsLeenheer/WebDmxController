@@ -2,17 +2,18 @@
     /**
      * Preview Component
      *
-     * Renders previews for devices, animations, inputs, and properties
-     * Consolidates all preview rendering logic in one place
+     * Renders previews for devices, animations, and inputs with stacked controls
      *
-     * @prop {string} type - Type of preview: 'device', 'animation', 'safety', 'fuel', 'output', 'euler', 'pantilt'
+     * @prop {string} type - Type of preview: 'device', 'animation', 'input'
      * @prop {string} size - Size: 'small', 'medium', 'large' (default: 'medium')
+     * @prop {Array<string>} controls - Array of control types to stack (for type='device')
      * @prop {Object} data - Data for rendering the preview
      */
 
     let {
         type = 'device',
         size = 'medium',
+        controls = [],
         data = {},
         class: className = '',
     } = $props();
@@ -22,84 +23,62 @@
 </script>
 
 <div class="preview {sizeClass} {className}">
+    <!-- Dark gray background (always present for devices) -->
+    <div class="preview-base"></div>
+
     {#if type === 'device'}
-        <!-- Device color preview (RGB, RGBW, DIMMER, etc.) -->
-        <div class="preview-color" style="background-color: {data.color || '#888'}"></div>
+        <!-- Stack device controls in order -->
+        {#each controls as control}
+            {#if control === 'color'}
+                <div class="control-layer control-color" style="background-color: {data.color || '#888'}"></div>
 
-    {:else if type === 'flamethrower'}
-        <!-- Flamethrower: safety and fuel -->
-        {@const safetyOff = (data.safety ?? 0) < 125}
-        {@const fuelPercent = ((data.fuel ?? 0) / 255) * 100}
-        <div
-            class="preview-flamethrower"
-            style="background: {safetyOff ? '#222222' : `linear-gradient(to top, #ff5722 0%, #ff9800 ${fuelPercent/2}%, #ffc107 ${fuelPercent}%, #1a1a1a ${fuelPercent}%, #1a1a1a 100%)`}"
-        >
-            {#if safetyOff}
-                <div class="flamethrower-cross"></div>
+            {:else if control === 'amber'}
+                {@const amberOpacity = ((data.amber ?? 0) / 255)}
+                <div class="control-layer control-amber" style="background-color: rgba(255, 191, 0, {amberOpacity})"></div>
+
+            {:else if control === 'white'}
+                {@const whiteOpacity = ((data.white ?? 0) / 255)}
+                <div class="control-layer control-white" style="background-color: rgba(255, 255, 255, {whiteOpacity})"></div>
+
+            {:else if control === 'fuel'}
+                {@const fuelPercent = ((data.fuel ?? 0) / 255) * 100}
+                <div
+                    class="control-layer control-fuel"
+                    style="background: linear-gradient(to top, #ff5722 0%, #ff9800 {fuelPercent/2}%, #ffc107 {fuelPercent}%, #1a1a1a {fuelPercent}%, #1a1a1a 100%)"
+                ></div>
+
+            {:else if control === 'safety'}
+                {@const safetyOn = (data.safety ?? 0) >= 125}
+                <div class="control-layer control-safety" style="background: {safetyOn ? 'transparent' : '#222222'}">
+                    {#if safetyOn}
+                        <div class="safety-checkmark"></div>
+                    {:else}
+                        <div class="safety-cross"></div>
+                    {/if}
+                </div>
+
+            {:else if control === 'output'}
+                {@const outputPercent = ((data.output ?? 0) / 255) * 100}
+                <div class="control-layer control-output">
+                    <div class="smoke-effect" style="opacity: {outputPercent / 100}"></div>
+                </div>
+
+            {:else if control === 'pantilt'}
+                {@const dotX = ((data.pan ?? 0) / 255) * 100}
+                {@const dotY = (1 - (data.tilt ?? 0) / 255) * 100}
+                <div class="control-layer control-pantilt">
+                    <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
+                </div>
             {/if}
-        </div>
-
-    {:else if type === 'smoke'}
-        <!-- Smoke machine: output -->
-        {@const smokePercent = ((data.output ?? 0) / 255) * 100}
-        <div class="preview-smoke" style="background: #1a1a1a">
-            <div class="smoke-effect" style="opacity: {smokePercent / 100}"></div>
-        </div>
-
-    {:else if type === 'safety'}
-        <!-- Safety toggle: on/off with checkmark or cross -->
-        {@const safetyOn = (data.value ?? 0) >= 125}
-        <div class="preview-safety" style="background: {safetyOn ? '#2a5a2a' : '#222222'}">
-            {#if safetyOn}
-                <div class="safety-checkmark"></div>
-            {:else}
-                <div class="flamethrower-cross"></div>
-            {/if}
-        </div>
-
-    {:else if type === 'fuel'}
-        <!-- Fuel: just the fire gradient -->
-        {@const fuelPercent = ((data.value ?? 0) / 255) * 100}
-        <div
-            class="preview-fuel"
-            style="background: linear-gradient(to top, #ff5722 0%, #ff9800 {fuelPercent/2}%, #ffc107 {fuelPercent}%, #1a1a1a {fuelPercent}%, #1a1a1a 100%)"
-        ></div>
-
-    {:else if type === 'output'}
-        <!-- Output: smoke effect -->
-        {@const smokePercent = ((data.value ?? 0) / 255) * 100}
-        <div class="preview-output" style="background: #1a1a1a">
-            <div class="smoke-effect" style="opacity: {smokePercent / 100}"></div>
-        </div>
+        {/each}
 
     {:else if type === 'animation'}
         <!-- Animation color/gradient preview -->
         <div class="preview-animation" style="background: {data.color || '#888'}"></div>
 
-    {:else if type === 'euler'}
-        <!-- Euler angles for Thingy:52 -->
-        <div class="preview-euler">
-            <div class="euler-axis">
-                <span class="euler-label">Roll:</span>
-                <span class="euler-value">{(data.roll ?? 0).toFixed(0)}°</span>
-            </div>
-            <div class="euler-axis">
-                <span class="euler-label">Pitch:</span>
-                <span class="euler-value">{(data.pitch ?? 0).toFixed(0)}°</span>
-            </div>
-            <div class="euler-axis">
-                <span class="euler-label">Yaw:</span>
-                <span class="euler-value">{(data.yaw ?? 0).toFixed(0)}°</span>
-            </div>
-        </div>
-
-    {:else if type === 'pantilt'}
-        <!-- Moving head with pan/tilt indicator -->
-        {@const dotX = ((data.pan ?? 0) / 255) * 100}
-        {@const dotY = (1 - (data.tilt ?? 0) / 255) * 100}
-        <div class="preview-pantilt" style="background-color: {data.color || '#888'}">
-            <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
-        </div>
+    {:else if type === 'input'}
+        <!-- Input color preview -->
+        <div class="preview-input" style="background: {data.color || '#888'}"></div>
     {/if}
 </div>
 
@@ -130,60 +109,42 @@
         border-radius: 6px;
     }
 
-    /* Content fills the preview */
-    .preview-color,
-    .preview-flamethrower,
-    .preview-smoke,
-    .preview-safety,
-    .preview-fuel,
-    .preview-output,
-    .preview-animation,
-    .preview-pantilt {
+    /* Dark gray background base */
+    .preview-base {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #1a1a1a;
+        border-radius: inherit;
+    }
+
+    /* Control layers stack on top of base */
+    .control-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
         height: 100%;
         border-radius: inherit;
     }
 
-    /* Shadow for color previews */
-    .preview-color,
-    .preview-animation,
-    .preview-pantilt {
+    /* Color layer has shadow */
+    .control-color {
         box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    /* Pan/Tilt preview needs relative positioning for indicator */
-    .preview-pantilt {
-        position: relative;
-    }
-
-    /* Flamethrower cross */
-    .flamethrower-cross {
+    /* Animation and input previews */
+    .preview-animation,
+    .preview-input {
         position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 70%;
-        height: 70%;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-    }
-
-    .flamethrower-cross::before,
-    .flamethrower-cross::after {
-        content: '';
-        position: absolute;
-        width: 100%;
-        height: 2px;
-        background-color: #ff4444;
-        top: 50%;
+        top: 0;
         left: 0;
-    }
-
-    .flamethrower-cross::before {
-        transform: translateY(-50%) rotate(45deg);
-    }
-
-    .flamethrower-cross::after {
-        transform: translateY(-50%) rotate(-45deg);
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     /* Safety checkmark */
@@ -221,6 +182,36 @@
         transform-origin: left bottom;
     }
 
+    /* Safety cross (diagonal X) */
+    .safety-cross {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 70%;
+        height: 70%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+    }
+
+    .safety-cross::before,
+    .safety-cross::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        background-color: #ff4444;
+        top: 50%;
+        left: 0;
+    }
+
+    .safety-cross::before {
+        transform: translateY(-50%) rotate(45deg);
+    }
+
+    .safety-cross::after {
+        transform: translateY(-50%) rotate(-45deg);
+    }
+
     /* Smoke effect */
     .smoke-effect {
         position: absolute;
@@ -243,54 +234,6 @@
         box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
         pointer-events: none;
         transition: opacity 0.2s ease-out;
-    }
-
-    /* Euler angle preview */
-    .preview-euler {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        padding: 8px 12px;
-        background: #f6f6f6;
-        border-radius: inherit;
-        font-family: var(--font-stack-mono);
-        width: auto;
-        height: auto;
-    }
-
-    .preview-small .preview-euler {
-        padding: 4px 6px;
-        gap: 2px;
-        font-size: 8pt;
-    }
-
-    .preview-medium .preview-euler {
-        padding: 6px 8px;
-        gap: 3px;
-        font-size: 9pt;
-    }
-
-    .preview-large .preview-euler {
-        padding: 8px 12px;
-        gap: 4px;
-        font-size: 10pt;
-    }
-
-    .euler-axis {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .euler-label {
-        color: #666;
-        font-weight: 500;
-    }
-
-    .euler-value {
-        color: #2563eb;
-        font-weight: 600;
-        font-variant-numeric: tabular-nums;
     }
 
     /* Pan/Tilt indicator */
