@@ -741,10 +741,12 @@
                     ondragend={handleDragEnd}
                 >
                     {#if input.color && isColorCapableControl(input.inputControlId)}
-                        <div
+                        <Preview
+                            type="device"
+                            size="medium"
+                            data={{ color: getInputColorCSS(input.color) }}
                             class="input-color-badge"
-                            style="background-color: {getInputColorCSS(input.color)}"
-                        ></div>
+                        />
                     {/if}
                     <div class="input-header">
                         <div class="input-name">{input.name}</div>
@@ -937,11 +939,6 @@
         position: absolute;
         top: 15px;
         right: 15px;
-        width: 32px;
-        height: 32px;
-        border-radius: 4px;
-        flex-shrink: 0;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .input-header {
