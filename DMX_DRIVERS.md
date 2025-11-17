@@ -21,7 +21,21 @@ Supports ENTTEC DMX USB Pro and compatible devices using the FTDI chipset (vendo
 **Features:**
 - 60 Hz continuous output
 - 512-channel DMX universe
+- Uses USB bulk transfers
 - Automatic device detection
+
+### uDMX Driver (Anyma)
+
+Location: `src/lib/dmx.js`
+
+Supports uDMX USB to wireless DMX controllers from Anyma (vendor ID `0x16c0`, product ID `0x05dc`).
+
+**Features:**
+- ~44 Hz continuous output (uDMX hardware limitation)
+- 512-channel DMX universe
+- Uses USB control transfers instead of bulk transfers
+- Automatic device detection
+- Handles occasional overflow errors gracefully
 
 ## Creating a New Driver
 
@@ -282,17 +296,32 @@ console.log('Vendor ID:', '0x' + device.vendorId.toString(16));
 console.log('Product ID:', '0x' + device.productId.toString(16));
 ```
 
-### USB Endpoints
+### USB Transfer Types
 
-- Most DMX controllers use **bulk transfer** on endpoint 2
-- Check your device's documentation for the correct endpoint
+DMX controllers typically use one of two transfer types:
+
+**Bulk Transfers** (ENTTEC DMX USB Pro):
+- Most common for DMX controllers
+- Usually endpoint 2
 - Use `device.transferOut(endpointNumber, data)` to send data
+- Example: ENTTEC DMX USB Pro, DMXking devices
+
+**Control Transfers** (uDMX):
+- Used by simpler/smaller devices
+- No endpoint needed (uses default control endpoint)
+- Use `device.controlTransferOut({...}, data)` to send data
+- Example: Anyma uDMX
 
 ### Common USB Operations
 
 ```javascript
 // Open device
 await device.open();
+
+// Select configuration (if needed)
+if (device.configuration === null) {
+    await device.selectConfiguration(1);
+}
 
 // Claim interface
 await device.claimInterface(0);
@@ -306,8 +335,17 @@ await device.controlTransferOut({
     index: 0x00
 });
 
-// Bulk transfer (for DMX data)
+// Bulk transfer (for DMX data - ENTTEC style)
 await device.transferOut(2, packetData);
+
+// Control transfer (for DMX data - uDMX style)
+await device.controlTransferOut({
+    requestType: 'vendor',
+    recipient: 'device',
+    request: 2, // CMD_SET_CHANNEL_RANGE
+    value: 512, // number of channels
+    index: 0    // starting channel
+}, universeData);
 
 // Close device
 await device.close();
@@ -315,13 +353,18 @@ await device.close();
 
 ## Common DMX Controller Types
 
-Here are some popular DMX controllers you might want to add support for:
+### Supported Controllers
 
-1. **DMXking ultraDMX Micro** - USB vendor ID: 0x04d8
-2. **DMXking ultraDMX Pro** - USB vendor ID: 0x04d8
-3. **Eurolite USB-DMX512-PRO** - Often compatible with ENTTEC protocol
-4. **Chauvet DJ Xpress 512** - Check vendor documentation
-5. **ADJ MyDMX** - Proprietary protocol, may require reverse engineering
+1. **ENTTEC DMX USB Pro** ✅ - USB vendor ID: 0x0403 (Built-in driver)
+2. **Anyma uDMX** ✅ - USB vendor ID: 0x16c0, product ID: 0x05dc (Built-in driver)
+3. **Eurolite USB-DMX512-PRO** ✅ - Often compatible with ENTTEC protocol (uses ENTTEC driver)
+
+### Controllers to Add Support For
+
+4. **DMXking ultraDMX Micro** - USB vendor ID: 0x04d8
+5. **DMXking ultraDMX Pro** - USB vendor ID: 0x04d8
+6. **Chauvet DJ Xpress 512** - Check vendor documentation
+7. **ADJ MyDMX** - Proprietary protocol, may require reverse engineering
 
 ## Debugging
 
