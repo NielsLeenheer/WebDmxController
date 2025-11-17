@@ -7,6 +7,7 @@
 
 import { StreamDeckManager, getStreamDeckFilters, isStreamDeck, getStreamDeckModel } from './streamdeck.js';
 import { MIDIDeviceProfileManager } from './midiDeviceProfiles.js';
+import { Thingy52Manager } from './thingy52.js';
 
 /**
  * Base class for all input devices
@@ -352,6 +353,75 @@ export class HIDInputDevice extends InputDevice {
 }
 
 /**
+ * Bluetooth Input Device (Thingy:52)
+ */
+export class BluetoothInputDevice extends InputDevice {
+	constructor(thingyDevice) {
+		super(thingyDevice.id, thingyDevice.name, 'bluetooth');
+		this.thingyDevice = thingyDevice;
+
+		// Set up button handlers
+		this.thingyDevice.on('button-press', this._handleButtonPress.bind(this));
+		this.thingyDevice.on('button-release', this._handleButtonRelease.bind(this));
+
+		// Set up sensor data handlers
+		this.thingyDevice.on('euler', this._handleEuler.bind(this));
+		this.thingyDevice.on('quaternion', this._handleQuaternion.bind(this));
+		this.thingyDevice.on('accelerometer', this._handleAccelerometer.bind(this));
+		this.thingyDevice.on('gyroscope', this._handleGyroscope.bind(this));
+		this.thingyDevice.on('compass', this._handleCompass.bind(this));
+	}
+
+	_handleButtonPress() {
+		this._trigger('button', 127);
+	}
+
+	_handleButtonRelease() {
+		this._emit('release', { controlId: 'button' });
+	}
+
+	_handleEuler({ roll, pitch, yaw }) {
+		// Euler angles: -180 to 180 degrees, normalize to 0-1
+		this._setValue('euler-roll', (roll + 180) / 360, -180, 180);
+		this._setValue('euler-pitch', (pitch + 180) / 360, -180, 180);
+		this._setValue('euler-yaw', (yaw + 180) / 360, -180, 180);
+	}
+
+	_handleQuaternion({ w, x, y, z }) {
+		// Quaternion: -1 to 1, normalize to 0-1
+		this._setValue('quat-w', (w + 1) / 2, -1, 1);
+		this._setValue('quat-x', (x + 1) / 2, -1, 1);
+		this._setValue('quat-y', (y + 1) / 2, -1, 1);
+		this._setValue('quat-z', (z + 1) / 2, -1, 1);
+	}
+
+	_handleAccelerometer({ x, y, z }) {
+		// Accelerometer: -4g to 4g typical range, normalize to 0-1
+		this._setValue('accel-x', (x + 4) / 8, -4, 4);
+		this._setValue('accel-y', (y + 4) / 8, -4, 4);
+		this._setValue('accel-z', (z + 4) / 8, -4, 4);
+	}
+
+	_handleGyroscope({ x, y, z }) {
+		// Gyroscope: -2000 to 2000 deg/s typical range, normalize to 0-1
+		this._setValue('gyro-x', (x + 2000) / 4000, -2000, 2000);
+		this._setValue('gyro-y', (y + 2000) / 4000, -2000, 2000);
+		this._setValue('gyro-z', (z + 2000) / 4000, -2000, 2000);
+	}
+
+	_handleCompass({ x, y, z }) {
+		// Compass: -100 to 100 µT typical range, normalize to 0-1
+		this._setValue('compass-x', (x + 100) / 200, -100, 100);
+		this._setValue('compass-y', (y + 100) / 200, -100, 100);
+		this._setValue('compass-z', (z + 100) / 200, -100, 100);
+	}
+
+	disconnect() {
+		this.thingyDevice?.disconnect();
+	}
+}
+
+/**
  * Keyboard Input Device
  */
 export class KeyboardInputDevice extends InputDevice {
@@ -441,8 +511,10 @@ export class InputDeviceManager {
 		this.midiAccess = null;
 		this.keyboardDevice = null;
 		this.streamDeckManager = new StreamDeckManager();
+		this.thingy52Manager = new Thingy52Manager();
 		this.midiProfileManager = new MIDIDeviceProfileManager();
 		this._setupStreamDeckListeners();
+		this._setupThingy52Listeners();
 	}
 
 	/**
@@ -484,6 +556,25 @@ export class InputDeviceManager {
 		this.streamDeckManager.on('disconnected', ({ serialNumber }) => {
 			console.log(`Stream Deck disconnected`);
 			this.removeDevice(serialNumber);
+		});
+	}
+
+	/**
+	 * Setup Thingy:52 event listeners
+	 */
+	_setupThingy52Listeners() {
+		this.thingy52Manager.on('connected', ({ device }) => {
+			console.log(`Thingy:52 connected: ${device.name}`);
+
+			// Create BluetoothInputDevice wrapper
+			const inputDevice = new BluetoothInputDevice(device);
+			this.devices.set(device.id, inputDevice);
+			this._emit('deviceadded', inputDevice);
+		});
+
+		this.thingy52Manager.on('disconnected', ({ device }) => {
+			console.log(`Thingy:52 disconnected: ${device.name}`);
+			this.removeDevice(device.id);
 		});
 	}
 
@@ -580,6 +671,32 @@ export class InputDeviceManager {
 			return devices;
 		} catch (error) {
 			console.error('Failed to auto-reconnect Stream Decks:', error);
+			return [];
+		}
+	}
+
+	/**
+	 * Request Thingy:52 device
+	 */
+	async requestThingy52() {
+		try {
+			return await this.thingy52Manager.requestDevice();
+		} catch (error) {
+			console.error('Failed to request Thingy:52:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Auto-reconnect to previously paired Thingy:52 devices
+	 */
+	async autoReconnectThingy52() {
+		try {
+			const devices = await this.thingy52Manager.autoReconnect();
+			console.log(`Auto-reconnected ${devices.length} Thingy:52(s)`);
+			return devices;
+		} catch (error) {
+			console.error('Failed to auto-reconnect Thingy:52 devices:', error);
 			return [];
 		}
 	}

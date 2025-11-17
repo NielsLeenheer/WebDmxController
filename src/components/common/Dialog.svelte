@@ -9,6 +9,7 @@
      * @prop {string} anchorId - Anchor name (CSS anchor-name value)
      * @prop {boolean} showArrow - Show arrow pointing to anchor (default true for anchored)
      * @prop {boolean} lightDismiss - Enable light dismiss on backdrop click (default true for anchored)
+     * @prop {string} width - Explicit width for the dialog (optional)
      * @snippet tools - Optional snippet for tool buttons (e.g., Delete)
      * @snippet buttons - Optional snippet for action buttons (e.g., Cancel, Save)
      */
@@ -20,6 +21,7 @@
         anchorId = null,
         showArrow = true,
         lightDismiss = true,
+        width = null,
         children,
         tools,
         buttons
@@ -42,7 +44,8 @@
     class="dialog"
     class:anchored
     class:show-arrow={showArrow && anchored}
-    style={anchored && anchorId ? `position-anchor: --${anchorId}` : ''}
+    class:explicit-width={width !== null}
+    style="{anchored && anchorId ? `position-anchor: --${anchorId};` : ''}{width ? `width: ${width};` : ''}"
     onclick={handleClick}
 >
     {#if title}
@@ -75,9 +78,13 @@
         border-radius: 8px;
         padding: 0;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-height: 90vh;
+    }
+
+    /* Default sizing for implicitly sized dialogs */
+    .dialog:not(.explicit-width) {
         min-width: 400px;
         max-width: 90vw;
-        max-height: 90vh;
     }
 
     .dialog::backdrop {
@@ -93,9 +100,13 @@
         translate: -50% 16px;
         margin: 0;
         z-index: 100;
+        overflow: visible;
+    }
+
+    /* Default sizing for implicitly sized anchored dialogs */
+    .dialog.anchored:not(.explicit-width) {
         min-width: 300px;
         max-width: 400px;
-        overflow: visible;
     }
 
     .dialog.anchored::backdrop {

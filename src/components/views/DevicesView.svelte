@@ -7,6 +7,7 @@
     import Dialog from '../common/Dialog.svelte';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
+    import Preview from '../common/Preview.svelte';
 
     import editIcon from '../../assets/glyphs/edit.svg?raw';
     import linkedIcon from '../../assets/icons/linked.svg?raw';
@@ -19,6 +20,7 @@
 
     // Settings dialog state
     let settingsDialog = null; // DOM reference - should NOT be $state
+    let customizeControlsDialog = null; // DOM reference - should NOT be $state
     let editingDevice = $state(null);
     let dialogName = $state('');
     let dialogChannel = $state(1);
@@ -31,8 +33,59 @@
     let draggedIndex = $state(null);
     let dragOverIndex = $state(null);
     let isAfterMidpoint = $state(false);
+    let lastMouseDownTarget = null;
+
+    // Preview state for special device types
+    let deviceFlamethrower = $state({});
+    let deviceSmoke = $state({});
+
+    function handleMouseDown(event) {
+        // Track where the mouse was pressed down
+        lastMouseDownTarget = event.target;
+    }
 
     function handleDragStart(event, device) {
+        // Check where the mousedown happened (not where drag started)
+        let clickedElement = lastMouseDownTarget;
+
+        if (!clickedElement) {
+            event.preventDefault();
+            return;
+        }
+
+        // Check if mousedown was on an interactive element
+        if (clickedElement.tagName === 'INPUT' ||
+            clickedElement.tagName === 'BUTTON' ||
+            clickedElement.tagName === 'TEXTAREA') {
+            event.preventDefault();
+            return;
+        }
+
+        // Walk up from the mousedown target to see if we're in header or controls
+        let foundHeader = false;
+        let foundControls = false;
+
+        let el = clickedElement;
+        while (el && el !== event.currentTarget) {
+            if (el.classList) {
+                if (el.classList.contains('device-header')) {
+                    foundHeader = true;
+                }
+                if (el.classList.contains('controls') ||
+                    el.classList.contains('control') ||
+                    el.classList.contains('icon-button')) {
+                    foundControls = true;
+                }
+            }
+            el = el.parentElement;
+        }
+
+        // Only allow drag from header, not from controls
+        if (!foundHeader || foundControls) {
+            event.preventDefault();
+            return;
+        }
+
         draggedDevice = device;
         draggedIndex = devices.findIndex(d => d.id === device.id);
         event.dataTransfer.effectAllowed = 'move';
@@ -130,6 +183,14 @@
         selectedLinkTarget = null;
         selectedSyncControls = null;
         mirrorPan = false;
+    }
+
+    function openCustomizeControlsDialog() {
+        customizeControlsDialog?.showModal();
+    }
+
+    function closeCustomizeControlsDialog() {
+        customizeControlsDialog?.close();
     }
 
     function confirmRemoveDevice() {
@@ -383,6 +444,18 @@
         // Update devices array with new instance
         devices = devices.map(d => d.id === device.id ? updatedDevice : d);
 
+        // Update preview state for special device types
+        if (updatedDevice.type === 'FLAMETHROWER') {
+            deviceFlamethrower[updatedDevice.id] = {
+                safety: updatedDevice.defaultValues[0] || 0,
+                fuel: updatedDevice.defaultValues[1] || 0
+            };
+        } else if (updatedDevice.type === 'SMOKE') {
+            deviceSmoke[updatedDevice.id] = {
+                output: updatedDevice.defaultValues[0] || 0
+            };
+        }
+
         // Update DMX controller
         updateDeviceToDMX(updatedDevice);
 
@@ -529,6 +602,7 @@
                 class:drag-over={dragOverIndex === index && !isAfterMidpoint}
                 class:drag-after={isDragAfter(index)}
                 draggable="true"
+                onmousedown={handleMouseDown}
                 ondragstart={(e) => handleDragStart(e, device)}
                 ondragover={(e) => handleDragOver(e, index)}
                 ondragleave={handleDragLeave}
@@ -536,10 +610,30 @@
                 ondragend={handleDragEnd}
             >
                 <div class="device-header">
-                    <div
-                        class="color-preview"
-                        style="background-color: {getDeviceColor(device.type, device.defaultValues)}"
-                    ></div>
+                    {#if device.type === 'FLAMETHROWER'}
+                        {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
+                        <Preview
+                            type="device"
+                            size="medium"
+                            controls={['fuel', 'safety']}
+                            data={{ fuel: flame.fuel, safety: flame.safety }}
+                        />
+                    {:else if device.type === 'SMOKE'}
+                        {@const smoke = deviceSmoke[device.id] || { output: device.defaultValues[0] || 0 }}
+                        <Preview
+                            type="device"
+                            size="medium"
+                            controls={['output']}
+                            data={{ output: smoke.output }}
+                        />
+                    {:else}
+                        <Preview
+                            type="device"
+                            size="medium"
+                            controls={['color']}
+                            data={{ color: getDeviceColor(device.type, device.defaultValues) }}
+                        />
+                    {/if}
                     <h3>{device.name}</h3>
                     {#if device.isLinked()}
                         <Icon data={linkedIcon} />
@@ -586,69 +680,45 @@
 
         <div class="dialog-input-group">
             <label for="channel-input">Starting channel (1-512):</label>
-            <input
-                id="channel-input"
-                type="number"
-                min="1"
-                max="512"
-                bind:value={dialogChannel}
-                class:valid={isChannelValid(editingDevice, dialogChannel - 1)}
-                class:invalid={!isChannelValid(editingDevice, dialogChannel - 1)}
-            />
-            <small class="channel-range">
-                Device uses {DEVICE_TYPES[editingDevice.type].channels} channels:
-                {dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1}
-            </small>
+            <div>
+                <input
+                    id="channel-input"
+                    type="number"
+                    min="1"
+                    max="512"
+                    bind:value={dialogChannel}
+                    class:valid={isChannelValid(editingDevice, dialogChannel - 1)}
+                    class:invalid={!isChannelValid(editingDevice, dialogChannel - 1)}
+                />
+                <small class="channel-range">
+                    Device uses {DEVICE_TYPES[editingDevice.type].channels} channels:
+                    {dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1}
+                </small>
+            </div>
         </div>
 
         <div class="dialog-input-group">
             <label for="link-select">Link to device:</label>
             {#if getLinkableDevices(editingDevice).length > 0 || editingDevice.isLinked()}
-                <select id="link-select" bind:value={selectedLinkTarget}>
-                    <option value={null}>None</option>
-                    {#each getLinkableDevices(editingDevice) as linkableDevice}
-                        <option value={linkableDevice.id}>
-                            {linkableDevice.name} ({DEVICE_TYPES[linkableDevice.type].name})
-                        </option>
-                    {/each}
-                </select>
-                <small class="link-help">Link this device to follow another device's values</small>
+                <div class="link-select-row">
+                    <select id="link-select" bind:value={selectedLinkTarget}>
+                        <option value={null}>None</option>
+                        {#each getLinkableDevices(editingDevice) as linkableDevice}
+                            <option value={linkableDevice.id}>
+                                {linkableDevice.name} ({DEVICE_TYPES[linkableDevice.type].name})
+                            </option>
+                        {/each}
+                    </select>
+                    {#if selectedLinkTarget !== null}
+                        <Button onclick={openCustomizeControlsDialog} variant="secondary">
+                            Customize
+                        </Button>
+                    {/if}
+                </div>
             {:else}
                 <p class="no-devices">No compatible devices available to link</p>
             {/if}
         </div>
-
-        {#if selectedLinkTarget !== null}
-            <div class="dialog-input-group">
-                <label>Sync controls:</label>
-                <div class="sync-controls-list">
-                    {#each getAvailableControlsForLink() as control}
-                        <label class="sync-control-item">
-                            <input
-                                type="checkbox"
-                                checked={isSyncControlSelected(control.controlName)}
-                                onchange={() => toggleSyncControl(control.controlName)}
-                            />
-                            <span>{control.controlName}</span>
-                        </label>
-                    {/each}
-                </div>
-                <small class="link-help">Select which controls to sync from the linked device</small>
-            </div>
-
-            {#if isPanTiltControlAvailable()}
-                <div class="dialog-input-group">
-                    <label class="checkbox-label">
-                        <input
-                            type="checkbox"
-                            bind:checked={mirrorPan}
-                        />
-                        <span>Mirror pan (invert pan values)</span>
-                    </label>
-                    <small class="link-help">Useful for moving heads facing each other</small>
-                </div>
-            {/if}
-        {/if}
     </form>
 
     {#snippet tools()}
@@ -671,6 +741,45 @@
     {/snippet}
 </Dialog>
 {/if}
+
+<Dialog
+    bind:dialogRef={customizeControlsDialog}
+    title="Synced controls"
+    onclose={closeCustomizeControlsDialog}
+>
+    <div class="customize-controls-content">
+        <p class="dialog-description">Select which controls to sync from the linked device:</p>
+        <div class="sync-controls-vertical">
+            {#each getAvailableControlsForLink() as control}
+                <div class="sync-control-row">
+                    <label class="sync-control-item">
+                        <input
+                            type="checkbox"
+                            checked={isSyncControlSelected(control.controlName)}
+                            onchange={() => toggleSyncControl(control.controlName)}
+                        />
+                        <span>{control.controlName}</span>
+                    </label>
+                    {#if control.controlName === 'Pan/Tilt'}
+                        <label class="mirror-option">
+                            — 
+                            <input
+                                type="checkbox"
+                                bind:checked={mirrorPan}
+                                disabled={!isSyncControlSelected('Pan/Tilt')}
+                            />
+                            <span>Mirror</span>
+                        </label>
+                    {/if}
+                </div>
+            {/each}
+        </div>
+    </div>
+
+    {#snippet buttons()}
+        <Button onclick={closeCustomizeControlsDialog} variant="primary">Done</Button>
+    {/snippet}
+</Dialog>
 </div>
 
 <style>
@@ -721,12 +830,7 @@
         background: #f0f0f0;
         border-radius: 8px;
         padding: 15px;
-        cursor: grab;
         transition: opacity 0.2s, transform 0.2s;
-    }
-
-    .device-card:active {
-        cursor: grabbing;
     }
 
     .device-card.dragging {
@@ -763,19 +867,17 @@
         padding: 12px 15px;
         border-top-left-radius: 8px;
         border-top-right-radius: 8px;
+        cursor: grab;
     }
 
-    .color-preview {
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
-        flex-shrink: 0;
+    .device-header:active {
+        cursor: grabbing;
     }
 
     .device-header h3 {
         margin: 0;
         font-size: 11pt;
+        font-weight: 600;
         color: #333;
     }
 
@@ -845,5 +947,58 @@
     .checkbox-label span {
         font-size: 10pt;
         color: #333;
+    }
+
+    .link-select-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .link-select-row select {
+        width: 200px;
+    }
+
+    .customize-controls-content {
+        min-width: 400px;
+    }
+
+    .dialog-description {
+        margin: 0 0 16px 0;
+        font-size: 10pt;
+        color: #666;
+    }
+
+    .sync-controls-vertical {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .sync-control-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .mirror-option {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        user-select: none;
+        font-size: 9pt;
+        color: #666;
+    }
+
+    .mirror-option input[type="checkbox"]:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .mirror-option input[type="checkbox"] {
+        cursor: pointer;
+        width: 14px;
+        height: 14px;
     }
 </style>

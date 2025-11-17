@@ -5,6 +5,7 @@
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Dialog from '../common/Dialog.svelte';
+    import Preview from '../common/Preview.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
     import recordIcon from '../../assets/icons/record.svg?raw';
     import stopIcon from '../../assets/icons/stop.svg?raw';
@@ -24,6 +25,7 @@
     let editingColor = $state(null);
     let editDialog = null; // DOM reference - should NOT be $state
     let inputStates = $state({}); // Track state/value for each input: { inputId: { state: 'on'|'off', value: number } }
+    let thingyEulerAngles = $state({}); // Track Euler angles for Thingy devices: { deviceId: { roll, pitch, yaw } }
 
     // Drag and drop state
     let draggedInput = $state(null);
@@ -149,6 +151,8 @@
 
     function isColorCapableControl(controlId) {
         if (!controlId || typeof controlId !== 'string') return false;
+        // Thingy:52 button uses 'button' (not 'button-'), so check exact match too
+        if (controlId === 'button') return true;
         return COLOR_CAPABLE_PREFIXES.some(prefix => controlId.startsWith(prefix));
     }
 
@@ -157,7 +161,8 @@
         if (device.type === 'hid') {
             return device.id !== 'keyboard';
         }
-        return device.type === 'midi';
+        // MIDI and Bluetooth (Thingy:52) support colors
+        return device.type === 'midi' || device.type === 'bluetooth';
     }
 
     function shouldAssignColor(device, controlId) {
@@ -300,6 +305,9 @@
                     if (!isNaN(noteNumber) && noteNumber >= 0) {
                         device.setButtonColor(noteNumber, inputMapping.color);
                     }
+                } else if (device.type === 'bluetooth' && controlId === 'button' && device.thingyDevice) {
+                    // Thingy:52 button
+                    device.thingyDevice.setLEDColor(inputMapping.color);
                 }
             }
         }
@@ -542,6 +550,9 @@
                 }
                 inputDevice.sendNoteOff(noteNumber);
             }
+        } else if (inputDevice?.type === 'bluetooth' && input.inputControlId === 'button' && inputDevice.thingyDevice) {
+            // Thingy:52 button - turn off LED
+            await inputDevice.thingyDevice.setLEDColor('off');
         }
 
         mappingLibrary.remove(inputId);
@@ -597,6 +608,9 @@
                 if (!isNaN(noteNumber) && noteNumber >= 0) {
                     inputDevice.setButtonColor(noteNumber, color);
                 }
+            } else if (inputDevice.type === 'bluetooth' && input.inputControlId === 'button' && inputDevice.thingyDevice) {
+                // Thingy:52 button
+                await inputDevice.thingyDevice.setLEDColor(color);
             }
         }
     }
@@ -622,11 +636,38 @@
             if (!isNaN(noteNumber) && noteNumber >= 0) {
                 inputDevice.setButtonColor(noteNumber, color);
             }
+        } else if (inputDevice.type === 'bluetooth' && input.inputControlId === 'button' && inputDevice.thingyDevice) {
+            // Thingy:52 button
+            await inputDevice.thingyDevice.setLEDColor(color);
         }
     }
 
     onMount(() => {
         refreshInputs();
+
+        // Listen for mapping changes (add/update/remove)
+        mappingLibrary.on('changed', ({ type, mapping }) => {
+            if (type === 'add' || type === 'remove') {
+                refreshInputs();
+            } else if (type === 'update') {
+                // Update the specific input in the list
+                const index = savedInputs.findIndex(i => i.id === mapping.id);
+                if (index !== -1) {
+                    savedInputs[index] = mapping;
+                    savedInputs = [...savedInputs]; // Trigger reactivity
+                }
+            }
+        });
+
+        // Track Euler angles for Thingy:52 devices
+        const devices = inputController.getInputDevices();
+        for (const device of devices) {
+            if (device.type === 'bluetooth' && device.thingyDevice) {
+                device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
+                    thingyEulerAngles[device.id] = { roll, pitch, yaw };
+                });
+            }
+        }
 
         // Track input state changes for display
         inputController.on('input-trigger', ({ mapping, velocity, toggleState }) => {
@@ -658,6 +699,13 @@
 
         // Apply colors when devices connect
         inputController.on('deviceadded', (device) => {
+            // Track Euler angles for Thingy:52 devices
+            if (device.type === 'bluetooth' && device.thingyDevice) {
+                device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
+                    thingyEulerAngles[device.id] = { roll, pitch, yaw };
+                });
+            }
+
             if (device.type === 'hid' || device.type === 'midi') {
                 // Small delay to ensure device is fully initialized
                 setTimeout(() => applyColorsToDevices(), 500);
@@ -670,6 +718,12 @@
 
     onDestroy(() => {
         stopListening();
+        
+        // Clear all stability timers
+        for (const timerId of thingyStabilityTimers.values()) {
+            clearTimeout(timerId);
+        }
+        thingyStabilityTimers.clear();
     });
 </script>
 
@@ -708,10 +762,13 @@
                     ondragend={handleDragEnd}
                 >
                     {#if input.color && isColorCapableControl(input.inputControlId)}
-                        <div
+                        <Preview
+                            type="input"
+                            size="medium"
+                            data={{ color: getInputColorCSS(input.color) }}
+                            euler={input.inputControlId === 'button' && thingyEulerAngles[input.inputDeviceId] ? thingyEulerAngles[input.inputDeviceId] : null}
                             class="input-color-badge"
-                            style="background-color: {getInputColorCSS(input.color)}"
-                        ></div>
+                        />
                     {/if}
                     <div class="input-header">
                         <div class="input-name">{input.name}</div>
@@ -719,6 +776,23 @@
                             {input.inputDeviceName || input.inputDeviceId}
                         </div>
                     </div>
+                    {#if input.inputControlId === 'button' && thingyEulerAngles[input.inputDeviceId]}
+                        {@const euler = thingyEulerAngles[input.inputDeviceId]}
+                        <div class="thingy-euler-preview">
+                            <div class="euler-axis">
+                                <span class="euler-label">Roll:</span>
+                                <span class="euler-value">{euler.roll.toFixed(0)}°</span>
+                            </div>
+                            <div class="euler-axis">
+                                <span class="euler-label">Pitch:</span>
+                                <span class="euler-value">{euler.pitch.toFixed(0)}°</span>
+                            </div>
+                            <div class="euler-axis">
+                                <span class="euler-label">Yaw:</span>
+                                <span class="euler-value">{euler.yaw.toFixed(0)}°</span>
+                            </div>
+                        </div>
+                    {/if}
                     <div class="input-state">
                         {getInputStateDisplay(input)}
                     </div>
@@ -777,8 +851,8 @@
             <div class="dialog-input-group">
                 <label for="button-mode">Button Mode:</label>
                 <select id="button-mode" bind:value={editingButtonMode}>
-                    <option value="momentary">Momentary (Down/Up)</option>
-                    <option value="toggle">Toggle (On/Off)</option>
+                    <option value="momentary">Down/Up</option>
+                    <option value="toggle">On/Off</option>
                 </select>
             </div>
         {/if}
@@ -896,11 +970,6 @@
         position: absolute;
         top: 15px;
         right: 15px;
-        width: 32px;
-        height: 32px;
-        border-radius: 4px;
-        flex-shrink: 0;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .input-header {
@@ -980,6 +1049,36 @@
         height: 32px;
         border-radius: 4px;
         box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Thingy:52 Euler angle preview */
+    .thingy-euler-preview {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 12px;
+        background: #f6f6f6;
+        border-radius: 4px;
+        margin: 8px 0;
+        font-family: var(--font-stack-mono);
+    }
+
+    .euler-axis {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10pt;
+    }
+
+    .euler-label {
+        color: #666;
+        font-weight: 500;
+    }
+
+    .euler-value {
+        color: #2563eb;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
     }
 
 </style>

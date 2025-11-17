@@ -97,6 +97,7 @@ svg {
 /* Common dialog styles */
 .dialog-input-group {
   margin-bottom: 20px;
+  max-width: -webkit-fill-available;
 }
 
 .dialog-input-group > label {
@@ -107,8 +108,8 @@ svg {
   color: #555;
 }
 
-.dialog-input-group > input[type="text"],
-.dialog-input-group > input[type="number"] {
+.dialog-input-group input[type="text"],
+.dialog-input-group input[type="number"] {
   width: 100%;
   padding: 8px 12px;
   font-size: 11pt;
@@ -117,33 +118,33 @@ svg {
   box-sizing: border-box;
 }
 
-.dialog-input-group > input.valid {
+.dialog-input-group input.valid {
     border-color: #4caf50;
     background: #f0fdf0;
 }
 
-.dialog-input-group > input.invalid {
+.dialog-input-group input.invalid {
     border-color: #ff4444;
     background: #fff5f5;
 }
 
-.dialog-input-group > select {
+.dialog-input-group select {
   height: auto;
   padding: 8px 32px 8px 12px;
   font-size: 11pt;
   border: 2px solid #ccc;
   border-radius: 4px;
   box-sizing: border-box;
+  max-width: 100%;
 }
 
-.dialog-input-group > input:focus,
-.dialog-input-group > select:focus {
+.dialog-input-group input:focus,
+.dialog-input-group select:focus {
   outline: none;
   border-color: #2196F3;
 }
 
-.dialog-input-group > small {
-  display: block;
+.dialog-input-group small {
   margin-top: 8px;
   font-size: 8pt;
   color: #888;

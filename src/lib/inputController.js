@@ -6,8 +6,9 @@
  */
 
 import { InputDeviceManager } from './inputs.js';
-import { MappingLibrary, TriggerManager } from './mappings.js';
+import { InputMapping, MappingLibrary, TriggerManager } from './mappings.js';
 import { CustomPropertyManager } from './cssEngine.js';
+import { getInputColorCSS } from './inputColors.js';
 
 export class InputController {
 	constructor(mappingLibrary, customPropertyManager, triggerManager) {
@@ -39,6 +40,17 @@ export class InputController {
 					.replace(/[^a-z0-9]+/g, '-')
 					.replace(/^-+|-+$/g, '');
 				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
+			}
+
+			// Update Thingy LED color when mapping color changes
+			if (type === 'update' && mapping.mode === 'input') {
+				const device = this.inputDeviceManager.getInputDevices().find(
+					d => d.id === mapping.inputDeviceId && d.type === 'bluetooth' && d.thingyDevice
+				);
+				if (device && mapping.color) {
+					const colorCSS = getInputColorCSS(mapping.color);
+					device.thingyDevice.setLEDColor(colorCSS);
+				}
 			}
 		});
 
@@ -74,6 +86,12 @@ export class InputController {
 	 * Setup listeners for a specific device
 	 */
 	_setupDeviceListeners(device) {
+		// Special handling for Thingy:52 (Bluetooth) devices
+		if (device.type === 'bluetooth') {
+			this._setupThingyListeners(device);
+			return;
+		}
+
 		// Handle triggers (buttons, notes)
 		device.on('trigger', ({ controlId, velocity }) => {
 			this._handleTrigger(device.id, controlId, velocity);
@@ -88,6 +106,98 @@ export class InputController {
 		device.on('change', ({ controlId, value }) => {
 			this._handleValueChange(device.id, controlId, value);
 		});
+	}
+
+	/**
+	 * Setup listeners for Thingy:52 devices
+	 * These expose multiple CSS properties and button as inputs
+	 */
+	_setupThingyListeners(device) {
+		// Handle button triggers (just like other buttons)
+		device.on('trigger', ({ controlId, velocity }) => {
+			this._handleTrigger(device.id, controlId, velocity);
+		});
+
+		// Handle button releases
+		device.on('release', ({ controlId }) => {
+			this._handleRelease(device.id, controlId);
+		});
+
+		// Handle all sensor value changes and expose as CSS properties
+		device.on('change', ({ controlId, value, control }) => {
+			// Convert sensor control ID to CSS property name
+			// e.g., "euler-roll" -> "--thingy-euler-roll"
+			const propertyName = `thingy-${controlId}`;
+
+			// Convert normalized value (0-1) to percentage or degrees based on sensor type
+			let propertyValue;
+
+			// Euler angles are in degrees
+			if (controlId.startsWith('euler-')) {
+				// Convert 0-1 back to -180 to 180 degrees
+				const degrees = (value * 360) - 180;
+				propertyValue = `${degrees.toFixed(1)}deg`;
+			}
+			// Quaternion components
+			else if (controlId.startsWith('quat-')) {
+				// Convert 0-1 back to -1 to 1
+				const qValue = (value * 2) - 1;
+				propertyValue = qValue.toFixed(3);
+			}
+			// Accelerometer (in g)
+			else if (controlId.startsWith('accel-')) {
+				// Convert 0-1 back to -4 to 4 g
+				const gValue = (value * 8) - 4;
+				propertyValue = `${gValue.toFixed(2)}g`;
+			}
+			// Gyroscope (in deg/s)
+			else if (controlId.startsWith('gyro-')) {
+				// Convert 0-1 back to -2000 to 2000 deg/s
+				const degPerSec = (value * 4000) - 2000;
+				propertyValue = `${degPerSec.toFixed(0)}deg`;
+			}
+			// Compass (in µT)
+			else if (controlId.startsWith('compass-')) {
+				// Convert 0-1 back to -100 to 100 µT
+				const microTesla = (value * 200) - 100;
+				propertyValue = `${microTesla.toFixed(1)}`;
+			}
+			// Default: use percentage
+			else {
+				const percentage = Math.round(value * 100);
+				propertyValue = `${percentage}%`;
+			}
+
+			this.customPropertyManager.setProperty(propertyName, propertyValue);
+		});
+
+		// Auto-create a button InputMapping for the Thingy
+		// Check if mapping already exists
+		const existingMappings = this.mappingLibrary.getAll().filter(
+			m => m.inputDeviceId === device.id && m.inputControlId === 'button'
+		);
+
+		if (existingMappings.length === 0) {
+			// Create button input mapping
+			const mapping = new InputMapping({
+				name: `${device.name} Button`,
+				mode: 'input',
+				inputDeviceId: device.id,
+				inputControlId: 'button',
+				inputDeviceName: device.name,
+				buttonMode: 'momentary', // Default to momentary, user can change to toggle
+				color: null // Color can be set to control the Thingy LED
+			});
+
+			this.mappingLibrary.add(mapping);
+		} else if (existingMappings.length > 0) {
+			// If mapping exists with a color, set the LED
+			const mapping = existingMappings[0];
+			if (mapping.color) {
+				const colorCSS = getInputColorCSS(mapping.color);
+				device.thingyDevice.setLEDColor(colorCSS);
+			}
+		}
 	}
 
 	/**
@@ -295,6 +405,13 @@ export class InputController {
 	 */
 	async requestHIDDevice(filters = []) {
 		return await this.inputDeviceManager.requestHIDDevice(filters);
+	}
+
+	/**
+	 * Request Thingy:52 device
+	 */
+	async requestThingy52() {
+		return await this.inputDeviceManager.requestThingy52();
 	}
 
 	/**

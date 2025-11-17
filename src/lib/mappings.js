@@ -403,15 +403,16 @@ ${props}
 
 	/**
 	 * Check if this input is a button/trigger type (vs slider/knob)
-	 * Buttons: Stream Deck buttons, MIDI notes, Keyboard keys
+	 * Buttons: Stream Deck buttons, MIDI notes, Keyboard keys, Thingy:52 button
 	 * Sliders/Knobs: MIDI CC (control change)
 	 */
 	isButtonInput() {
 		if (!this.inputControlId) return false;
 
-		// Button types: button-*, note-*, key-*
+		// Button types: button-*, button (Thingy), note-*, key-*
 		// Slider/Knob types: cc-*, control-*
-		return this.inputControlId.startsWith('button-') ||
+		return this.inputControlId === 'button' ||
+		       this.inputControlId.startsWith('button-') ||
 		       this.inputControlId.startsWith('note-') ||
 		       this.inputControlId.startsWith('key-');
 	}

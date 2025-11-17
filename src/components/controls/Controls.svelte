@@ -102,6 +102,8 @@
                 return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,255,255) 100%)';
             case 'Output':
                 return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(200,200,200) 100%)';
+            case 'Fuel':
+                return 'linear-gradient(to right, rgb(0,0,0) 0%, #ff5722 50%, #ff9800 75%, #ffc107 100%)';
             default:
                 return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(128,128,128) 100%)';
         }
@@ -125,6 +127,21 @@
                 return `rgb(${value}, ${value}, ${value})`;
             case 'Output':
                 return `rgb(${Math.round(value * 0.784)}, ${Math.round(value * 0.784)}, ${Math.round(value * 0.784)})`;
+            case 'Fuel':
+                // Interpolate through flame gradient: black -> #ff5722 -> #ff9800 -> #ffc107
+                if (value <= 127) {
+                    // 0-127: black (0,0,0) to red-orange (255,87,34)
+                    const t = value / 127;
+                    return `rgb(${Math.round(255 * t)}, ${Math.round(87 * t)}, ${Math.round(34 * t)})`;
+                } else if (value <= 191) {
+                    // 128-191: red-orange (255,87,34) to orange (255,152,0)
+                    const t = (value - 127) / 64;
+                    return `rgb(255, ${Math.round(87 + (152 - 87) * t)}, ${Math.round(34 - 34 * t)})`;
+                } else {
+                    // 192-255: orange (255,152,0) to yellow-orange (255,193,7)
+                    const t = (value - 191) / 64;
+                    return `rgb(255, ${Math.round(152 + (193 - 152) * t)}, ${Math.round(7 * t)})`;
+                }
             default:
                 return `rgb(${Math.round(value * 0.5)}, ${Math.round(value * 0.5)}, ${Math.round(value * 0.5)})`;
         }
@@ -326,7 +343,7 @@
 
     .control label {
         font-size: 9pt;
-        font-weight: 600;
+        font-weight: 500;
         color: #555;
     }
 
@@ -365,7 +382,7 @@
         height: 12px;
         border-radius: 50%;
         background: var(--thumb-color, #888);
-        outline: 2px solid white;
+        outline: 2px solid rgba(255,255,255,0.6);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         cursor: pointer;
     }
@@ -380,7 +397,7 @@
         height: 12px;
         border-radius: 50%;
         background: var(--thumb-color, #888);
-        outline: 2px solid white;
+        outline: 2px solid rgba(255,255,255,0.6);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         cursor: pointer;
     }
@@ -397,10 +414,10 @@
 
     .value-input {
         width: 4em;
-        border: none;
+        border: none !important;
         background: transparent;
-        padding: 4px;
-        font-size: 9pt;
+        padding: 4px !important;
+        font-size: 9pt !important;
         font-family: var(--font-stack-mono);
         text-align: right;
         border-radius: 5px;
@@ -420,12 +437,12 @@
         display: grid;
         grid-template-columns: 4em 1fr 3em;
         gap: 8px;
-        align-items: center;
+        align-items: start;
     }
 
     .control-xypad label {
         font-size: 9pt;
-        font-weight: 600;
+        font-weight: 500;
         color: #555;
     }
 
@@ -440,7 +457,7 @@
     }
 
     .xypad-wrapper {
-        padding-left: 6px;
+        padding-left: 7px;
         padding-bottom: 6px;
     }
     .xypad-wrapper.disabled {

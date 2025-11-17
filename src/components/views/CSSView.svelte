@@ -1,6 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { getDeviceColor } from '../../lib/colorUtils.js';
+    import Preview from '../common/Preview.svelte';
 
     let {
         dmxController,
@@ -33,6 +34,8 @@
     let previewColors = $state({});
     let deviceOpacities = $state({});
     let devicePanTilt = $state({});
+    let deviceFlamethrower = $state({});
+    let deviceSmoke = $state({});
 
     // Get animations for display
     let animations = $derived(
@@ -126,6 +129,13 @@
 
         devices.forEach(device => {
             const channels = sampledValues.get(device.id);
+
+            // SMOKE and FLAMETHROWER always have opacity 1 (they handle their own effects internally)
+            // Set this BEFORE checking if channels exist to ensure it's always set
+            if (device.type === 'SMOKE' || device.type === 'FLAMETHROWER') {
+                deviceOpacities[device.id] = 1;
+            }
+
             if (!channels) return;
 
             // Convert sampled channels to device channel array based on device type
@@ -144,7 +154,7 @@
                     deviceOpacities[device.id] = 1;
                 }
             } else if (channels.Intensity !== undefined || channels.Dimmer !== undefined) {
-                // Dimmer/Intensity for non-color devices
+                // Dimmer/Intensity for other non-color devices
                 const intensity = (channels.Intensity || channels.Dimmer || 0) / 255;
                 deviceOpacities[device.id] = intensity;
             }
@@ -154,6 +164,21 @@
                 devicePanTilt[device.id] = {
                     pan: channels.Pan,
                     tilt: channels.Tilt
+                };
+            }
+
+            // Update flamethrower preview
+            if (device.type === 'FLAMETHROWER' && channels.Safety !== undefined && channels.Fuel !== undefined) {
+                deviceFlamethrower[device.id] = {
+                    safety: channels.Safety,
+                    fuel: channels.Fuel
+                };
+            }
+
+            // Update smoke machine preview
+            if (device.type === 'SMOKE' && channels.Output !== undefined) {
+                deviceSmoke[device.id] = {
+                    output: channels.Output
                 };
             }
 
@@ -385,18 +410,50 @@
                     <div class="device-previews">
                         {#each independentDevices as device (device.id)}
                             <div class="device-preview-item">
-                                <div
-                                    class="device-preview"
-                                    style="background-color: {previewColors[device.id] || getDeviceColor(device.type, device.defaultValues)}; opacity: {deviceOpacities[device.id] || 1}"
-                                    title={device.name}
-                                >
-                                    {#if device.type === 'MOVING_HEAD' && devicePanTilt[device.id]}
-                                        {@const panTilt = devicePanTilt[device.id]}
-                                        {@const dotX = (panTilt.pan / 255) * 100}
-                                        {@const dotY = (1 - panTilt.tilt / 255) * 100}
-                                        <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
-                                    {/if}
-                                </div>
+                                {#if device.type === 'FLAMETHROWER'}
+                                    {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
+                                    <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
+                                        <Preview
+                                            type="device"
+                                            size="large"
+                                            controls={['fuel', 'safety']}
+                                            data={{ fuel: flame.fuel, safety: flame.safety }}
+                                        />
+                                    </div>
+                                {:else if device.type === 'SMOKE'}
+                                    {@const smoke = deviceSmoke[device.id] || { output: device.defaultValues[0] || 0 }}
+                                    <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
+                                        <Preview
+                                            type="device"
+                                            size="large"
+                                            controls={['output']}
+                                            data={{ output: smoke.output }}
+                                        />
+                                    </div>
+                                {:else if device.type === 'MOVING_HEAD' && devicePanTilt[device.id]}
+                                    {@const panTilt = devicePanTilt[device.id]}
+                                    <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
+                                        <Preview
+                                            type="device"
+                                            size="large"
+                                            controls={['color', 'pantilt']}
+                                            data={{
+                                                color: previewColors[device.id] || getDeviceColor(device.type, device.defaultValues),
+                                                pan: panTilt.pan,
+                                                tilt: panTilt.tilt
+                                            }}
+                                        />
+                                    </div>
+                                {:else}
+                                    <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
+                                        <Preview
+                                            type="device"
+                                            size="large"
+                                            controls={['color']}
+                                            data={{ color: previewColors[device.id] || getDeviceColor(device.type, device.defaultValues) }}
+                                        />
+                                    </div>
+                                {/if}
                                 <code class="device-id">#{device.cssId}</code>
                             </div>
                         {/each}
@@ -456,7 +513,7 @@
             <pre class="css-editor readonly">{generatedCSS}</pre>
             <pre
                 class="css-editor editable"
-                contenteditable="true"
+                contenteditable="plaintext-only"
                 oninput={handleCustomCSSInput}
                 spellcheck="false"
                 bind:this={customCSSEditor}
@@ -521,24 +578,6 @@
         gap: 12px;
     }
 
-    .device-preview {
-        position: relative;
-        width: 50px;
-        height: 50px;
-        border-radius: 6px;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .pan-tilt-indicator {
-        position: absolute;
-        width: 10px;
-        height: 10px;
-        background: #888;
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-        z-index: 10;
-    }
 
     .device-id {
         font-family: var(--font-stack-mono);

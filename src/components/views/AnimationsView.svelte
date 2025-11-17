@@ -5,6 +5,7 @@
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
+    import Preview from '../common/Preview.svelte';
     import TimelineEditor from '../animations/TimelineEditor.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
     import editIcon from '../../assets/glyphs/edit.svg?raw';
@@ -35,6 +36,12 @@
     let draggedIndex = $state(null);
     let dragOverIndex = $state(null);
     let isAfterMidpoint = $state(false);
+    let lastMouseDownTarget = null;
+
+    function handleMouseDown(event) {
+        // Track where the mouse was pressed down
+        lastMouseDownTarget = event.target;
+    }
 
     // Load animations from library
     function refreshAnimationsList() {
@@ -53,6 +60,46 @@
     }
 
     function handleDragStart(event, animation) {
+        // Check where the mousedown happened (not where drag started)
+        let clickedElement = lastMouseDownTarget;
+
+        if (!clickedElement) {
+            event.preventDefault();
+            return;
+        }
+
+        // Check if mousedown was on an interactive element
+        if (clickedElement.tagName === 'INPUT' ||
+            clickedElement.tagName === 'BUTTON' ||
+            clickedElement.tagName === 'TEXTAREA') {
+            event.preventDefault();
+            return;
+        }
+
+        // Walk up from the mousedown target to see if we're in header or timeline
+        let foundHeader = false;
+        let foundBlocking = false;
+
+        let el = clickedElement;
+        while (el && el !== event.currentTarget) {
+            if (el.classList) {
+                if (el.classList.contains('animation-header')) {
+                    foundHeader = true;
+                }
+                if (el.classList.contains('timeline-container') ||
+                    el.classList.contains('icon-button')) {
+                    foundBlocking = true;
+                }
+            }
+            el = el.parentElement;
+        }
+
+        // Only allow drag from header, not from timeline
+        if (!foundHeader || foundBlocking) {
+            event.preventDefault();
+            return;
+        }
+
         draggedAnimation = animation;
         draggedIndex = animationsList.findIndex(a => a.name === animation.name);
         event.dataTransfer.effectAllowed = 'move';
@@ -396,6 +443,7 @@
                     class:drag-over={dragOverIndex === index && !isAfterMidpoint}
                     class:drag-after={isDragAfter(index)}
                     draggable="true"
+                    onmousedown={handleMouseDown}
                     ondragstart={(e) => handleDragStart(e, animation)}
                     ondragover={(e) => handleDragOver(e, index)}
                     ondragleave={handleDragLeave}
@@ -403,10 +451,11 @@
                     ondragend={handleDragEnd}
                 >
                     <div class="animation-header">
-                        <div
-                            class="animation-preview"
-                            style="background: {getAnimationPreview(animation)}"
-                        ></div>
+                        <Preview
+                            type="animation"
+                            size="medium"
+                            data={{ color: getAnimationPreview(animation) }}
+                        />
                         <div class="animation-info">
                             <h3>{animation.name}</h3>
                             <div class="badges">
@@ -548,12 +597,7 @@
         width: 80vw;
         background: #f0f0f0;
         border-radius: 8px;
-        cursor: grab;
         transition: opacity 0.2s, transform 0.2s;
-    }
-
-    .animation-card:active {
-        cursor: grabbing;
     }
 
     .animation-card.dragging {
@@ -588,14 +632,11 @@
         background: #e6e6e6;
         gap: 15px;
         border-radius: 8px 8px 0 0;
+        cursor: grab;
     }
 
-    .animation-preview {
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
-        flex-shrink: 0;
+    .animation-header:active {
+        cursor: grabbing;
     }
 
     .animation-info {
@@ -618,12 +659,13 @@
     }
 
     .target-badge {
-        background: #e3f2fd;
+        background: #f6f6f6;
         color: #1976d2;
         padding: 4px 8px;
         border-radius: 4px;
         font-size: 9pt;
         font-weight: 500;
+        box-shadow: 0px 2px 0px rgba(0,0,0,0.2)
     }
 
     .help-text {
