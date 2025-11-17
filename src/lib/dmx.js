@@ -96,7 +96,11 @@ export class EnttecDMXUSBProDriver extends DMXDriver {
 
 	constructor() {
 		super('ENTTEC DMX USB Pro', [
-			{ vendorId: 0x0403 } // FTDI chipset used by ENTTEC
+			// ENTTEC uses FTDI chips with vendor ID 0x0403
+			// Product ID is typically 0x6001 (same as generic FT232R!)
+			// The difference is the PROTOCOL - ENTTEC uses proprietary protocol
+			{ vendorId: 0x0403, productId: 0x6001 },
+			{ vendorId: 0x0403 } // Fallback: match any FTDI device
 		]);
 		this.updateRate = 1000 / 60; // 60 fps
 		this.interval = null;
@@ -527,8 +531,9 @@ export class DMXOutputManager {
 		this.listeners = new Map();
 
 		// Register built-in drivers
-		// Note: FT232R is registered before ENTTEC because both use vendor ID 0x0403,
-		// but FT232R specifically matches product ID 0x6001
+		// Note: Both FT232R and ENTTEC use 0x0403:0x6001 (same USB IDs!)
+		// They differ only in protocol (FTDI serial vs ENTTEC proprietary)
+		// If both match, findDriverForDevice() prefers ENTTEC
 		this.registerDriver(new FT232RDriver());
 		this.registerDriver(new EnttecDMXUSBProDriver());
 		this.registerDriver(new uDMXDriver());
@@ -573,12 +578,34 @@ export class DMXOutputManager {
 	 * @returns {DMXDriver|null}
 	 */
 	findDriverForDevice(device) {
+		// Collect all drivers that match the USB IDs
+		const matchingDrivers = [];
 		for (const driver of this.drivers.values()) {
 			if (driver.supportsDevice(device)) {
-				return driver;
+				matchingDrivers.push(driver);
 			}
 		}
-		return null;
+
+		if (matchingDrivers.length === 0) {
+			return null;
+		}
+
+		// If only one driver matches, return it
+		if (matchingDrivers.length === 1) {
+			return matchingDrivers[0];
+		}
+
+		// Multiple drivers match (e.g., ENTTEC and FT232R both match 0x0403:0x6001)
+		// Prefer ENTTEC over FT232R if ENTTEC is in the list
+		// This is because ENTTEC DMX USB Pro also uses 0x0403:0x6001 but has a proprietary protocol
+		const enttecDriver = matchingDrivers.find(d => d.name === 'ENTTEC DMX USB Pro');
+		if (enttecDriver) {
+			console.log('Multiple drivers match - preferring ENTTEC DMX USB Pro (use FT232R if this fails)');
+			return enttecDriver;
+		}
+
+		// Otherwise, return the first matching driver
+		return matchingDrivers[0];
 	}
 
 	/**

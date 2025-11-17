@@ -38,6 +38,8 @@ Supports generic FTDI FT232R-based USB to DMX cables (vendor ID `0x0403`, produc
 - Uses USB control transfers for configuration + bulk transfers for data
 - Automatic device detection
 
+**Note:** ENTTEC DMX USB Pro devices also use the same USB IDs (`0x0403:0x6001`) but with a different protocol. If both drivers match your device, the system will try ENTTEC first. If connection fails, you may need to manually select the FT232R driver.
+
 ### uDMX Driver (Anyma)
 
 Location: `src/lib/dmx.js`
@@ -50,6 +52,48 @@ Supports uDMX USB to wireless DMX controllers from Anyma (vendor ID `0x16c0`, pr
 - Uses USB control transfers instead of bulk transfers
 - Automatic device detection
 - Handles occasional overflow errors gracefully
+
+## USB ID Conflicts
+
+### ENTTEC vs FT232R Conflict
+
+**Problem:** Both ENTTEC DMX USB Pro and generic FT232R cables use identical USB identifiers:
+- Vendor ID: `0x0403` (FTDI)
+- Product ID: `0x6001`
+
+The devices differ only in their **communication protocol**:
+- **ENTTEC**: Proprietary protocol with packet framing (0x7E start, 0xE7 end, command bytes)
+- **FT232R**: Standard FTDI serial protocol (raw serial with break/MAB control)
+
+### How Detection Works
+
+When both drivers match a device (`0x0403:0x6001`), the system:
+
+1. Detects that multiple drivers match
+2. Prefers ENTTEC DMX USB Pro (logs a message to console)
+3. Attempts connection with ENTTEC protocol
+4. If ENTTEC fails to connect or work properly, the device is likely a generic FT232R cable
+
+### Future Improvement: Device Probing
+
+A better solution would be to **probe the device** to determine which protocol it uses:
+
+```javascript
+// Query ENTTEC device using GET_WIDGET_PARAMS command (0x03)
+const probe = new Uint8Array([
+    0x7E,  // Start
+    0x03,  // Label: GET_WIDGET_PARAMS
+    0x00,  // Data length LSB
+    0x00,  // Data length MSB
+    0xE7   // End
+]);
+
+// Send probe and wait for response
+// ENTTEC devices respond with widget parameters
+// FT232R devices won't respond (or will respond differently)
+```
+
+This would allow automatic detection of the correct driver without user intervention.
 
 ## Creating a New Driver
 
