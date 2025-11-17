@@ -709,6 +709,37 @@
         return getDeviceColor(device.type, device.defaultValues);
     }
 
+    // Get device controls and data for preview based on device type
+    function getDevicePreviewControls(trigger) {
+        const deviceId = getTriggerDeviceId(trigger);
+        const device = devices.find(d => d.id === deviceId);
+        if (!device) return { controls: ['color'], data: { color: '#888' } };
+
+        if (device.type === 'FLAMETHROWER') {
+            const flame = deviceFlamethrower[device.id] || {
+                safety: device.defaultValues[0] || 0,
+                fuel: device.defaultValues[1] || 0
+            };
+            return {
+                controls: ['fuel', 'safety'],
+                data: { fuel: flame.fuel, safety: flame.safety }
+            };
+        } else if (device.type === 'SMOKE') {
+            const smoke = deviceSmoke[device.id] || {
+                output: device.defaultValues[0] || 0
+            };
+            return {
+                controls: ['output'],
+                data: { output: smoke.output }
+            };
+        } else {
+            return {
+                controls: ['color'],
+                data: { color: getDeviceColor(device.type, device.defaultValues) }
+            };
+        }
+    }
+
     // Get device name from trigger
     function getTriggerDeviceName(trigger) {
         const deviceId = getTriggerDeviceId(trigger);
@@ -853,16 +884,19 @@
 
                     <!-- Column 2: Device -->
                     <div class="trigger-column trigger-device-column">
-                        <Preview
-                            type="device"
-                            size="medium"
-                            controls={['color']}
-                            data={{ color: getDevicePreview(trigger) }}
-                            class="trigger-preview"
-                        />
-                        <div class="trigger-text">
-                            {getTriggerDeviceName(trigger)}
-                        </div>
+                        {#if true}
+                            {@const devicePreview = getDevicePreviewControls(trigger)}
+                            <Preview
+                                type="device"
+                                size="medium"
+                                controls={devicePreview.controls}
+                                data={devicePreview.data}
+                                class="trigger-preview"
+                            />
+                            <div class="trigger-text">
+                                {getTriggerDeviceName(trigger)}
+                            </div>
+                        {/if}
                     </div>
 
                     <!-- Column 3: Action -->
