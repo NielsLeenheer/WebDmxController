@@ -151,6 +151,8 @@
 
     function isColorCapableControl(controlId) {
         if (!controlId || typeof controlId !== 'string') return false;
+        // Thingy:52 button uses 'button' (not 'button-'), so check exact match too
+        if (controlId === 'button') return true;
         return COLOR_CAPABLE_PREFIXES.some(prefix => controlId.startsWith(prefix));
     }
 
@@ -159,7 +161,8 @@
         if (device.type === 'hid') {
             return device.id !== 'keyboard';
         }
-        return device.type === 'midi';
+        // MIDI and Bluetooth (Thingy:52) support colors
+        return device.type === 'midi' || device.type === 'bluetooth';
     }
 
     function shouldAssignColor(device, controlId) {

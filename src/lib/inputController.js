@@ -8,6 +8,7 @@
 import { InputDeviceManager } from './inputs.js';
 import { InputMapping, MappingLibrary, TriggerManager } from './mappings.js';
 import { CustomPropertyManager } from './cssEngine.js';
+import { getInputColorCSS } from './inputColors.js';
 
 export class InputController {
 	constructor(mappingLibrary, customPropertyManager, triggerManager) {
@@ -39,6 +40,17 @@ export class InputController {
 					.replace(/[^a-z0-9]+/g, '-')
 					.replace(/^-+|-+$/g, '');
 				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
+			}
+
+			// Update Thingy LED color when mapping color changes
+			if (type === 'update' && mapping.mode === 'input') {
+				const device = this.inputDeviceManager.getInputDevices().find(
+					d => d.id === mapping.inputDeviceId && d.type === 'bluetooth' && d.thingyDevice
+				);
+				if (device && mapping.color) {
+					const colorCSS = getInputColorCSS(mapping.color);
+					device.thingyDevice.setLEDColor(colorCSS);
+				}
 			}
 		});
 
@@ -174,10 +186,17 @@ export class InputController {
 				inputControlId: 'button',
 				inputDeviceName: device.name,
 				buttonMode: 'momentary', // Default to momentary, user can change to toggle
-				color: null // No color support for Thingy
+				color: null // Color can be set to control the Thingy LED
 			});
 
 			this.mappingLibrary.add(mapping);
+		} else if (existingMappings.length > 0) {
+			// If mapping exists with a color, set the LED
+			const mapping = existingMappings[0];
+			if (mapping.color) {
+				const colorCSS = getInputColorCSS(mapping.color);
+				device.thingyDevice.setLEDColor(colorCSS);
+			}
 		}
 	}
 

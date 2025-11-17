@@ -8,6 +8,7 @@ const THINGY_UI_SERVICE = 'ef680300-9b35-4933-9b10-52ffa9740042';
 const THINGY_MOTION_SERVICE = 'ef680400-9b35-4933-9b10-52ffa9740042';
 
 // Thingy:52 UI Characteristic UUIDs
+const THINGY_UI_LED = 'ef680301-9b35-4933-9b10-52ffa9740042';
 const THINGY_UI_BUTTON = 'ef680302-9b35-4933-9b10-52ffa9740042';
 
 // Thingy:52 Motion Characteristic UUIDs
@@ -237,6 +238,63 @@ export class Thingy52Device {
 		} catch (error) {
 			console.warn('Failed to subscribe to Raw Motion:', error);
 		}
+	}
+
+	/**
+	 * Set LED color
+	 * @param {string} color - CSS color string (e.g., '#ff0000')
+	 */
+	async setLEDColor(color) {
+		try {
+			if (!this.uiService) {
+				console.warn('UI service not available');
+				return;
+			}
+
+			const ledChar = await this.uiService.getCharacteristic(THINGY_UI_LED);
+
+			// Parse CSS color to RGB
+			const rgb = this._parseColor(color);
+
+			// LED mode: 1 = constant, 2 = breathe, 3 = one-shot
+			// We use mode 1 (constant) with the specified color
+			const ledData = new Uint8Array([
+				0x01,      // Mode: constant
+				rgb.r,     // Red
+				rgb.g,     // Green
+				rgb.b      // Blue
+			]);
+
+			await ledChar.writeValue(ledData);
+			console.log(`Set Thingy LED to ${color}`, rgb);
+		} catch (error) {
+			console.warn('Failed to set LED color:', error);
+		}
+	}
+
+	/**
+	 * Parse CSS color string to RGB values
+	 */
+	_parseColor(color) {
+		// Create a temporary element to parse the color
+		const div = document.createElement('div');
+		div.style.color = color;
+		document.body.appendChild(div);
+		const computed = getComputedStyle(div).color;
+		document.body.removeChild(div);
+
+		// Parse rgb(r, g, b) or rgba(r, g, b, a)
+		const match = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+		if (match) {
+			return {
+				r: parseInt(match[1]),
+				g: parseInt(match[2]),
+				b: parseInt(match[3])
+			};
+		}
+
+		// Default to white if parsing fails
+		return { r: 255, g: 255, b: 255 };
 	}
 
 	/**
