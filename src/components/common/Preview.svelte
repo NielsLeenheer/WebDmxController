@@ -5,7 +5,7 @@
      * Renders previews for devices, animations, inputs, and properties
      * Consolidates all preview rendering logic in one place
      *
-     * @prop {string} type - Type of preview: 'device', 'animation', 'safety', 'fuel', 'output', 'euler'
+     * @prop {string} type - Type of preview: 'device', 'animation', 'safety', 'fuel', 'output', 'euler', 'pantilt'
      * @prop {string} size - Size: 'small', 'medium', 'large' (default: 'medium')
      * @prop {Object} data - Data for rendering the preview
      */
@@ -92,6 +92,14 @@
                 <span class="euler-value">{(data.yaw ?? 0).toFixed(0)}°</span>
             </div>
         </div>
+
+    {:else if type === 'pantilt'}
+        <!-- Moving head with pan/tilt indicator -->
+        {@const dotX = ((data.pan ?? 0) / 255) * 100}
+        {@const dotY = (1 - (data.tilt ?? 0) / 255) * 100}
+        <div class="preview-pantilt" style="background-color: {data.color || '#888'}">
+            <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
+        </div>
     {/if}
 </div>
 
@@ -129,7 +137,8 @@
     .preview-safety,
     .preview-fuel,
     .preview-output,
-    .preview-animation {
+    .preview-animation,
+    .preview-pantilt {
         width: 100%;
         height: 100%;
         border-radius: inherit;
@@ -137,8 +146,14 @@
 
     /* Shadow for color previews */
     .preview-color,
-    .preview-animation {
+    .preview-animation,
+    .preview-pantilt {
         box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Pan/Tilt preview needs relative positioning for indicator */
+    .preview-pantilt {
+        position: relative;
     }
 
     /* Flamethrower cross */
@@ -276,5 +291,17 @@
         color: #2563eb;
         font-weight: 600;
         font-variant-numeric: tabular-nums;
+    }
+
+    /* Pan/Tilt indicator */
+    .pan-tilt-indicator {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: #888;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 10;
     }
 </style>

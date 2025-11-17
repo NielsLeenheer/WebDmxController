@@ -415,7 +415,7 @@
                                     <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
                                         <Preview
                                             type="flamethrower"
-                                            size="medium"
+                                            size="large"
                                             data={{ safety: flame.safety, fuel: flame.fuel }}
                                         />
                                     </div>
@@ -424,22 +424,30 @@
                                     <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
                                         <Preview
                                             type="smoke"
-                                            size="medium"
+                                            size="large"
                                             data={{ output: smoke.output }}
                                         />
                                     </div>
+                                {:else if device.type === 'MOVING_HEAD' && devicePanTilt[device.id]}
+                                    {@const panTilt = devicePanTilt[device.id]}
+                                    <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
+                                        <Preview
+                                            type="pantilt"
+                                            size="large"
+                                            data={{
+                                                color: previewColors[device.id] || getDeviceColor(device.type, device.defaultValues),
+                                                pan: panTilt.pan,
+                                                tilt: panTilt.tilt
+                                            }}
+                                        />
+                                    </div>
                                 {:else}
-                                    <div
-                                        class="device-preview"
-                                        style="background-color: {previewColors[device.id] || getDeviceColor(device.type, device.defaultValues)}; opacity: {deviceOpacities[device.id] || 1}"
-                                        title={device.name}
-                                    >
-                                        {#if device.type === 'MOVING_HEAD' && devicePanTilt[device.id]}
-                                            {@const panTilt = devicePanTilt[device.id]}
-                                            {@const dotX = (panTilt.pan / 255) * 100}
-                                            {@const dotY = (1 - panTilt.tilt / 255) * 100}
-                                            <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
-                                        {/if}
+                                    <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
+                                        <Preview
+                                            type="device"
+                                            size="large"
+                                            data={{ color: previewColors[device.id] || getDeviceColor(device.type, device.defaultValues) }}
+                                        />
                                     </div>
                                 {/if}
                                 <code class="device-id">#{device.cssId}</code>
@@ -566,24 +574,6 @@
         gap: 12px;
     }
 
-    .device-preview {
-        position: relative;
-        width: 50px;
-        height: 50px;
-        border-radius: 6px;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .pan-tilt-indicator {
-        position: absolute;
-        width: 10px;
-        height: 10px;
-        background: #888;
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-        z-index: 10;
-    }
 
     .device-id {
         font-family: var(--font-stack-mono);
