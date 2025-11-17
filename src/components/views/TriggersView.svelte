@@ -716,21 +716,19 @@
         if (!device) return { controls: ['color'], data: { color: '#888' } };
 
         if (device.type === 'FLAMETHROWER') {
-            const flame = deviceFlamethrower[device.id] || {
-                safety: device.defaultValues[0] || 0,
-                fuel: device.defaultValues[1] || 0
-            };
             return {
                 controls: ['fuel', 'safety'],
-                data: { fuel: flame.fuel, safety: flame.safety }
+                data: {
+                    safety: device.defaultValues[0] || 0,
+                    fuel: device.defaultValues[1] || 0
+                }
             };
         } else if (device.type === 'SMOKE') {
-            const smoke = deviceSmoke[device.id] || {
-                output: device.defaultValues[0] || 0
-            };
             return {
                 controls: ['output'],
-                data: { output: smoke.output }
+                data: {
+                    output: device.defaultValues[0] || 0
+                }
             };
         } else {
             return {
