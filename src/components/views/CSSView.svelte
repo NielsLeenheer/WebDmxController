@@ -109,6 +109,21 @@
                     channels.White || 0
                 ];
 
+            case 'MOVING_HEAD_11CH':
+                return [
+                    channels.Pan || 127,
+                    channels['Pan Fine'] || 0,
+                    channels.Tilt || 127,
+                    channels['Tilt Fine'] || 0,
+                    channels['Speed'] || 0,
+                    channels.Dimmer || 0,
+                    channels.Strobe || 0,
+                    channels.Red || 0,
+                    channels.Green || 0,
+                    channels.Blue || 0,
+                    channels.White || 0
+                ];
+
             case 'FLAMETHROWER':
                 return [
                     channels.Safety || 0,

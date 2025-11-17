@@ -137,7 +137,7 @@ export const DEVICE_TYPES = {
             { name: 'Pan Fine', channel: 1 },
             { name: 'Tilt', channel: 2 },
             { name: 'Tilt Fine', channel: 3 },
-            { name: 'P/T Speed', channel: 4 },
+            { name: 'Speed', channel: 4 },
             { name: 'Dimmer', channel: 5 },
             { name: 'Strobe', channel: 6 },
             { name: 'Red', channel: 7 },
