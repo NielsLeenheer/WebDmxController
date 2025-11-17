@@ -616,7 +616,6 @@
                             type="flamethrower"
                             size="medium"
                             data={{ safety: flame.safety, fuel: flame.fuel }}
-                            class="color-preview"
                         />
                     {:else if device.type === 'SMOKE'}
                         {@const smoke = deviceSmoke[device.id] || { output: device.defaultValues[0] || 0 }}
@@ -624,14 +623,12 @@
                             type="smoke"
                             size="medium"
                             data={{ output: smoke.output }}
-                            class="color-preview"
                         />
                     {:else}
                         <Preview
                             type="device"
                             size="medium"
                             data={{ color: getDeviceColor(device.type, device.defaultValues) }}
-                            class="color-preview"
                         />
                     {/if}
                     <h3>{device.name}</h3>
@@ -872,15 +869,6 @@
 
     .device-header:active {
         cursor: grabbing;
-    }
-
-    .color-preview {
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
-        flex-shrink: 0;
-        position: relative;
     }
 
     .device-header h3 {
