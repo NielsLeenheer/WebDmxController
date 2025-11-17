@@ -8,6 +8,7 @@
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Controls from '../controls/Controls.svelte';
+    import Preview from '../common/Preview.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
     import editIcon from '../../assets/glyphs/edit.svg?raw';
 
@@ -861,10 +862,12 @@
                     <!-- Column 3: Action -->
                     <div class="trigger-column trigger-action-column">
                         {#if trigger.actionType === 'animation'}
-                            <div
+                            <Preview
+                                type="animation"
+                                size="medium"
+                                data={{ color: getAnimationPreview(trigger.animationName) }}
                                 class="trigger-preview"
-                                style="background: {getAnimationPreview(trigger.animationName)}"
-                            ></div>
+                            />
                             <div class="trigger-text">
                                 {getAnimationDisplayName(trigger.animationName)}
                             </div>
@@ -872,29 +875,35 @@
                             {@const specialType = getSpecialPreviewType(trigger)}
                             {#if specialType === 'safety'}
                                 {@const safetyValue = getControlValue(trigger, 'Safety')}
-                                {@const safetyOn = safetyValue >= 125}
-                                <div class="trigger-preview safety-preview" style="background: {safetyOn ? '#2a5a2a' : '#222222'}">
-                                    {#if safetyOn}
-                                        <div class="safety-checkmark"></div>
-                                    {:else}
-                                        <div class="flamethrower-cross"></div>
-                                    {/if}
-                                </div>
+                                <Preview
+                                    type="safety"
+                                    size="medium"
+                                    data={{ value: safetyValue }}
+                                    class="trigger-preview"
+                                />
                             {:else if specialType === 'fuel'}
                                 {@const fuelValue = getControlValue(trigger, 'Fuel')}
-                                {@const fuelPercent = (fuelValue / 255) * 100}
-                                <div class="trigger-preview fuel-preview" style="background: linear-gradient(to top, #ff5722 0%, #ff9800 {fuelPercent/2}%, #ffc107 {fuelPercent}%, #1a1a1a {fuelPercent}%, #1a1a1a 100%)"></div>
+                                <Preview
+                                    type="fuel"
+                                    size="medium"
+                                    data={{ value: fuelValue }}
+                                    class="trigger-preview"
+                                />
                             {:else if specialType === 'output'}
                                 {@const outputValue = getControlValue(trigger, 'Output')}
-                                {@const smokePercent = (outputValue / 255) * 100}
-                                <div class="trigger-preview output-preview" style="background: #1a1a1a">
-                                    <div class="smoke-effect" style="opacity: {smokePercent / 100}"></div>
-                                </div>
-                            {:else}
-                                <div
+                                <Preview
+                                    type="output"
+                                    size="medium"
+                                    data={{ value: outputValue }}
                                     class="trigger-preview"
-                                    style="background: {getValuePreview(trigger)}"
-                                ></div>
+                                />
+                            {:else}
+                                <Preview
+                                    type="device"
+                                    size="medium"
+                                    data={{ color: getValuePreview(trigger) }}
+                                    class="trigger-preview"
+                                />
                             {/if}
                             <div class="trigger-text">
                                 {Object.keys(trigger.channelValues || {}).length} values
@@ -1471,100 +1480,4 @@
         font-style: italic;
     }
 
-    /* Special preview styles */
-    .trigger-preview.safety-preview,
-    .trigger-preview.fuel-preview,
-    .trigger-preview.output-preview {
-        position: relative;
-        overflow: visible;
-    }
-
-    /* Flamethrower cross */
-    .flamethrower-cross {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 70%;
-        height: 70%;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-    }
-
-    .flamethrower-cross::before,
-    .flamethrower-cross::after {
-        content: '';
-        position: absolute;
-        width: 100%;
-        height: 2px;
-        background-color: #ff4444;
-        top: 50%;
-        left: 0;
-    }
-
-    .flamethrower-cross::before {
-        transform: translateY(-50%) rotate(45deg);
-    }
-
-    .flamethrower-cross::after {
-        transform: translateY(-50%) rotate(-45deg);
-    }
-
-    /* Safety checkmark */
-    .safety-checkmark {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 70%;
-        height: 70%;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-    }
-
-    .safety-checkmark::before {
-        content: '';
-        position: absolute;
-        width: 40%;
-        height: 2px;
-        background-color: #4ade80;
-        bottom: 50%;
-        left: 15%;
-        transform: rotate(-45deg);
-        transform-origin: left bottom;
-    }
-
-    .safety-checkmark::after {
-        content: '';
-        position: absolute;
-        width: 80%;
-        height: 2px;
-        background-color: #4ade80;
-        bottom: 50%;
-        left: 15%;
-        transform: rotate(45deg);
-        transform-origin: left bottom;
-    }
-
-    /* Smoke effect */
-    .smoke-effect {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background:
-            radial-gradient(circle at 12% 18%, rgba(180, 180, 180, 0.6) 0%, rgba(180, 180, 180, 0.6) 42%, transparent 43%),
-            radial-gradient(circle at 72% 12%, rgba(160, 160, 160, 0.5) 0%, rgba(160, 160, 160, 0.5) 28%, transparent 29%),
-            radial-gradient(circle at 88% 58%, rgba(170, 170, 170, 0.55) 0%, rgba(170, 170, 170, 0.55) 35%, transparent 36%),
-            radial-gradient(circle at 24% 88%, rgba(175, 175, 175, 0.6) 0%, rgba(175, 175, 175, 0.6) 38%, transparent 39%),
-            radial-gradient(circle at 42% 48%, rgba(165, 165, 165, 0.5) 0%, rgba(165, 165, 165, 0.5) 32%, transparent 33%),
-            radial-gradient(circle at 58% 78%, rgba(170, 170, 170, 0.55) 0%, rgba(170, 170, 170, 0.55) 30%, transparent 31%),
-            radial-gradient(circle at 78% 38%, rgba(180, 180, 180, 0.5) 0%, rgba(180, 180, 180, 0.5) 26%, transparent 27%),
-            radial-gradient(circle at 32% 28%, rgba(175, 175, 175, 0.55) 0%, rgba(175, 175, 175, 0.55) 33%, transparent 34%),
-            radial-gradient(circle at 62% 22%, rgba(170, 170, 170, 0.5) 0%, rgba(170, 170, 170, 0.5) 29%, transparent 30%),
-            radial-gradient(circle at 48% 68%, rgba(165, 165, 165, 0.6) 0%, rgba(165, 165, 165, 0.6) 36%, transparent 37%);
-        border-radius: 4px;
-        box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
-        pointer-events: none;
-        transition: opacity 0.2s ease-out;
-    }
 </style>
