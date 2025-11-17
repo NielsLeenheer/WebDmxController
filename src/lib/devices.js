@@ -129,6 +129,59 @@ export const DEVICE_TYPES = {
             }
         ]
     },
+    MOVING_HEAD_11CH: {
+        name: 'Moving Head (11ch)',
+        channels: 11,
+        components: [
+            { name: 'Pan', channel: 0 },
+            { name: 'Pan Fine', channel: 1 },
+            { name: 'Tilt', channel: 2 },
+            { name: 'Tilt Fine', channel: 3 },
+            { name: 'P/T Speed', channel: 4 },
+            { name: 'Dimmer', channel: 5 },
+            { name: 'Strobe', channel: 6 },
+            { name: 'Red', channel: 7 },
+            { name: 'Green', channel: 8 },
+            { name: 'Blue', channel: 9 },
+            { name: 'White', channel: 10 }
+        ],
+        controls: [
+            {
+                name: 'Pan/Tilt',
+                type: 'xypad',
+                components: { x: 0, y: 2 }
+            },
+            {
+                name: 'Speed',
+                type: 'slider',
+                color: '#666666',
+                components: { value: 4 }
+            },
+            {
+                name: 'Dimmer',
+                type: 'slider',
+                color: '#888888',
+                components: { value: 5 }
+            },
+            {
+                name: 'Strobe',
+                type: 'slider',
+                color: '#888888',
+                components: { value: 6 }
+            },
+            {
+                name: 'Color',
+                type: 'rgb',
+                components: { r: 7, g: 8, b: 9 }
+            },
+            {
+                name: 'White',
+                type: 'slider',
+                color: '#808080',
+                components: { value: 10 }
+            }
+        ]
+    },
     FLAMETHROWER: {
         name: 'Flamethrower',
         channels: 2,
