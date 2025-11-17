@@ -642,14 +642,14 @@
         return getDeviceColor(device.type, values);
     }
 
-    // Check if a setValue trigger should use a special preview
-    function getSpecialPreviewType(trigger) {
+    // Get all special controls being set by a setValue trigger
+    function getSpecialControls(trigger) {
         if (trigger.actionType !== 'setValue') return null;
 
         const device = devices.find(d => d.id === trigger.setValueDeviceId);
         if (!device) return null;
 
-        // Check which channel is being set
+        // Check which channels are being set
         const channelIndices = Object.keys(trigger.channelValues || {}).map(k => parseInt(k));
         if (channelIndices.length === 0) return null;
 
@@ -662,17 +662,18 @@
             name: comp.name
         }));
 
-        // Check for specific controls
+        // Collect all special controls being set
+        const specialControls = [];
         for (const channelIndex of channelIndices) {
             const control = controls.find(c => c.index === channelIndex);
             if (control) {
-                if (control.name === 'Safety') return 'safety';
-                if (control.name === 'Fuel') return 'fuel';
-                if (control.name === 'Output') return 'output';
+                if (control.name === 'Safety') specialControls.push('safety');
+                if (control.name === 'Fuel') specialControls.push('fuel');
+                if (control.name === 'Output') specialControls.push('output');
             }
         }
 
-        return null;
+        return specialControls.length > 0 ? specialControls : null;
     }
 
     // Get the value for a specific control in a setValue trigger
@@ -877,32 +878,23 @@
                                 {getAnimationDisplayName(trigger.animationName)}
                             </div>
                         {:else}
-                            {@const specialType = getSpecialPreviewType(trigger)}
-                            {#if specialType === 'safety'}
-                                {@const safetyValue = getControlValue(trigger, 'Safety')}
+                            {@const specialControls = getSpecialControls(trigger)}
+                            {#if specialControls}
+                                {@const previewData = {}}
+                                {#if specialControls.includes('fuel')}
+                                    {@const _ = previewData.fuel = getControlValue(trigger, 'Fuel')}
+                                {/if}
+                                {#if specialControls.includes('safety')}
+                                    {@const _ = previewData.safety = getControlValue(trigger, 'Safety')}
+                                {/if}
+                                {#if specialControls.includes('output')}
+                                    {@const _ = previewData.output = getControlValue(trigger, 'Output')}
+                                {/if}
                                 <Preview
                                     type="device"
                                     size="medium"
-                                    controls={['safety']}
-                                    data={{ safety: safetyValue }}
-                                    class="trigger-preview"
-                                />
-                            {:else if specialType === 'fuel'}
-                                {@const fuelValue = getControlValue(trigger, 'Fuel')}
-                                <Preview
-                                    type="device"
-                                    size="medium"
-                                    controls={['fuel']}
-                                    data={{ fuel: fuelValue }}
-                                    class="trigger-preview"
-                                />
-                            {:else if specialType === 'output'}
-                                {@const outputValue = getControlValue(trigger, 'Output')}
-                                <Preview
-                                    type="device"
-                                    size="medium"
-                                    controls={['output']}
-                                    data={{ output: outputValue }}
+                                    controls={specialControls}
+                                    data={previewData}
                                     class="trigger-preview"
                                 />
                             {:else}
