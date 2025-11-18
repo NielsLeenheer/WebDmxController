@@ -1,7 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { InputMapping, INPUT_COLOR_PALETTE } from '../../lib/mappings.js';
-    import { getInputColorCSS } from '../../lib/inputColors.js';
+    import { getInputColorCSS } from '../../lib/inputs/colors.js';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Dialog from '../common/Dialog.svelte';

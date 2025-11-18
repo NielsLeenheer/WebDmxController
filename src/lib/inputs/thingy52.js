@@ -3,7 +3,7 @@
  * Provides access to Thingy:52 sensors for use as input controls
  */
 
-import { getInputColorCSS } from './inputColors.js';
+import { getInputColorCSS } from './colors.js';
 
 // Thingy:52 Service UUIDs
 const THINGY_UI_SERVICE = 'ef680300-9b35-4933-9b10-52ffa9740042';

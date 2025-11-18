@@ -5,10 +5,10 @@
  * Handles both trigger and direct mode mappings.
  */
 
-import { InputDeviceManager } from './inputs.js';
+import { InputDeviceManager } from './inputs/manager.js';
 import { InputMapping, MappingLibrary, TriggerManager } from './mappings.js';
 import { CustomPropertyManager } from './cssEngine.js';
-import { getInputColorCSS } from './inputColors.js';
+import { getInputColorCSS } from './inputs/colors.js';
 
 export class InputController {
 	constructor(mappingLibrary, customPropertyManager, triggerManager) {
