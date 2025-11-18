@@ -8,6 +8,7 @@
 import { getDeviceColor } from './colorUtils.js';
 import { DEVICE_TYPES } from './outputs/devices.js';
 import { CONTROL_CSS_MAPPING, generateCSSProperties } from './controlCssMapping.js';
+import { toCSSIdentifier } from './cssUtils.js';
 
 /**
  * Represents a single keyframe in an animation
@@ -74,7 +75,7 @@ export class Animation {
 		this.displayName = displayName; // Display name for UI (e.g., "Color" or "RGBW Light")
 		this.keyframes = keyframes; // Array of Keyframe objects
 		// Stored CSS animation name (generated from name and stored)
-		this.cssName = cssName || this._generateCSSName();
+		this.cssName = cssName || toCSSIdentifier(this.name);
 	}
 
 	/**
@@ -115,24 +116,10 @@ export class Animation {
 	}
 
 	/**
-	 * Generate CSS animation name from the animation name
-	 */
-	_generateCSSName() {
-		if (!this.name) return 'animation';
-
-		const cssName = this.name
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
-		return cssName;
-	}
-
-	/**
 	 * Update stored CSS name when animation name changes
 	 */
 	updateCSSName() {
-		this.cssName = this._generateCSSName();
+		this.cssName = toCSSIdentifier(this.name);
 	}
 
 	/**

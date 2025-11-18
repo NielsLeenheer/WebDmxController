@@ -4,6 +4,7 @@
     import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { getInputColorCSS } from '../../lib/inputs/colors.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
+    import { toCSSIdentifier } from '../../lib/cssUtils.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
@@ -298,10 +299,7 @@
         const buttonMode = inputMapping.buttonMode || 'momentary';
 
         // Generate CSS class name from input name with state suffix
-        const baseClassName = inputMapping.name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+        const baseClassName = toCSSIdentifier(inputMapping.name);
 
         // Determine suffix based on button mode
         let suffix;
@@ -434,10 +432,7 @@
             const buttonMode = selectedInput.buttonMode || 'momentary';
 
             // Generate new CSS class name
-            const baseClassName = selectedInput.name
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-+|-+$/g, '');
+            const baseClassName = toCSSIdentifier(selectedInput.name);
 
             // Determine suffix based on button mode
             let suffix;

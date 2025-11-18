@@ -2,6 +2,7 @@
     import { onMount, onDestroy } from 'svelte';
     import { InputMapping, INPUT_COLOR_PALETTE } from '../../lib/mappings.js';
     import { getInputColorCSS } from '../../lib/inputs/colors.js';
+    import { toCSSIdentifier } from '../../lib/cssUtils.js';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Dialog from '../common/Dialog.svelte';
@@ -455,66 +456,6 @@
         editingColor = null;
     }
 
-    // Generate preview of CSS property name based on current editing name
-    function getPreviewPropertyName() {
-        if (!editingName.trim()) return '--';
-
-        const propertyName = editingName
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
-        return `--${propertyName}`;
-    }
-
-    // Generate preview of button down class name based on current editing name
-    function getPreviewButtonDownClass() {
-        if (!editingName.trim()) return '';
-
-        const namePart = editingName
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
-            .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
-
-        return `${namePart}_down`;
-    }
-
-    // Generate preview of button up class name based on current editing name
-    function getPreviewButtonUpClass() {
-        if (!editingName.trim()) return '';
-
-        const namePart = editingName
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
-            .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
-
-        return `${namePart}_up`;
-    }
-
-    // Generate preview of button on class name based on current editing name
-    function getPreviewButtonOnClass() {
-        if (!editingName.trim()) return '';
-
-        const namePart = editingName
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
-            .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
-
-        return `${namePart}_on`;
-    }
-
-    // Generate preview of button off class name based on current editing name
-    function getPreviewButtonOffClass() {
-        if (!editingName.trim()) return '';
-
-        const namePart = editingName
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '_')  // Replace non-alphanumeric with underscores
-            .replace(/^_+|_+$/g, '');      // Remove leading/trailing underscores
-
-        return `${namePart}_off`;
-    }
-
     async function confirmDelete() {
         if (!editingInput) return;
 
@@ -835,14 +776,14 @@
             <div class="css-identifiers">
                 {#if editingInput.isButtonInput()}
                     {#if editingButtonMode === 'toggle'}
-                        <code class="css-identifier">.{getPreviewButtonOnClass()}</code>
-                        <code class="css-identifier">.{getPreviewButtonOffClass()}</code>
+                        <code class="css-identifier">.{toCSSIdentifier(editingName)}-on</code>
+                        <code class="css-identifier">.{toCSSIdentifier(editingName)}-off</code>
                     {:else}
-                        <code class="css-identifier">.{getPreviewButtonDownClass()}</code>
-                        <code class="css-identifier">.{getPreviewButtonUpClass()}</code>
+                        <code class="css-identifier">.{toCSSIdentifier(editingName)}-down</code>
+                        <code class="css-identifier">.{toCSSIdentifier(editingName)}-up</code>
                     {/if}
                 {:else}
-                    <code class="css-identifier">{getPreviewPropertyName()}</code>
+                    <code class="css-identifier">--{toCSSIdentifier(editingName)}</code>
                 {/if}
             </div>
         </div>

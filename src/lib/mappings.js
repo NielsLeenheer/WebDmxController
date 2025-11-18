@@ -8,6 +8,7 @@
 
 import { DEVICE_TYPES } from './outputs/devices.js';
 import { generateCSSProperties } from './controlCssMapping.js';
+import { toCSSIdentifier } from './cssUtils.js';
 
 export const INPUT_COLOR_PALETTE = [
 	'red', 'orange', 'yellow', 'lime', 'green', 'spring',
@@ -70,29 +71,29 @@ export class InputMapping {
 		if (this.mode === 'input' && this.isButtonInput()) {
 			if (this.buttonMode === 'toggle') {
 				// Toggle mode: on/off class names
-				this.cssClassOn = config.cssClassOn || this._generateButtonOnClass();
-				this.cssClassOff = config.cssClassOff || this._generateButtonOffClass();
+				this.cssClassOn = config.cssClassOn || `${toCSSIdentifier(this.name)}-on`;
+				this.cssClassOff = config.cssClassOff || `${toCSSIdentifier(this.name)}-off`;
 				this.cssClassDown = null;
 				this.cssClassUp = null;
 			} else {
 				// Momentary mode: down/up class names (default)
-				this.cssClassDown = config.cssClassDown || this._generateButtonDownClass();
-				this.cssClassUp = config.cssClassUp || this._generateButtonUpClass();
+				this.cssClassDown = config.cssClassDown || `${toCSSIdentifier(this.name)}-down`;
+				this.cssClassUp = config.cssClassUp || `${toCSSIdentifier(this.name)}-up`;
 				this.cssClassOn = null;
 				this.cssClassOff = null;
 			}
 			this.cssProperty = null;
 		} else if (!this.isButtonInput()) {
 			// For slider/knob inputs: store the CSS custom property name
-			this.cssProperty = config.cssProperty || this._generatePropertyName();
+			this.cssProperty = config.cssProperty || `--${toCSSIdentifier(this.name)}`;
 			this.cssClassDown = null;
 			this.cssClassUp = null;
 			this.cssClassOn = null;
 			this.cssClassOff = null;
 		} else {
 			// For trigger mode buttons, keep old behavior
-			this.cssClassDown = config.cssClassDown || (this.isButtonInput() ? this._generateButtonDownClass() : null);
-			this.cssClassUp = config.cssClassUp || (this.isButtonInput() ? this._generateButtonUpClass() : null);
+			this.cssClassDown = config.cssClassDown || (this.isButtonInput() ? `${toCSSIdentifier(this.name)}-down` : null);
+			this.cssClassUp = config.cssClassUp || (this.isButtonInput() ? `${toCSSIdentifier(this.name)}-up` : null);
 			this.cssClassOn = null;
 			this.cssClassOff = null;
 			this.cssProperty = null;
@@ -138,102 +139,32 @@ export class InputMapping {
 	}
 
 	/**
-	 * Generate CSS custom property name from input name (for slider/knob inputs)
-	 */
-	_generatePropertyName() {
-		if (!this.name) return '--value';
-
-		const propertyName = this.name
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
-		return `--${propertyName}`;
-	}
-
-	/**
-	 * Generate CSS class name for button down state (for button inputs)
-	 */
-	_generateButtonDownClass() {
-		if (!this.name) return '';
-
-		const namePart = this.name
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
-		return `${namePart}-down`;
-	}
-
-	/**
-	 * Generate CSS class name for button up state (for button inputs)
-	 */
-	_generateButtonUpClass() {
-		if (!this.name) return '';
-
-		const namePart = this.name
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
-		return `${namePart}-up`;
-	}
-
-	/**
-	 * Generate CSS class name for button on state (for toggle button inputs)
-	 */
-	_generateButtonOnClass() {
-		if (!this.name) return '';
-
-		const namePart = this.name
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
-		return `${namePart}-on`;
-	}
-
-	/**
-	 * Generate CSS class name for button off state (for toggle button inputs)
-	 */
-	_generateButtonOffClass() {
-		if (!this.name) return '';
-
-		const namePart = this.name
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-			.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
-		return `${namePart}-off`;
-	}
-
-	/**
 	 * Update stored CSS identifiers when name changes
 	 */
 	updateCSSIdentifiers() {
 		if (this.mode === 'input' && this.isButtonInput()) {
 			if (this.buttonMode === 'toggle') {
-				this.cssClassOn = this._generateButtonOnClass();
-				this.cssClassOff = this._generateButtonOffClass();
+				this.cssClassOn = `${toCSSIdentifier(this.name)}-on`;
+				this.cssClassOff = `${toCSSIdentifier(this.name)}-off`;
 				this.cssClassDown = null;
 				this.cssClassUp = null;
 			} else {
-				this.cssClassDown = this._generateButtonDownClass();
-				this.cssClassUp = this._generateButtonUpClass();
+				this.cssClassDown = `${toCSSIdentifier(this.name)}-down`;
+				this.cssClassUp = `${toCSSIdentifier(this.name)}-up`;
 				this.cssClassOn = null;
 				this.cssClassOff = null;
 			}
 			this.cssProperty = null;
 		} else if (this.isButtonInput()) {
 			// Trigger mode buttons
-			this.cssClassDown = this._generateButtonDownClass();
-			this.cssClassUp = this._generateButtonUpClass();
+			this.cssClassDown = `${toCSSIdentifier(this.name)}-down`;
+			this.cssClassUp = `${toCSSIdentifier(this.name)}-up`;
 			this.cssClassOn = null;
 			this.cssClassOff = null;
 			this.cssProperty = null;
 		} else {
 			// Slider/knob inputs
-			this.cssProperty = this._generatePropertyName();
+			this.cssProperty = `--${toCSSIdentifier(this.name)}`;
 			this.cssClassDown = null;
 			this.cssClassUp = null;
 			this.cssClassOn = null;

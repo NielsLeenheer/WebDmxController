@@ -9,6 +9,7 @@ import { InputDeviceManager } from './inputs/manager.js';
 import { InputMapping, MappingLibrary, TriggerManager } from './mappings.js';
 import { CustomPropertyManager } from './cssEngine.js';
 import { getInputColorCSS } from './inputs/colors.js';
+import { toCSSIdentifier } from './cssUtils.js';
 
 export class InputController {
 	constructor(mappingLibrary, customPropertyManager, triggerManager) {
@@ -35,11 +36,7 @@ export class InputController {
 		// Listen for mapping changes to initialize pressure for new mappings
 		this.mappingLibrary.on('changed', ({ type, mapping }) => {
 			if (type === 'add' && mapping.mode === 'input' && mapping.name && mapping.isButtonInput()) {
-				const propertyName = mapping.name
-					.toLowerCase()
-					.replace(/[^a-z0-9]+/g, '-')
-					.replace(/^-+|-+$/g, '');
-				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
+				this.customPropertyManager.setProperty(`${toCSSIdentifier(mapping.name)}-pressure`, '0.0%');
 			}
 
 			// Update Thingy LED color when mapping color changes
@@ -272,16 +269,10 @@ export class InputController {
 
 				// Set velocity as custom property (for velocity-sensitive buttons)
 				if (inputMapping.name) {
-					// Generate CSS custom property name from input name
-					const propertyName = inputMapping.name
-						.toLowerCase()
-						.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-						.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
 					// Velocity is already normalized to 0-1 by input devices
 					const normalizedVelocity = Math.max(0, Math.min(1, velocity));
 					const percentage = (normalizedVelocity * 100).toFixed(1);
-					this.customPropertyManager.setProperty(`${propertyName}-pressure`, `${percentage}%`);
+					this.customPropertyManager.setProperty(`${toCSSIdentifier(inputMapping.name)}-pressure`, `${percentage}%`);
 				}
 			}
 
@@ -340,11 +331,7 @@ export class InputController {
 
 				// Reset pressure custom property to 0%
 				if (inputMapping.name) {
-					const propertyName = inputMapping.name
-						.toLowerCase()
-						.replace(/[^a-z0-9]+/g, '-')
-						.replace(/^-+|-+$/g, '');
-					this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
+					this.customPropertyManager.setProperty(`${toCSSIdentifier(inputMapping.name)}-pressure`, '0.0%');
 				}
 			}
 
@@ -377,15 +364,9 @@ export class InputController {
 		// Find the input mapping (mode='input') for this control
 		const inputMapping = mappings.find(m => m.mode === 'input');
 		if (inputMapping && inputMapping.name) {
-			// Generate CSS custom property name from input name
-			const propertyName = inputMapping.name
-				.toLowerCase()
-				.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-				.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
 			// Convert value (0-1) to percentage
 			const percentage = Math.round(value * 100);
-			this.customPropertyManager.setProperty(propertyName, `${percentage}%`);
+			this.customPropertyManager.setProperty(toCSSIdentifier(inputMapping.name), `${percentage}%`);
 
 			// Emit event for input value change
 			this._emit('input-valuechange', { mapping: inputMapping, value });
@@ -502,14 +483,8 @@ export class InputController {
 
 		for (const mapping of inputMappings) {
 			if (mapping.name && mapping.isButtonInput()) {
-				// Generate CSS custom property name from input name
-				const propertyName = mapping.name
-					.toLowerCase()
-					.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-					.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
 				// Initialize to 0%
-				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
+				this.customPropertyManager.setProperty(`${toCSSIdentifier(mapping.name)}-pressure`, '0.0%');
 			}
 		}
 	}
