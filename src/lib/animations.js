@@ -25,10 +25,17 @@ class Keyframe {
 	getProperties() {
 		const color = getDeviceColor(this.deviceType, this.values);
 
-		// For moving heads, also generate transform for pan/tilt
-		if (this.deviceType === 'MOVING_HEAD') {
-			const pan = this.values[0] || 0;
-			const tilt = this.values[1] || 0;
+		// Check if device has Pan/Tilt control (xypad) to generate transform
+		const deviceTypeDef = DEVICE_TYPES[this.deviceType];
+		const xypadControl = deviceTypeDef?.controls?.find(c => c.type === 'xypad');
+		
+		if (xypadControl) {
+			// Extract pan (x) and tilt (y) from the xypad control components
+			const panChannel = deviceTypeDef.components[xypadControl.components.x].channel;
+			const tiltChannel = deviceTypeDef.components[xypadControl.components.y].channel;
+			const pan = this.values[panChannel] || 0;
+			const tilt = this.values[tiltChannel] || 0;
+			
 			// Convert 0-255 to percentage (-50% to 50%)
 			const panPercent = ((pan / 255) * 100) - 50;
 			const tiltPercent = ((tilt / 255) * 100) - 50;

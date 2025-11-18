@@ -1,6 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { getDeviceColor } from '../../lib/colorUtils.js';
+    import { convertChannelsToArray } from '../../lib/devices.js';
     import Preview from '../common/Preview.svelte';
 
     let {
@@ -59,83 +60,6 @@
     let triggerClassesContainer;
     let customCSSEditor;
 
-    /**
-     * Convert sampled channel object to device channel array
-     * Maps channel names to the correct array indices for each device type
-     */
-    function convertChannelsToArray(deviceType, channels) {
-        switch (deviceType) {
-            case 'RGB':
-                return [
-                    channels.Red || 0,
-                    channels.Green || 0,
-                    channels.Blue || 0
-                ];
-
-            case 'RGBA':
-                return [
-                    channels.Red || 0,
-                    channels.Green || 0,
-                    channels.Blue || 0,
-                    channels.Amber || 0
-                ];
-
-            case 'RGBW':
-                return [
-                    channels.Red || 0,
-                    channels.Green || 0,
-                    channels.Blue || 0,
-                    channels.White || 0
-                ];
-
-            case 'DIMMER':
-                return [
-                    channels.Intensity || 0
-                ];
-
-            case 'SMOKE':
-                return [
-                    channels.Output || 0
-                ];
-
-            case 'MOVING_HEAD':
-                return [
-                    channels.Pan || 127,
-                    channels.Tilt || 127,
-                    channels.Dimmer || 0,
-                    channels.Red || 0,
-                    channels.Green || 0,
-                    channels.Blue || 0,
-                    channels.White || 0
-                ];
-
-            case 'MOVING_HEAD_11CH':
-                return [
-                    channels.Pan || 127,
-                    channels['Pan Fine'] || 0,
-                    channels.Tilt || 127,
-                    channels['Tilt Fine'] || 0,
-                    channels['Speed'] || 0,
-                    channels.Dimmer || 0,
-                    channels.Strobe || 0,
-                    channels.Red || 0,
-                    channels.Green || 0,
-                    channels.Blue || 0,
-                    channels.White || 0
-                ];
-
-            case 'FLAMETHROWER':
-                return [
-                    channels.Safety || 0,
-                    channels.Fuel || 0
-                ];
-
-            default:
-                console.warn(`Unknown device type: ${deviceType}`);
-                return [];
-        }
-    }
-
     function updateDMXFromCSS() {
         if (!cssSampler) return;
 
@@ -157,13 +81,16 @@
             const newValues = convertChannelsToArray(device.type, channels);
 
             // ALWAYS update preview colors (even when not active)
-            if (channels.Red !== undefined && channels.Green !== undefined && channels.Blue !== undefined) {
+            // Check if we have color data (Red, Green, Blue)
+            const hasColorData = channels.Red !== undefined || channels.Green !== undefined || channels.Blue !== undefined;
+            
+            if (hasColorData) {
                 // Use getDeviceColor for consistent color calculation
                 const color = getDeviceColor(device.type, newValues);
                 previewColors[device.id] = color;
 
                 // For moving heads, dimmer controls opacity separately
-                if (device.type === 'MOVING_HEAD' && channels.Dimmer !== undefined) {
+                if ((device.type === 'MOVING_HEAD' || device.type === 'MOVING_HEAD_11CH') && channels.Dimmer !== undefined) {
                     deviceOpacities[device.id] = channels.Dimmer / 255;
                 } else {
                     deviceOpacities[device.id] = 1;
@@ -175,7 +102,7 @@
             }
 
             // Update pan/tilt preview for moving heads
-            if (device.type === 'MOVING_HEAD' && channels.Pan !== undefined && channels.Tilt !== undefined) {
+            if ((device.type === 'MOVING_HEAD' || device.type === 'MOVING_HEAD_11CH') && channels.Pan !== undefined && channels.Tilt !== undefined) {
                 devicePanTilt[device.id] = {
                     pan: channels.Pan,
                     tilt: channels.Tilt
@@ -369,10 +296,10 @@
         devices.forEach(device => {
             previewColors[device.id] = getDeviceColor(device.type, device.defaultValues);
             deviceOpacities[device.id] = 1;
-            if (device.type === 'MOVING_HEAD') {
+            if (device.type === 'MOVING_HEAD' || device.type === 'MOVING_HEAD_11CH') {
                 devicePanTilt[device.id] = {
                     pan: device.defaultValues[0] || 127,
-                    tilt: device.defaultValues[1] || 127
+                    tilt: device.defaultValues[2] || 127  // For MOVING_HEAD_11CH, tilt is at index 2
                 };
             }
         });
@@ -445,7 +372,20 @@
                                             data={{ output: smoke.output }}
                                         />
                                     </div>
-                                {:else if device.type === 'MOVING_HEAD' && devicePanTilt[device.id]}
+                                {:else if device.type === 'DIMMER'}
+                                    {@const intensity = (deviceOpacities[device.id] ?? 1) * 255}
+                                    <div style="opacity: 1" title={device.name}>
+                                        <Preview
+                                            type="device"
+                                            size="large"
+                                            controls={['color', 'intensity']}
+                                            data={{ 
+                                                color: previewColors[device.id] || getDeviceColor(device.type, device.defaultValues),
+                                                intensity: intensity
+                                            }}
+                                        />
+                                    </div>
+                                {:else if (device.type === 'MOVING_HEAD' || device.type === 'MOVING_HEAD_11CH') && devicePanTilt[device.id]}
                                     {@const panTilt = devicePanTilt[device.id]}
                                     <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
                                         <Preview

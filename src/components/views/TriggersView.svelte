@@ -1,7 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { InputMapping } from '../../lib/mappings.js';
-    import { DEVICE_TYPES } from '../../lib/devices.js';
+    import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/devices.js';
     import { getInputColorCSS } from '../../lib/inputColors.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import Button from '../common/Button.svelte';
@@ -713,29 +713,11 @@
     function getDevicePreviewControls(trigger) {
         const deviceId = getTriggerDeviceId(trigger);
         const device = devices.find(d => d.id === deviceId);
-        if (!device) return { controls: ['color'], data: { color: '#888' } };
-
-        if (device.type === 'FLAMETHROWER') {
-            return {
-                controls: ['fuel', 'safety'],
-                data: {
-                    safety: device.defaultValues[0] || 0,
-                    fuel: device.defaultValues[1] || 0
-                }
-            };
-        } else if (device.type === 'SMOKE') {
-            return {
-                controls: ['output'],
-                data: {
-                    output: device.defaultValues[0] || 0
-                }
-            };
-        } else {
-            return {
-                controls: ['color'],
-                data: { color: getDeviceColor(device.type, device.defaultValues) }
-            };
+        if (!device) {
+            return { controls: [], data: {} };
         }
+
+        return getDevicePreviewData(device.type, device.defaultValues);
     }
 
     // Get device name from trigger
