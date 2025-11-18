@@ -222,7 +222,7 @@ export const CONTROL_CSS_MAPPING = {
 						// Convert to 0.0-1.0 for intensity
 						return (value / 255).toFixed(3);
 					}
-					if (controlName === 'White' || controlName === 'Amber') {
+					if (controlName === 'White' || controlName === 'Amber' || controlName === 'Fuel') {
 						// Convert to percentage 0% to 100%
 						return `${((value / 255) * 100).toFixed(1)}%`;
 					}
