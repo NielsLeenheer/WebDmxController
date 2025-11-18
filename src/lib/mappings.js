@@ -6,7 +6,7 @@
  * 2. Direct mode - Continuously control a CSS custom property
  */
 
-import { DEVICE_TYPES } from './devices.js';
+import { DEVICE_TYPES } from './outputs/devices.js';
 import { generateCSSProperties } from './controlCssMapping.js';
 
 export const INPUT_COLOR_PALETTE = [

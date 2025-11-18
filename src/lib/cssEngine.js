@@ -5,7 +5,7 @@
  * computed styles to extract DMX values.
  */
 
-import { DEVICE_TYPES } from './devices.js';
+import { DEVICE_TYPES } from './outputs/devices.js';
 import { generateCSSProperties, sampleCSSProperties, sampleCSSPropertiesFromControls } from './controlCssMapping.js';
 
 /**

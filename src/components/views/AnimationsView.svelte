@@ -1,7 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { Animation } from '../../lib/animations.js';
-    import { DEVICE_TYPES } from '../../lib/devices.js';
+    import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';

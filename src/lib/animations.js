@@ -6,7 +6,7 @@
  */
 
 import { getDeviceColor } from './colorUtils.js';
-import { DEVICE_TYPES } from './devices.js';
+import { DEVICE_TYPES } from './outputs/devices.js';
 import { CONTROL_CSS_MAPPING, generateCSSProperties } from './controlCssMapping.js';
 
 /**

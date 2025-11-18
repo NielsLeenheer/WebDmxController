@@ -1,7 +1,7 @@
 <script>
     import { Icon } from 'svelte-icon';
     import { untrack } from 'svelte';
-    import { DEVICE_TYPES, Device } from '../../lib/devices.js';
+    import { DEVICE_TYPES, Device } from '../../lib/outputs/devices.js';
     import { canLinkDevices, applyLinkedValues, getMappedChannels, getAvailableSyncControls } from '../../lib/channelMapping.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import Controls from '../controls/Controls.svelte';

@@ -1,7 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { getDeviceColor } from '../../lib/colorUtils.js';
-    import { convertChannelsToArray } from '../../lib/devices.js';
+    import { convertChannelsToArray } from '../../lib/outputs/devices.js';
     import Preview from '../common/Preview.svelte';
 
     let {

@@ -1,7 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { InputMapping } from '../../lib/mappings.js';
-    import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/devices.js';
+    import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { getInputColorCSS } from '../../lib/inputs/colors.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import Button from '../common/Button.svelte';

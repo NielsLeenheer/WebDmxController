@@ -1,4 +1,4 @@
-import { DEVICE_TYPES } from './devices.js';
+import { DEVICE_TYPES } from './outputs/devices.js';
 
 /**
  * Get color preview for a device based on its type and values
