@@ -5,7 +5,7 @@
  * their controls as normalized values for mapping to DMX.
  */
 
-import { StreamDeckManager, getStreamDeckFilters, isStreamDeck, getStreamDeckModel } from './streamdeck.js';
+import { StreamDeckManager, isStreamDeck } from './streamdeck.js';
 import { MIDIDeviceProfileManager } from './midi.js';
 import { Thingy52Manager } from './thingy52.js';
 
