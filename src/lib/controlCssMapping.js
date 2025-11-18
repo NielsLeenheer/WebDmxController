@@ -141,10 +141,10 @@ export const CSS_TO_DMX_MAPPING = {
 
 	// Safety custom property (special case)
 	'--safety': {
-		// Convert "none" or "probably" → 0 or 125 DMX
+		// Convert "none" or "probably" → 0 or 255 DMX
 		sample: (cssValue) => {
 			const value = cssValue.trim().toLowerCase();
-			const dmxValue = value === 'probably' ? 125 : 0;
+			const dmxValue = value === 'probably' ? 255 : 0;
 
 			return { 'Safety': dmxValue };
 		},
@@ -244,7 +244,7 @@ export const CONTROL_CSS_MAPPING = {
 				convert: (value, controlName, control) => {
 					if (controlName === 'Safety') {
 						// Special case: Safety uses "none" or "probably"
-						return value >= 125 ? 'probably' : 'none';
+						return value >= 255 ? 'probably' : 'none';
 					}
 					// For other toggles, use on/off based on onValue threshold
 					if (control && control.onValue !== undefined) {

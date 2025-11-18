@@ -18,7 +18,7 @@ export class FlamethrowerDeviceType extends DeviceType {
                     name: 'Safety',
                     type: 'toggle',
                     offValue: 0,
-                    onValue: 125,
+                    onValue: 255,
                     components: { value: 0 }
                 },
                 {
