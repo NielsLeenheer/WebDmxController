@@ -174,7 +174,11 @@ export class Thingy52Device {
 				this._checkStabilityAndCalibrate(roll, pitch, rawYaw);
 
 				// Apply calibration offset to yaw
-				const calibratedYaw = rawYaw - this.yawCalibrationOffset;
+				let calibratedYaw = rawYaw - this.yawCalibrationOffset;
+				
+				// Normalize yaw to -180 to 180 range
+				while (calibratedYaw > 180) calibratedYaw -= 360;
+				while (calibratedYaw < -180) calibratedYaw += 360;
 
 				this.sensorData.euler = { roll, pitch, yaw: calibratedYaw };
 				this._emit('euler', { roll, pitch, yaw: calibratedYaw });
