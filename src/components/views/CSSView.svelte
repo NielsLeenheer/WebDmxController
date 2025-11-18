@@ -197,8 +197,8 @@
                 };
             }
 
-            // Always update DMX hardware with CSS-sampled values
-            if (dmxController) {
+            // Only update DMX hardware when CSS view is active
+            if (dmxController && isActive) {
                 updateDeviceToDMX(device, newValues);
             }
         });
