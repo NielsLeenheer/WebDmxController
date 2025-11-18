@@ -22,6 +22,9 @@ export class EnttecDMXUSBProDriver extends DMXDriver {
 		this.updateRate = 1000 / 60; // 60 fps
 		this.interval = null;
 		this.universeData = null;
+		this.errorCount = 0;
+		this.maxErrors = 10; // Stop after 10 consecutive errors
+		this.isSending = false;
 	}
 
 	async connect(device) {
@@ -80,6 +83,7 @@ export class EnttecDMXUSBProDriver extends DMXDriver {
 	 */
 	startOutput(universeData) {
 		this.universeData = universeData;
+		this.errorCount = 0; // Reset error count when starting
 
 		if (this.interval) {
 			clearInterval(this.interval);
@@ -102,7 +106,9 @@ export class EnttecDMXUSBProDriver extends DMXDriver {
 	}
 
 	async sendUniverse(universeData) {
-		if (!this.device || !this.connected || !universeData) return;
+		if (!this.device || !this.connected || !universeData || this.isSending) return;
+
+		this.isSending = true;
 
 		const message = Uint8Array.from([
 			EnttecDMXUSBProDriver.DMX_STARTCODE,
@@ -119,10 +125,35 @@ export class EnttecDMXUSBProDriver extends DMXDriver {
 		]);
 
 		try {
-			await this.device.transferOut(2, packet);
+			const result = await this.device.transferOut(2, packet);
+			
+			if (result.status !== 'ok') {
+				console.warn('ENTTEC: Transfer status:', result.status, 'bytesWritten:', result.bytesWritten);
+				this.errorCount++;
+			} else {
+				// Reset error count on success
+				this.errorCount = 0;
+			}
+
+			// Stop output if too many errors
+			if (this.errorCount >= this.maxErrors) {
+				console.error('ENTTEC: Too many consecutive errors, stopping output');
+				this.stopOutput();
+				this._emit('error', { error: new Error('Too many transfer errors'), driver: this });
+			}
+
 		} catch (error) {
-			console.error('ENTTEC: Failed to send DMX data:', error);
-			this._emit('error', { error, driver: this });
+			this.errorCount++;
+			console.error('ENTTEC: Failed to send DMX data (error', this.errorCount, 'of', this.maxErrors + '):', error);
+			
+			// Stop output if too many errors
+			if (this.errorCount >= this.maxErrors) {
+				console.error('ENTTEC: Too many consecutive errors, stopping output');
+				this.stopOutput();
+				this._emit('error', { error: new Error('Too many transfer errors: ' + error.message), driver: this });
+			}
+		} finally {
+			this.isSending = false;
 		}
 	}
 }
