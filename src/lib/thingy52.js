@@ -209,12 +209,50 @@ export class Thingy52Device {
 
 				this.sensorData.quaternion = { w, x, y, z };
 				this._emit('quaternion', { w, x, y, z });
+
+				// Calculate gravity-compensated pan and tilt for moving head control
+				const { pan, tilt } = this._calculatePanTilt(w, x, y, z);
+				this.sensorData.panTilt = { pan, tilt };
+				this._emit('panTilt', { pan, tilt });
 			});
 
 			console.log('Subscribed to Quaternion');
 		} catch (error) {
 			console.warn('Failed to subscribe to Quaternion:', error);
 		}
+	}
+
+	/**
+	 * Calculate gravity-compensated pan and tilt from quaternion
+	 * Pan: Rotation around vertical (gravity) axis (-180 to 180 degrees)
+	 * Tilt: Forward/backward tilt (-90 to 90 degrees)
+	 */
+	_calculatePanTilt(w, x, y, z) {
+		// Calculate pitch (tilt forward/back)
+		const sinp = 2 * (w * y - z * x);
+		let pitch;
+		if (Math.abs(sinp) >= 1) {
+			pitch = Math.sign(sinp) * 90; // Use 90 degrees if out of range
+		} else {
+			pitch = Math.asin(sinp) * (180 / Math.PI);
+		}
+
+		// Calculate yaw (pan left/right) - gravity compensated
+		const siny_cosp = 2 * (w * z + x * y);
+		const cosy_cosp = 1 - 2 * (y * y + z * z);
+		let yaw = Math.atan2(siny_cosp, cosy_cosp) * (180 / Math.PI);
+
+		// Apply calibration to yaw
+		yaw = yaw - this.yawCalibrationOffset;
+		
+		// Normalize yaw to -180 to 180
+		while (yaw > 180) yaw -= 360;
+		while (yaw < -180) yaw += 360;
+
+		return {
+			pan: yaw,    // -180 to 180 degrees (horizontal rotation)
+			tilt: pitch  // -90 to 90 degrees (forward/back tilt)
+		};
 	}
 
 	/**

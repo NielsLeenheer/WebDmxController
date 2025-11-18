@@ -132,8 +132,19 @@ export class InputController {
 			// Convert normalized value (0-1) to percentage or degrees based on sensor type
 			let propertyValue;
 
-			// Euler angles are in degrees
-			if (controlId.startsWith('euler-')) {
+			// Pan and Tilt (gravity-compensated)
+			if (controlId === 'pan') {
+				// Pan: Convert 0-1 back to -180 to 180 degrees
+				const degrees = (value * 360) - 180;
+				propertyValue = `${degrees.toFixed(1)}deg`;
+			}
+			else if (controlId === 'tilt') {
+				// Tilt: Convert 0-1 back to -90 to 90 degrees
+				const degrees = (value * 180) - 90;
+				propertyValue = `${degrees.toFixed(1)}deg`;
+			}
+			// Euler angles are in degrees (-180 to 180)
+			else if (controlId.startsWith('euler-')) {
 				// Convert 0-1 back to -180 to 180 degrees
 				const degrees = (value * 360) - 180;
 				propertyValue = `${degrees.toFixed(1)}deg`;

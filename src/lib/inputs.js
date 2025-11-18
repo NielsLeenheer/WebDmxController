@@ -367,6 +367,7 @@ export class BluetoothInputDevice extends InputDevice {
 		// Set up sensor data handlers
 		this.thingyDevice.on('euler', this._handleEuler.bind(this));
 		this.thingyDevice.on('quaternion', this._handleQuaternion.bind(this));
+		this.thingyDevice.on('panTilt', this._handlePanTilt.bind(this));
 		this.thingyDevice.on('accelerometer', this._handleAccelerometer.bind(this));
 		this.thingyDevice.on('gyroscope', this._handleGyroscope.bind(this));
 		this.thingyDevice.on('compass', this._handleCompass.bind(this));
@@ -393,6 +394,13 @@ export class BluetoothInputDevice extends InputDevice {
 		this._setValue('quat-x', (x + 1) / 2, -1, 1);
 		this._setValue('quat-y', (y + 1) / 2, -1, 1);
 		this._setValue('quat-z', (z + 1) / 2, -1, 1);
+	}
+
+	_handlePanTilt({ pan, tilt }) {
+		// Pan: -180 to 180 degrees (horizontal rotation), normalize to 0-1
+		// Tilt: -90 to 90 degrees (forward/back tilt), normalize to 0-1
+		this._setValue('pan', (pan + 180) / 360, -180, 180);
+		this._setValue('tilt', (tilt + 90) / 180, -90, 90);
 	}
 
 	_handleAccelerometer({ x, y, z }) {
