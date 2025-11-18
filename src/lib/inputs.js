@@ -6,7 +6,7 @@
  */
 
 import { StreamDeckManager, getStreamDeckFilters, isStreamDeck, getStreamDeckModel } from './streamdeck.js';
-import { MIDIDeviceProfileManager } from './midiDeviceProfiles.js';
+import { MIDIDeviceProfileManager } from './midi.js';
 import { Thingy52Manager } from './thingy52.js';
 
 /**
