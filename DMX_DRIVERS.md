@@ -24,23 +24,32 @@ Supports ENTTEC DMX USB Pro and compatible devices using the FTDI chipset (vendo
 - Uses USB bulk transfers
 - Automatic device detection
 
-### FT232R USB-DMX Driver
+### FT232R USB-DMX Driver ⚠️ EXPERIMENTAL
 
 Location: `src/lib/dmx.js`
 
-Supports generic FTDI FT232R-based USB to DMX cables (vendor ID `0x0403`, product ID `0x6001`).
+Supports generic FTDI FT232R-based USB to DMX cables (vendor ID `0x0403`, product ID `0x6001`), including Enttec Open DMX and compatible devices.
+
+**⚠️ WARNING: This driver has severe limitations with Enttec Open DMX-style adapters due to WebUSB constraints.**
 
 **Features:**
-- ~40 Hz continuous output
+- ~25 Hz continuous output (slower due to timing constraints)
 - 512-channel DMX universe
-- Uses FTDI serial protocol with proper DMX break/MAB timing
-- Configures FTDI chip for 250,000 baud, 8N2 format
-- Uses USB control transfers for configuration + bulk transfers for data
 - Automatic device detection
+
+**Known Issues:**
+- **Enttec Open DMX / SH-RS09B / Similar adapters**: These devices require BREAK signals to be generated via baud rate switching (90kbaud → send 0x00 → 250kbaud → send data). This is extremely difficult to implement reliably in WebUSB due to:
+  - Unpredictable async control transfer latency (50-200ms)
+  - No way to guarantee precise timing for BREAK duration
+  - Browser scheduling delays
+  
+  **Result**: These adapters often don't work at all, or exhibit flickering, random movements, and data corruption.
+  
+  **Recommendation**: Use uDMX (works well) or Enttec DMX USB Pro (not Open DMX) instead.
 
 **Note:** ENTTEC DMX USB Pro devices also use the same USB IDs (`0x0403:0x6001`) but with a different protocol. If both drivers match your device, the system will try ENTTEC first. If connection fails, you may need to manually select the FT232R driver.
 
-### uDMX Driver (Anyma)
+### uDMX Driver (Anyma) ✅ RECOMMENDED
 
 Location: `src/lib/dmx.js`
 
