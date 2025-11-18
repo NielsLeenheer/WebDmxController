@@ -87,6 +87,10 @@
                 {@const whiteOpacity = ((data.white ?? 0) / 255)}
                 <div class="control-layer control-white" style="background-color: rgba(255, 255, 255, {whiteOpacity})"></div>
 
+            {:else if control === 'intensity'}
+                {@const intensityOpacity = ((data.intensity ?? 0) / 255)}
+                <div class="control-layer control-intensity" style="background-color: rgba(0, 0, 0, {1 - intensityOpacity})"></div>
+
             {:else if control === 'fuel'}
                 {@const fuelPercent = ((data.fuel ?? 0) / 255) * 100}
                 <div
