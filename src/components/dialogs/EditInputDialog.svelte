@@ -24,7 +24,7 @@
 	} = $props();
 
 	// Dialog state
-	let dialogRef = $state();
+	let dialogRef = $state(null);
 	let resolvePromise = $state(null);
 
 	// Edit state
