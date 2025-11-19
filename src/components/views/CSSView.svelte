@@ -66,11 +66,9 @@
 
     function updateStyleElement() {
         if (styleElement) {
-            // Combine generated CSS and custom CSS
+            // Combine generated CSS and custom CSS, wrap in @scope
             const combinedCSS = generatedCSS + '\n\n' + customCSS;
-
-            // No scoping needed - device IDs are unique
-            styleElement.textContent = combinedCSS;
+            styleElement.textContent = `@scope (.animation-targets) {\n${combinedCSS}\n}`;
         }
     }
 
@@ -121,6 +119,14 @@
     $effect(() => {
         if (devices) {
             regenerateCSS();
+            updateStyleElement();
+        }
+    });
+
+    // Watch for styleElement to become available and update it
+    // This handles the case where styleElement is created after CSSView mounts
+    $effect(() => {
+        if (styleElement && (generatedCSS || customCSS)) {
             updateStyleElement();
         }
     });

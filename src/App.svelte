@@ -33,7 +33,7 @@
     // CSS sampling infrastructure
     let animationTargetsContainer;
     let triggerClassesContainer;
-    let styleElement;
+    let styleElement = $state(null);
     let animationFrameId;
 
     // Initialize input controller
