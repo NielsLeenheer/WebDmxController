@@ -401,7 +401,7 @@
             // Update CSS identifiers based on new name and button mode
             mapping.updateCSSIdentifiers();
             mappingLibrary.update(mapping);
-            refreshInputs();
+            // Note: refreshInputs() is called automatically by the 'changed' listener in onMount
         }
     }
 
@@ -478,16 +478,8 @@
 
         // Listen for mapping changes (add/update/remove)
         mappingLibrary.on('changed', ({ type, mapping }) => {
-            if (type === 'add' || type === 'remove') {
-                refreshInputs();
-            } else if (type === 'update') {
-                // Update the specific input in the list
-                const index = savedInputs.findIndex(i => i.id === mapping.id);
-                if (index !== -1) {
-                    savedInputs[index] = mapping;
-                    savedInputs = [...savedInputs]; // Trigger reactivity
-                }
-            }
+            // Refresh inputs for all change types to ensure UI updates
+            refreshInputs();
         });
 
         // Track Euler angles for Thingy:52 devices
