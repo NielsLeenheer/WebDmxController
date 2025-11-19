@@ -1,7 +1,6 @@
 <script>
     import { onMount } from 'svelte';
-    import { getDeviceColor } from '../../lib/colorUtils.js';
-    import { convertChannelsToArray } from '../../lib/outputs/devices.js';
+    import { convertChannelsToArray, getDevicePreviewData } from '../../lib/outputs/devices.js';
     import Preview from '../common/Preview.svelte';
 
     let {
@@ -11,12 +10,8 @@
         mappingLibrary
     } = $props();
 
-    // Preview state
-    let previewColors = $state({});
-    let deviceOpacities = $state({});
-    let devicePanTilt = $state({});
-    let deviceFlamethrower = $state({});
-    let deviceSmoke = $state({});
+    // Store sampled device data (Map of deviceId -> channels object)
+    let sampledDeviceData = $state(new Map());
 
     // Get CSS from manager
     let generatedCSS = $derived(cssManager?.generatedCSS || '');
@@ -52,79 +47,29 @@
     }
 
     // Subscribe to CSS sampling updates
-    // This effect subscribes to the cssManager and updates previews when sampled values change
     $effect(() => {
         if (!cssManager) return;
 
-        // Subscribe to sampled values
+        // Subscribe to sampled values and store them directly
         const unsubscribe = cssManager.subscribe((sampledValues) => {
-            updatePreviews(sampledValues);
+            sampledDeviceData = sampledValues;
         });
 
         // Cleanup subscription on destroy or when cssManager changes
         return unsubscribe;
     });
 
-    // Update preview colors from sampled CSS values
-    function updatePreviews(sampledValues) {
-        if (!sampledValues) return;
+    // Get preview data for a device
+    function getPreviewData(device) {
+        const channels = sampledDeviceData.get(device.id);
+        if (!channels) {
+            // Use default values if no sampled data
+            return getDevicePreviewData(device.type, device.defaultValues);
+        }
 
-        devices.forEach(device => {
-            const channels = sampledValues.get(device.id);
-
-            // SMOKE and FLAMETHROWER always have opacity 1 (they handle their own effects internally)
-            if (device.type === 'SMOKE' || device.type === 'FLAMETHROWER') {
-                deviceOpacities[device.id] = 1;
-            }
-
-            if (!channels) return;
-
-            // Convert sampled channels to device channel array based on device type
-            const newValues = convertChannelsToArray(device.type, channels);
-
-            // Update preview colors
-            const hasColorData = channels.Red !== undefined || channels.Green !== undefined || channels.Blue !== undefined;
-
-            if (hasColorData) {
-                // Use getDeviceColor for consistent color calculation
-                const color = getDeviceColor(device.type, newValues);
-                previewColors[device.id] = color;
-
-                // For moving heads, dimmer controls opacity separately
-                if ((device.type === 'MOVING_HEAD' || device.type === 'MOVING_HEAD_11CH') && channels.Dimmer !== undefined) {
-                    deviceOpacities[device.id] = channels.Dimmer / 255;
-                } else {
-                    deviceOpacities[device.id] = 1;
-                }
-            } else if (channels.Intensity !== undefined || channels.Dimmer !== undefined) {
-                // Dimmer/Intensity for other non-color devices
-                const intensity = (channels.Intensity || channels.Dimmer || 0) / 255;
-                deviceOpacities[device.id] = intensity;
-            }
-
-            // Update pan/tilt preview for moving heads
-            if ((device.type === 'MOVING_HEAD' || device.type === 'MOVING_HEAD_11CH') && channels.Pan !== undefined && channels.Tilt !== undefined) {
-                devicePanTilt[device.id] = {
-                    pan: channels.Pan,
-                    tilt: channels.Tilt
-                };
-            }
-
-            // Update flamethrower preview
-            if (device.type === 'FLAMETHROWER' && channels.Safety !== undefined && channels.Fuel !== undefined) {
-                deviceFlamethrower[device.id] = {
-                    safety: channels.Safety,
-                    fuel: channels.Fuel
-                };
-            }
-
-            // Update smoke machine preview
-            if (device.type === 'SMOKE' && channels.Output !== undefined) {
-                deviceSmoke[device.id] = {
-                    output: channels.Output
-                };
-            }
-        });
+        // Convert channels object to array, then get preview data
+        const values = convertChannelsToArray(device.type, channels);
+        return getDevicePreviewData(device.type, values);
     }
 
     // Update mappings list when library changes
@@ -144,18 +89,6 @@
             customCSSEditor.textContent = cssManager.customCSS;
         }
 
-        // Initialize preview colors based on default values
-        devices.forEach(device => {
-            previewColors[device.id] = getDeviceColor(device.type, device.defaultValues);
-            deviceOpacities[device.id] = 1;
-            if (device.type === 'MOVING_HEAD' || device.type === 'MOVING_HEAD_11CH') {
-                devicePanTilt[device.id] = {
-                    pan: device.defaultValues[0] || 127,
-                    tilt: device.defaultValues[2] || 127  // For MOVING_HEAD_11CH, tilt is at index 2
-                };
-            }
-        });
-
         return () => {
             mappingLibrary.off('changed', handleMappingChange);
         };
@@ -171,64 +104,15 @@
                     <h4>Devices</h4>
                     <div class="device-previews">
                         {#each independentDevices as device (device.id)}
+                            {@const previewData = getPreviewData(device)}
                             <div class="device-preview-item">
-                                {#if device.type === 'FLAMETHROWER'}
-                                    {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
-                                    <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
-                                        <Preview
-                                            type="device"
-                                            size="large"
-                                            controls={['fuel', 'safety']}
-                                            data={{ fuel: flame.fuel, safety: flame.safety }}
-                                        />
-                                    </div>
-                                {:else if device.type === 'SMOKE'}
-                                    {@const smoke = deviceSmoke[device.id] || { output: device.defaultValues[0] || 0 }}
-                                    <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
-                                        <Preview
-                                            type="device"
-                                            size="large"
-                                            controls={['output']}
-                                            data={{ output: smoke.output }}
-                                        />
-                                    </div>
-                                {:else if device.type === 'DIMMER'}
-                                    {@const intensity = (deviceOpacities[device.id] ?? 1) * 255}
-                                    <div style="opacity: 1" title={device.name}>
-                                        <Preview
-                                            type="device"
-                                            size="large"
-                                            controls={['color', 'intensity']}
-                                            data={{ 
-                                                color: previewColors[device.id] || getDeviceColor(device.type, device.defaultValues),
-                                                intensity: intensity
-                                            }}
-                                        />
-                                    </div>
-                                {:else if (device.type === 'MOVING_HEAD' || device.type === 'MOVING_HEAD_11CH') && devicePanTilt[device.id]}
-                                    {@const panTilt = devicePanTilt[device.id]}
-                                    <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
-                                        <Preview
-                                            type="device"
-                                            size="large"
-                                            controls={['color', 'pantilt']}
-                                            data={{
-                                                color: previewColors[device.id] || getDeviceColor(device.type, device.defaultValues),
-                                                pan: panTilt.pan,
-                                                tilt: panTilt.tilt
-                                            }}
-                                        />
-                                    </div>
-                                {:else}
-                                    <div style="opacity: {deviceOpacities[device.id] || 1}" title={device.name}>
-                                        <Preview
-                                            type="device"
-                                            size="large"
-                                            controls={['color']}
-                                            data={{ color: previewColors[device.id] || getDeviceColor(device.type, device.defaultValues) }}
-                                        />
-                                    </div>
-                                {/if}
+                                <Preview
+                                    type="device"
+                                    size="large"
+                                    controls={previewData.controls}
+                                    data={previewData.data}
+                                    title={device.name}
+                                />
                                 <code class="device-id">#{device.cssId}</code>
                             </div>
                         {/each}
