@@ -5,7 +5,7 @@
  */
 
 import { DEVICE_TYPES } from '../outputs/devices.js';
-import { generateCSSProperties } from './controlCssMapping.js';
+import { generateCSSProperties } from './mapping/index.js';
 
 export class CSSGenerator {
 	constructor(animationLibrary, mappingLibrary) {

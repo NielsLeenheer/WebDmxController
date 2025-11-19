@@ -5,7 +5,7 @@
  */
 
 import { DEVICE_TYPES } from '../outputs/devices.js';
-import { sampleCSSPropertiesFromControls } from './controlCssMapping.js';
+import { sampleCSSPropertiesFromControls } from './mapping/index.js';
 
 export class CSSSampler {
 	constructor() {

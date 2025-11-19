@@ -7,7 +7,7 @@
  */
 
 import { DEVICE_TYPES } from './outputs/devices.js';
-import { generateCSSProperties } from './css/controlCssMapping.js';
+import { generateCSSProperties } from './css/mapping/index.js';
 import { toCSSIdentifier } from './css/cssUtils.js';
 
 /**
