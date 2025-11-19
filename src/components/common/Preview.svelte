@@ -25,7 +25,7 @@
 
     // Reorder controls for proper visual stacking
     // Flamethrower: fuel layer must render before safety layer so safety appears on top
-    const orderedControls = $derived(() => {
+    const orderedControls = $derived.by(() => {
         const safetyIndex = controls.indexOf('safety');
         const fuelIndex = controls.indexOf('fuel');
 
