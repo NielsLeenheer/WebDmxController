@@ -257,6 +257,7 @@
             {mappingLibrary}
             {cssGenerator}
             {styleElement}
+            {cssSampler}
         />
     </div>
 </main>

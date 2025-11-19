@@ -9,7 +9,8 @@
         animationLibrary,
         mappingLibrary,
         cssGenerator,
-        styleElement
+        styleElement,
+        cssSampler
     } = $props();
 
     // Separate generated and custom CSS
@@ -32,6 +33,7 @@
     let devicePanTilt = $state({});
     let deviceFlamethrower = $state({});
     let deviceSmoke = $state({});
+    let previewAnimationFrameId;
 
     // Get animations for display
     let animations = $derived(
@@ -70,6 +72,74 @@
             const combinedCSS = generatedCSS + '\n\n' + customCSS;
             styleElement.textContent = `@scope (.animation-targets) {\n${combinedCSS}\n}`;
         }
+    }
+
+    // Update preview from CSS sampling
+    function updatePreviewFromCSS() {
+        if (!cssSampler) return;
+
+        // Sample CSS values for preview updates
+        const sampledValues = cssSampler.sampleAll(devices);
+
+        devices.forEach(device => {
+            const channels = sampledValues.get(device.id);
+
+            // SMOKE and FLAMETHROWER always have opacity 1 (they handle their own effects internally)
+            if (device.type === 'SMOKE' || device.type === 'FLAMETHROWER') {
+                deviceOpacities[device.id] = 1;
+            }
+
+            if (!channels) return;
+
+            // Convert sampled channels to device channel array based on device type
+            const newValues = convertChannelsToArray(device.type, channels);
+
+            // Update preview colors
+            const hasColorData = channels.Red !== undefined || channels.Green !== undefined || channels.Blue !== undefined;
+
+            if (hasColorData) {
+                // Use getDeviceColor for consistent color calculation
+                const color = getDeviceColor(device.type, newValues);
+                previewColors[device.id] = color;
+
+                // For moving heads, dimmer controls opacity separately
+                if ((device.type === 'MOVING_HEAD' || device.type === 'MOVING_HEAD_11CH') && channels.Dimmer !== undefined) {
+                    deviceOpacities[device.id] = channels.Dimmer / 255;
+                } else {
+                    deviceOpacities[device.id] = 1;
+                }
+            } else if (channels.Intensity !== undefined || channels.Dimmer !== undefined) {
+                // Dimmer/Intensity for other non-color devices
+                const intensity = (channels.Intensity || channels.Dimmer || 0) / 255;
+                deviceOpacities[device.id] = intensity;
+            }
+
+            // Update pan/tilt preview for moving heads
+            if ((device.type === 'MOVING_HEAD' || device.type === 'MOVING_HEAD_11CH') && channels.Pan !== undefined && channels.Tilt !== undefined) {
+                devicePanTilt[device.id] = {
+                    pan: channels.Pan,
+                    tilt: channels.Tilt
+                };
+            }
+
+            // Update flamethrower preview
+            if (device.type === 'FLAMETHROWER' && channels.Safety !== undefined && channels.Fuel !== undefined) {
+                deviceFlamethrower[device.id] = {
+                    safety: channels.Safety,
+                    fuel: channels.Fuel
+                };
+            }
+
+            // Update smoke machine preview
+            if (device.type === 'SMOKE' && channels.Output !== undefined) {
+                deviceSmoke[device.id] = {
+                    output: channels.Output
+                };
+            }
+        });
+
+        // Continue preview animation loop
+        previewAnimationFrameId = requestAnimationFrame(updatePreviewFromCSS);
     }
 
     // Regenerate CSS when mappings or animations change
@@ -113,6 +183,11 @@
                 };
             }
         });
+
+        // Start preview animation loop
+        if (!previewAnimationFrameId && cssSampler) {
+            updatePreviewFromCSS();
+        }
     });
 
     // Watch for device changes and regenerate CSS
@@ -132,6 +207,12 @@
     });
 
     onDestroy(() => {
+        // Stop preview animation loop
+        if (previewAnimationFrameId) {
+            cancelAnimationFrame(previewAnimationFrameId);
+            previewAnimationFrameId = null;
+        }
+
         mappingLibrary.off('changed', handleMappingChange);
         animationLibrary.off('changed', handleAnimationChange);
     });
