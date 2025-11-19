@@ -3,7 +3,9 @@
     import { DMXController } from './lib/outputs/dmx.js';
     import { convertChannelsToArray } from './lib/outputs/devices.js';
     import { AnimationLibrary } from './lib/animations.js';
-    import { MappingLibrary, TriggerManager } from './lib/mappings.js';
+    import { InputLibrary } from './lib/inputs.js';
+    import { TriggerLibrary } from './lib/triggers.js';
+    import { TriggerManager } from './lib/mappings.js';
     import { CustomPropertyManager, CSSManager } from './lib/css/index.js';
     import { InputController } from './lib/inputController.js';
     import Header from './components/layout/Header.svelte';
@@ -23,10 +25,11 @@
 
     // Reactive systems
     let animationLibrary = $state(new AnimationLibrary());
-    let mappingLibrary = $state(new MappingLibrary());
+    let inputLibrary = $state(new InputLibrary());
+    let triggerLibrary = $state(new TriggerLibrary());
     let triggerManager = $state(new TriggerManager());
     let customPropertyManager = $state(new CustomPropertyManager());
-    let inputController = $state(new InputController(mappingLibrary, customPropertyManager, triggerManager));
+    let inputController = $state(new InputController(inputLibrary, customPropertyManager, triggerManager));
 
     // CSS Manager - handles all CSS sampling and DOM management
     let cssManager = $state(null);
@@ -87,7 +90,7 @@
 
     onMount(() => {
         // Create CSS Manager
-        cssManager = new CSSManager(animationLibrary, mappingLibrary, triggerManager);
+        cssManager = new CSSManager(animationLibrary, inputLibrary, triggerLibrary, triggerManager);
         cssManager.initialize(mainElement);
 
         // Subscribe to sampled values for DMX output
@@ -144,13 +147,13 @@
     <div class="view-container" class:hidden={view !== 'inputs'}>
         <InputsView
             {inputController}
-            {mappingLibrary}
+            {inputLibrary}
         />
     </div>
 
     <div class="view-container" class:hidden={view !== 'triggers'}>
         <TriggersView
-            {mappingLibrary}
+            {triggerLibrary}
             {animationLibrary}
             {devices}
         />
@@ -161,7 +164,8 @@
             {cssManager}
             {devices}
             {animationLibrary}
-            {mappingLibrary}
+            {inputLibrary}
+            {triggerLibrary}
         />
     </div>
 </main>
