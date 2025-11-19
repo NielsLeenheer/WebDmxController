@@ -118,6 +118,18 @@ export function getDevicePreviewData(deviceType, values) {
         }
     }
 
+    // Special case: Flamethrower needs fuel layer before safety layer
+    // so that safety appears on top in the DOM
+    if (deviceType === 'FLAMETHROWER') {
+        const safetyIndex = controls.indexOf('safety');
+        const fuelIndex = controls.indexOf('fuel');
+        if (safetyIndex !== -1 && fuelIndex !== -1 && safetyIndex < fuelIndex) {
+            // Swap them so fuel comes first
+            controls[safetyIndex] = 'fuel';
+            controls[fuelIndex] = 'safety';
+        }
+    }
+
     return { controls, data };
 }
 

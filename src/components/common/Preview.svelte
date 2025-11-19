@@ -100,7 +100,7 @@
 
             {:else if control === 'safety'}
                 {@const safetyOn = (data.safety ?? 0) >= 125}
-                <div class="control-layer control-safety" style="background: {safetyOn ? 'transparent' : 'black'}">
+                <div class="control-layer control-safety" style="background: {safetyOn ? 'transparent' : '#222222'}">
                     {#if safetyOn}
                         <div class="safety-checkmark"></div>
                     {:else}
