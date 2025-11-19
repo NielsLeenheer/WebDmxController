@@ -1,11 +1,6 @@
 /**
- * CSS Mapping - Central export for all mapping-related code
+ * CSS Mapping - Central export for all mapping configurations
  */
 
 export { CSS_TO_DMX_MAPPING } from './cssToDmxMapping.js';
-export { CONTROL_CSS_MAPPING } from './dmxToCssMapping.js';
-export {
-	generateCSSProperties,
-	sampleCSSPropertiesFromControls,
-	sampleCSSProperties
-} from './mappingFunctions.js';
+export { CONTROL_CSS_MAPPING } from './controlToCssMapping.js';
