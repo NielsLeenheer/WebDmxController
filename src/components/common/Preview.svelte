@@ -224,6 +224,7 @@
         height: 70%;
         transform: translate(-50%, -50%) rotate(-90deg);
         pointer-events: none;
+        z-index: 10;
     }
 
     .safety-checkmark::before {
@@ -259,6 +260,7 @@
         height: 70%;
         transform: translate(-50%, -50%);
         pointer-events: none;
+        z-index: 10;
     }
 
     .safety-cross::before,
