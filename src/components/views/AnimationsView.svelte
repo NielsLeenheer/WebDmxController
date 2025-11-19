@@ -2,14 +2,12 @@
     import { onMount } from 'svelte';
     import { Animation } from '../../lib/animations.js';
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-    import { toCSSIdentifier } from '../../lib/css/utils.js';
     import Button from '../common/Button.svelte';
-    import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Preview from '../common/Preview.svelte';
     import TimelineEditor from '../animations/TimelineEditor.svelte';
     import AddAnimationDialog from '../dialogs/AddAnimationDialog.svelte';
-    import removeIcon from '../../assets/icons/remove.svg?raw';
+    import EditAnimationDialog from '../dialogs/EditAnimationDialog.svelte';
     import editIcon from '../../assets/glyphs/edit.svg?raw';
 
     let {
@@ -21,11 +19,7 @@
 
     // Dialog references
     let addAnimationDialog;
-
-    // Edit dialog states
-    let editDialog = null; // DOM reference - should NOT be $state
-    let editingAnimation = $state(null);
-    let editingName = $state('');
+    let editAnimationDialog;
 
     // Animation version for forcing re-renders
     let animationVersion = $state(0);
@@ -45,17 +39,6 @@
     // Load animations from library
     function refreshAnimationsList() {
         animationsList = animationLibrary.getAll();
-
-        // Update editingAnimation reference to the refreshed copy
-        if (editingAnimation) {
-            const refreshedAnimation = animationsList.find(a => a.name === editingAnimation.name);
-            if (refreshedAnimation) {
-                editingAnimation = refreshedAnimation;
-            } else {
-                // Animation was deleted
-                editingAnimation = null;
-            }
-        }
     }
 
     function handleDragStart(event, animation) {
@@ -241,44 +224,23 @@
         };
     }
 
-    function openEditDialog(animation) {
-        editingAnimation = animation;
-        editingName = animation.name;
+    async function openEditDialog(animation) {
+        const result = await editAnimationDialog.open(animation);
 
-        requestAnimationFrame(() => {
-            editDialog?.showModal();
-        });
-    }
+        if (!result) return; // User cancelled
 
-    function closeEditDialog() {
-        editDialog?.close();
-        editingAnimation = null;
-        editingName = '';
-    }
+        if (result.delete) {
+            // Handle delete
+            animationLibrary.remove(animation.name);
+            refreshAnimationsList();
+            return;
+        }
 
-    function saveEdit() {
-        if (!editingAnimation || !editingName.trim()) return;
-
-        // Update animation name
-        const oldName = editingAnimation.name;
-        editingAnimation.name = editingName.trim();
-        // Update CSS name based on new animation name
-        editingAnimation.updateCSSName();
-
-        // Save to library
+        // Handle save
+        animation.name = result.name;
+        animation.updateCSSName();
         animationLibrary.save();
         refreshAnimationsList();
-        closeEditDialog();
-    }
-
-    function confirmDeleteAnimation() {
-        if (!editingAnimation) return;
-
-        if (confirm(`Are you sure you want to delete "${editingAnimation.name}"?`)) {
-            animationLibrary.remove(editingAnimation.name);
-            refreshAnimationsList();
-            closeEditDialog();
-        }
     }
 
     function handleAnimationUpdate() {
@@ -421,37 +383,9 @@
 />
 
 <!-- Edit Animation Dialog -->
-{#if editingAnimation}
-<Dialog bind:dialogRef={editDialog} title="Animation" onclose={closeEditDialog}>
-    <form id="edit-animation-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
-        <div class="dialog-input-group">
-            <label for="edit-animation-name">Name:</label>
-            <input
-                id="edit-animation-name"
-                type="text"
-                bind:value={editingName}
-                placeholder="Animation name"
-                autofocus
-            />
-            <div class="css-identifiers">
-                <code class="css-identifier">@keyframes {toCSSIdentifier(editingName)} &lbrace; &rbrace;</code>
-            </div>
-        </div>
-    </form>
-
-    {#snippet tools()}
-        <Button onclick={confirmDeleteAnimation} variant="secondary">
-            {@html removeIcon}
-            Delete
-        </Button>
-    {/snippet}
-
-    {#snippet buttons()}
-        <Button onclick={closeEditDialog} variant="secondary">Cancel</Button>
-        <Button type="submit" form="edit-animation-form" variant="primary">Save</Button>
-    {/snippet}
-</Dialog>
-{/if}
+<EditAnimationDialog
+    bind:this={editAnimationDialog}
+/>
 
 <style>
     .animations-view {
