@@ -9,8 +9,8 @@
  */
 
 import './properties.css';
-import { CSSGenerator } from './CSSGenerator.js';
-import { CSSSampler } from './CSSSampler.js';
+import { CSSGenerator } from './generator.js';
+import { CSSSampler } from './sampler.js';
 
 export class CSSManager {
 	constructor(animationLibrary, mappingLibrary, triggerManager) {

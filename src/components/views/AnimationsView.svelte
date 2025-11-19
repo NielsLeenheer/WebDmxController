@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import { Animation } from '../../lib/animations.js';
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-    import { toCSSIdentifier } from '../../lib/css/cssUtils.js';
+    import { toCSSIdentifier } from '../../lib/css/utils.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';

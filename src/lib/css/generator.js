@@ -89,7 +89,7 @@ export class CSSGenerator {
 		const defaultValues = device.defaultValues || [];
 
 		// Generate CSS properties from DMX values
-		const properties = this.generateCSSProperties(
+		const properties = CSSGenerator.generateCSSProperties(
 			deviceType.controls,
 			deviceType.components,
 			defaultValues,
@@ -113,7 +113,7 @@ export class CSSGenerator {
 	 * @param {string} deviceType - Device type (for color generation)
 	 * @returns {Object} CSS properties object
 	 */
-	generateCSSProperties(controls, components, values, deviceType) {
+	static generateCSSProperties(controls, components, values, deviceType) {
 		const properties = {};
 
 		for (const control of controls) {
@@ -159,7 +159,4 @@ export class CSSGenerator {
 }
 
 // Export standalone function for backward compatibility
-export function generateCSSProperties(controls, components, values, deviceType) {
-	const generator = new CSSGenerator(null, null);
-	return generator.generateCSSProperties(controls, components, values, deviceType);
-}
+export const generateCSSProperties = CSSGenerator.generateCSSProperties;

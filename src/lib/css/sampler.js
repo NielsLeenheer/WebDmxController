@@ -83,7 +83,7 @@ export class CSSSampler {
 		const computed = window.getComputedStyle(element);
 
 		// Sample CSS properties based on device controls
-		const channels = this.sampleCSSPropertiesFromControls(computed, deviceType.controls, deviceType.components);
+		const channels = this.sampleCSSProperties(computed, deviceType.controls, deviceType.components);
 
 		// Store current values for next comparison
 		this.previousValues.set(device.id, { ...channels });
@@ -100,7 +100,7 @@ export class CSSSampler {
 	 * @param {Array} components - Array of component definitions (with name and channel)
 	 * @returns {Object} Map of component names to DMX values (e.g., {Red: 255, Green: 128, Blue: 0})
 	 */
-	sampleCSSPropertiesFromControls(computed, controls, components) {
+	sampleCSSProperties(computed, controls, components) {
 		const result = {};
 
 		// Process each control

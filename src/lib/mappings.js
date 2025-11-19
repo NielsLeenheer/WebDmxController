@@ -7,8 +7,8 @@
  */
 
 import { DEVICE_TYPES } from './outputs/devices.js';
-import { generateCSSProperties } from './css/CSSGenerator.js';
-import { toCSSIdentifier } from './css/cssUtils.js';
+import { generateCSSProperties } from './css/generator.js';
+import { toCSSIdentifier } from './css/utils.js';
 
 /**
  * Represents a single input-to-output mapping
