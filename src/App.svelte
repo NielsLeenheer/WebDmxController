@@ -99,14 +99,6 @@
         }
     }
 
-    // Update CSS in the global style element
-    function updateGlobalCSS(generatedCSS, customCSS) {
-        if (styleElement) {
-            const combinedCSS = generatedCSS + '\n\n' + customCSS;
-            styleElement.textContent = `@scope (.animation-targets) {\n${combinedCSS}\n}`;
-        }
-    }
-
     onMount(() => {
         // Create style element for @property definitions (must be at document level)
         const propertyDefsElement = document.createElement('style');

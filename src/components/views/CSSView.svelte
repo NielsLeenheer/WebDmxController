@@ -66,9 +66,11 @@
 
     function updateStyleElement() {
         if (styleElement) {
-            // Combine generated CSS and custom CSS, wrap in @scope
+            // Combine generated CSS and custom CSS
             const combinedCSS = generatedCSS + '\n\n' + customCSS;
-            styleElement.textContent = `@scope (.animation-targets) {\n${combinedCSS}\n}`;
+
+            // No scoping needed - device IDs are unique
+            styleElement.textContent = combinedCSS;
         }
     }
 
