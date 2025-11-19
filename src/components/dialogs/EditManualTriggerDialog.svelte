@@ -1,0 +1,387 @@
+<script>
+	import Dialog from '../common/Dialog.svelte';
+	import Button from '../common/Button.svelte';
+	import Controls from '../controls/Controls.svelte';
+	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+	import removeIcon from '../../assets/icons/remove.svg?raw';
+
+	/**
+	 * EditManualTriggerDialog - Promise-based dialog for editing manual triggers
+	 *
+	 * Usage:
+	 *   const result = await editManualTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
+	 *   if (result) {
+	 *     if (result.delete) {
+	 *       // Handle delete
+	 *     } else {
+	 *       // Update trigger with result data
+	 *     }
+	 *   }
+	 */
+
+	// Dialog state
+	let dialogRef = $state(null);
+	let resolvePromise = $state(null);
+
+	// Data props
+	let editingTrigger = $state(null);
+	let availableInputs = $state([]);
+	let availableAnimations = $state([]);
+	let devices = $state([]);
+
+	// Form state
+	let selectedInput = $state(null);
+	let triggerType = $state('pressed');
+	let actionType = $state('animation');
+	let selectedDevice = $state(null);
+	let selectedAnimation = $state(null);
+	let duration = $state(1000);
+	let looping = $state(false);
+	let easing = $state('linear');
+	let channelValues = $state({});
+	let enabledControls = $state([]);
+
+	const ACTION_TYPES = [
+		{ value: 'animation', label: 'Run Animation' },
+		{ value: 'setValue', label: 'Set values' }
+	];
+
+	const EASING_FUNCTIONS = [
+		'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out',
+		'cubic-bezier(0.4, 0.0, 0.2, 1)', // Material Design
+		'cubic-bezier(0.68, -0.55, 0.265, 1.55)' // Back easing
+	];
+
+	// Get trigger type options based on the selected input's button mode
+	function getTriggerTypeOptions() {
+		if (!selectedInput) return [
+			{ value: 'pressed', label: 'Pressed' },
+			{ value: 'not-pressed', label: 'Not Pressed' }
+		];
+
+		const [deviceId, controlId] = selectedInput.split('_');
+		const input = availableInputs.find(i =>
+			i.inputDeviceId === deviceId && i.inputControlId === controlId
+		);
+
+		if (!input || !input.isButtonInput()) {
+			return [
+				{ value: 'pressed', label: 'Pressed' },
+				{ value: 'not-pressed', label: 'Not Pressed' }
+			];
+		}
+
+		const buttonMode = input.buttonMode || 'momentary';
+
+		if (buttonMode === 'toggle') {
+			return [
+				{ value: 'pressed', label: 'On' },
+				{ value: 'not-pressed', label: 'Off' }
+			];
+		} else {
+			return [
+				{ value: 'pressed', label: 'Down' },
+				{ value: 'not-pressed', label: 'Up' }
+			];
+		}
+	}
+
+	// Convert channelValues object to full values array for Controls
+	function getValuesArrayForDevice() {
+		const device = devices.find(d => d.id === selectedDevice);
+		if (!device) return [];
+
+		const numChannels = DEVICE_TYPES[device.type].channels;
+		const values = new Array(numChannels).fill(0);
+
+		// Fill in values from channelValues object
+		for (let i = 0; i < numChannels; i++) {
+			if (channelValues[i] !== undefined) {
+				values[i] = channelValues[i];
+			}
+		}
+
+		return values;
+	}
+
+	// Handle device control changes for setValue triggers
+	function handleSetValueChange(channelIndex, value) {
+		channelValues = {
+			...channelValues,
+			[channelIndex]: Math.max(0, Math.min(255, parseInt(value) || 0))
+		};
+	}
+
+	/**
+	 * Open the dialog
+	 * @param {Object} trigger - The trigger to edit
+	 * @param {Array} inputs - Available input mappings
+	 * @param {Array} animations - Available animations
+	 * @param {Array} devs - Available devices
+	 * @returns {Promise<{input, triggerType, actionType, device, animation, duration, looping, easing, channelValues, enabledControls}|{delete: true}|null>}
+	 */
+	export function open(trigger, inputs, animations, devs) {
+		return new Promise((resolve) => {
+			resolvePromise = resolve;
+
+			// Store data
+			editingTrigger = trigger;
+			availableInputs = inputs;
+			availableAnimations = animations;
+			devices = devs;
+
+			// Initialize form state from trigger
+			selectedInput = trigger.inputDeviceId + '_' + trigger.inputControlId;
+			triggerType = trigger.triggerType;
+			actionType = trigger.actionType || 'animation';
+
+			if (trigger.actionType === 'setValue') {
+				selectedDevice = trigger.setValueDeviceId;
+				channelValues = {...trigger.channelValues};
+				enabledControls = trigger.enabledControls ? [...trigger.enabledControls] : [];
+
+				// If enabledControls is empty, initialize with all controls
+				if (enabledControls.length === 0 && selectedDevice) {
+					const device = devs.find(d => d.id === selectedDevice);
+					if (device) {
+						const deviceType = DEVICE_TYPES[device.type];
+						enabledControls = deviceType.controls.map(c => c.name);
+					}
+				}
+			} else {
+				selectedDevice = trigger.targetDeviceIds[0];
+				selectedAnimation = trigger.animationName;
+				enabledControls = [];
+			}
+
+			duration = trigger.duration;
+			looping = trigger.iterations === 'infinite';
+			easing = trigger.easing;
+
+			requestAnimationFrame(() => {
+				dialogRef?.showModal();
+			});
+		});
+	}
+
+	function handleSave() {
+		if (!selectedInput || !selectedDevice) {
+			resolvePromise(null);
+			closeDialog();
+			return;
+		}
+
+		if (actionType === 'animation' && !selectedAnimation) {
+			resolvePromise(null);
+			closeDialog();
+			return;
+		}
+
+		// Return trigger configuration
+		const result = {
+			input: selectedInput,
+			triggerType,
+			actionType,
+			device: selectedDevice,
+			animation: selectedAnimation,
+			duration,
+			looping,
+			easing,
+			channelValues: {...channelValues},
+			enabledControls: [...enabledControls]
+		};
+
+		resolvePromise(result);
+		closeDialog();
+	}
+
+	function confirmDelete() {
+		if (!editingTrigger) return;
+
+		if (confirm(`Are you sure you want to delete this trigger?`)) {
+			resolvePromise({ delete: true });
+			closeDialog();
+		}
+	}
+
+	function handleCancel() {
+		resolvePromise(null);
+		closeDialog();
+	}
+
+	function closeDialog() {
+		dialogRef?.close();
+		editingTrigger = null;
+	}
+</script>
+
+{#if editingTrigger}
+<Dialog bind:dialogRef={dialogRef} title="Trigger" onclose={handleCancel}>
+	<form id="edit-manual-trigger-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
+		<div class="trigger-columns">
+			<!-- Column 1: Trigger Configuration -->
+			<div class="trigger-column">
+				<div class="dialog-input-group">
+					<label for="edit-trigger-input">Input:</label>
+					<select id="edit-trigger-input" bind:value={selectedInput}>
+						{#each availableInputs as input}
+							<option value={input.inputDeviceId + '_' + input.inputControlId}>
+								{input.name}
+							</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="dialog-input-group">
+					<label for="edit-trigger-type">Trigger Type:</label>
+					<select id="edit-trigger-type" bind:value={triggerType}>
+						{#each getTriggerTypeOptions() as type}
+							<option value={type.value}>{type.label}</option>
+						{/each}
+					</select>
+				</div>
+			</div>
+
+			<!-- Column 2: Device Configuration -->
+			<div class="trigger-column with-divider">
+				<div class="dialog-input-group">
+					<label for="edit-trigger-device">Device:</label>
+					<select id="edit-trigger-device" bind:value={selectedDevice}>
+						{#each devices as device}
+							<option value={device.id}>{device.name}</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="dialog-input-group">
+					<label for="edit-trigger-action-type">Action:</label>
+					<select id="edit-trigger-action-type" bind:value={actionType}>
+						{#each ACTION_TYPES as type}
+							<option value={type.value}>{type.label}</option>
+						{/each}
+					</select>
+				</div>
+			</div>
+
+			<!-- Column 3: Action Configuration -->
+			<div class="trigger-column">
+				<div class="trigger-card">
+					{#if actionType === 'animation'}
+						<div class="dialog-input-group">
+							<label for="edit-trigger-animation">Animation:</label>
+							<select id="edit-trigger-animation" bind:value={selectedAnimation}>
+								{#each availableAnimations as animation}
+									<option value={animation.cssName}>{animation.name}</option>
+								{/each}
+							</select>
+						</div>
+
+						<div class="dialog-input-group">
+							<label for="edit-trigger-duration">Duration (ms):</label>
+							<div class="duration-with-loop">
+								<input
+									id="edit-trigger-duration"
+									type="number"
+									bind:value={duration}
+									min="100"
+									step="100"
+									disabled={!selectedAnimation}
+								/>
+								<div class="checkbox-field">
+									<label>
+										<input
+											type="checkbox"
+											bind:checked={looping}
+											disabled={!selectedAnimation}
+										/>
+										Loop
+									</label>
+								</div>
+							</div>
+						</div>
+
+						<div class="dialog-input-group">
+							<label for="edit-trigger-easing">Easing:</label>
+							<select id="edit-trigger-easing" bind:value={easing} disabled={!selectedAnimation}>
+								{#each EASING_FUNCTIONS as easingFn}
+									<option value={easingFn}>{easingFn}</option>
+								{/each}
+							</select>
+						</div>
+					{:else if actionType === 'setValue' && selectedDevice}
+						{@const device = devices.find(d => d.id === selectedDevice)}
+						{#if device}
+							<div class="dialog-input-group">
+								<Controls
+									controls={DEVICE_TYPES[device.type].controls}
+									components={DEVICE_TYPES[device.type].components}
+									values={getValuesArrayForDevice()}
+									onChange={handleSetValueChange}
+									showCheckboxes={true}
+									bind:enabledControls={enabledControls}
+								/>
+							</div>
+						{/if}
+					{/if}
+				</div>
+			</div>
+		</div>
+	</form>
+
+	{#snippet tools()}
+		<Button onclick={confirmDelete} variant="secondary">
+			{@html removeIcon}
+			Delete
+		</Button>
+	{/snippet}
+
+	{#snippet buttons()}
+		<Button onclick={handleCancel} variant="secondary">Cancel</Button>
+		<Button type="submit" form="edit-manual-trigger-form" variant="primary">Save</Button>
+	{/snippet}
+</Dialog>
+{/if}
+
+<style>
+	.trigger-columns {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 20px;
+		min-width: 900px;
+	}
+
+	.trigger-column {
+		display: flex;
+		flex-direction: column;
+		gap: 15px;
+	}
+
+	.trigger-column.with-divider {
+		border-left: 1px solid #ddd;
+		padding-left: 20px;
+	}
+
+	.trigger-card {
+		background: #f6f6f6;
+		padding: 15px;
+		border-radius: 6px;
+	}
+
+	.duration-with-loop {
+		display: flex;
+		gap: 10px;
+		align-items: center;
+	}
+
+	.duration-with-loop input[type="number"] {
+		flex: 1;
+	}
+
+	.checkbox-field label {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		font-size: 10pt;
+		cursor: pointer;
+	}
+</style>
