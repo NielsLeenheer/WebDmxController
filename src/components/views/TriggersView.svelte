@@ -260,6 +260,7 @@
             trigger.easing = result.easing;
             trigger.iterations = result.looping ? 'infinite' : 1;
             trigger.name = `always_${result.animation}`;
+            trigger.version = (trigger.version || 0) + 1;
 
             mappingLibrary.save();
             refreshData();
@@ -327,6 +328,7 @@
             trigger.easing = result.easing;
             trigger.iterations = result.looping ? 'infinite' : 1;
             trigger.cssClassName = cssClassName;
+            trigger.version = (trigger.version || 0) + 1;
 
             mappingLibrary.save();
             refreshData();
@@ -636,7 +638,7 @@
                 <p>No triggers created yet. Click Add Trigger to create one!</p>
             </div>
         {:else}
-            {#each triggers as trigger, index (trigger.id)}
+            {#each triggers as trigger, index (`${trigger.id}-${trigger.version}`)}
                 <div
                     class="trigger-card"
                     class:dragging={draggedTrigger?.id === trigger.id}
