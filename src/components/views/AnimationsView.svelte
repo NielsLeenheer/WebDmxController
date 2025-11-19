@@ -21,9 +21,6 @@
     let addAnimationDialog;
     let editAnimationDialog;
 
-    // Animation version for forcing re-renders
-    let animationVersion = $state(0);
-
     // Drag and drop state
     let draggedAnimation = $state(null);
     let draggedIndex = $state(null);
@@ -239,12 +236,14 @@
         // Handle save
         animation.name = result.name;
         animation.updateCSSName();
+        animation.version = (animation.version || 0) + 1;
         animationLibrary.save();
         refreshAnimationsList();
     }
 
-    function handleAnimationUpdate() {
-        animationVersion++;
+    function handleAnimationUpdate(animation) {
+        animation.version = (animation.version || 0) + 1;
+        animationLibrary.save();
     }
 
     // Generate preview gradient for animation
@@ -331,7 +330,7 @@
                 <p>No animations yet. Create one to get started!</p>
             </div>
         {:else}
-            {#each animationsList as animation, index (animation.name)}
+            {#each animationsList as animation, index (`${animation.name}-${animation.version}`)}
                 <div
                     class="animation-card"
                     class:dragging={draggedAnimation?.name === animation.name}
@@ -368,8 +367,7 @@
                     <TimelineEditor
                         {animation}
                         {animationLibrary}
-                        {animationVersion}
-                        onUpdate={handleAnimationUpdate}
+                        onUpdate={() => handleAnimationUpdate(animation)}
                     />
                 </div>
             {/each}
