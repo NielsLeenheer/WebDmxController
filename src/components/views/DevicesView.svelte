@@ -9,6 +9,7 @@
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Preview from '../common/Preview.svelte';
+    import EditDeviceDialog from '../dialogs/EditDeviceDialog.svelte';
 
     import editIcon from '../../assets/glyphs/edit.svg?raw';
     import linkedIcon from '../../assets/icons/linked.svg?raw';
@@ -19,15 +20,8 @@
     // Device type selection
     let selectedType = $state('RGB');
 
-    // Settings dialog state
-    let settingsDialog = null; // DOM reference - should NOT be $state
-    let customizeControlsDialog = null; // DOM reference - should NOT be $state
-    let editingDevice = $state(null);
-    let dialogName = $state('');
-    let dialogChannel = $state(1);
-    let selectedLinkTarget = $state(null);
-    let selectedSyncControls = $state(null); // Array of control names, or null for all
-    let mirrorPan = $state(false);
+    // Dialog reference
+    let editDeviceDialog;
 
     // Drag and drop state
     let draggedDevice = $state(null);
@@ -163,95 +157,48 @@
         isAfterMidpoint = false;
     }
 
-    function openSettingsDialog(device) {
-        editingDevice = device;
-        dialogName = device.name;
-        dialogChannel = device.startChannel + 1;
-        selectedLinkTarget = device.linkedTo || null;
-        selectedSyncControls = device.syncedControls || null;
-        mirrorPan = device.mirrorPan || false;
+    async function openSettingsDialog(device) {
+        const result = await editDeviceDialog.open(device, devices);
 
-        // Wait for Dialog to mount before showing
-        requestAnimationFrame(() => {
-            settingsDialog?.showModal();
-        });
-    }
+        if (!result) return; // User cancelled
 
-    function closeSettingsDialog() {
-        settingsDialog?.close();
-        editingDevice = null;
-        dialogName = '';
-        selectedLinkTarget = null;
-        selectedSyncControls = null;
-        mirrorPan = false;
-    }
-
-    function openCustomizeControlsDialog() {
-        customizeControlsDialog?.showModal();
-    }
-
-    function closeCustomizeControlsDialog() {
-        customizeControlsDialog?.close();
-    }
-
-    function confirmRemoveDevice() {
-        if (!editingDevice) return;
-
-        if (confirm(`Are you sure you want to remove "${editingDevice.name}"?`)) {
-            removeDevice(editingDevice.id);
-            closeSettingsDialog();
-        }
-    }
-
-    // Generate CSS ID preview from current dialog name
-    function getPreviewCssId() {
-        const name = dialogName.trim() || editingDevice?.name || '';
-        return name
-            .toLowerCase()
-            .replace(/[^a-z0-9]/g, '_')
-            .replace(/_+/g, '_')
-            .replace(/^_|_$/g, '');
-    }
-
-    function saveDeviceSettings() {
-        if (!editingDevice) return;
-
-        // Validate channel
-        if (!isChannelValid(editingDevice, dialogChannel - 1)) {
+        if (result.delete) {
+            // Handle delete
+            removeDevice(device.id);
             return;
         }
 
-        const newStartChannel = Math.max(0, Math.min(511, dialogChannel - 1));
-        const newName = dialogName.trim() || editingDevice.name;
+        // Handle save
+        const newStartChannel = result.startChannel;
+        const newName = result.name;
 
         // Only preserve cssId if name hasn't changed, otherwise regenerate
-        const preserveCssId = newName === editingDevice.name ? editingDevice.cssId : null;
+        const preserveCssId = newName === device.name ? device.cssId : null;
 
         // Create new Device instance with all updated properties
-        // If not linking, clear sync controls and mirror pan
         const updatedDevice = new Device(
-            editingDevice.id,
-            editingDevice.type,
+            device.id,
+            device.type,
             newStartChannel,
             newName,
-            selectedLinkTarget,
+            result.linkedTo,
             preserveCssId,
-            selectedLinkTarget !== null ? selectedSyncControls : null,
-            selectedLinkTarget !== null ? mirrorPan : false
+            result.syncedControls,
+            result.mirrorPan
         );
-        updatedDevice.defaultValues = [...editingDevice.defaultValues];
+        updatedDevice.defaultValues = [...device.defaultValues];
 
         // If linking, apply values from source device
-        if (selectedLinkTarget !== null) {
-            const sourceDevice = devices.find(d => d.id === selectedLinkTarget);
+        if (result.linkedTo !== null) {
+            const sourceDevice = devices.find(d => d.id === result.linkedTo);
             if (sourceDevice) {
                 const newValues = applyLinkedValues(
                     sourceDevice.type,
                     updatedDevice.type,
                     sourceDevice.defaultValues,
                     updatedDevice.defaultValues,
-                    selectedSyncControls,
-                    mirrorPan
+                    result.syncedControls,
+                    result.mirrorPan
                 );
                 updatedDevice.defaultValues = newValues;
             }
@@ -266,33 +213,7 @@
         }
 
         // Update devices array
-        devices = devices.map(d => d.id === editingDevice.id ? updatedDevice : d);
-
-        closeSettingsDialog();
-    }
-
-    function isChannelValid(device, startChannel0indexed) {
-        const deviceChannels = DEVICE_TYPES[device.type].channels;
-        const endChannel = startChannel0indexed + deviceChannels;
-
-        // Check if device would exceed channel 512
-        if (endChannel > 512 || startChannel0indexed < 0) return false;
-
-        // Check for overlaps with other devices
-        for (let otherDevice of devices) {
-            if (otherDevice.id === device.id) continue;
-
-            const otherChannels = DEVICE_TYPES[otherDevice.type].channels;
-            const otherStart = otherDevice.startChannel;
-            const otherEnd = otherStart + otherChannels;
-
-            // Check if ranges overlap
-            if (startChannel0indexed < otherEnd && endChannel > otherStart) {
-                return false;
-            }
-        }
-
-        return true;
+        devices = devices.map(d => d.id === device.id ? updatedDevice : d);
     }
 
     // Load initial state from localStorage
@@ -509,15 +430,6 @@
         });
     }
 
-    function getLinkableDevices(device) {
-        return devices.filter(d =>
-            d.id !== device.id &&
-            !d.isLinked() && // Can't link to a device that's already linked
-            canLinkDevices(device.type, d.type) &&
-            d.linkedTo !== device.id // Don't allow circular links
-        );
-    }
-
     function getDisabledChannels(device) {
         if (!device.linkedTo) return [];
 
@@ -525,46 +437,6 @@
         if (!sourceDevice) return [];
 
         return getMappedChannels(sourceDevice.type, device.type, device.syncedControls);
-    }
-
-    // Get available sync controls for current link target
-    function getAvailableControlsForLink() {
-        if (!selectedLinkTarget || !editingDevice) return [];
-
-        const sourceDevice = devices.find(d => d.id === selectedLinkTarget);
-        if (!sourceDevice) return [];
-
-        return getAvailableSyncControls(sourceDevice.type, editingDevice.type);
-    }
-
-    // Toggle a sync control selection
-    function toggleSyncControl(controlName) {
-        if (selectedSyncControls === null) {
-            // If currently syncing all, create array with all except this one
-            const available = getAvailableControlsForLink();
-            selectedSyncControls = available
-                .map(c => c.controlName)
-                .filter(name => name !== controlName);
-        } else if (selectedSyncControls.includes(controlName)) {
-            // Remove from array
-            selectedSyncControls = selectedSyncControls.filter(name => name !== controlName);
-            // If all controls are deselected, set to empty array (none synced)
-        } else {
-            // Add to array
-            selectedSyncControls = [...selectedSyncControls, controlName];
-        }
-    }
-
-    // Check if a control is currently selected for syncing
-    function isSyncControlSelected(controlName) {
-        if (selectedSyncControls === null) return true; // All controls selected
-        return selectedSyncControls.includes(controlName);
-    }
-
-    // Check if Pan/Tilt control is available for current link
-    function isPanTiltControlAvailable() {
-        const available = getAvailableControlsForLink();
-        return available.some(c => c.controlName === 'Pan/Tilt');
     }
 
     // Restore all device values to DMX controller on load (only when controller changes, not on devices updates)
@@ -673,129 +545,10 @@
         {/each}
     </div>
 
-{#if editingDevice}
-<Dialog
-    bind:dialogRef={settingsDialog}
-    title="Device"
-    onclose={closeSettingsDialog}
->
-    <form id="device-settings-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveDeviceSettings(); }}>
-        <div class="dialog-input-group">
-            <label for="name-input">Name:</label>
-            <input
-                id="name-input"
-                type="text"
-                bind:value={dialogName}
-                placeholder="Device name"
-            />
-
-            <div class="css-identifiers">
-                <code class="css-identifier">#{getPreviewCssId()}</code>
-            </div>
-        </div>
-
-        <div class="dialog-input-group">
-            <label for="channel-input">Starting channel (1-512):</label>
-            <div>
-                <input
-                    id="channel-input"
-                    type="number"
-                    min="1"
-                    max="512"
-                    bind:value={dialogChannel}
-                    class:valid={isChannelValid(editingDevice, dialogChannel - 1)}
-                    class:invalid={!isChannelValid(editingDevice, dialogChannel - 1)}
-                />
-                <small class="channel-range">
-                    Device uses {DEVICE_TYPES[editingDevice.type].channels} channels:
-                    {dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1}
-                </small>
-            </div>
-        </div>
-
-        <div class="dialog-input-group">
-            <label for="link-select">Link to device:</label>
-            {#if getLinkableDevices(editingDevice).length > 0 || editingDevice.isLinked()}
-                <div class="link-select-row">
-                    <select id="link-select" bind:value={selectedLinkTarget}>
-                        <option value={null}>None</option>
-                        {#each getLinkableDevices(editingDevice) as linkableDevice}
-                            <option value={linkableDevice.id}>
-                                {linkableDevice.name} ({DEVICE_TYPES[linkableDevice.type].name})
-                            </option>
-                        {/each}
-                    </select>
-                    {#if selectedLinkTarget !== null}
-                        <Button onclick={openCustomizeControlsDialog} variant="secondary">
-                            Customize
-                        </Button>
-                    {/if}
-                </div>
-            {:else}
-                <p class="no-devices">No compatible devices available to link</p>
-            {/if}
-        </div>
-    </form>
-
-    {#snippet tools()}
-        <Button onclick={confirmRemoveDevice} variant="secondary">
-            {@html removeIcon}
-            Delete
-        </Button>
-    {/snippet}
-
-    {#snippet buttons()}
-        <Button onclick={closeSettingsDialog} variant="secondary">Cancel</Button>
-        <Button
-            type="submit"
-            form="device-settings-form"
-            variant="primary"
-            disabled={!isChannelValid(editingDevice, dialogChannel - 1)}
-        >
-            Save
-        </Button>
-    {/snippet}
-</Dialog>
-{/if}
-
-<Dialog
-    bind:dialogRef={customizeControlsDialog}
-    title="Synced controls"
-    onclose={closeCustomizeControlsDialog}
->
-    <div class="customize-controls-content">
-        <p class="dialog-description">Select which controls to sync from the linked device:</p>
-        <div class="sync-controls-vertical">
-            {#each getAvailableControlsForLink() as control}
-                <div class="sync-control-row">
-                    <label class="sync-control-item">
-                        <input
-                            type="checkbox"
-                            checked={isSyncControlSelected(control.controlName)}
-                            onchange={() => toggleSyncControl(control.controlName)}
-                        />
-                        <span>{control.controlName}</span>
-                    </label>
-                    {#if control.controlName === 'Pan/Tilt'}
-                        <label class="mirror-option">
-                            — 
-                            <input
-                                type="checkbox"
-                                bind:checked={mirrorPan}
-                                disabled={!isSyncControlSelected('Pan/Tilt')}
-                            />
-                            <span>Mirror</span>
-                        </label>
-                    {/if}
-                </div>
-            {/each}
-        </div>
-    </div>
-
-    {#snippet buttons()}
-        <Button onclick={closeCustomizeControlsDialog} variant="primary">Done</Button>
-    {/snippet}
-</Dialog>
+<!-- Edit Device Dialog -->
+<EditDeviceDialog
+    bind:this={editDeviceDialog}
+/>
 </div>
 
 <style>
@@ -899,122 +652,5 @@
 
     .device-header :global(.icon-button) {
         margin-left: auto;
-    }
-
-    /* Dialog-specific overrides */
-    .dialog-input-group input[type="number"] {
-        width: 10ch;
-    }
-
-    .no-devices {
-        margin: 0;
-        padding: 12px;
-        background: #f5f5f5;
-        border-radius: 4px;
-        color: #999;
-        text-align: center;
-        font-size: 10pt;
-    }
-
-    .sync-controls-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        padding: 12px;
-        background: #f9f9f9;
-        border-radius: 4px;
-        border: 1px solid #e0e0e0;
-    }
-
-    .sync-control-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        cursor: pointer;
-        user-select: none;
-    }
-
-    .sync-control-item input[type="checkbox"] {
-        cursor: pointer;
-        width: 16px;
-        height: 16px;
-    }
-
-    .sync-control-item span {
-        font-size: 10pt;
-        color: #333;
-    }
-
-    .checkbox-label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-        user-select: none;
-        padding: 8px 0;
-    }
-
-    .checkbox-label input[type="checkbox"] {
-        cursor: pointer;
-        width: 16px;
-        height: 16px;
-    }
-
-    .checkbox-label span {
-        font-size: 10pt;
-        color: #333;
-    }
-
-    .link-select-row {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .link-select-row select {
-        width: 200px;
-    }
-
-    .customize-controls-content {
-        min-width: 400px;
-    }
-
-    .dialog-description {
-        margin: 0 0 16px 0;
-        font-size: 10pt;
-        color: #666;
-    }
-
-    .sync-controls-vertical {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .sync-control-row {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-    }
-
-    .mirror-option {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        cursor: pointer;
-        user-select: none;
-        font-size: 9pt;
-        color: #666;
-    }
-
-    .mirror-option input[type="checkbox"]:disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-    }
-
-    .mirror-option input[type="checkbox"] {
-        cursor: pointer;
-        width: 14px;
-        height: 14px;
     }
 </style>
