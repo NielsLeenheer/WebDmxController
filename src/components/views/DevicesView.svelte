@@ -14,7 +14,7 @@
     import linkedIcon from '../../assets/icons/linked.svg?raw';
     import removeIcon from '../../assets/icons/remove.svg?raw';
 
-    let { dmxController, devices = $bindable([]) } = $props();
+    let { dmxController, devices = $bindable([]), isActive = false } = $props();
 
     // Device type selection
     let selectedType = $state('RGB');
@@ -571,6 +571,18 @@
     $effect(() => {
         if (dmxController) {
             // Use untrack to prevent this effect from re-running when devices array changes
+            untrack(() => {
+                devices.forEach(device => {
+                    updateDeviceToDMX(device);
+                });
+            });
+        }
+    });
+
+    // Re-output default device values when Devices tab becomes active
+    // This ensures default values are restored when switching from other tabs
+    $effect(() => {
+        if (isActive && dmxController) {
             untrack(() => {
                 devices.forEach(device => {
                     updateDeviceToDMX(device);
