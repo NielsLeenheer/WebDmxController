@@ -1,7 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { Input } from '../../lib/inputs.js';
-    import { paletteColorToHex, getUnusedFromPalette } from '../../lib/inputs/colors.js';
+    import { paletteColorToHex, getUnusedFromPalette, getPalette } from '../../lib/inputs/colors.js';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Preview from '../common/Preview.svelte';
