@@ -13,7 +13,6 @@
 
     let {
         animationLibrary,
-        cssGenerator,
         devices = []
     } = $props();
 

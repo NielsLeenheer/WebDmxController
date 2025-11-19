@@ -1,38 +1,26 @@
 <script>
-    import { onMount, onDestroy } from 'svelte';
+    import { onMount } from 'svelte';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import { convertChannelsToArray } from '../../lib/outputs/devices.js';
     import Preview from '../common/Preview.svelte';
 
     let {
+        cssManager,
         devices = [],
         animationLibrary,
-        mappingLibrary,
-        cssGenerator,
-        styleElement,
-        sampledCSSValues
+        mappingLibrary
     } = $props();
 
-    // Separate generated and custom CSS
-    let generatedCSS = $state('');
-    let customCSS = $state('');
-
-    // Load custom CSS from localStorage
-    function loadCustomCSS() {
-        const saved = localStorage.getItem('dmx-custom-css');
-        return saved || '/* Add your custom CSS here to override device defaults and apply animations */\n';
-    }
-
-    // Regenerate generated CSS from current state
-    function regenerateCSS() {
-        generatedCSS = cssGenerator.generate(devices);
-    }
-
+    // Preview state
     let previewColors = $state({});
     let deviceOpacities = $state({});
     let devicePanTilt = $state({});
     let deviceFlamethrower = $state({});
     let deviceSmoke = $state({});
+
+    // Get CSS from manager
+    let generatedCSS = $derived(cssManager?.generatedCSS || '');
+    let customCSS = $derived(cssManager?.customCSS || '');
 
     // Get animations for display
     let animations = $derived(
@@ -57,29 +45,32 @@
         // Read the content from the contenteditable element
         const newContent = event.target.textContent;
 
-        // Update custom CSS
-        customCSS = newContent;
-        localStorage.setItem('dmx-custom-css', newContent);
-
-        // Update the combined style element
-        updateStyleElement();
-    }
-
-    function updateStyleElement() {
-        if (styleElement) {
-            // Combine generated CSS and custom CSS, wrap in @scope
-            const combinedCSS = generatedCSS + '\n\n' + customCSS;
-            styleElement.textContent = `@scope (.animation-targets) {\n${combinedCSS}\n}`;
+        // Update custom CSS via manager
+        if (cssManager) {
+            cssManager.updateCustomCSS(newContent);
         }
     }
 
-    // Watch for sampled CSS values and update previews
-    // This runs whenever the sampling loop in App.svelte updates sampledCSSValues
+    // Subscribe to CSS sampling updates
+    // This effect subscribes to the cssManager and updates previews when sampled values change
     $effect(() => {
-        if (!sampledCSSValues) return;
+        if (!cssManager) return;
+
+        // Subscribe to sampled values
+        const unsubscribe = cssManager.subscribe((sampledValues) => {
+            updatePreviews(sampledValues);
+        });
+
+        // Cleanup subscription on destroy or when cssManager changes
+        return unsubscribe;
+    });
+
+    // Update preview colors from sampled CSS values
+    function updatePreviews(sampledValues) {
+        if (!sampledValues) return;
 
         devices.forEach(device => {
-            const channels = sampledCSSValues.get(device.id);
+            const channels = sampledValues.get(device.id);
 
             // SMOKE and FLAMETHROWER always have opacity 1 (they handle their own effects internally)
             if (device.type === 'SMOKE' || device.type === 'FLAMETHROWER') {
@@ -134,37 +125,24 @@
                 };
             }
         });
-    });
-
-    // Regenerate CSS when mappings or animations change
-    function handleMappingChange() {
-        allMappings = mappingLibrary.getAll();
-        regenerateCSS();
-        updateStyleElement();
     }
 
-    function handleAnimationChange() {
-        regenerateCSS();
-        updateStyleElement();
+    // Update mappings list when library changes
+    function handleMappingChange() {
+        allMappings = mappingLibrary.getAll();
     }
 
     onMount(() => {
-        // Listen for mapping and animation changes to update CSS automatically
+        // Listen for mapping changes to update the mappings list
         mappingLibrary.on('changed', handleMappingChange);
-        animationLibrary.on('changed', handleAnimationChange);
 
         // Initialize mappings list
         allMappings = mappingLibrary.getAll();
 
-        // Initialize CSS
-        customCSS = loadCustomCSS();
-        regenerateCSS();
-
-        // Set initial content in the editors
-        if (customCSSEditor) {
-            customCSSEditor.textContent = customCSS;
+        // Set initial content in the custom CSS editor
+        if (customCSSEditor && cssManager) {
+            customCSSEditor.textContent = cssManager.customCSS;
         }
-        updateStyleElement();
 
         // Initialize preview colors based on default values
         devices.forEach(device => {
@@ -177,27 +155,10 @@
                 };
             }
         });
-    });
 
-    // Watch for device changes and regenerate CSS
-    $effect(() => {
-        if (devices) {
-            regenerateCSS();
-            updateStyleElement();
-        }
-    });
-
-    // Watch for styleElement to become available and update it
-    // This handles the case where styleElement is created after CSSView mounts
-    $effect(() => {
-        if (styleElement && (generatedCSS || customCSS)) {
-            updateStyleElement();
-        }
-    });
-
-    onDestroy(() => {
-        mappingLibrary.off('changed', handleMappingChange);
-        animationLibrary.off('changed', handleAnimationChange);
+        return () => {
+            mappingLibrary.off('changed', handleMappingChange);
+        };
     });
 </script>
 
