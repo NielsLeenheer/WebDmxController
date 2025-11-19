@@ -1,7 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
 
-    let { dmxController } = $props();
+    let { dmxController, isActive = false } = $props();
 
     let universe = $state(new Array(512).fill(0));
     let updateInterval;
@@ -21,6 +21,16 @@
     onDestroy(() => {
         if (updateInterval) {
             clearInterval(updateInterval);
+        }
+    });
+
+    // Re-output universe values when Universe tab becomes active
+    // This ensures universe values are restored when switching from other tabs
+    $effect(() => {
+        if (isActive && dmxController) {
+            universe.forEach((value, channel) => {
+                dmxController.setChannel(channel, value);
+            });
         }
     });
 

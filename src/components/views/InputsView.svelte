@@ -2,7 +2,7 @@
     import { onMount, onDestroy } from 'svelte';
     import { InputMapping } from '../../lib/mappings.js';
     import { paletteColorToHex, getPalette, getUnusedFromPalette } from '../../lib/inputs/colors.js';
-    import { toCSSIdentifier } from '../../lib/cssUtils.js';
+    import { toCSSIdentifier } from '../../lib/css/utils.js';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Dialog from '../common/Dialog.svelte';

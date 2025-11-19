@@ -1,9 +1,10 @@
 <script>
+    import { onMount, onDestroy } from 'svelte';
     import { DMXController } from './lib/outputs/dmx.js';
-    import { DEVICE_TYPES } from './lib/outputs/devices.js';
+    import { convertChannelsToArray } from './lib/outputs/devices.js';
     import { AnimationLibrary } from './lib/animations.js';
     import { MappingLibrary, TriggerManager } from './lib/mappings.js';
-    import { CSSGenerator, CSSSampler, CustomPropertyManager } from './lib/cssEngine.js';
+    import { CustomPropertyManager, CSSManager } from './lib/css/index.js';
     import { InputController } from './lib/inputController.js';
     import Header from './components/layout/Header.svelte';
     import Tabs from './components/layout/Tabs.svelte';
@@ -20,14 +21,16 @@
     let devicesViewRef = $state(null);
     let devices = $state([]);
 
-    // New reactive systems
+    // Reactive systems
     let animationLibrary = $state(new AnimationLibrary());
     let mappingLibrary = $state(new MappingLibrary());
     let triggerManager = $state(new TriggerManager());
     let customPropertyManager = $state(new CustomPropertyManager());
-    let cssSampler = $state(new CSSSampler());
-    let cssGenerator = $state(new CSSGenerator(animationLibrary, mappingLibrary));
     let inputController = $state(new InputController(mappingLibrary, customPropertyManager, triggerManager));
+
+    // CSS Manager - handles all CSS sampling and DOM management
+    let cssManager = $state(null);
+    let mainElement;
 
     // Initialize input controller
     $effect(() => {
@@ -57,6 +60,52 @@
             devicesViewRef.clearAllDeviceValues();
         }
     }
+
+    // Handle sampled CSS values from CSSManager
+    // This callback is called every frame with the latest sampled values
+    function handleSampledValues(sampledValues) {
+        // Only update DMX hardware when NOT on Devices or Universe tab
+        // Those tabs handle their own DMX output
+        if (!dmxController || view === 'devices' || view === 'universe') {
+            return;
+        }
+
+        devices.forEach(device => {
+            const channels = sampledValues.get(device.id);
+            if (!channels) return;
+
+            // Convert sampled channels to device channel array based on device type
+            const newValues = convertChannelsToArray(device.type, channels);
+
+            // Update DMX hardware
+            for (let i = 0; i < newValues.length; i++) {
+                const channel = device.startChannel + i;
+                dmxController.setChannel(channel, newValues[i]);
+            }
+        });
+    }
+
+    onMount(() => {
+        // Create CSS Manager
+        cssManager = new CSSManager(animationLibrary, mappingLibrary, triggerManager);
+        cssManager.initialize(mainElement);
+
+        // Subscribe to sampled values for DMX output
+        const unsubscribe = cssManager.subscribe(handleSampledValues);
+
+        // Return cleanup function
+        return () => {
+            unsubscribe();
+            cssManager.destroy();
+        };
+    });
+
+    // Watch for device changes and update CSS manager
+    $effect(() => {
+        if (cssManager && devices) {
+            cssManager.updateDevices(devices);
+        }
+    });
 </script>
 
 <Header
@@ -66,7 +115,7 @@
     {inputController}
 />
 
-<main>
+<main bind:this={mainElement}>
     <Tabs
         bind:view
         onClearUniverse={handleClearUniverse}
@@ -77,17 +126,17 @@
             {dmxController}
             bind:this={devicesViewRef}
             bind:devices
+            isActive={view === 'devices'}
         />
     </div>
 
     <div class="view-container" class:hidden={view !== 'universe'}>
-        <UniverseView {dmxController} />
+        <UniverseView {dmxController} isActive={view === 'universe'} />
     </div>
 
     <div class="view-container" class:hidden={view !== 'animations'}>
         <AnimationsView
             {animationLibrary}
-            {cssGenerator}
             {devices}
         />
     </div>
@@ -109,15 +158,10 @@
 
     <div class="view-container" class:hidden={view !== 'css'}>
         <CSSView
-            {dmxController}
+            {cssManager}
             {devices}
             {animationLibrary}
             {mappingLibrary}
-            {cssGenerator}
-            {cssSampler}
-            {triggerManager}
-            {customPropertyManager}
-            isActive={view === 'css'}
         />
     </div>
 </main>

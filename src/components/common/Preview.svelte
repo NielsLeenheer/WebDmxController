@@ -23,6 +23,23 @@
     // Determine the CSS class based on size
     const sizeClass = $derived(`preview-${size}`);
 
+    // Reorder controls for proper visual stacking
+    // Flamethrower: fuel layer must render before safety layer so safety appears on top
+    const orderedControls = $derived.by(() => {
+        const safetyIndex = controls.indexOf('safety');
+        const fuelIndex = controls.indexOf('fuel');
+
+        // If both safety and fuel exist, and safety comes first, swap them
+        if (safetyIndex !== -1 && fuelIndex !== -1 && safetyIndex < fuelIndex) {
+            const reordered = [...controls];
+            reordered[safetyIndex] = 'fuel';
+            reordered[fuelIndex] = 'safety';
+            return reordered;
+        }
+
+        return controls;
+    });
+
     // Calculate 3D transform from Euler angles
     const transform3D = $derived(() => {
         if (!euler) return '';
@@ -72,7 +89,7 @@
 
     {#if type === 'device'}
         <!-- Stack device controls in order -->
-        {#each controls as control}
+        {#each orderedControls as control}
             {#if control === 'color'}
                 <div 
                     class="control-layer control-color" 
