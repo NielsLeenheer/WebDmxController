@@ -50,21 +50,8 @@
 			editingColor = input.color;
 
 			// Compute whether to show color picker
-			const device = inputController?.getInputDevice(input.inputDeviceId);
-			showColorPicker = shouldAssignColor(device, input.inputControlId);
-
-			// Debug: check what devices are available
-			const allDevices = inputController?.getInputDevices() || [];
-			console.log('EditInputDialog.open:', {
-				inputDeviceId: input.inputDeviceId,
-				inputControlId: input.inputControlId,
-				device: device,
-				deviceType: device?.type,
-				deviceId: device?.id,
-				showColorPicker: showColorPicker,
-				availableDevices: allDevices.map(d => ({ id: d.id, name: d.name, type: d.type })),
-				inputControllerExists: !!inputController
-			});
+			// Check based on control ID, not device presence (device might be disconnected)
+			showColorPicker = isColorCapableControl(input.inputControlId);
 
 			requestAnimationFrame(() => {
 				dialogRef?.showModal();
