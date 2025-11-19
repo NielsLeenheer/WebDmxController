@@ -8,6 +8,7 @@
  * - Publishes sampled values to subscribers
  */
 
+import './properties.css';
 import { CSSGenerator } from './CSSGenerator.js';
 import { CSSSampler } from './CSSSampler.js';
 
@@ -23,7 +24,6 @@ export class CSSManager {
 		// DOM elements
 		this.animationTargetsContainer = null;
 		this.triggerClassesContainer = null;
-		this.propertyDefsElement = null;
 		this.styleElement = null;
 
 		// CSS content
@@ -72,49 +72,6 @@ export class CSSManager {
 		if (this.triggerManager) {
 			this.triggerManager.setContainer(this.triggerClassesContainer);
 		}
-
-		// Create @property definitions style element
-		this.propertyDefsElement = document.createElement('style');
-		this.propertyDefsElement.id = 'css-property-definitions';
-		this.propertyDefsElement.textContent = `
-/* CSS Custom Property Definitions */
-@property --safety {
-  syntax: "none | probably";
-  inherits: false;
-  initial-value: none;
-}
-
-@property --fuel {
-  syntax: "<percentage>";
-  inherits: false;
-  initial-value: 0%;
-}
-
-@property --smoke {
-  syntax: "<percentage>";
-  inherits: false;
-  initial-value: 0%;
-}
-
-@property --pan {
-  syntax: "<percentage>";
-  inherits: false;
-  initial-value: 0%;
-}
-
-@property --tilt {
-  syntax: "<percentage>";
-  inherits: false;
-  initial-value: 0%;
-}
-
-@property --amber {
-  syntax: "<percentage>";
-  inherits: false;
-  initial-value: 0%;
-}
-`;
-		document.head.appendChild(this.propertyDefsElement);
 
 		// Create style element for animations/mappings/custom CSS
 		this.styleElement = document.createElement('style');
@@ -272,10 +229,6 @@ export class CSSManager {
 
 		if (this.styleElement && this.styleElement.parentNode) {
 			this.styleElement.parentNode.removeChild(this.styleElement);
-		}
-
-		if (this.propertyDefsElement && this.propertyDefsElement.parentNode) {
-			this.propertyDefsElement.parentNode.removeChild(this.propertyDefsElement);
 		}
 
 		// Clear subscribers
