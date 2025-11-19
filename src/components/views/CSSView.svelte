@@ -10,7 +10,7 @@
         mappingLibrary,
         cssGenerator,
         styleElement,
-        cssSampler
+        sampledCSSValues
     } = $props();
 
     // Separate generated and custom CSS
@@ -33,7 +33,6 @@
     let devicePanTilt = $state({});
     let deviceFlamethrower = $state({});
     let deviceSmoke = $state({});
-    let previewAnimationFrameId;
 
     // Get animations for display
     let animations = $derived(
@@ -74,15 +73,13 @@
         }
     }
 
-    // Update preview from CSS sampling
-    function updatePreviewFromCSS() {
-        if (!cssSampler) return;
-
-        // Sample CSS values for preview updates
-        const sampledValues = cssSampler.sampleAll(devices);
+    // Watch for sampled CSS values and update previews
+    // This runs whenever the sampling loop in App.svelte updates sampledCSSValues
+    $effect(() => {
+        if (!sampledCSSValues) return;
 
         devices.forEach(device => {
-            const channels = sampledValues.get(device.id);
+            const channels = sampledCSSValues.get(device.id);
 
             // SMOKE and FLAMETHROWER always have opacity 1 (they handle their own effects internally)
             if (device.type === 'SMOKE' || device.type === 'FLAMETHROWER') {
@@ -137,10 +134,7 @@
                 };
             }
         });
-
-        // Continue preview animation loop
-        previewAnimationFrameId = requestAnimationFrame(updatePreviewFromCSS);
-    }
+    });
 
     // Regenerate CSS when mappings or animations change
     function handleMappingChange() {
@@ -183,11 +177,6 @@
                 };
             }
         });
-
-        // Start preview animation loop
-        if (!previewAnimationFrameId && cssSampler) {
-            updatePreviewFromCSS();
-        }
     });
 
     // Watch for device changes and regenerate CSS
@@ -207,12 +196,6 @@
     });
 
     onDestroy(() => {
-        // Stop preview animation loop
-        if (previewAnimationFrameId) {
-            cancelAnimationFrame(previewAnimationFrameId);
-            previewAnimationFrameId = null;
-        }
-
         mappingLibrary.off('changed', handleMappingChange);
         animationLibrary.off('changed', handleAnimationChange);
     });

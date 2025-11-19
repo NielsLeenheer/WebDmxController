@@ -36,6 +36,9 @@
     let styleElement = $state(null);
     let animationFrameId;
 
+    // Sampled CSS values - shared with CSSView for previews
+    let sampledCSSValues = $state(new Map());
+
     // Initialize input controller
     $effect(() => {
         inputController.initialize();
@@ -69,8 +72,11 @@
     function updateDMXFromCSS() {
         if (!cssSampler) return;
 
-        // Sample CSS values for all devices
+        // Sample CSS values for all devices (ONCE per frame)
         const sampledValues = cssSampler.sampleAll(devices);
+
+        // Store sampled values for CSSView previews
+        sampledCSSValues = sampledValues;
 
         devices.forEach(device => {
             const channels = sampledValues.get(device.id);
@@ -257,7 +263,7 @@
             {mappingLibrary}
             {cssGenerator}
             {styleElement}
-            {cssSampler}
+            {sampledCSSValues}
         />
     </div>
 </main>
