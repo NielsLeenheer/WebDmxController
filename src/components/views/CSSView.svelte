@@ -33,9 +33,6 @@
     // Get all mappings for display (trigger and direct modes)
     let allMappings = $state([]);
 
-    // CSS editor reference
-    let customCSSEditor;
-
     function handleCustomCSSInput(event) {
         // Read the content from the contenteditable element
         const newContent = event.target.textContent;
@@ -83,11 +80,6 @@
 
         // Initialize mappings list
         allMappings = mappingLibrary.getAll();
-
-        // Set initial content in the custom CSS editor
-        if (customCSSEditor && cssManager) {
-            customCSSEditor.textContent = cssManager.customCSS;
-        }
 
         return () => {
             mappingLibrary.off('changed', handleMappingChange);
@@ -172,8 +164,7 @@
                 contenteditable="plaintext-only"
                 oninput={handleCustomCSSInput}
                 spellcheck="false"
-                bind:this={customCSSEditor}
-            ></pre>
+            >{customCSS}</pre>
         </div>
     </div>
 </div>
