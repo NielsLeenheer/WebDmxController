@@ -365,11 +365,8 @@
                 mapping.buttonMode = result.buttonMode;
             }
 
-            // Update color if it changed and device supports colors
-            if (result.color !== oldColor && shouldAssignColor(
-                inputController.getInputDevice(mapping.inputDeviceId),
-                mapping.inputControlId
-            )) {
+            // Update color if it changed and control is color-capable
+            if (result.color !== oldColor && isColorCapableControl(mapping.inputControlId)) {
                 // Release old color usage
                 if (oldColor) {
                     releaseColorUsage(mapping.inputDeviceId, mapping.inputControlId, oldColor);
@@ -383,7 +380,7 @@
                     registerColorUsage(mapping.inputDeviceId, mapping.inputControlId, result.color);
                 }
 
-                // Update color on hardware
+                // Update color on hardware (only if device is connected)
                 const inputDevice = inputController.getInputDevice(mapping.inputDeviceId);
                 if (inputDevice && result.color) {
                     // For toggle buttons, respect current state
