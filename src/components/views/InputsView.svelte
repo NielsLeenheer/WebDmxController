@@ -424,8 +424,10 @@
 
     function refreshInputs() {
         // Only show input-mode mappings
+        // Create fresh object instances to ensure Svelte detects changes
         savedInputs = mappingLibrary.getAll()
-            .filter(m => m.mode === 'input');
+            .filter(m => m.mode === 'input')
+            .map(m => InputMapping.fromJSON(m.toJSON()));
 
         // Initialize input states for all inputs
         for (const input of savedInputs) {

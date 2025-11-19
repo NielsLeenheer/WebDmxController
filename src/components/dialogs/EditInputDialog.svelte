@@ -33,6 +33,15 @@
 	let editingButtonMode = $state('momentary');
 	let editingColor = $state(null);
 
+	// Computed: whether this input supports colors
+	let showColorPicker = $derived(
+		editingInput &&
+		shouldAssignColor(
+			inputController?.getInputDevice(editingInput.inputDeviceId),
+			editingInput.inputControlId
+		)
+	);
+
 	/**
 	 * Open the dialog with an input mapping
 	 * @param {InputMapping} input - The input mapping to edit
@@ -161,7 +170,7 @@
 			</div>
 		{/if}
 
-		{#if editingInput && shouldAssignColor(inputController.getInputDevice(editingInput.inputDeviceId), editingInput.inputControlId)}
+		{#if showColorPicker}
 			<div class="dialog-input-group">
 				<label for="input-color">Color:</label>
 				<select id="input-color" bind:value={editingColor}>
