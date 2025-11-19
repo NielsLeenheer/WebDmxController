@@ -273,12 +273,10 @@
 
             if (supportsColor) {
                 registerColorUsage(deviceId, controlId, input.color);
-            }
 
-            // Set color on hardware for devices that support it
-            if (supportsColor) {
-                device.setColor(controlId, input.color).catch(err => {
-                    console.warn(`Could not set button color:`, err);
+                // Refresh all colors on the device to show assigned vs unassigned buttons
+                applyColorsToDevices().catch(err => {
+                    console.warn(`Could not apply colors to devices:`, err);
                 });
             }
         }
@@ -400,17 +398,14 @@
         const input = inputLibrary.get(inputId);
         if (!input) return;
 
-        // Release color usage for this device before clearing hardware
+        // Release color usage for this device
         releaseColorUsage(input.inputDeviceId, input.inputControlId, input.color);
-
-        // Clear button color on hardware
-        const inputDevice = inputController.getInputDevice(input.inputDeviceId);
-        if (inputDevice && isColorCapableControl(input.inputControlId)) {
-            await inputDevice.setColor(input.inputControlId, 'off');
-        }
 
         inputLibrary.remove(inputId);
         refreshInputs();
+
+        // Refresh all colors on devices to update unassigned buttons
+        await applyColorsToDevices();
     }
 
     function refreshInputs() {
@@ -436,20 +431,60 @@
     }
 
     async function applyColorsToDevices() {
-        // Apply colors to all buttons that have saved inputs
-        for (const input of savedInputs) {
-            const inputDevice = inputController.getInputDevice(input.inputDeviceId);
-            if (!inputDevice || !input.color || !isColorCapableControl(input.inputControlId)) continue;
+        // Get all connected devices
+        const devices = inputController.getInputDevices();
 
-            // For toggle buttons, respect the current toggle state
-            let color = input.color;
-            if (input.isButtonInput() && input.buttonMode === 'toggle') {
-                const state = inputStates[input.id];
-                color = (state?.state === 'on') ? input.color : 'black';
+        for (const device of devices) {
+            // Only apply to devices that support colors
+            if (!deviceSupportsColors(device)) continue;
+
+            // For MIDI devices with profiles, get all pads and set colors
+            if (device.type === 'midi' && device.profile && device.profile.padNotes) {
+                // Build a map of assigned controls for this device
+                const assignedControls = new Map();
+                for (const input of savedInputs) {
+                    if (input.inputDeviceId === device.id && input.color) {
+                        assignedControls.set(input.inputControlId, input);
+                    }
+                }
+
+                // Set color for each pad
+                for (const note of device.profile.padNotes) {
+                    const controlId = `note-${note}`;
+                    const input = assignedControls.get(controlId);
+
+                    if (input) {
+                        // Set assigned color
+                        let color = input.color;
+
+                        // For toggle buttons, respect the current toggle state
+                        if (input.isButtonInput() && input.buttonMode === 'toggle') {
+                            const state = inputStates[input.id];
+                            color = (state?.state === 'on') ? input.color : 'black';
+                        }
+
+                        await device.setColor(controlId, color);
+                    } else {
+                        // Set unassigned buttons to black
+                        await device.setColor(controlId, 'black');
+                    }
+                }
+            } else {
+                // For other devices (HID, Bluetooth), apply colors only to saved inputs
+                for (const input of savedInputs) {
+                    if (input.inputDeviceId !== device.id) continue;
+                    if (!input.color || !isColorCapableControl(input.inputControlId)) continue;
+
+                    // For toggle buttons, respect the current toggle state
+                    let color = input.color;
+                    if (input.isButtonInput() && input.buttonMode === 'toggle') {
+                        const state = inputStates[input.id];
+                        color = (state?.state === 'on') ? input.color : 'black';
+                    }
+
+                    await device.setColor(input.inputControlId, color);
+                }
             }
-
-            // Use generic setColor method for all device types
-            await inputDevice.setColor(input.inputControlId, color);
         }
     }
 
