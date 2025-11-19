@@ -8,7 +8,6 @@
 import { InputDeviceManager } from './inputs/manager.js';
 import { InputMapping, MappingLibrary, TriggerManager } from './mappings.js';
 import { CustomPropertyManager } from './cssEngine.js';
-import { getInputColorCSS } from './inputs/colors.js';
 import { toCSSIdentifier } from './cssUtils.js';
 
 export class InputController {
@@ -35,23 +34,20 @@ export class InputController {
 
 		// Listen for mapping changes to initialize pressure for new mappings
 		this.mappingLibrary.on('changed', ({ type, mapping }) => {
-			if (type === 'add' && mapping.mode === 'input' && mapping.name && mapping.isButtonInput()) {
-				this.customPropertyManager.setProperty(`${toCSSIdentifier(mapping.name)}-pressure`, '0.0%');
-			}
+		if (type === 'add' && mapping.mode === 'input' && mapping.name && mapping.isButtonInput()) {
+			this.customPropertyManager.setProperty(`${toCSSIdentifier(mapping.name)}-pressure`, '0.0%');
+		}
 
-			// Update Thingy LED color when mapping color changes
-			if (type === 'update' && mapping.mode === 'input') {
-				const device = this.inputDeviceManager.getInputDevices().find(
-					d => d.id === mapping.inputDeviceId && d.type === 'bluetooth' && d.thingyDevice
-				);
-				if (device && mapping.color) {
-					const colorCSS = getInputColorCSS(mapping.color);
-					device.thingyDevice.setLEDColor(colorCSS);
-				}
-			}
-		});
-
-		// IMPORTANT: Set up device listeners BEFORE initializing devices
+		// Update Thingy LED color when mapping color changes
+		if (type === 'update' && mapping.mode === 'input') {
+		const device = this.inputDeviceManager.getInputDevices().find(
+			d => d.id === mapping.inputDeviceId && d.type === 'bluetooth' && d.thingyDevice
+		);
+		if (device && mapping.color) {
+			device.thingyDevice.setDeviceColor(mapping.color);
+		}
+	}
+});		// IMPORTANT: Set up device listeners BEFORE initializing devices
 		// Otherwise auto-reconnected devices won't have their listeners attached
 		this.inputDeviceManager.on('deviceadded', (device) => {
 			this._setupDeviceListeners(device);
@@ -194,21 +190,18 @@ export class InputController {
 				inputControlId: 'button',
 				inputDeviceName: device.name,
 				buttonMode: 'momentary', // Default to momentary, user can change to toggle
-				color: null // Color can be set to control the Thingy LED
-			});
+			color: null // Color can be set to control the Thingy LED
+		});
 
-			this.mappingLibrary.add(mapping);
-		} else if (existingMappings.length > 0) {
-			// If mapping exists with a color, set the LED
-			const mapping = existingMappings[0];
-			if (mapping.color) {
-				const colorCSS = getInputColorCSS(mapping.color);
-				device.thingyDevice.setLEDColor(colorCSS);
-			}
+		this.mappingLibrary.add(mapping);
+	} else if (existingMappings.length > 0) {
+		// If mapping exists with a color, set the LED
+		const mapping = existingMappings[0];
+		if (mapping.color) {
+			device.thingyDevice.setDeviceColor(mapping.color);
 		}
 	}
-
-	/**
+}	/**
 	 * Generate CSS class name from control ID
 	 */
 	_generateClassName(controlId, suffix) {
@@ -421,39 +414,27 @@ export class InputController {
 	}
 
 	/**
-	 * Create virtual input device
-	 */
-	createVirtualDevice(name) {
-		return this.inputDeviceManager.createVirtual(name);
-	}
-
-	/**
-	 * Set button color on a MIDI device
+	 * Set color on an input device control (generic for all device types)
 	 * @param {string} deviceId - Device ID
-	 * @param {string} controlId - Control ID (e.g., "note-36")
-	 * @param {string|number} color - Color name or velocity value
+	 * @param {string} controlId - Control ID (e.g., "note-36", "button-0")
+	 * @param {string} color - Palette color name
 	 */
-	setButtonColor(deviceId, controlId, color) {
+	async setButtonColor(deviceId, controlId, color) {
 		const device = this.inputDeviceManager.getDevice(deviceId);
-		if (device && device.type === 'midi' && device.setButtonColor) {
-			// Extract note number from control ID (e.g., "note-36" -> 36)
-			const noteMatch = controlId.match(/note-(\d+)/);
-			if (noteMatch) {
-				const noteNumber = parseInt(noteMatch[1]);
-				device.setButtonColor(noteNumber, color);
-			}
+		if (device && device.setColor) {
+			await device.setColor(controlId, color);
 		}
 	}
 
 	/**
 	 * Set button color by input mapping
 	 * @param {string} mappingId - Mapping ID or name
-	 * @param {string|number} color - Color name or velocity value
+	 * @param {string} color - Palette color name
 	 */
-	setButtonColorByMapping(mappingId, color) {
+	async setButtonColorByMapping(mappingId, color) {
 		const mapping = this.mappingLibrary.get(mappingId);
 		if (mapping && mapping.inputDeviceId && mapping.inputControlId) {
-			this.setButtonColor(mapping.inputDeviceId, mapping.inputControlId, color);
+			await this.setButtonColor(mapping.inputDeviceId, mapping.inputControlId, color);
 		}
 	}
 

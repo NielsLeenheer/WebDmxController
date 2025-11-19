@@ -9,12 +9,12 @@ import { StreamDeckManager, isStreamDeck } from './streamdeck.js';
 import { MIDIDeviceProfileManager } from './midi.js';
 import { Thingy52Manager } from './thingy52.js';
 import { 
-	InputDevice, 
-	MIDIInputDevice, 
-	HIDInputDevice, 
-	BluetoothInputDevice, 
+	InputDevice,
 	KeyboardInputDevice, 
-	VirtualInputDevice 
+	MIDIInputDevice, 
+	HIDInputDevice,
+	StreamDeckInputDevice,
+	ThingyInputDevice, 
 } from './devices.js';
 
 /**
@@ -39,11 +39,9 @@ export class InputDeviceManager {
 		this.streamDeckManager.on('connected', ({ device, model, serialNumber }) => {
 			console.log(`Stream Deck connected: ${model}`);
 
-			// Create InputDevice wrapper immediately when Stream Deck connects
-			const deviceId = serialNumber;
-			const inputDevice = new InputDevice(deviceId, model || 'Stream Deck', 'hid');
-			inputDevice.streamDeck = device; // Store reference to the StreamDeck instance
-			this.devices.set(deviceId, inputDevice);
+			// Create StreamDeckInputDevice wrapper with manager reference
+			const inputDevice = new StreamDeckInputDevice(device, serialNumber, model, this.streamDeckManager);
+			this.devices.set(serialNumber, inputDevice);
 			this._emit('deviceadded', inputDevice);
 		});
 
@@ -81,8 +79,8 @@ export class InputDeviceManager {
 		this.thingy52Manager.on('connected', ({ device }) => {
 			console.log(`Thingy:52 connected: ${device.name}`);
 
-			// Create BluetoothInputDevice wrapper
-			const inputDevice = new BluetoothInputDevice(device);
+			// Create ThingyInputDevice wrapper
+			const inputDevice = new ThingyInputDevice(device);
 			this.devices.set(device.id, inputDevice);
 			this._emit('deviceadded', inputDevice);
 		});
@@ -267,16 +265,6 @@ export class InputDeviceManager {
 			this._emit('deviceadded', this.keyboardDevice);
 		}
 		return this.keyboardDevice;
-	}
-
-	/**
-	 * Create virtual input device
-	 */
-	createVirtual(name) {
-		const device = new VirtualInputDevice(name);
-		this.devices.set(device.id, device);
-		this._emit('deviceadded', device);
-		return device;
 	}
 
 	/**

@@ -87,4 +87,14 @@ export class InputDevice {
 	getControlIds() {
 		return Array.from(this.controls.keys());
 	}
+
+	/**
+	 * Set color for a control (button/pad/LED)
+	 * Override in subclasses to implement device-specific color handling
+	 * @param {string} controlId - Control identifier (e.g., 'button-0', 'note-36')
+	 * @param {string} color - Palette color name
+	 */
+	async setColor(controlId, color) {
+		// Base implementation does nothing - override in subclasses
+	}
 }

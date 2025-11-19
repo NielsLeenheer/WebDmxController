@@ -10,12 +10,6 @@ import { DEVICE_TYPES } from './outputs/devices.js';
 import { generateCSSProperties } from './controlCssMapping.js';
 import { toCSSIdentifier } from './cssUtils.js';
 
-export const INPUT_COLOR_PALETTE = [
-	'red', 'orange', 'yellow', 'lime', 'green', 'spring',
-	'turquoise', 'cyan', 'sky', 'blue', 'violet', 'purple',
-	'magenta', 'pink'
-];
-
 /**
  * Represents a single input-to-output mapping
  */
@@ -31,12 +25,7 @@ export class InputMapping {
 		this.inputDeviceName = config.inputDeviceName || null; // Store device name for display
 
 		// Visual color for the input (shown in UI and on hardware)
-		// undefined = generate random, null = no color support, string = use that color
-		if (!('color' in config) || config.color === undefined) {
-			this.color = this._generateRandomColor();
-		} else {
-			this.color = config.color; // Could be null or an actual color string
-		}
+		this.color = config.color;
 
 		// Trigger mode settings
 		this.triggerType = config.triggerType || 'pressed'; // 'pressed', 'not-pressed', 'always'
@@ -98,14 +87,6 @@ export class InputMapping {
 			this.cssClassOff = null;
 			this.cssProperty = null;
 		}
-	}
-
-	/**
-	 * Generate a random named color
-	 * Named colors work across all devices (MIDI, Stream Deck)
-	 */
-	_generateRandomColor() {
-		return INPUT_COLOR_PALETTE[Math.floor(Math.random() * INPUT_COLOR_PALETTE.length)];
 	}
 
 	/**

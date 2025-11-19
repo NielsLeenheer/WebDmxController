@@ -8,7 +8,6 @@
 // Import device profiles
 import { MIDIDeviceProfile } from './midi/MIDIDeviceProfile.js';
 import { APCMiniMK2Profile } from './midi/APCMiniMK2Profile.js';
-import { AkaiLPD8Profile } from './midi/AkaiLPD8Profile.js';
 import { AkaiLPD8MK2Profile } from './midi/AkaiLPD8MK2Profile.js';
 import { DonnerStarrypadProfile } from './midi/DonnerStarrypadProfile.js';
 
@@ -20,8 +19,7 @@ export class MIDIDeviceProfileManager {
 	constructor() {
 		this.profiles = [
 			new APCMiniMK2Profile(),
-			new AkaiLPD8MK2Profile(), // Check MK2 first before falling back to original LPD8
-			new AkaiLPD8Profile(),
+			new AkaiLPD8MK2Profile(),
 			new DonnerStarrypadProfile()
 		];
 	}

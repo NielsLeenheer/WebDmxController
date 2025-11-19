@@ -5,6 +5,7 @@
  */
 
 import { requestStreamDecks, getStreamDecks } from '@elgato-stream-deck/webhid';
+import { paletteColorToRGB } from './colors.js';
 
 /**
  * Check if a HID device is a Stream Deck
@@ -239,54 +240,29 @@ export class StreamDeckManager {
 			return false;
 		}
 
-		// Validate button index is within range for this device
-		const buttonCount = streamDeck.NUM_KEYS || 15;
-		if (buttonIndex < 0 || buttonIndex >= buttonCount) {
-			// Button index out of range for this device
-			return false;
-		}
-
-		try {
-			// Parse color to RGB
-			const rgb = this._parseColor(color);
-			if (!rgb) return false;
-
-			// Use the library's fillKeyColor method
-			await streamDeck.fillKeyColor(buttonIndex, rgb.r, rgb.g, rgb.b);
-			return true;
-		} catch (error) {
-			console.error(`Failed to set button ${buttonIndex} color on ${serialNumber}:`, error);
-			return false;
-		}
+	// Validate button index is within range for this device
+	const buttonCount = streamDeck.NUM_KEYS || 15;
+	if (buttonIndex < 0 || buttonIndex >= buttonCount) {
+		// Button index out of range for this device
+		return false;
 	}
 
-	/**
+	try {
+		// Get RGB from palette color name
+		const rgb = paletteColorToRGB(color);
+
+		// Use the library's fillKeyColor method
+		await streamDeck.fillKeyColor(buttonIndex, rgb.r, rgb.g, rgb.b);
+		return true;
+	} catch (error) {
+		console.error(`Failed to set button ${buttonIndex} color on ${serialNumber}:`, error);
+		return false;
+	}
+}	/**
 	 * Clear button color (set to black) on a Stream Deck device
 	 */
 	async clearButtonColor(serialNumber, buttonIndex) {
-		return await this.setButtonColor(serialNumber, buttonIndex, '#000000');
-	}
-
-	/**
-	 * Parse CSS color string to RGB object
-	 */
-	_parseColor(colorStr) {
-		// Create temporary element to compute color
-		const div = document.createElement('div');
-		div.style.color = colorStr;
-		document.body.appendChild(div);
-		const computed = window.getComputedStyle(div).color;
-		document.body.removeChild(div);
-
-		// Parse rgb(r, g, b) or rgba(r, g, b, a)
-		const match = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-		if (!match) return null;
-
-		return {
-			r: parseInt(match[1]),
-			g: parseInt(match[2]),
-			b: parseInt(match[3])
-		};
+		return await this.setButtonColor(serialNumber, buttonIndex, 'off');
 	}
 
 	/**

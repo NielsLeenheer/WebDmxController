@@ -6,7 +6,6 @@ export class MIDIDeviceProfile {
 		this.name = name;
 		this.patterns = patterns; // Array of regex patterns to match device names
 		this.colorMap = this._getColorMap();
-		this.colorUpdateMode = this._getColorUpdateMode(); // 'note' | 'sysex'
 	}
 
 	/**
@@ -18,63 +17,28 @@ export class MIDIDeviceProfile {
 	}
 
 	/**
+	 * Convert palette color name to MIDI command
+	 * Override in subclasses for device-specific behavior
+	 * @param {string} color - Palette color name
+	 * @param {number} [button] - Button/note number (optional, used by SysEx devices)
+	 * @returns {{ type: 'note'|'sysex', value: number|Uint8Array, note?: number, channel?: number }}
+	 */
+	paletteColorToCommand(color, button) {
+		// Default implementation: use note velocity
+		return {
+			type: 'note',
+			value: this.colorToVelocity(color)
+		};
+	}
+
+	/**
 	 * Convert color to velocity value
 	 */
 	colorToVelocity(color) {
 		if (typeof color === 'number') return Math.max(0, Math.min(127, color));
 
-		const velocity = this.colorMap[color.toLowerCase()];
+		const velocity = this.colorMap[color];
 		return velocity !== undefined ? velocity : 0;
-	}
-
-	/**
-	 * Convert color to RGB (override for RGB/SysEx devices)
-	 */
-	colorToRGB(color) {
-		if (!color) {
-			return { r: 0, g: 0, b: 0 };
-		}
-
-		if (typeof color === 'object' && color !== null) {
-			return {
-				r: Math.max(0, Math.min(127, color.r || 0)),
-				g: Math.max(0, Math.min(127, color.g || 0)),
-				b: Math.max(0, Math.min(127, color.b || 0))
-			};
-		}
-
-		// Default implementation only supports named colors in colorMap
-		const velocity = this.colorToVelocity(color);
-		return {
-			r: velocity,
-			g: velocity,
-			b: velocity
-		};
-	}
-
-	/**
-	 * Override to change how button colors should be sent
-	 */
-	_getColorUpdateMode() {
-		return 'note';
-	}
-
-	/**
-	 * Provide note/channel/velocity for devices that use NOTE ON velocity colors
-	 */
-	getNoteColor(button, color) {
-		return {
-			note: button,
-			velocity: this.colorToVelocity(color),
-			channel: 0
-		};
-	}
-
-	/**
-	 * Provide SysEx message for devices that need full RGB updates
-	 */
-	buildColorSysEx(/* buttonColors */) {
-		return null;
 	}
 
 	/**

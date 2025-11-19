@@ -1,9 +1,9 @@
 import { InputDevice } from './InputDevice.js';
 
 /**
- * Bluetooth Input Device (Thingy:52)
+ * Thingy:52 Input Device (Bluetooth)
  */
-export class BluetoothInputDevice extends InputDevice {
+export class ThingyInputDevice extends InputDevice {
 	constructor(thingyDevice) {
 		super(thingyDevice.id, thingyDevice.name, 'bluetooth');
 		this.thingyDevice = thingyDevice;
@@ -70,6 +70,17 @@ export class BluetoothInputDevice extends InputDevice {
 		this._setValue('compass-x', (x + 100) / 200, -100, 100);
 		this._setValue('compass-y', (y + 100) / 200, -100, 100);
 		this._setValue('compass-z', (z + 100) / 200, -100, 100);
+	}
+
+	/**
+	 * Set color for a control (button LED)
+	 * @param {string} controlId - Control identifier (should be 'button')
+	 * @param {string} color - Palette color name
+	 */
+	async setColor(controlId, color) {
+		if (controlId === 'button' && this.thingyDevice) {
+			await this.thingyDevice.setDeviceColor(color);
+		}
 	}
 
 	disconnect() {

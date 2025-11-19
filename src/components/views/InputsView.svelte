@@ -1,7 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
-    import { InputMapping, INPUT_COLOR_PALETTE } from '../../lib/mappings.js';
-    import { getInputColorCSS } from '../../lib/inputs/colors.js';
+    import { InputMapping } from '../../lib/mappings.js';
+    import { paletteColorToHex, getPalette, getUnusedFromPalette } from '../../lib/inputs/colors.js';
     import { toCSSIdentifier } from '../../lib/cssUtils.js';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
@@ -210,19 +210,18 @@
     let inputEventHandlers = [];
 
     function getNextAvailableColor(deviceId) {
-        const palette = INPUT_COLOR_PALETTE || [];
-        if (!palette.length) return undefined;
-
         const usedColors = deviceColorUsage.get(deviceId);
-        if (!usedColors || usedColors.size === 0) {
-            return palette[0];
+        const usedColorsArray = usedColors ? Array.from(usedColors) : [];
+        
+        // Try to get an unused color
+        const unusedColor = getUnusedFromPalette(usedColorsArray);
+        if (unusedColor) {
+            return unusedColor;
         }
 
-        for (const color of palette) {
-            if (!usedColors.has(color)) {
-                return color;
-            }
-        }
+        // All colors are used, cycle through the palette
+        const palette = getPalette();
+        if (!palette.length) return undefined;
 
         const lastIndex = deviceColorIndices.get(deviceId) ?? -1;
         const nextIndex = (lastIndex + 1) % palette.length;
@@ -290,26 +289,9 @@
 
             // Set color on hardware for devices that support it
             if (supportsColor) {
-                if (device.type === 'hid' && controlId.startsWith('button-')) {
-                    // Stream Deck button
-                    const buttonIndex = parseInt(controlId.replace('button-', ''));
-                    if (!isNaN(buttonIndex) && buttonIndex >= 0) {
-                        const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
-                        const serialNumber = deviceId;
-                        streamDeckManager.setButtonColor(serialNumber, buttonIndex, inputMapping.color).catch(err => {
-                            console.warn(`Could not set Stream Deck button ${buttonIndex} color:`, err);
-                        });
-                    }
-                } else if (device.type === 'midi' && controlId.startsWith('note-')) {
-                    // MIDI note/button
-                    const noteNumber = parseInt(controlId.replace('note-', ''));
-                    if (!isNaN(noteNumber) && noteNumber >= 0) {
-                        device.setButtonColor(noteNumber, inputMapping.color);
-                    }
-                } else if (device.type === 'bluetooth' && controlId === 'button' && device.thingyDevice) {
-                    // Thingy:52 button
-                    device.thingyDevice.setLEDColor(inputMapping.color);
-                }
+                device.setColor(controlId, inputMapping.color).catch(err => {
+                    console.warn(`Could not set button color:`, err);
+                });
             }
         }
     }
@@ -420,19 +402,8 @@
                         color = (state?.state === 'on') ? editingColor : 'black';
                     }
 
-                    if (inputDevice.type === 'hid' && inputDevice.id !== 'keyboard' && mapping.inputControlId.startsWith('button-')) {
-                        const buttonIndex = parseInt(mapping.inputControlId.replace('button-', ''));
-                        if (!isNaN(buttonIndex) && buttonIndex >= 0) {
-                            const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
-                            const serialNumber = mapping.inputDeviceId;
-                            await streamDeckManager.setButtonColor(serialNumber, buttonIndex, color);
-                        }
-                    } else if (inputDevice.type === 'midi' && mapping.inputControlId.startsWith('note-')) {
-                        const noteNumber = parseInt(mapping.inputControlId.replace('note-', ''));
-                        if (!isNaN(noteNumber) && noteNumber >= 0) {
-                            inputDevice.setButtonColor(noteNumber, color);
-                        }
-                    }
+                    // Use generic setColor method
+                    await inputDevice.setColor(mapping.inputControlId, color);
                 }
             }
 
@@ -469,31 +440,13 @@
         const input = mappingLibrary.get(inputId);
         if (!input) return;
 
-    // Release color usage for this device before clearing hardware
-    releaseColorUsage(input.inputDeviceId, input.inputControlId, input.color);
+        // Release color usage for this device before clearing hardware
+        releaseColorUsage(input.inputDeviceId, input.inputControlId, input.color);
 
-    // Clear button color on hardware
+        // Clear button color on hardware
         const inputDevice = inputController.getInputDevice(input.inputDeviceId);
-        if (inputDevice?.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
-            // Stream Deck button
-            const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
-            if (!isNaN(buttonIndex) && buttonIndex >= 0) {
-                const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
-                const serialNumber = input.inputDeviceId;
-                await streamDeckManager.clearButtonColor(serialNumber, buttonIndex);
-            }
-        } else if (inputDevice?.type === 'midi' && input.inputControlId.startsWith('note-')) {
-            // MIDI note/button
-            const noteNumber = parseInt(input.inputControlId.replace('note-', ''));
-            if (!isNaN(noteNumber) && noteNumber >= 0) {
-                if (typeof inputDevice.setButtonColor === 'function') {
-                    inputDevice.setButtonColor(noteNumber, 'off');
-                }
-                inputDevice.sendNoteOff(noteNumber);
-            }
-        } else if (inputDevice?.type === 'bluetooth' && input.inputControlId === 'button' && inputDevice.thingyDevice) {
-            // Thingy:52 button - turn off LED
-            await inputDevice.thingyDevice.setLEDColor('off');
+        if (inputDevice && isColorCapableControl(input.inputControlId)) {
+            await inputDevice.setColor(input.inputControlId, 'off');
         }
 
         mappingLibrary.remove(inputId);
@@ -535,24 +488,8 @@
                 color = (state?.state === 'on') ? input.color : 'black';
             }
 
-            if (inputDevice.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
-                // Stream Deck button
-                const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
-                if (!isNaN(buttonIndex) && buttonIndex >= 0) {
-                    const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
-                    const serialNumber = input.inputDeviceId;
-                    await streamDeckManager.setButtonColor(serialNumber, buttonIndex, color);
-                }
-            } else if (inputDevice.type === 'midi' && input.inputControlId.startsWith('note-')) {
-                // MIDI note/button
-                const noteNumber = parseInt(input.inputControlId.replace('note-', ''));
-                if (!isNaN(noteNumber) && noteNumber >= 0) {
-                    inputDevice.setButtonColor(noteNumber, color);
-                }
-            } else if (inputDevice.type === 'bluetooth' && input.inputControlId === 'button' && inputDevice.thingyDevice) {
-                // Thingy:52 button
-                await inputDevice.thingyDevice.setLEDColor(color);
-            }
+            // Use generic setColor method for all device types
+            await inputDevice.setColor(input.inputControlId, color);
         }
     }
 
@@ -563,24 +500,8 @@
 
         const color = isOn ? input.color : 'black';
 
-        if (inputDevice.type === 'hid' && inputDevice.id !== 'keyboard' && input.inputControlId.startsWith('button-')) {
-            // Stream Deck button
-            const buttonIndex = parseInt(input.inputControlId.replace('button-', ''));
-            if (!isNaN(buttonIndex) && buttonIndex >= 0) {
-                const streamDeckManager = inputController.inputDeviceManager.streamDeckManager;
-                const serialNumber = input.inputDeviceId;
-                await streamDeckManager.setButtonColor(serialNumber, buttonIndex, color);
-            }
-        } else if (inputDevice.type === 'midi' && input.inputControlId.startsWith('note-')) {
-            // MIDI note/button
-            const noteNumber = parseInt(input.inputControlId.replace('note-', ''));
-            if (!isNaN(noteNumber) && noteNumber >= 0) {
-                inputDevice.setButtonColor(noteNumber, color);
-            }
-        } else if (inputDevice.type === 'bluetooth' && input.inputControlId === 'button' && inputDevice.thingyDevice) {
-            // Thingy:52 button
-            await inputDevice.thingyDevice.setLEDColor(color);
-        }
+        // Use generic setColor method for all device types
+        await inputDevice.setColor(input.inputControlId, color);
     }
 
     onMount(() => {
@@ -706,7 +627,7 @@
                         <Preview
                             type="input"
                             size="medium"
-                            data={{ color: getInputColorCSS(input.color) }}
+                            data={{ color: paletteColorToHex(input.color) }}
                             euler={input.inputControlId === 'button' && thingyEulerAngles[input.inputDeviceId] ? thingyEulerAngles[input.inputDeviceId] : null}
                             class="input-color-badge"
                         />
@@ -802,14 +723,14 @@
             <div class="dialog-input-group">
                 <label for="input-color">Color:</label>
                 <select id="input-color" bind:value={editingColor}>
-                    {#each INPUT_COLOR_PALETTE as color}
+                    {#each getPalette() as color}
                         <option value={color}>{color.charAt(0).toUpperCase() + color.slice(1)}</option>
                     {/each}
                 </select>
                 <div class="color-preview-wrapper">
                     <div
                         class="color-preview-large"
-                        style="background-color: {getInputColorCSS(editingColor)}"
+                        style="background-color: {paletteColorToHex(editingColor)}"
                     ></div>
                 </div>
             </div>

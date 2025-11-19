@@ -2,7 +2,7 @@
     import { onMount, onDestroy } from 'svelte';
     import { InputMapping } from '../../lib/mappings.js';
     import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
-    import { getInputColorCSS } from '../../lib/inputs/colors.js';
+    import { paletteColorToHex } from '../../lib/inputs/colors.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import { toCSSIdentifier } from '../../lib/cssUtils.js';
     import Button from '../common/Button.svelte';
@@ -529,7 +529,7 @@
             i => i.inputDeviceId === trigger.inputDeviceId &&
                  i.inputControlId === trigger.inputControlId
         );
-        return input?.color ? getInputColorCSS(input.color) : '#888';
+        return input?.color ? paletteColorToHex(input.color) : '#888';
     }
 
     // Get input type label (On/Off/Up/Down)
