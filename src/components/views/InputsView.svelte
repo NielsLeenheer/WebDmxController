@@ -539,12 +539,6 @@
 
     onDestroy(() => {
         stopListening();
-        
-        // Clear all stability timers
-        for (const timerId of thingyStabilityTimers.values()) {
-            clearTimeout(timerId);
-        }
-        thingyStabilityTimers.clear();
     });
 </script>
 
