@@ -502,6 +502,14 @@
     onMount(() => {
         refreshInputs();
 
+        // Apply colors immediately after inputs are loaded
+        // Use a small delay to ensure devices are ready
+        setTimeout(() => {
+            applyColorsToDevices().catch(err => {
+                console.warn('Failed to apply colors on initial load:', err);
+            });
+        }, 100);
+
         // Listen for input changes (add/update/remove)
         inputLibrary.on('changed', ({ type, input }) => {
             // Refresh inputs for all change types to ensure UI updates
@@ -557,12 +565,13 @@
 
             if (device.type === 'hid' || device.type === 'midi') {
                 // Small delay to ensure device is fully initialized
-                setTimeout(() => applyColorsToDevices(), 500);
+                setTimeout(() => {
+                    applyColorsToDevices().catch(err => {
+                        console.warn('Failed to apply colors on device added:', err);
+                    });
+                }, 500);
             }
         });
-
-        // Apply colors on initial load
-        setTimeout(() => applyColorsToDevices(), 1000);
     });
 
     onDestroy(() => {
