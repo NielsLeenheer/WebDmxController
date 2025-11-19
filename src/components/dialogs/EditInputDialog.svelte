@@ -6,10 +6,10 @@
 	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
-	 * EditInputDialog - Promise-based dialog for editing input mappings
+	 * EditInputDialog - Promise-based dialog for editing inputs
 	 *
 	 * Usage:
-	 *   const result = await editDialog.open(inputMapping);
+	 *   const result = await editDialog.open(input);
 	 *   if (result) {
 	 *     if (result.delete) {
 	 *       // Handle delete
@@ -35,8 +35,8 @@
 	let showColorPicker = $state(false);
 
 	/**
-	 * Open the dialog with an input mapping
-	 * @param {InputMapping} input - The input mapping to edit
+	 * Open the dialog with an input
+	 * @param {Input} input - The input to edit
 	 * @returns {Promise<{name: string, buttonMode: string, color: string}|{delete: true}|null>}
 	 */
 	export function open(input) {

@@ -1,19 +1,20 @@
 /**
  * Input Controller
  *
- * Coordinates input devices, mappings, and CSS updates.
- * Handles both trigger and direct mode mappings.
+ * Coordinates input devices, inputs, triggers, and CSS updates.
  */
 
 import { InputDeviceManager } from './inputs/manager.js';
-import { InputMapping, MappingLibrary, TriggerManager } from './mappings.js';
+import { Input, InputLibrary } from './inputs.js';
+import { Trigger, TriggerLibrary } from './triggers.js';
+import { TriggerManager } from './mappings.js';
 import { CustomPropertyManager } from './css/index.js';
 import { toCSSIdentifier } from './css/utils.js';
 
 export class InputController {
-	constructor(mappingLibrary, customPropertyManager, triggerManager) {
+	constructor(inputLibrary, customPropertyManager, triggerManager) {
 		this.inputDeviceManager = new InputDeviceManager();
-		this.mappingLibrary = mappingLibrary || new MappingLibrary();
+		this.inputLibrary = inputLibrary || new InputLibrary();
 		this.customPropertyManager = customPropertyManager || new CustomPropertyManager();
 		this.triggerManager = triggerManager || new TriggerManager();
 
@@ -29,25 +30,25 @@ export class InputController {
 		// Initialize custom properties
 		this.customPropertyManager.initialize();
 
-		// Initialize pressure properties to 0% for all input mappings
+		// Initialize pressure properties to 0% for all inputs
 		this._initializePressureProperties();
 
-		// Listen for mapping changes to initialize pressure for new mappings
-		this.mappingLibrary.on('changed', ({ type, mapping }) => {
-		if (type === 'add' && mapping.mode === 'input' && mapping.name && mapping.isButtonInput()) {
-			this.customPropertyManager.setProperty(`${toCSSIdentifier(mapping.name)}-pressure`, '0.0%');
-		}
+		// Listen for input changes to initialize pressure for new inputs
+		this.inputLibrary.on('changed', ({ type, input }) => {
+			if (type === 'add' && input.name && input.isButtonInput()) {
+				this.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
+			}
 
-		// Update Thingy LED color when mapping color changes
-		if (type === 'update' && mapping.mode === 'input') {
-		const device = this.inputDeviceManager.getInputDevices().find(
-			d => d.id === mapping.inputDeviceId && d.type === 'bluetooth' && d.thingyDevice
-		);
-		if (device && mapping.color) {
-			device.thingyDevice.setDeviceColor(mapping.color);
-		}
-	}
-});		// IMPORTANT: Set up device listeners BEFORE initializing devices
+			// Update Thingy LED color when input color changes
+			if (type === 'update') {
+				const device = this.inputDeviceManager.getInputDevices().find(
+					d => d.id === input.inputDeviceId && d.type === 'bluetooth' && d.thingyDevice
+				);
+				if (device && input.color) {
+					device.thingyDevice.setDeviceColor(input.color);
+				}
+			}
+		});		// IMPORTANT: Set up device listeners BEFORE initializing devices
 		// Otherwise auto-reconnected devices won't have their listeners attached
 		this.inputDeviceManager.on('deviceadded', (device) => {
 			this._setupDeviceListeners(device);
@@ -175,33 +176,29 @@ export class InputController {
 			this.customPropertyManager.setProperty(propertyName, propertyValue);
 		});
 
-		// Auto-create a button InputMapping for the Thingy
-		// Check if mapping already exists
-		const existingMappings = this.mappingLibrary.getAll().filter(
-			m => m.inputDeviceId === device.id && m.inputControlId === 'button'
-		);
+		// Auto-create a button Input for the Thingy
+		// Check if input already exists
+		const existingInput = this.inputLibrary.findByDeviceControl(device.id, 'button');
 
-		if (existingMappings.length === 0) {
-			// Create button input mapping
-			const mapping = new InputMapping({
+		if (!existingInput) {
+			// Create button input
+			const input = new Input({
 				name: `${device.name} Button`,
-				mode: 'input',
 				inputDeviceId: device.id,
 				inputControlId: 'button',
 				inputDeviceName: device.name,
 				buttonMode: 'momentary', // Default to momentary, user can change to toggle
-			color: null // Color can be set to control the Thingy LED
-		});
+				color: null // Color can be set to control the Thingy LED
+			});
 
-		this.mappingLibrary.add(mapping);
-	} else if (existingMappings.length > 0) {
-		// If mapping exists with a color, set the LED
-		const mapping = existingMappings[0];
-		if (mapping.color) {
-			device.thingyDevice.setDeviceColor(mapping.color);
+			this.inputLibrary.add(input);
+		} else {
+			// If input exists with a color, set the LED
+			if (existingInput.color) {
+				device.thingyDevice.setDeviceColor(existingInput.color);
+			}
 		}
-	}
-}	/**
+	}	/**
 	 * Generate CSS class name from control ID
 	 */
 	_generateClassName(controlId, suffix) {
@@ -213,17 +210,14 @@ export class InputController {
 	 * Handle trigger event (button/note press)
 	 */
 	_handleTrigger(deviceId, controlId, velocity) {
-		// Find mappings for this input
-		const mappings = this.mappingLibrary.getByInput(deviceId, controlId);
+		// Find the input for this control
+		const input = this.inputLibrary.findByDeviceControl(deviceId, controlId);
 
-		// Only add CSS classes if this input has defined mappings
-		if (mappings.length > 0) {
-			// Find the input mapping (mode='input') for this control
-			const inputMapping = mappings.find(m => m.mode === 'input');
-
-			if (inputMapping && inputMapping.isButtonInput()) {
+		// Handle input CSS classes and properties
+		if (input) {
+			if (input.isButtonInput()) {
 				// Handle toggle vs momentary mode
-				const buttonMode = inputMapping.buttonMode || 'momentary';
+				const buttonMode = input.buttonMode || 'momentary';
 
 				if (buttonMode === 'toggle') {
 					// Toggle mode: flip state on each press
@@ -233,8 +227,8 @@ export class InputController {
 					this.toggleStates.set(toggleKey, newState);
 
 					// Apply on/off classes based on new state
-					const onClass = inputMapping.cssClassOn;
-					const offClass = inputMapping.cssClassOff;
+					const onClass = input.cssClassOn;
+					const offClass = input.cssClassOff;
 
 					if (newState) {
 						// Turned ON
@@ -247,134 +241,83 @@ export class InputController {
 					}
 
 					// Emit event for toggle state change
-					this._emit('input-trigger', { mapping: inputMapping, velocity, toggleState: newState });
+					this._emit('input-trigger', { mapping: input, velocity, toggleState: newState });
 				} else {
 					// Momentary mode: add down class, remove up class
-					const downClass = inputMapping.cssClassDown;
-					const upClass = inputMapping.cssClassUp;
+					const downClass = input.cssClassDown;
+					const upClass = input.cssClassUp;
 
 					if (downClass) this.triggerManager.addRawClass(downClass);
 					if (upClass) this.triggerManager.removeRawClass(upClass);
 
 					// Emit event for momentary button press
-					this._emit('input-trigger', { mapping: inputMapping, velocity });
+					this._emit('input-trigger', { mapping: input, velocity });
 				}
 
 				// Set velocity as custom property (for velocity-sensitive buttons)
-				if (inputMapping.name) {
+				if (input.name) {
 					// Velocity is already normalized to 0-1 by input devices
 					const normalizedVelocity = Math.max(0, Math.min(1, velocity));
 					const percentage = (normalizedVelocity * 100).toFixed(1);
-					this.customPropertyManager.setProperty(`${toCSSIdentifier(inputMapping.name)}-pressure`, `${percentage}%`);
-				}
-			}
-
-			for (const mapping of mappings) {
-				if (mapping.mode === 'trigger') {
-					// For toggle buttons, handle trigger state differently
-					if (inputMapping && inputMapping.buttonMode === 'toggle') {
-						// Get current toggle state
-						const toggleKey = `${deviceId}:${controlId}`;
-						const isOn = this.toggleStates.get(toggleKey) || false;
-
-						// Manually toggle the trigger CSS class
-						if (isOn) {
-							this.triggerManager.addRawClass(mapping.cssClassName);
-						} else {
-							this.triggerManager.removeRawClass(mapping.cssClassName);
-						}
-					} else {
-						// Momentary buttons use normal trigger/release cycle
-						this.triggerManager.trigger(mapping);
-					}
-					this._emit('trigger', { mapping, velocity });
+					this.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, `${percentage}%`);
 				}
 			}
 		}
+
+		// Find and execute triggers for this input
+		// Note: The TriggerManager will handle trigger execution based on CSS classes
+		// So we don't need to manually trigger them here - they are handled by the CSS system
 	}
 
 	/**
 	 * Handle release event (button/note release)
 	 */
 	_handleRelease(deviceId, controlId) {
-		// Find mappings for this input
-		const mappings = this.mappingLibrary.getByInput(deviceId, controlId);
+		// Find the input for this control
+		const input = this.inputLibrary.findByDeviceControl(deviceId, controlId);
 
-		// Only update CSS classes if this input has defined mappings
-		if (mappings.length > 0) {
-			// Find the input mapping (mode='input') for this control
-			const inputMapping = mappings.find(m => m.mode === 'input');
+		// Handle input CSS classes and properties
+		if (input && input.isButtonInput()) {
+			// Handle toggle vs momentary mode
+			const buttonMode = input.buttonMode || 'momentary';
 
-			if (inputMapping && inputMapping.isButtonInput()) {
-				// Handle toggle vs momentary mode
-				const buttonMode = inputMapping.buttonMode || 'momentary';
+			if (buttonMode === 'momentary') {
+				// Momentary mode: remove down class and add up class on release
+				const downClass = input.cssClassDown;
+				const upClass = input.cssClassUp;
 
-				if (buttonMode === 'momentary') {
-					// Momentary mode: remove down class and add up class on release
-					const downClass = inputMapping.cssClassDown;
-					const upClass = inputMapping.cssClassUp;
+				if (downClass) this.triggerManager.removeRawClass(downClass);
+				if (upClass) this.triggerManager.addRawClass(upClass);
 
-					if (downClass) this.triggerManager.removeRawClass(downClass);
-					if (upClass) this.triggerManager.addRawClass(upClass);
-
-					// Emit event for momentary button release
-					this._emit('input-release', { mapping: inputMapping });
-				}
-				// Toggle mode: do nothing on release (state was toggled on press)
-
-				// Reset pressure custom property to 0%
-				if (inputMapping.name) {
-					this.customPropertyManager.setProperty(`${toCSSIdentifier(inputMapping.name)}-pressure`, '0.0%');
-				}
+				// Emit event for momentary button release
+				this._emit('input-release', { mapping: input });
 			}
+			// Toggle mode: do nothing on release (state was toggled on press)
 
-			for (const mapping of mappings) {
-				if (mapping.mode === 'trigger') {
-					// For toggle buttons, don't call release (state was toggled on press)
-					if (inputMapping && inputMapping.buttonMode === 'toggle') {
-						// Toggle mode: do nothing on release for triggers
-						continue;
-					}
-
-					// Always triggers don't respond to release
-					if (mapping.triggerType !== 'always') {
-						this.triggerManager.release(mapping);
-						this._emit('release', { mapping });
-					}
-				}
+			// Reset pressure custom property to 0%
+			if (input.name) {
+				this.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
 			}
 		}
+
+		// Trigger releases are handled by the CSS system via TriggerManager
 	}
 
 	/**
 	 * Handle value change (knob/slider)
 	 */
 	_handleValueChange(deviceId, controlId, value) {
-		// Find mappings for this input
-		const mappings = this.mappingLibrary.getByInput(deviceId, controlId);
+		// Find the input for this control
+		const input = this.inputLibrary.findByDeviceControl(deviceId, controlId);
 
-		// Always set a custom property based on the input name (for use in CSS)
-		// Find the input mapping (mode='input') for this control
-		const inputMapping = mappings.find(m => m.mode === 'input');
-		if (inputMapping && inputMapping.name) {
+		// Set a custom property based on the input name (for use in CSS)
+		if (input && input.name) {
 			// Convert value (0-1) to percentage
 			const percentage = Math.round(value * 100);
-			this.customPropertyManager.setProperty(toCSSIdentifier(inputMapping.name), `${percentage}%`);
+			this.customPropertyManager.setProperty(toCSSIdentifier(input.name), `${percentage}%`);
 
 			// Emit event for input value change
-			this._emit('input-valuechange', { mapping: inputMapping, value });
-		}
-
-		// Process direct mode mappings
-		for (const mapping of mappings) {
-			if (mapping.mode === 'direct') {
-				// Update CSS custom property
-				const propertyName = mapping.getPropertyName();
-				const propertyValue = mapping.mapValue(value);
-
-				this.customPropertyManager.setProperty(propertyName, propertyValue);
-				this._emit('valuechange', { mapping, value, propertyValue });
-			}
+			this._emit('input-valuechange', { mapping: input, value });
 		}
 	}
 
@@ -427,14 +370,14 @@ export class InputController {
 	}
 
 	/**
-	 * Set button color by input mapping
-	 * @param {string} mappingId - Mapping ID or name
+	 * Set button color by input ID
+	 * @param {string} inputId - Input ID
 	 * @param {string} color - Palette color name
 	 */
-	async setButtonColorByMapping(mappingId, color) {
-		const mapping = this.mappingLibrary.get(mappingId);
-		if (mapping && mapping.inputDeviceId && mapping.inputControlId) {
-			await this.setButtonColor(mapping.inputDeviceId, mapping.inputControlId, color);
+	async setButtonColorByInput(inputId, color) {
+		const input = this.inputLibrary.get(inputId);
+		if (input && input.inputDeviceId && input.inputControlId) {
+			await this.setButtonColor(input.inputDeviceId, input.inputControlId, color);
 		}
 	}
 
@@ -455,17 +398,16 @@ export class InputController {
 	}
 
 	/**
-	 * Initialize pressure custom properties for all input mappings
+	 * Initialize pressure custom properties for all inputs
 	 * Sets all pressure properties to 0% as default
 	 */
 	_initializePressureProperties() {
-		const allMappings = this.mappingLibrary.getAll();
-		const inputMappings = allMappings.filter(m => m.mode === 'input');
+		const inputs = this.inputLibrary.getAll();
 
-		for (const mapping of inputMappings) {
-			if (mapping.name && mapping.isButtonInput()) {
+		for (const input of inputs) {
+			if (input.name && input.isButtonInput()) {
 				// Initialize to 0%
-				this.customPropertyManager.setProperty(`${toCSSIdentifier(mapping.name)}-pressure`, '0.0%');
+				this.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
 			}
 		}
 	}

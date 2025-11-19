@@ -1,6 +1,6 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
-    import { InputMapping } from '../../lib/mappings.js';
+    import { Input } from '../../lib/inputs.js';
     import { paletteColorToHex, getUnusedFromPalette } from '../../lib/inputs/colors.js';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
@@ -13,7 +13,7 @@
 
     let {
         inputController,
-        mappingLibrary
+        inputLibrary
     } = $props();
 
     let isListening = $state(false);
@@ -96,18 +96,13 @@
         newInputs.splice(finalInsertIndex, 0, removed);
         savedInputs = newInputs;
 
-        // Update the mapping library order
-        // Get all mappings and reorder them
-        const allMappings = mappingLibrary.getAll();
-        const inputMappings = newInputs;
-        const nonInputMappings = allMappings.filter(m => m.mode !== 'input');
-
-        // Clear and rebuild the library with new order
-        mappingLibrary.mappings.clear();
-        [...inputMappings, ...nonInputMappings].forEach(m => {
-            mappingLibrary.mappings.set(m.id, m);
+        // Update the input library order
+        // Clear and rebuild with new order
+        inputLibrary.inputs.clear();
+        newInputs.forEach(input => {
+            inputLibrary.inputs.set(input.id, input);
         });
-        mappingLibrary.save();
+        inputLibrary.save();
 
         draggedInput = null;
         draggedIndex = null;
@@ -265,25 +260,24 @@
             // Stream Deck (HID, not keyboard) and MIDI devices support colors
             const supportsColor = shouldAssignColor(device, controlId);
 
-            const inputMapping = new InputMapping({
+            const input = new Input({
                 name,
-                mode: 'input',  // Mark as input-only (not a trigger mapping)
                 inputDeviceId: deviceId,
                 inputControlId: controlId,
                 inputDeviceName: device?.name || deviceId, // Store device name for display
                 color: supportsColor ? getNextAvailableColor(deviceId) : null  // unique random color if supported
             });
 
-            mappingLibrary.add(inputMapping);
+            inputLibrary.add(input);
             refreshInputs();
 
             if (supportsColor) {
-                registerColorUsage(deviceId, controlId, inputMapping.color);
+                registerColorUsage(deviceId, controlId, input.color);
             }
 
             // Set color on hardware for devices that support it
             if (supportsColor) {
-                device.setColor(controlId, inputMapping.color).catch(err => {
+                device.setColor(controlId, input.color).catch(err => {
                     console.warn(`Could not set button color:`, err);
                 });
             }
@@ -355,55 +349,55 @@
         }
 
         // Handle save
-        const mapping = mappingLibrary.get(input.id);
-        if (mapping) {
-            const oldColor = mapping.color;
-            mapping.name = result.name;
+        const existingInput = inputLibrary.get(input.id);
+        if (existingInput) {
+            const oldColor = existingInput.color;
+            existingInput.name = result.name;
 
             // Update button mode for button inputs
-            if (mapping.mode === 'input' && mapping.isButtonInput()) {
-                mapping.buttonMode = result.buttonMode;
+            if (existingInput.isButtonInput()) {
+                existingInput.buttonMode = result.buttonMode;
             }
 
             // Update color if it changed and control is color-capable
-            if (result.color !== oldColor && isColorCapableControl(mapping.inputControlId)) {
+            if (result.color !== oldColor && isColorCapableControl(existingInput.inputControlId)) {
                 // Release old color usage
                 if (oldColor) {
-                    releaseColorUsage(mapping.inputDeviceId, mapping.inputControlId, oldColor);
+                    releaseColorUsage(existingInput.inputDeviceId, existingInput.inputControlId, oldColor);
                 }
 
                 // Update color
-                mapping.color = result.color;
+                existingInput.color = result.color;
 
                 // Register new color usage
                 if (result.color) {
-                    registerColorUsage(mapping.inputDeviceId, mapping.inputControlId, result.color);
+                    registerColorUsage(existingInput.inputDeviceId, existingInput.inputControlId, result.color);
                 }
 
                 // Update color on hardware (only if device is connected)
-                const inputDevice = inputController.getInputDevice(mapping.inputDeviceId);
+                const inputDevice = inputController.getInputDevice(existingInput.inputDeviceId);
                 if (inputDevice && result.color) {
                     // For toggle buttons, respect current state
                     let color = result.color;
-                    if (mapping.isButtonInput() && mapping.buttonMode === 'toggle') {
-                        const state = inputStates[mapping.id];
+                    if (existingInput.isButtonInput() && existingInput.buttonMode === 'toggle') {
+                        const state = inputStates[existingInput.id];
                         color = (state?.state === 'on') ? result.color : 'black';
                     }
 
                     // Use generic setColor method
-                    await inputDevice.setColor(mapping.inputControlId, color);
+                    await inputDevice.setColor(existingInput.inputControlId, color);
                 }
             }
 
             // Update CSS identifiers based on new name and button mode
-            mapping.updateCSSIdentifiers();
-            mappingLibrary.update(mapping);
+            existingInput.updateCSSIdentifiers();
+            inputLibrary.update(existingInput);
             // Note: refreshInputs() is called automatically by the 'changed' listener in onMount
         }
     }
 
     async function deleteInput(inputId) {
-        const input = mappingLibrary.get(inputId);
+        const input = inputLibrary.get(inputId);
         if (!input) return;
 
         // Release color usage for this device before clearing hardware
@@ -415,15 +409,14 @@
             await inputDevice.setColor(input.inputControlId, 'off');
         }
 
-        mappingLibrary.remove(inputId);
+        inputLibrary.remove(inputId);
         refreshInputs();
     }
 
     function refreshInputs() {
-        // Only show input-mode mappings
-        // Note: Mappings have a version property that increments on update for reactivity
-        savedInputs = mappingLibrary.getAll()
-            .filter(m => m.mode === 'input');
+        // Get all inputs from the library
+        // Note: Inputs have a version property that increments on update for reactivity
+        savedInputs = inputLibrary.getAll();
 
         // Initialize input states for all inputs
         for (const input of savedInputs) {
@@ -474,8 +467,8 @@
     onMount(() => {
         refreshInputs();
 
-        // Listen for mapping changes (add/update/remove)
-        mappingLibrary.on('changed', ({ type, mapping }) => {
+        // Listen for input changes (add/update/remove)
+        inputLibrary.on('changed', ({ type, input }) => {
             // Refresh inputs for all change types to ensure UI updates
             refreshInputs();
         });

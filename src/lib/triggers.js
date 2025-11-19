@@ -5,6 +5,8 @@
  */
 
 import { toCSSIdentifier } from './css/utils.js';
+import { DEVICE_TYPES } from './outputs/devices.js';
+import { generateCSSProperties } from './css/generator.js';
 
 /**
  * Represents a trigger that executes an action when an input event occurs
@@ -108,6 +110,127 @@ export class Trigger {
 			enabledControls: this.enabledControls,
 			cssClassName: this.cssClassName
 		};
+	}
+
+	/**
+	 * Generate CSS for this trigger
+	 */
+	toCSS(devices = [], allTriggers = []) {
+		if (this.actionType === 'animation') {
+			return this._generateAnimationCSS(devices, allTriggers);
+		} else if (this.actionType === 'setValue') {
+			return this._generateSetValueCSS(devices);
+		}
+		return '';
+	}
+
+	/**
+	 * Generate CSS for animation actions
+	 */
+	_generateAnimationCSS(devices = [], allTriggers = []) {
+		if (!this.animationName) return '';
+
+		// Map device IDs to CSS IDs
+		const targetSelectors = this.targetDeviceIds
+			.map(deviceId => {
+				const device = devices.find(d => d.id === deviceId);
+				return device ? `#${device.cssId}` : null;
+			})
+			.filter(selector => selector !== null)
+			.join(', ');
+
+		if (!targetSelectors) return '';
+
+		const iterationsValue = this.iterations === 'infinite' ? 'infinite' : this.iterations;
+		const durationSec = (this.duration / 1000).toFixed(3);
+
+		// Build the animation specification for this trigger
+		const thisAnimation = `${this.animationName} ${durationSec}s ${this.easing} ${iterationsValue}`;
+
+		// For manual triggers (non-automatic), check for automatic triggers on the same devices
+		// and prepend their animations to preserve them
+		let animationValue = thisAnimation;
+		if (this.triggerType !== 'always') {
+			// Find all automatic triggers that target any of the same devices
+			const automaticAnimations = allTriggers
+				.filter(trigger =>
+					trigger.actionType === 'animation' &&
+					trigger.triggerType === 'always' &&
+					trigger.animationName &&
+					// Check if this automatic trigger targets any of our devices
+					trigger.targetDeviceIds.some(deviceId => this.targetDeviceIds.includes(deviceId))
+				)
+				.map(trigger => {
+					const iterVal = trigger.iterations === 'infinite' ? 'infinite' : trigger.iterations;
+					const durSec = (trigger.duration / 1000).toFixed(3);
+					return `${trigger.animationName} ${durSec}s ${trigger.easing} ${iterVal}`;
+				});
+
+			// Combine automatic animations with this animation
+			if (automaticAnimations.length > 0) {
+				animationValue = [...automaticAnimations, thisAnimation].join(', ');
+			}
+		}
+
+		// For automatic triggers (always), don't use a class selector
+		// For input triggers, use the class selector
+		const selector = this.triggerType === 'always'
+			? targetSelectors
+			: `.${this.cssClassName} ${targetSelectors}`;
+
+		return `${selector} {
+  animation: ${animationValue};
+}`;
+	}
+
+	/**
+	 * Generate CSS for setValue actions
+	 */
+	_generateSetValueCSS(devices = []) {
+		if (!this.setValueDeviceId || !this.channelValues) return '';
+
+		// Find the target device
+		const device = devices.find(d => d.id === this.setValueDeviceId);
+		if (!device) return '';
+
+		// Get device type to access controls/components
+		const deviceType = DEVICE_TYPES[device.type];
+		if (!deviceType) return '';
+
+		// Convert channelValues object to array format
+		const valuesArray = new Array(deviceType.channels).fill(0);
+		for (const [channelStr, value] of Object.entries(this.channelValues)) {
+			const channel = parseInt(channelStr);
+			if (channel < valuesArray.length) {
+				valuesArray[channel] = value;
+			}
+		}
+
+		// Filter controls to only include enabled ones
+		const filteredControls = Array.isArray(this.enabledControls)
+			? deviceType.controls.filter(control =>
+				this.enabledControls.includes(control.name)
+			)
+			: deviceType.controls;
+
+		// Generate CSS properties only for enabled controls
+		const properties = generateCSSProperties(
+			filteredControls,
+			deviceType.components,
+			valuesArray,
+			device.type
+		);
+
+		if (Object.keys(properties).length === 0) return '';
+
+		// Convert properties object to CSS string
+		const props = Object.entries(properties).map(([prop, value]) => `  ${prop}: ${value};`);
+
+		const selector = `.${this.cssClassName} #${device.cssId}`;
+
+		return `${selector} {
+${props.join('\n')}
+}`;
 	}
 
 	/**
@@ -236,5 +359,68 @@ export class TriggerLibrary extends EventEmitter {
 	clear() {
 		this.triggers.clear();
 		this.save();
+	}
+
+	/**
+	 * Generate CSS for all triggers
+	 */
+	toCSS(devices = []) {
+		const allTriggers = this.getAll();
+		const cssRules = [];
+
+		// Group automatic animation triggers by device to combine them
+		const automaticAnimationsByDevice = new Map(); // deviceId -> array of triggers
+
+		// Separate automatic animations from other triggers
+		const automaticAnimations = [];
+		const otherTriggers = [];
+
+		for (const trigger of allTriggers) {
+			if (trigger.actionType === 'animation' &&
+			    trigger.triggerType === 'always' &&
+			    trigger.animationName) {
+				automaticAnimations.push(trigger);
+			} else {
+				otherTriggers.push(trigger);
+			}
+		}
+
+		// Group automatic animations by device
+		for (const trigger of automaticAnimations) {
+			for (const deviceId of trigger.targetDeviceIds) {
+				if (!automaticAnimationsByDevice.has(deviceId)) {
+					automaticAnimationsByDevice.set(deviceId, []);
+				}
+				automaticAnimationsByDevice.get(deviceId).push(trigger);
+			}
+		}
+
+		// Generate combined CSS for automatic animations
+		for (const [deviceId, triggers] of automaticAnimationsByDevice.entries()) {
+			const device = devices.find(d => d.id === deviceId);
+			if (!device) continue;
+
+			// Combine all automatic animations for this device
+			const animationSpecs = triggers.map(trigger => {
+				const iterVal = trigger.iterations === 'infinite' ? 'infinite' : trigger.iterations;
+				const durSec = (trigger.duration / 1000).toFixed(3);
+				return `${trigger.animationName} ${durSec}s ${trigger.easing} ${iterVal}`;
+			});
+
+			const animationValue = animationSpecs.join(', ');
+			cssRules.push(`#${device.cssId} {
+  animation: ${animationValue};
+}`);
+		}
+
+		// Generate CSS for all other triggers (including manual animations)
+		for (const trigger of otherTriggers) {
+			const css = trigger.toCSS(devices, allTriggers);
+			if (css) {
+				cssRules.push(css);
+			}
+		}
+
+		return cssRules.join('\n\n');
 	}
 }

@@ -154,6 +154,7 @@
     <div class="view-container" class:hidden={view !== 'triggers'}>
         <TriggersView
             {triggerLibrary}
+            {inputLibrary}
             {animationLibrary}
             {devices}
         />

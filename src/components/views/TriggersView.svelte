@@ -1,6 +1,6 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
-    import { InputMapping } from '../../lib/mappings.js';
+    import { Trigger } from '../../lib/triggers.js';
     import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { paletteColorToHex } from '../../lib/inputs/colors.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
@@ -15,7 +15,8 @@
     import editIcon from '../../assets/glyphs/edit.svg?raw';
 
     let {
-        mappingLibrary,
+        triggerLibrary,
+        inputLibrary,
         animationLibrary,
         devices = []
     } = $props();
@@ -65,9 +66,9 @@
     }
 
     function refreshData() {
-        availableInputs = mappingLibrary.getAll().filter(m => m.mode === 'input');
+        availableInputs = inputLibrary.getAll();
         availableAnimations = animationLibrary.getAll();
-        triggers = mappingLibrary.getAll().filter(m => m.mode === 'trigger');
+        triggers = triggerLibrary.getAll();
     }
 
     function handleDragStart(event, trigger) {
@@ -134,17 +135,13 @@
         newTriggers.splice(finalInsertIndex, 0, removed);
         triggers = newTriggers;
 
-        // Update the mapping library order
-        const allMappings = mappingLibrary.getAll();
-        const triggerMappings = newTriggers;
-        const nonTriggerMappings = allMappings.filter(m => m.mode !== 'trigger');
-
+        // Update the trigger library order
         // Clear and rebuild the library with new order
-        mappingLibrary.mappings.clear();
-        [...nonTriggerMappings, ...triggerMappings].forEach(m => {
-            mappingLibrary.mappings.set(m.id, m);
+        triggerLibrary.triggers.clear();
+        newTriggers.forEach(trigger => {
+            triggerLibrary.triggers.set(trigger.id, trigger);
         });
-        mappingLibrary.save();
+        triggerLibrary.save();
 
         draggedTrigger = null;
         draggedIndex = null;
@@ -168,14 +165,17 @@
 
         if (!result) return; // User cancelled
 
-        const inputMapping = mappingLibrary.get(result.input);
-        if (!inputMapping) return;
+        const [inputDeviceId, inputControlId] = result.input.split('_');
+        const input = availableInputs.find(i =>
+            i.inputDeviceId === inputDeviceId && i.inputControlId === inputControlId
+        );
+        if (!input) return;
 
-        // Get button mode from the input mapping
-        const buttonMode = inputMapping.buttonMode || 'momentary';
+        // Get button mode from the input
+        const buttonMode = input.buttonMode || 'momentary';
 
         // Generate CSS class name from input name with state suffix
-        const baseClassName = toCSSIdentifier(inputMapping.name);
+        const baseClassName = toCSSIdentifier(input.name);
 
         // Determine suffix based on button mode
         let suffix;
@@ -187,17 +187,16 @@
         const cssClassName = `${baseClassName}-${suffix}`;
 
         const triggerName = result.actionType === 'animation'
-            ? `${inputMapping.name}_${result.triggerType}_${result.animation}`
-            : `${inputMapping.name}_${result.triggerType}_setValue`;
+            ? `${input.name}_${result.triggerType}_${result.animation}`
+            : `${input.name}_${result.triggerType}_setValue`;
 
-        // Create trigger mapping
-        const trigger = new InputMapping({
+        // Create trigger
+        const trigger = new Trigger({
             name: triggerName,
-            mode: 'trigger',
             triggerType: result.triggerType,
             actionType: result.actionType,
-            inputDeviceId: inputMapping.inputDeviceId,
-            inputControlId: inputMapping.inputControlId,
+            inputDeviceId: input.inputDeviceId,
+            inputControlId: input.inputControlId,
             // Animation action properties
             animationName: result.actionType === 'animation' ? result.animation : null,
             targetDeviceIds: result.actionType === 'animation' ? [result.device] : [],
@@ -211,7 +210,7 @@
             cssClassName: cssClassName
         });
 
-        mappingLibrary.add(trigger);
+        triggerLibrary.add(trigger);
         refreshData();
     }
 
@@ -220,10 +219,9 @@
 
         if (!result) return; // User cancelled
 
-        // Create trigger mapping for automatic (always) trigger
-        const trigger = new InputMapping({
+        // Create trigger for automatic (always) trigger
+        const trigger = new Trigger({
             name: `always_${result.animation}`,
-            mode: 'trigger',
             triggerType: 'always',
             inputDeviceId: null,
             inputControlId: null,
@@ -235,7 +233,7 @@
             cssClassName: 'always'
         });
 
-        mappingLibrary.add(trigger);
+        triggerLibrary.add(trigger);
         refreshData();
     }
 
@@ -248,7 +246,7 @@
 
             if (result.delete) {
                 // Handle delete
-                mappingLibrary.remove(trigger.id);
+                triggerLibrary.remove(trigger.id);
                 refreshData();
                 return;
             }
@@ -260,9 +258,8 @@
             trigger.easing = result.easing;
             trigger.iterations = result.looping ? 'infinite' : 1;
             trigger.name = `always_${result.animation}`;
-            trigger.version = (trigger.version || 0) + 1;
 
-            mappingLibrary.save();
+            triggerLibrary.update(trigger);
             refreshData();
         } else {
             // Manual trigger
@@ -272,7 +269,7 @@
 
             if (result.delete) {
                 // Handle delete
-                mappingLibrary.remove(trigger.id);
+                triggerLibrary.remove(trigger.id);
                 refreshData();
                 return;
             }
@@ -290,7 +287,7 @@
             trigger.inputDeviceId = newInputDeviceId;
             trigger.inputControlId = newInputControlId;
 
-            // Get button mode from the input mapping
+            // Get button mode from the input
             const buttonMode = selectedInput.buttonMode || 'momentary';
 
             // Generate new CSS class name
@@ -328,9 +325,8 @@
             trigger.easing = result.easing;
             trigger.iterations = result.looping ? 'infinite' : 1;
             trigger.cssClassName = cssClassName;
-            trigger.version = (trigger.version || 0) + 1;
 
-            mappingLibrary.save();
+            triggerLibrary.update(trigger);
             refreshData();
         }
     }
@@ -594,11 +590,13 @@
 
     onMount(() => {
         refreshData();
-        mappingLibrary.on('changed', handleMappingChange);
+        triggerLibrary.on('changed', handleMappingChange);
+        inputLibrary.on('changed', handleMappingChange);
     });
 
     onDestroy(() => {
-        mappingLibrary.off('changed', handleMappingChange);
+        triggerLibrary.off('changed', handleMappingChange);
+        inputLibrary.off('changed', handleMappingChange);
     });
 </script>
 

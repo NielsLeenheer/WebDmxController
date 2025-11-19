@@ -7,7 +7,8 @@
         cssManager,
         devices = [],
         animationLibrary,
-        mappingLibrary
+        inputLibrary,
+        triggerLibrary
     } = $props();
 
     // Store sampled device data (Map of deviceId -> channels object)
@@ -22,6 +23,11 @@
         animationLibrary ? animationLibrary.getAll() : []
     );
 
+    // Get inputs for display
+    let inputs = $derived(
+        inputLibrary ? inputLibrary.getAll() : []
+    );
+
     // Filter devices to only show those with independent controls
     // A device has independent controls if:
     // - It's not linked to another device (linkedTo === null), OR
@@ -29,9 +35,6 @@
     let independentDevices = $derived(
         devices.filter(device => !device.linkedTo || device.syncedControls !== null)
     );
-
-    // Get all mappings for display (trigger and direct modes)
-    let allMappings = $state([]);
 
     function handleCustomCSSInput(event) {
         // Read the content from the contenteditable element
@@ -69,22 +72,7 @@
         return getDevicePreviewData(device.type, values);
     }
 
-    // Update mappings list when library changes
-    function handleMappingChange() {
-        allMappings = mappingLibrary.getAll();
-    }
-
-    onMount(() => {
-        // Listen for mapping changes to update the mappings list
-        mappingLibrary.on('changed', handleMappingChange);
-
-        // Initialize mappings list
-        allMappings = mappingLibrary.getAll();
-
-        return () => {
-            mappingLibrary.off('changed', handleMappingChange);
-        };
-    });
+    // Note: inputs are now reactive via $derived, so no need for onMount listeners
 </script>
 
 <div class="css-view">
@@ -125,29 +113,25 @@
             {/if}
 
             <!-- Inputs Section -->
-            {#if allMappings.length > 0}
+            {#if inputs.length > 0}
                 <div class="reference-section">
                     <h4>Inputs</h4>
                     <div class="css-identifiers">
-                        {#each allMappings as mapping (mapping.id)}
-                            {#if mapping.mode === 'input'}
-                                {#if mapping.isButtonInput()}
-                                    <!-- Buttons show classes based on mode -->
-                                    {#if mapping.buttonMode === 'toggle'}
-                                        <!-- Toggle buttons show on and off classes -->
-                                        <code class="css-identifier">.{mapping.getButtonOnClass()}</code>
-                                        <code class="css-identifier">.{mapping.getButtonOffClass()}</code>
-                                    {:else}
-                                        <!-- Momentary buttons show down and up classes -->
-                                        <code class="css-identifier">.{mapping.getButtonDownClass()}</code>
-                                        <code class="css-identifier">.{mapping.getButtonUpClass()}</code>
-                                    {/if}
+                        {#each inputs as input (`${input.id}-${input.version}`)}
+                            {#if input.isButtonInput()}
+                                <!-- Buttons show classes based on mode -->
+                                {#if input.buttonMode === 'toggle'}
+                                    <!-- Toggle buttons show on and off classes -->
+                                    <code class="css-identifier">.{input.cssClassOn}</code>
+                                    <code class="css-identifier">.{input.cssClassOff}</code>
                                 {:else}
-                                    <!-- Sliders/Knobs show custom property -->
-                                    <code class="css-identifier">{mapping.getInputPropertyName()}</code>
+                                    <!-- Momentary buttons show down and up classes -->
+                                    <code class="css-identifier">.{input.cssClassDown}</code>
+                                    <code class="css-identifier">.{input.cssClassUp}</code>
                                 {/if}
-                            {:else if mapping.mode === 'direct'}
-                                <code class="css-identifier">{mapping.getPropertyName()}</code>
+                            {:else}
+                                <!-- Sliders/Knobs show custom property -->
+                                <code class="css-identifier">{input.getInputPropertyName()}</code>
                             {/if}
                         {/each}
                     </div>
