@@ -100,7 +100,7 @@
 
             {:else if control === 'safety'}
                 {@const safetyOn = (data.safety ?? 0) >= 125}
-                <div class="control-layer control-safety" style="background: {safetyOn ? 'transparent' : '#222222'}">
+                <div class="control-layer control-safety" style="background: {safetyOn ? 'transparent' : 'black'}">
                     {#if safetyOn}
                         <div class="safety-checkmark"></div>
                     {:else}
@@ -224,7 +224,6 @@
         height: 70%;
         transform: translate(-50%, -50%) rotate(-90deg);
         pointer-events: none;
-        z-index: 10;
     }
 
     .safety-checkmark::before {
@@ -260,7 +259,6 @@
         height: 70%;
         transform: translate(-50%, -50%);
         pointer-events: none;
-        z-index: 10;
     }
 
     .safety-cross::before,
