@@ -32,13 +32,7 @@
 	let editingName = $state('');
 	let editingButtonMode = $state('momentary');
 	let editingColor = $state(null);
-
-	// Computed: whether this input supports colors
-	let showColorPicker = $derived.by(() => {
-		if (!editingInput) return false;
-		const device = inputController?.getInputDevice(editingInput.inputDeviceId);
-		return shouldAssignColor(device, editingInput.inputControlId);
-	});
+	let showColorPicker = $state(false);
 
 	/**
 	 * Open the dialog with an input mapping
@@ -54,6 +48,19 @@
 			editingName = input.name;
 			editingButtonMode = input.buttonMode || 'momentary';
 			editingColor = input.color;
+
+			// Compute whether to show color picker
+			const device = inputController?.getInputDevice(input.inputDeviceId);
+			showColorPicker = shouldAssignColor(device, input.inputControlId);
+
+			console.log('EditInputDialog.open:', {
+				inputDeviceId: input.inputDeviceId,
+				inputControlId: input.inputControlId,
+				device: device,
+				deviceType: device?.type,
+				deviceId: device?.id,
+				showColorPicker: showColorPicker
+			});
 
 			requestAnimationFrame(() => {
 				dialogRef?.showModal();
