@@ -5,8 +5,8 @@
  * computed styles to extract DMX values.
  */
 
-import { DEVICE_TYPES } from './devices.js';
-import { generateCSSProperties, sampleCSSProperties } from './controlCssMapping.js';
+import { DEVICE_TYPES } from './outputs/devices.js';
+import { generateCSSProperties, sampleCSSProperties, sampleCSSPropertiesFromControls } from './controlCssMapping.js';
 
 /**
  * Generates a complete CSS stylesheet from animations and mappings
@@ -185,8 +185,8 @@ export class CSSSampler {
 
 		const computed = window.getComputedStyle(element);
 
-		// Use unified sampling function
-		const channels = sampleCSSProperties(computed, deviceType.components);
+		// Use control-based sampling function for accurate CSS-to-DMX conversion
+		const channels = sampleCSSPropertiesFromControls(computed, deviceType.controls, deviceType.components);
 
 		// Store current values for next comparison
 		this.previousValues.set(device.id, { ...channels });

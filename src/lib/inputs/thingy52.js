@@ -3,7 +3,7 @@
  * Provides access to Thingy:52 sensors for use as input controls
  */
 
-import { getInputColorCSS } from './inputColors.js';
+import { paletteColorToRGB } from './colors.js';
 
 // Thingy:52 Service UUIDs
 const THINGY_UI_SERVICE = 'ef680300-9b35-4933-9b10-52ffa9740042';
@@ -174,7 +174,11 @@ export class Thingy52Device {
 				this._checkStabilityAndCalibrate(roll, pitch, rawYaw);
 
 				// Apply calibration offset to yaw
-				const calibratedYaw = rawYaw - this.yawCalibrationOffset;
+				let calibratedYaw = rawYaw - this.yawCalibrationOffset;
+				
+				// Normalize yaw to -180 to 180 range
+				while (calibratedYaw > 180) calibratedYaw -= 360;
+				while (calibratedYaw < -180) calibratedYaw += 360;
 
 				this.sensorData.euler = { roll, pitch, yaw: calibratedYaw };
 				this._emit('euler', { roll, pitch, yaw: calibratedYaw });
@@ -205,12 +209,50 @@ export class Thingy52Device {
 
 				this.sensorData.quaternion = { w, x, y, z };
 				this._emit('quaternion', { w, x, y, z });
+
+				// Calculate gravity-compensated pan and tilt for moving head control
+				const { pan, tilt } = this._calculatePanTilt(w, x, y, z);
+				this.sensorData.panTilt = { pan, tilt };
+				this._emit('panTilt', { pan, tilt });
 			});
 
 			console.log('Subscribed to Quaternion');
 		} catch (error) {
 			console.warn('Failed to subscribe to Quaternion:', error);
 		}
+	}
+
+	/**
+	 * Calculate gravity-compensated pan and tilt from quaternion
+	 * Pan: Rotation around vertical (gravity) axis (-180 to 180 degrees)
+	 * Tilt: Forward/backward tilt (-90 to 90 degrees)
+	 */
+	_calculatePanTilt(w, x, y, z) {
+		// Calculate pitch (tilt forward/back)
+		const sinp = 2 * (w * y - z * x);
+		let pitch;
+		if (Math.abs(sinp) >= 1) {
+			pitch = Math.sign(sinp) * 90; // Use 90 degrees if out of range
+		} else {
+			pitch = Math.asin(sinp) * (180 / Math.PI);
+		}
+
+		// Calculate yaw (pan left/right) - gravity compensated
+		const siny_cosp = 2 * (w * z + x * y);
+		const cosy_cosp = 1 - 2 * (y * y + z * z);
+		let yaw = Math.atan2(siny_cosp, cosy_cosp) * (180 / Math.PI);
+
+		// Apply calibration to yaw
+		yaw = yaw - this.yawCalibrationOffset;
+		
+		// Normalize yaw to -180 to 180
+		while (yaw > 180) yaw -= 360;
+		while (yaw < -180) yaw += 360;
+
+		return {
+			pan: yaw,    // -180 to 180 degrees (horizontal rotation)
+			tilt: pitch  // -90 to 90 degrees (forward/back tilt)
+		};
 	}
 
 	/**
@@ -257,31 +299,37 @@ export class Thingy52Device {
 	}
 
 	/**
-	 * Set LED color
-	 * @param {string} color - CSS color string (e.g., '#ff0000')
+	 * Set device color using a named palette color
+	 * @param {string} color - Named color from palette (e.g., 'red', 'blue')
 	 */
-	async setLEDColor(color) {
+	async setDeviceColor(color) {
 		try {
 			if (!this.uiService) {
 				console.warn('UI service not available');
 				return;
 			}
 
+			// Convert palette color name to RGB
+			const rgb = paletteColorToRGB(color);
+
+			// Compensate for LED brightness differences and blue plastic housing
+			const clamp = (val) => Math.max(0, Math.min(255, val));
+			const compensated = {
+				r: clamp(rgb.r + 16),                    // Red: +16 for housing
+				g: clamp(Math.round(rgb.g / 2) + 16),    // Green: /2 + 16
+				b: clamp(Math.round(rgb.b / 3) - 32)     // Blue: /3 - 32 for housing
+			};
+
+			const ledData = new Uint8Array([
+				0x01,           // Mode: constant
+				compensated.r,  // Red
+				compensated.g,  // Green
+				compensated.b   // Blue
+			]);
+
 			const ledChar = await this.uiService.getCharacteristic(THINGY_UI_LED);
-
-		// Parse CSS color to RGB
-		const rgb = this._parseColor(color);
-
-		// LED mode: 1 = constant, 2 = breathe, 3 = one-shot
-		// We use mode 1 (constant) with the specified color
-		// Firmware analysis confirms BLE protocol expects RGB order
-		const ledData = new Uint8Array([
-			0x01,      // Mode: constant
-			rgb.r,     // Red
-			rgb.g,     // Green
-			rgb.b      // Blue
-		]);			await ledChar.writeValue(ledData);
-			console.log(`Set Thingy LED to ${color}`, rgb);
+			await ledChar.writeValue(ledData);
+			console.log(`Set Thingy LED to '${color}':`, rgb, '→', compensated);
 		} catch (error) {
 			console.warn('Failed to set LED color:', error);
 		}
@@ -336,39 +384,6 @@ export class Thingy52Device {
 			console.log(`Manually calibrated Thingy:52 ${this.id} yaw offset: ${this.lastAngles.yaw}°`);
 			this._emit('calibrated', { yawOffset: this.lastAngles.yaw });
 		}
-	}
-
-	/**
-	 * Parse CSS color string to RGB values
-	 */
-	_parseColor(color) {
-		// Handle named colors from our input color palette
-		if (typeof color === 'string' && !color.startsWith('#') && !color.startsWith('rgb')) {
-			color = getInputColorCSS(color);
-		}
-
-		// Create a temporary element to parse the color
-		const div = document.createElement('div');
-		div.style.color = color;
-		document.body.appendChild(div);
-		const computed = getComputedStyle(div).color;
-		document.body.removeChild(div);
-
-		// Parse rgb(r, g, b) or rgba(r, g, b, a)
-		const match = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-		if (match) {
-			// Thingy:52 LED brightness compensation
-			// Compensate for LED brightness differences and blue plastic housing
-			const clamp = (val) => Math.max(0, Math.min(255, val));
-			return {
-				r: clamp(parseInt(match[1]) + 16),              // Red: +16 for housing
-				g: clamp(Math.round(parseInt(match[2]) / 2) + 16), // Green: /2 + 16
-				b: clamp(Math.round(parseInt(match[3]) / 3) - 32)  // Blue: /3 - 32 for housing
-			};
-		}
-
-		// Default to white if parsing fails
-		return { r: 255, g: 128, b: 53 };
 	}
 
 	/**

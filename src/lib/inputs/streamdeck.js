@@ -5,84 +5,13 @@
  */
 
 import { requestStreamDecks, getStreamDecks } from '@elgato-stream-deck/webhid';
-
-/**
- * Stream Deck device information
- */
-export const STREAM_DECK_DEVICES = {
-	// Elgato vendor ID
-	VENDOR_ID: 0x0fd9,
-
-	// Product IDs for different Stream Deck models
-	PRODUCTS: {
-		ORIGINAL: 0x0060,
-		ORIGINAL_V2: 0x006d,
-		MINI: 0x0063,
-		MINI_V2: 0x0090,
-		XL: 0x006c,
-		XL_V2: 0x008f,
-		MK2: 0x0080,
-		PLUS: 0x0084,
-		PEDAL: 0x0086,
-		NEO: 0x009a
-	},
-
-	// Button counts for each model
-	BUTTON_COUNTS: {
-		0x0060: 15, // Original
-		0x006d: 15, // Original V2
-		0x0063: 6,  // Mini
-		0x0090: 6,  // Mini V2
-		0x006c: 32, // XL
-		0x008f: 32, // XL V2
-		0x0080: 15, // MK2
-		0x0084: 8,  // Plus (LCD keys only)
-		0x0086: 3,  // Pedal
-		0x009a: 8   // Neo
-	}
-};
-
-/**
- * Get WebHID filters for all Stream Deck devices
- */
-export function getStreamDeckFilters() {
-	return [{
-		vendorId: STREAM_DECK_DEVICES.VENDOR_ID
-	}];
-}
+import { paletteColorToRGB } from './colors.js';
 
 /**
  * Check if a HID device is a Stream Deck
  */
 export function isStreamDeck(hidDevice) {
-	return hidDevice.vendorId === STREAM_DECK_DEVICES.VENDOR_ID;
-}
-
-/**
- * Get the model name of a Stream Deck device
- */
-export function getStreamDeckModel(hidDevice) {
-	if (!isStreamDeck(hidDevice)) return null;
-
-	const productName = hidDevice.productName || '';
-
-	// Try to extract model from product name
-	if (productName.includes('Mini')) return 'Stream Deck Mini';
-	if (productName.includes('XL')) return 'Stream Deck XL';
-	if (productName.includes('MK.2')) return 'Stream Deck MK.2';
-	if (productName.includes('Plus')) return 'Stream Deck Plus';
-	if (productName.includes('Pedal')) return 'Stream Deck Pedal';
-	if (productName.includes('Neo')) return 'Stream Deck Neo';
-
-	return 'Stream Deck';
-}
-
-/**
- * Get the number of buttons for a Stream Deck device
- */
-export function getStreamDeckButtonCount(hidDevice) {
-	if (!isStreamDeck(hidDevice)) return 0;
-	return STREAM_DECK_DEVICES.BUTTON_COUNTS[hidDevice.productId] || 15;
+	return hidDevice.vendorId === 0x0fd9; // Elgato vendor ID
 }
 
 /**
@@ -311,54 +240,29 @@ export class StreamDeckManager {
 			return false;
 		}
 
-		// Validate button index is within range for this device
-		const buttonCount = streamDeck.NUM_KEYS || 15;
-		if (buttonIndex < 0 || buttonIndex >= buttonCount) {
-			// Button index out of range for this device
-			return false;
-		}
-
-		try {
-			// Parse color to RGB
-			const rgb = this._parseColor(color);
-			if (!rgb) return false;
-
-			// Use the library's fillKeyColor method
-			await streamDeck.fillKeyColor(buttonIndex, rgb.r, rgb.g, rgb.b);
-			return true;
-		} catch (error) {
-			console.error(`Failed to set button ${buttonIndex} color on ${serialNumber}:`, error);
-			return false;
-		}
+	// Validate button index is within range for this device
+	const buttonCount = streamDeck.NUM_KEYS || 15;
+	if (buttonIndex < 0 || buttonIndex >= buttonCount) {
+		// Button index out of range for this device
+		return false;
 	}
 
-	/**
+	try {
+		// Get RGB from palette color name
+		const rgb = paletteColorToRGB(color);
+
+		// Use the library's fillKeyColor method
+		await streamDeck.fillKeyColor(buttonIndex, rgb.r, rgb.g, rgb.b);
+		return true;
+	} catch (error) {
+		console.error(`Failed to set button ${buttonIndex} color on ${serialNumber}:`, error);
+		return false;
+	}
+}	/**
 	 * Clear button color (set to black) on a Stream Deck device
 	 */
 	async clearButtonColor(serialNumber, buttonIndex) {
-		return await this.setButtonColor(serialNumber, buttonIndex, '#000000');
-	}
-
-	/**
-	 * Parse CSS color string to RGB object
-	 */
-	_parseColor(colorStr) {
-		// Create temporary element to compute color
-		const div = document.createElement('div');
-		div.style.color = colorStr;
-		document.body.appendChild(div);
-		const computed = window.getComputedStyle(div).color;
-		document.body.removeChild(div);
-
-		// Parse rgb(r, g, b) or rgba(r, g, b, a)
-		const match = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-		if (!match) return null;
-
-		return {
-			r: parseInt(match[1]),
-			g: parseInt(match[2]),
-			b: parseInt(match[3])
-		};
+		return await this.setButtonColor(serialNumber, buttonIndex, 'off');
 	}
 
 	/**

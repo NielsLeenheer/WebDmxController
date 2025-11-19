@@ -1,4 +1,4 @@
-import { DEVICE_TYPES } from './devices.js';
+import { DEVICE_TYPES } from './outputs/devices.js';
 
 /**
  * Get control mapping from source device type to target device type

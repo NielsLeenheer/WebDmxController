@@ -1,9 +1,10 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { InputMapping } from '../../lib/mappings.js';
-    import { DEVICE_TYPES } from '../../lib/devices.js';
-    import { getInputColorCSS } from '../../lib/inputColors.js';
+    import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
+    import { paletteColorToHex } from '../../lib/inputs/colors.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
+    import { toCSSIdentifier } from '../../lib/cssUtils.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
@@ -298,10 +299,7 @@
         const buttonMode = inputMapping.buttonMode || 'momentary';
 
         // Generate CSS class name from input name with state suffix
-        const baseClassName = inputMapping.name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+        const baseClassName = toCSSIdentifier(inputMapping.name);
 
         // Determine suffix based on button mode
         let suffix;
@@ -434,10 +432,7 @@
             const buttonMode = selectedInput.buttonMode || 'momentary';
 
             // Generate new CSS class name
-            const baseClassName = selectedInput.name
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-+|-+$/g, '');
+            const baseClassName = toCSSIdentifier(selectedInput.name);
 
             // Determine suffix based on button mode
             let suffix;
@@ -534,7 +529,7 @@
             i => i.inputDeviceId === trigger.inputDeviceId &&
                  i.inputControlId === trigger.inputControlId
         );
-        return input?.color ? getInputColorCSS(input.color) : '#888';
+        return input?.color ? paletteColorToHex(input.color) : '#888';
     }
 
     // Get input type label (On/Off/Up/Down)
@@ -713,29 +708,11 @@
     function getDevicePreviewControls(trigger) {
         const deviceId = getTriggerDeviceId(trigger);
         const device = devices.find(d => d.id === deviceId);
-        if (!device) return { controls: ['color'], data: { color: '#888' } };
-
-        if (device.type === 'FLAMETHROWER') {
-            return {
-                controls: ['fuel', 'safety'],
-                data: {
-                    safety: device.defaultValues[0] || 0,
-                    fuel: device.defaultValues[1] || 0
-                }
-            };
-        } else if (device.type === 'SMOKE') {
-            return {
-                controls: ['output'],
-                data: {
-                    output: device.defaultValues[0] || 0
-                }
-            };
-        } else {
-            return {
-                controls: ['color'],
-                data: { color: getDeviceColor(device.type, device.defaultValues) }
-            };
+        if (!device) {
+            return { controls: [], data: {} };
         }
+
+        return getDevicePreviewData(device.type, device.defaultValues);
     }
 
     // Get device name from trigger

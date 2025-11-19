@@ -1,6 +1,6 @@
 <script>
-    import { DMXController } from './lib/dmx.js';
-    import { DEVICE_TYPES } from './lib/devices.js';
+    import { DMXController } from './lib/outputs/dmx.js';
+    import { DEVICE_TYPES } from './lib/outputs/devices.js';
     import { AnimationLibrary } from './lib/animations.js';
     import { MappingLibrary, TriggerManager } from './lib/mappings.js';
     import { CSSGenerator, CSSSampler, CustomPropertyManager } from './lib/cssEngine.js';

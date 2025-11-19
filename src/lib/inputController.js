@@ -5,10 +5,10 @@
  * Handles both trigger and direct mode mappings.
  */
 
-import { InputDeviceManager } from './inputs.js';
+import { InputDeviceManager } from './inputs/manager.js';
 import { InputMapping, MappingLibrary, TriggerManager } from './mappings.js';
 import { CustomPropertyManager } from './cssEngine.js';
-import { getInputColorCSS } from './inputColors.js';
+import { toCSSIdentifier } from './cssUtils.js';
 
 export class InputController {
 	constructor(mappingLibrary, customPropertyManager, triggerManager) {
@@ -34,27 +34,20 @@ export class InputController {
 
 		// Listen for mapping changes to initialize pressure for new mappings
 		this.mappingLibrary.on('changed', ({ type, mapping }) => {
-			if (type === 'add' && mapping.mode === 'input' && mapping.name && mapping.isButtonInput()) {
-				const propertyName = mapping.name
-					.toLowerCase()
-					.replace(/[^a-z0-9]+/g, '-')
-					.replace(/^-+|-+$/g, '');
-				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
-			}
+		if (type === 'add' && mapping.mode === 'input' && mapping.name && mapping.isButtonInput()) {
+			this.customPropertyManager.setProperty(`${toCSSIdentifier(mapping.name)}-pressure`, '0.0%');
+		}
 
-			// Update Thingy LED color when mapping color changes
-			if (type === 'update' && mapping.mode === 'input') {
-				const device = this.inputDeviceManager.getInputDevices().find(
-					d => d.id === mapping.inputDeviceId && d.type === 'bluetooth' && d.thingyDevice
-				);
-				if (device && mapping.color) {
-					const colorCSS = getInputColorCSS(mapping.color);
-					device.thingyDevice.setLEDColor(colorCSS);
-				}
-			}
-		});
-
-		// IMPORTANT: Set up device listeners BEFORE initializing devices
+		// Update Thingy LED color when mapping color changes
+		if (type === 'update' && mapping.mode === 'input') {
+		const device = this.inputDeviceManager.getInputDevices().find(
+			d => d.id === mapping.inputDeviceId && d.type === 'bluetooth' && d.thingyDevice
+		);
+		if (device && mapping.color) {
+			device.thingyDevice.setDeviceColor(mapping.color);
+		}
+	}
+});		// IMPORTANT: Set up device listeners BEFORE initializing devices
 		// Otherwise auto-reconnected devices won't have their listeners attached
 		this.inputDeviceManager.on('deviceadded', (device) => {
 			this._setupDeviceListeners(device);
@@ -132,8 +125,19 @@ export class InputController {
 			// Convert normalized value (0-1) to percentage or degrees based on sensor type
 			let propertyValue;
 
-			// Euler angles are in degrees
-			if (controlId.startsWith('euler-')) {
+			// Pan and Tilt (gravity-compensated)
+			if (controlId === 'pan') {
+				// Pan: Convert 0-1 back to -180 to 180 degrees
+				const degrees = (value * 360) - 180;
+				propertyValue = `${degrees.toFixed(1)}deg`;
+			}
+			else if (controlId === 'tilt') {
+				// Tilt: Convert 0-1 back to -90 to 90 degrees
+				const degrees = (value * 180) - 90;
+				propertyValue = `${degrees.toFixed(1)}deg`;
+			}
+			// Euler angles are in degrees (-180 to 180)
+			else if (controlId.startsWith('euler-')) {
 				// Convert 0-1 back to -180 to 180 degrees
 				const degrees = (value * 360) - 180;
 				propertyValue = `${degrees.toFixed(1)}deg`;
@@ -186,21 +190,18 @@ export class InputController {
 				inputControlId: 'button',
 				inputDeviceName: device.name,
 				buttonMode: 'momentary', // Default to momentary, user can change to toggle
-				color: null // Color can be set to control the Thingy LED
-			});
+			color: null // Color can be set to control the Thingy LED
+		});
 
-			this.mappingLibrary.add(mapping);
-		} else if (existingMappings.length > 0) {
-			// If mapping exists with a color, set the LED
-			const mapping = existingMappings[0];
-			if (mapping.color) {
-				const colorCSS = getInputColorCSS(mapping.color);
-				device.thingyDevice.setLEDColor(colorCSS);
-			}
+		this.mappingLibrary.add(mapping);
+	} else if (existingMappings.length > 0) {
+		// If mapping exists with a color, set the LED
+		const mapping = existingMappings[0];
+		if (mapping.color) {
+			device.thingyDevice.setDeviceColor(mapping.color);
 		}
 	}
-
-	/**
+}	/**
 	 * Generate CSS class name from control ID
 	 */
 	_generateClassName(controlId, suffix) {
@@ -261,16 +262,10 @@ export class InputController {
 
 				// Set velocity as custom property (for velocity-sensitive buttons)
 				if (inputMapping.name) {
-					// Generate CSS custom property name from input name
-					const propertyName = inputMapping.name
-						.toLowerCase()
-						.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-						.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
 					// Velocity is already normalized to 0-1 by input devices
 					const normalizedVelocity = Math.max(0, Math.min(1, velocity));
 					const percentage = (normalizedVelocity * 100).toFixed(1);
-					this.customPropertyManager.setProperty(`${propertyName}-pressure`, `${percentage}%`);
+					this.customPropertyManager.setProperty(`${toCSSIdentifier(inputMapping.name)}-pressure`, `${percentage}%`);
 				}
 			}
 
@@ -329,11 +324,7 @@ export class InputController {
 
 				// Reset pressure custom property to 0%
 				if (inputMapping.name) {
-					const propertyName = inputMapping.name
-						.toLowerCase()
-						.replace(/[^a-z0-9]+/g, '-')
-						.replace(/^-+|-+$/g, '');
-					this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
+					this.customPropertyManager.setProperty(`${toCSSIdentifier(inputMapping.name)}-pressure`, '0.0%');
 				}
 			}
 
@@ -366,15 +357,9 @@ export class InputController {
 		// Find the input mapping (mode='input') for this control
 		const inputMapping = mappings.find(m => m.mode === 'input');
 		if (inputMapping && inputMapping.name) {
-			// Generate CSS custom property name from input name
-			const propertyName = inputMapping.name
-				.toLowerCase()
-				.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-				.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
 			// Convert value (0-1) to percentage
 			const percentage = Math.round(value * 100);
-			this.customPropertyManager.setProperty(propertyName, `${percentage}%`);
+			this.customPropertyManager.setProperty(toCSSIdentifier(inputMapping.name), `${percentage}%`);
 
 			// Emit event for input value change
 			this._emit('input-valuechange', { mapping: inputMapping, value });
@@ -429,39 +414,27 @@ export class InputController {
 	}
 
 	/**
-	 * Create virtual input device
-	 */
-	createVirtualDevice(name) {
-		return this.inputDeviceManager.createVirtual(name);
-	}
-
-	/**
-	 * Set button color on a MIDI device
+	 * Set color on an input device control (generic for all device types)
 	 * @param {string} deviceId - Device ID
-	 * @param {string} controlId - Control ID (e.g., "note-36")
-	 * @param {string|number} color - Color name or velocity value
+	 * @param {string} controlId - Control ID (e.g., "note-36", "button-0")
+	 * @param {string} color - Palette color name
 	 */
-	setButtonColor(deviceId, controlId, color) {
+	async setButtonColor(deviceId, controlId, color) {
 		const device = this.inputDeviceManager.getDevice(deviceId);
-		if (device && device.type === 'midi' && device.setButtonColor) {
-			// Extract note number from control ID (e.g., "note-36" -> 36)
-			const noteMatch = controlId.match(/note-(\d+)/);
-			if (noteMatch) {
-				const noteNumber = parseInt(noteMatch[1]);
-				device.setButtonColor(noteNumber, color);
-			}
+		if (device && device.setColor) {
+			await device.setColor(controlId, color);
 		}
 	}
 
 	/**
 	 * Set button color by input mapping
 	 * @param {string} mappingId - Mapping ID or name
-	 * @param {string|number} color - Color name or velocity value
+	 * @param {string} color - Palette color name
 	 */
-	setButtonColorByMapping(mappingId, color) {
+	async setButtonColorByMapping(mappingId, color) {
 		const mapping = this.mappingLibrary.get(mappingId);
 		if (mapping && mapping.inputDeviceId && mapping.inputControlId) {
-			this.setButtonColor(mapping.inputDeviceId, mapping.inputControlId, color);
+			await this.setButtonColor(mapping.inputDeviceId, mapping.inputControlId, color);
 		}
 	}
 
@@ -491,14 +464,8 @@ export class InputController {
 
 		for (const mapping of inputMappings) {
 			if (mapping.name && mapping.isButtonInput()) {
-				// Generate CSS custom property name from input name
-				const propertyName = mapping.name
-					.toLowerCase()
-					.replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-					.replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
 				// Initialize to 0%
-				this.customPropertyManager.setProperty(`${propertyName}-pressure`, '0.0%');
+				this.customPropertyManager.setProperty(`${toCSSIdentifier(mapping.name)}-pressure`, '0.0%');
 			}
 		}
 	}

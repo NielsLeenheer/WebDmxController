@@ -1,6 +1,7 @@
 <script>
     import { Icon } from 'svelte-icon';
-    import { DEVICE_TYPES, Device } from '../../lib/devices.js';
+    import { untrack } from 'svelte';
+    import { DEVICE_TYPES, Device } from '../../lib/outputs/devices.js';
     import { canLinkDevices, applyLinkedValues, getMappedChannels, getAvailableSyncControls } from '../../lib/channelMapping.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import Controls from '../controls/Controls.svelte';
@@ -566,11 +567,14 @@
         return available.some(c => c.controlName === 'Pan/Tilt');
     }
 
-    // Restore all device values to DMX controller on load
+    // Restore all device values to DMX controller on load (only when controller changes, not on devices updates)
     $effect(() => {
         if (dmxController) {
-            devices.forEach(device => {
-                updateDeviceToDMX(device);
+            // Use untrack to prevent this effect from re-running when devices array changes
+            untrack(() => {
+                devices.forEach(device => {
+                    updateDeviceToDMX(device);
+                });
             });
         }
     });

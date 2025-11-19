@@ -1,7 +1,8 @@
 <script>
     import { onMount } from 'svelte';
     import { Animation } from '../../lib/animations.js';
-    import { DEVICE_TYPES } from '../../lib/devices.js';
+    import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+    import { toCSSIdentifier } from '../../lib/cssUtils.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
@@ -314,30 +315,6 @@
         closeEditDialog();
     }
 
-    // Generate preview of CSS animation name for new animation
-    function getNewAnimationCSSName() {
-        if (!newAnimationName.trim()) return '';
-
-        const cssName = newAnimationName
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
-        return cssName;
-    }
-
-    // Generate preview of CSS animation name based on current editing name
-    function getPreviewCSSName() {
-        if (!editingName.trim()) return '';
-
-        const cssName = editingName
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-            .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
-
-        return cssName;
-    }
-
     function confirmDeleteAnimation() {
         if (!editingAnimation) return;
 
@@ -495,7 +472,7 @@
                 autofocus
             />
             <div class="css-identifiers">
-                <code class="css-identifier">@keyframes {getNewAnimationCSSName()}</code>
+                <code class="css-identifier">@keyframes {toCSSIdentifier(newAnimationName)}</code>
             </div>
         </div>
 
@@ -534,7 +511,7 @@
                 autofocus
             />
             <div class="css-identifiers">
-                <code class="css-identifier">@keyframes {getPreviewCSSName()} &lbrace; &rbrace;</code>
+                <code class="css-identifier">@keyframes {toCSSIdentifier(editingName)} &lbrace; &rbrace;</code>
             </div>
         </div>
     </form>
