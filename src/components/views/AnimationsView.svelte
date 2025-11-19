@@ -8,6 +8,7 @@
     import IconButton from '../common/IconButton.svelte';
     import Preview from '../common/Preview.svelte';
     import TimelineEditor from '../animations/TimelineEditor.svelte';
+    import AddAnimationDialog from '../dialogs/AddAnimationDialog.svelte';
     import removeIcon from '../../assets/icons/remove.svg?raw';
     import editIcon from '../../assets/glyphs/edit.svg?raw';
 
@@ -18,10 +19,8 @@
 
     let animationsList = $state([]);
 
-    // Dialog states
-    let newAnimationDialog = null; // DOM reference - should NOT be $state
-    let newAnimationName = $state('');
-    let selectedAnimationTarget = $state('RGB|all'); // Format: "deviceType|all" or "deviceType|control|ControlName"
+    // Dialog references
+    let addAnimationDialog;
 
     // Edit dialog states
     let editDialog = null; // DOM reference - should NOT be $state
@@ -188,47 +187,28 @@
         refreshAnimationsList();
     });
 
-    function openNewAnimationDialog() {
-        newAnimationName = '';
-        selectedAnimationTarget = 'control|Color'; // Default to Color control
-        newAnimationDialog?.showModal();
-    }
+    async function openNewAnimationDialog() {
+        const result = await addAnimationDialog.open();
 
-    // Build complete list of animation targets (controls + device types)
-    function getAllAnimationTargets() {
-        const targets = [];
+        if (!result) return; // User cancelled
 
-        // First, collect all unique control names across all device types
-        const controlNamesSet = new Set();
-        for (const deviceDef of Object.values(DEVICE_TYPES)) {
-            for (const control of deviceDef.controls) {
-                controlNamesSet.add(control.name);
-            }
-        }
+        // Parse selected target
+        const parsed = parseAnimationTarget(result.target);
+        const { controls, displayName } = parsed;
 
-        // Add individual controls (device-agnostic)
-        const sortedControlNames = Array.from(controlNamesSet).sort();
-        for (const controlName of sortedControlNames) {
-            targets.push({
-                type: 'control',
-                value: `control|${controlName}`,
-                label: controlName
-            });
-        }
+        // Create animation with controls array (no deviceType stored)
+        const animation = new Animation(result.name, null, [], null, controls, displayName);
 
-        // Add separator
-        targets.push({ type: 'separator' });
+        // Determine number of channels based on control selection
+        const numChannels = animation.getNumChannels();
+        const defaultValues = new Array(numChannels).fill(0);
 
-        // Add device types (all controls)
-        for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
-            targets.push({
-                type: 'device',
-                value: `device|${deviceKey}`,
-                label: deviceDef.name
-            });
-        }
+        // Add default keyframes at start and end
+        animation.addKeyframe(0, [...defaultValues]);
+        animation.addKeyframe(1, [...defaultValues]);
 
-        return targets;
+        animationLibrary.add(animation);
+        refreshAnimationsList();
     }
 
     // Parse selected target into controls array and displayName
@@ -259,29 +239,6 @@
             controls: ['Color'],
             displayName: 'Color'
         };
-    }
-
-    function createNewAnimation() {
-        if (!newAnimationName.trim()) return;
-
-        // Parse selected target
-        const parsed = parseAnimationTarget(selectedAnimationTarget);
-        const { controls, displayName } = parsed;
-
-        // Create animation with controls array (no deviceType stored)
-        const animation = new Animation(newAnimationName.trim(), null, [], null, controls, displayName);
-
-        // Determine number of channels based on control selection
-        const numChannels = animation.getNumChannels();
-        const defaultValues = new Array(numChannels).fill(0);
-
-        // Add default keyframes at start and end
-        animation.addKeyframe(0, [...defaultValues]);
-        animation.addKeyframe(1, [...defaultValues]);
-
-        animationLibrary.add(animation);
-        refreshAnimationsList();
-        newAnimationDialog?.close();
     }
 
     function openEditDialog(animation) {
@@ -458,43 +415,10 @@
     </div>
 </div>
 
-<!-- New Animation Dialog -->
-<Dialog bind:dialogRef={newAnimationDialog} title="Create New Animation" onclose={() => newAnimationDialog?.close()}>
-    <form id="new-animation-form" method="dialog" onsubmit={(e) => { e.preventDefault(); createNewAnimation(); }}>
-        <div class="dialog-input-group">
-            <label for="animation-name">Animation Name:</label>
-            <input
-                id="animation-name"
-                type="text"
-                bind:value={newAnimationName}
-                placeholder="e.g., rainbow, pulse, sweep"
-                autofocus
-            />
-            <div class="css-identifiers">
-                <code class="css-identifier">@keyframes {toCSSIdentifier(newAnimationName)}</code>
-            </div>
-        </div>
-
-        <div class="dialog-input-group">
-            <label for="animation-target">Target:</label>
-            <select id="animation-target" bind:value={selectedAnimationTarget} class="animation-target-select">
-                {#each getAllAnimationTargets() as target}
-                    {#if target.type === 'separator'}
-                        <option disabled>──────────</option>
-                    {:else}
-                        <option value={target.value}>{target.label}</option>
-                    {/if}
-                {/each}
-            </select>
-            <small class="help-text">Select a specific control or entire device type</small>
-        </div>
-    </form>
-
-    {#snippet buttons()}
-        <Button type="button" onclick={() => newAnimationDialog?.close()} variant="secondary">Cancel</Button>
-        <Button type="submit" form="new-animation-form" variant="primary">Create</Button>
-    {/snippet}
-</Dialog>
+<!-- Add Animation Dialog -->
+<AddAnimationDialog
+    bind:this={addAnimationDialog}
+/>
 
 <!-- Edit Animation Dialog -->
 {#if editingAnimation}
