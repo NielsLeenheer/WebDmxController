@@ -1,13 +1,11 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { InputMapping } from '../../lib/mappings.js';
-    import { paletteColorToHex, getPalette, getUnusedFromPalette } from '../../lib/inputs/colors.js';
-    import { toCSSIdentifier } from '../../lib/css/utils.js';
+    import { paletteColorToHex, getUnusedFromPalette } from '../../lib/inputs/colors.js';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
-    import Dialog from '../common/Dialog.svelte';
     import Preview from '../common/Preview.svelte';
-    import removeIcon from '../../assets/icons/remove.svg?raw';
+    import EditInputDialog from '../dialogs/EditInputDialog.svelte';
     import recordIcon from '../../assets/icons/record.svg?raw';
     import stopIcon from '../../assets/icons/stop.svg?raw';
     import editIcon from '../../assets/glyphs/edit.svg?raw';
@@ -20,11 +18,7 @@
 
     let isListening = $state(false);
     let savedInputs = $state([]);
-    let editingInput = $state(null);
-    let editingName = $state('');
-    let editingButtonMode = $state('momentary');
-    let editingColor = $state(null);
-    let editDialog = null; // DOM reference - should NOT be $state
+    let editInputDialog; // Reference to EditInputDialog component
     let inputStates = $state({}); // Track state/value for each input: { inputId: { state: 'on'|'off', value: number } }
     let thingyEulerAngles = $state({}); // Track Euler angles for Thingy devices: { deviceId: { roll, pitch, yaw } }
 
@@ -349,33 +343,30 @@
         }
     }
 
-    function startEditing(input) {
-        editingInput = input;
-        editingName = input.name;
-        editingButtonMode = input.buttonMode || 'momentary';
-        editingColor = input.color;
+    async function startEditing(input) {
+        const result = await editInputDialog.open(input);
 
-        requestAnimationFrame(() => {
-            editDialog?.showModal();
-        });
-    }
+        if (!result) return; // User cancelled
 
-    async function saveEdit() {
-        if (!editingInput || !editingName.trim()) return;
+        if (result.delete) {
+            // Handle delete
+            await deleteInput(input.id);
+            return;
+        }
 
-        // Get the mapping from the library and update it
-        const mapping = mappingLibrary.get(editingInput.id);
+        // Handle save
+        const mapping = mappingLibrary.get(input.id);
         if (mapping) {
             const oldColor = mapping.color;
-            mapping.name = editingName.trim();
+            mapping.name = result.name;
 
             // Update button mode for button inputs
             if (mapping.mode === 'input' && mapping.isButtonInput()) {
-                mapping.buttonMode = editingButtonMode;
+                mapping.buttonMode = result.buttonMode;
             }
 
             // Update color if it changed and device supports colors
-            if (editingColor !== oldColor && shouldAssignColor(
+            if (result.color !== oldColor && shouldAssignColor(
                 inputController.getInputDevice(mapping.inputDeviceId),
                 mapping.inputControlId
             )) {
@@ -385,21 +376,21 @@
                 }
 
                 // Update color
-                mapping.color = editingColor;
+                mapping.color = result.color;
 
                 // Register new color usage
-                if (editingColor) {
-                    registerColorUsage(mapping.inputDeviceId, mapping.inputControlId, editingColor);
+                if (result.color) {
+                    registerColorUsage(mapping.inputDeviceId, mapping.inputControlId, result.color);
                 }
 
                 // Update color on hardware
                 const inputDevice = inputController.getInputDevice(mapping.inputDeviceId);
-                if (inputDevice && editingColor) {
+                if (inputDevice && result.color) {
                     // For toggle buttons, respect current state
-                    let color = editingColor;
+                    let color = result.color;
                     if (mapping.isButtonInput() && mapping.buttonMode === 'toggle') {
                         const state = inputStates[mapping.id];
-                        color = (state?.state === 'on') ? editingColor : 'black';
+                        color = (state?.state === 'on') ? result.color : 'black';
                     }
 
                     // Use generic setColor method
@@ -411,28 +402,6 @@
             mapping.updateCSSIdentifiers();
             mappingLibrary.update(mapping);
             refreshInputs();
-        }
-
-        closeEditDialog();
-    }
-
-    function cancelEdit() {
-        closeEditDialog();
-    }
-
-    function closeEditDialog() {
-        editDialog?.close();
-        editingInput = null;
-        editingName = '';
-        editingColor = null;
-    }
-
-    async function confirmDelete() {
-        if (!editingInput) return;
-
-        if (confirm(`Are you sure you want to delete "${editingInput.name}"?`)) {
-            await deleteInput(editingInput.id);
-            closeEditDialog();
         }
     }
 
@@ -673,83 +642,11 @@
     </div>
 </div>
 
-<!-- Edit Dialog -->
-{#if editingInput}
-<Dialog
-    bind:dialogRef={editDialog}
-    title="Input"
-    onclose={closeEditDialog}
->
-    <form id="edit-input-form" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
-        <div class="dialog-input-group">
-            <label for="input-name">Name:</label>
-            <input
-                id="input-name"
-                type="text"
-                bind:value={editingName}
-                placeholder="Input name"
-                onkeydown={(e) => {
-                    if (e.key === 'Enter') saveEdit();
-                    if (e.key === 'Escape') cancelEdit();
-                }}
-                autofocus
-            />
-            <div class="css-identifiers">
-                {#if editingInput.isButtonInput()}
-                    {#if editingButtonMode === 'toggle'}
-                        <code class="css-identifier">.{toCSSIdentifier(editingName)}-on</code>
-                        <code class="css-identifier">.{toCSSIdentifier(editingName)}-off</code>
-                    {:else}
-                        <code class="css-identifier">.{toCSSIdentifier(editingName)}-down</code>
-                        <code class="css-identifier">.{toCSSIdentifier(editingName)}-up</code>
-                    {/if}
-                {:else}
-                    <code class="css-identifier">--{toCSSIdentifier(editingName)}</code>
-                {/if}
-            </div>
-        </div>
-
-        {#if editingInput.isButtonInput()}
-            <div class="dialog-input-group">
-                <label for="button-mode">Button Mode:</label>
-                <select id="button-mode" bind:value={editingButtonMode}>
-                    <option value="momentary">Down/Up</option>
-                    <option value="toggle">On/Off</option>
-                </select>
-            </div>
-        {/if}
-
-        {#if editingInput && shouldAssignColor(inputController.getInputDevice(editingInput.inputDeviceId), editingInput.inputControlId)}
-            <div class="dialog-input-group">
-                <label for="input-color">Color:</label>
-                <select id="input-color" bind:value={editingColor}>
-                    {#each getPalette() as color}
-                        <option value={color}>{color.charAt(0).toUpperCase() + color.slice(1)}</option>
-                    {/each}
-                </select>
-                <div class="color-preview-wrapper">
-                    <div
-                        class="color-preview-large"
-                        style="background-color: {paletteColorToHex(editingColor)}"
-                    ></div>
-                </div>
-            </div>
-        {/if}
-    </form>
-
-    {#snippet tools()}
-        <Button onclick={confirmDelete} variant="secondary">
-            {@html removeIcon}
-            Delete
-        </Button>
-    {/snippet}
-
-    {#snippet buttons()}
-        <Button onclick={cancelEdit} variant="secondary">Cancel</Button>
-        <Button type="submit" form="edit-input-form" variant="primary">Save</Button>
-    {/snippet}
-</Dialog>
-{/if}
+<!-- Edit Input Dialog -->
+<EditInputDialog
+    bind:this={editInputDialog}
+    inputController={inputController}
+/>
 
 <style>
     .inputs-view {
@@ -900,17 +797,6 @@
     .edit-button :global(svg) {
         width: 20px;
         height: 20px;
-    }
-
-    .color-preview-wrapper {
-        margin-top: 8px;
-    }
-
-    .color-preview-large {
-        width: 64px;
-        height: 32px;
-        border-radius: 4px;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     /* Thingy:52 Euler angle preview */
