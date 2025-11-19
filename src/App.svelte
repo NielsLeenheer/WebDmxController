@@ -4,8 +4,7 @@
     import { convertChannelsToArray } from './lib/outputs/devices.js';
     import { AnimationLibrary } from './lib/animations.js';
     import { MappingLibrary, TriggerManager } from './lib/mappings.js';
-    import { CustomPropertyManager } from './lib/cssEngine.js';
-    import { CSSManager } from './lib/cssManager.js';
+    import { CustomPropertyManager, CSSManager } from './lib/css/index.js';
     import { InputController } from './lib/inputController.js';
     import Header from './components/layout/Header.svelte';
     import Tabs from './components/layout/Tabs.svelte';

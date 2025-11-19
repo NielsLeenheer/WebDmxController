@@ -6,7 +6,7 @@
  * consistent conversion in both directions.
  */
 
-import { getDeviceColor } from './colorUtils.js';
+import { getDeviceColor } from '../colorUtils.js';
 
 /**
  * CSS to DMX mapping configuration (reverse direction)

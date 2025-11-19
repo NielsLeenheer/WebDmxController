@@ -8,7 +8,8 @@
  * - Publishes sampled values to subscribers
  */
 
-import { CSSGenerator, CSSSampler } from './cssEngine.js';
+import { CSSGenerator } from './CSSGenerator.js';
+import { CSSSampler } from './CSSSampler.js';
 
 export class CSSManager {
 	constructor(animationLibrary, mappingLibrary, triggerManager) {

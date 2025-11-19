@@ -7,8 +7,8 @@
 
 import { getDeviceColor } from './colorUtils.js';
 import { DEVICE_TYPES } from './outputs/devices.js';
-import { CONTROL_CSS_MAPPING, generateCSSProperties } from './controlCssMapping.js';
-import { toCSSIdentifier } from './cssUtils.js';
+import { CONTROL_CSS_MAPPING, generateCSSProperties } from './css/controlCssMapping.js';
+import { toCSSIdentifier } from './css/cssUtils.js';
 
 /**
  * Represents a single keyframe in an animation

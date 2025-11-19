@@ -7,8 +7,8 @@
 
 import { InputDeviceManager } from './inputs/manager.js';
 import { InputMapping, MappingLibrary, TriggerManager } from './mappings.js';
-import { CustomPropertyManager } from './cssEngine.js';
-import { toCSSIdentifier } from './cssUtils.js';
+import { CustomPropertyManager } from './css/index.js';
+import { toCSSIdentifier } from './css/cssUtils.js';
 
 export class InputController {
 	constructor(mappingLibrary, customPropertyManager, triggerManager) {

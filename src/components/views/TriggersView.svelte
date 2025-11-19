@@ -4,7 +4,7 @@
     import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { paletteColorToHex } from '../../lib/inputs/colors.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
-    import { toCSSIdentifier } from '../../lib/cssUtils.js';
+    import { toCSSIdentifier } from '../../lib/css/cssUtils.js';
     import Button from '../common/Button.svelte';
     import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
