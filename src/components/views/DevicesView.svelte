@@ -168,25 +168,19 @@
             return;
         }
 
-        // Handle save
-        const newStartChannel = result.startChannel;
-        const newName = result.name;
+        // Handle save - mutate device in place and increment version
+        const nameChanged = result.name !== device.name;
 
-        // Only preserve cssId if name hasn't changed, otherwise regenerate
-        const preserveCssId = newName === device.name ? device.cssId : null;
+        device.startChannel = result.startChannel;
+        device.name = result.name;
+        device.linkedTo = result.linkedTo;
+        device.syncedControls = result.syncedControls;
+        device.mirrorPan = result.mirrorPan;
 
-        // Create new Device instance with all updated properties
-        const updatedDevice = new Device(
-            device.id,
-            device.type,
-            newStartChannel,
-            newName,
-            result.linkedTo,
-            preserveCssId,
-            result.syncedControls,
-            result.mirrorPan
-        );
-        updatedDevice.defaultValues = [...device.defaultValues];
+        // Update cssId if name changed
+        if (nameChanged) {
+            device.updateCssId();
+        }
 
         // If linking, apply values from source device
         if (result.linkedTo !== null) {
@@ -194,26 +188,27 @@
             if (sourceDevice) {
                 const newValues = applyLinkedValues(
                     sourceDevice.type,
-                    updatedDevice.type,
+                    device.type,
                     sourceDevice.defaultValues,
-                    updatedDevice.defaultValues,
+                    device.defaultValues,
                     result.syncedControls,
                     result.mirrorPan
                 );
-                updatedDevice.defaultValues = newValues;
+                device.defaultValues = newValues;
             }
         }
 
         // Update DMX controller with new channel values
         if (dmxController) {
-            updatedDevice.defaultValues.forEach((value, index) => {
-                const channelIndex = updatedDevice.startChannel + index;
+            device.defaultValues.forEach((value, index) => {
+                const channelIndex = device.startChannel + index;
                 dmxController.setChannel(channelIndex, value);
             });
         }
 
-        // Update devices array
-        devices = devices.map(d => d.id === device.id ? updatedDevice : d);
+        // Increment version for reactivity and trigger array update
+        device.version = (device.version || 0) + 1;
+        devices = [...devices];
     }
 
     // Load initial state from localStorage
@@ -232,7 +227,8 @@
                         d.linkedTo,
                         d.cssId,
                         d.syncedControls || null,
-                        d.mirrorPan || false
+                        d.mirrorPan || false,
+                        d.version || 0
                     );
                     device.defaultValues = d.defaultValues || new Array(DEVICE_TYPES[d.type].channels).fill(0);
                     return device;
@@ -272,7 +268,8 @@
                     linkedTo: d.linkedTo,
                     cssId: d.cssId,
                     syncedControls: d.syncedControls,
-                    mirrorPan: d.mirrorPan
+                    mirrorPan: d.mirrorPan,
+                    version: d.version
                 })),
                 nextId
             };
@@ -483,7 +480,7 @@
             </div>
         {/if}
 
-        {#each devices as device, index (device.id)}
+        {#each devices as device, index (`${device.id}-${device.version}`)}
             <div
                 class="device-card"
                 class:dragging={draggedDevice?.id === device.id}
