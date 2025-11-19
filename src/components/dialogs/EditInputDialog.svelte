@@ -34,13 +34,11 @@
 	let editingColor = $state(null);
 
 	// Computed: whether this input supports colors
-	let showColorPicker = $derived(
-		editingInput &&
-		shouldAssignColor(
-			inputController?.getInputDevice(editingInput.inputDeviceId),
-			editingInput.inputControlId
-		)
-	);
+	let showColorPicker = $derived.by(() => {
+		if (!editingInput) return false;
+		const device = inputController?.getInputDevice(editingInput.inputDeviceId);
+		return shouldAssignColor(device, editingInput.inputControlId);
+	});
 
 	/**
 	 * Open the dialog with an input mapping

@@ -572,7 +572,7 @@
                 <p>No inputs detected yet. Start listening to detect inputs!</p>
             </div>
         {:else}
-            {#each savedInputs as input, index (input.id)}
+            {#each savedInputs as input, index (`${input.id}-${input.version}`)}
                 <div
                     class="input-card"
                     class:dragging={draggedInput?.id === input.id}
