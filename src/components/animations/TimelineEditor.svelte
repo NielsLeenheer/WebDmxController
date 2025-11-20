@@ -26,25 +26,34 @@
     let dragStartTime = $state(0);
     let hasActuallyDragged = $state(false);
 
-    // Local version counter for immediate visual updates
+    // Local state for immediate UI updates without expensive animation saves
+    let localKeyframes = $state([]);
     let localVersion = $state(0);
+    let isSyncing = $state(false); // Prevent reactivity loops
 
-    // Display keyframes (for rendering) - reactive to animation.version
-    let displayKeyframes = $derived.by(() => {
-        animation.version; // Make reactive to animation version changes
-        localVersion; // Make reactive to local changes (e.g., during drag)
-        return animation ? animation.keyframes : [];
+    // Watch for animation changes and sync to local state
+    $effect(() => {
+        if (animation && !isSyncing) {
+            animation.version; // Track external changes
+            localKeyframes = [...animation.keyframes];
+            localVersion++;
+        }
     });
 
-    // Gradient segments for visualization - reactive to animation.version
+    // Display keyframes from local state
+    let displayKeyframes = $derived.by(() => {
+        localVersion; // Make reactive to local changes
+        return localKeyframes;
+    });
+
+    // Gradient segments for visualization using local keyframes
     let gradientSegments = $derived.by(() => {
-        animation.version; // Make reactive to animation version changes
         localVersion; // Make reactive to local changes
 
-        if (!animation || animation.keyframes.length < 2) return [];
+        if (!animation || localKeyframes.length < 2) return [];
 
         const segments = [];
-        const keyframes = animation.keyframes;
+        const keyframes = localKeyframes;
 
         // Extend gradient from 0% if first keyframe is after the start
         const firstKeyframe = keyframes[0];
@@ -93,13 +102,11 @@
     });
 
     function getKeyframePosition(keyframe) {
-        animation.version; // Make reactive to animation version changes
         localVersion; // Make reactive to local changes
         return keyframe.time * timelineWidth;
     }
 
     function getKeyframePercentage(keyframe) {
-        animation.version; // Make reactive to animation version changes
         localVersion; // Make reactive to local changes
         return (keyframe.time * 100).toFixed(0);
     }
@@ -108,7 +115,7 @@
         if (!animation) return;
 
         selectedKeyframeIndex = index;
-        const keyframe = animation.keyframes[index];
+        const keyframe = localKeyframes[index];
 
         // Load keyframe values into editor
         editingKeyframeValues = [...keyframe.values];
@@ -129,11 +136,17 @@
     function updateKeyframeValues() {
         if (!animation || selectedKeyframeIndex === null) return;
 
-        const keyframe = animation.keyframes[selectedKeyframeIndex];
+        // Update in local keyframes first
+        const keyframe = localKeyframes[selectedKeyframeIndex];
         keyframe.values = [...editingKeyframeValues];
-
-        animation.version = (animation.version || 0) + 1;
         localVersion++;
+
+        // Sync to animation
+        isSyncing = true;
+        animation.keyframes = [...localKeyframes];
+        animation.version = (animation.version || 0) + 1;
+        isSyncing = false;
+
         animationLibrary.save();
         if (onUpdate) onUpdate();
     }
@@ -141,26 +154,33 @@
     function confirmDeleteKeyframe() {
         if (!animation || selectedKeyframeIndex === null) return;
 
-        if (animation.keyframes.length <= 2) {
+        if (localKeyframes.length <= 2) {
             alert('Animation must have at least 2 keyframes');
             return;
         }
 
-        if (confirm(`Delete keyframe at ${(animation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%?`)) {
+        if (confirm(`Delete keyframe at ${(localKeyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%?`)) {
             deleteKeyframe(selectedKeyframeIndex);
             closeEditDialog();
         }
     }
 
     function deleteKeyframe(index) {
-        if (!animation || animation.keyframes.length <= 2) {
+        if (!animation || localKeyframes.length <= 2) {
             alert('Animation must have at least 2 keyframes');
             return;
         }
 
-        animation.keyframes = animation.keyframes.filter((_, i) => i !== index);
-        animation.version = (animation.version || 0) + 1;
+        // Remove from local keyframes
+        localKeyframes = localKeyframes.filter((_, i) => i !== index);
         localVersion++;
+
+        // Sync to animation
+        isSyncing = true;
+        animation.keyframes = [...localKeyframes];
+        animation.version = (animation.version || 0) + 1;
+        isSyncing = false;
+
         animationLibrary.save();
         if (onUpdate) onUpdate();
         selectedKeyframeIndex = null;
@@ -242,39 +262,45 @@
         newTime = Math.round(newTime * 100) / 100;
 
         // Don't allow dragging to 0 or 1 if those positions already have keyframes
-        const firstKeyframe = animation.keyframes[0];
-        const lastKeyframe = animation.keyframes[animation.keyframes.length - 1];
+        const firstKeyframe = localKeyframes[0];
+        const lastKeyframe = localKeyframes[localKeyframes.length - 1];
 
         if (draggingKeyframe.index !== 0 && newTime === 0 && firstKeyframe.time === 0) {
             return;
         }
-        if (draggingKeyframe.index !== animation.keyframes.length - 1 && newTime === 1 && lastKeyframe.time === 1) {
+        if (draggingKeyframe.index !== localKeyframes.length - 1 && newTime === 1 && lastKeyframe.time === 1) {
             return;
         }
 
-        // Update time
+        // Update time in local keyframes only
         draggingKeyframe.keyframe.time = newTime;
 
-        // Re-sort keyframes by time
-        animation.keyframes.sort((a, b) => a.time - b.time);
+        // Re-sort local keyframes by time
+        localKeyframes.sort((a, b) => a.time - b.time);
 
         // Update the dragging index in case it changed due to sorting
-        draggingKeyframe.index = animation.keyframes.indexOf(draggingKeyframe.keyframe);
+        draggingKeyframe.index = localKeyframes.indexOf(draggingKeyframe.keyframe);
 
-        // Increment version to trigger reactivity
-        animation.version = (animation.version || 0) + 1;
+        // Increment only local version (no animation.version, no expensive save)
         localVersion++;
 
         if (Math.abs(deltaX) > 3) {
             hasActuallyDragged = true;
         }
 
-        if (onUpdate) onUpdate();
+        // Don't call onUpdate during drag - wait until mouseup
     }
 
     function handleKeyframeMouseUp() {
         if (draggingKeyframe && animation) {
+            // Now sync back to animation and save once
+            isSyncing = true;
+            animation.keyframes = [...localKeyframes];
+            animation.version = (animation.version || 0) + 1;
+            isSyncing = false;
+
             animationLibrary.save();
+            if (onUpdate) onUpdate();
         }
 
         draggingKeyframe = null;
@@ -337,7 +363,7 @@
     showArrow={true}
     lightDismiss={true}
     onclose={closeEditDialog}
-    title="Keyframe at {(animation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%"
+    title="Keyframe at {(localKeyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%"
 >
     <Controls
         {...animation.getControlsForRendering()}
