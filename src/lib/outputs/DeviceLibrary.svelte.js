@@ -39,7 +39,7 @@ export class DeviceLibrary extends Library {
 			type,
 			startChannel,
 			name: name || `${DEVICE_TYPES[type].name} ${this.items.length + 1}`,
-			defaultValues: $state([...DEVICE_TYPES[type].getDefaultValues()]),
+			defaultValues: [...DEVICE_TYPES[type].getDefaultValues()],
 			linkedTo,
 			syncedControls,
 			mirrorPan,
@@ -143,7 +143,8 @@ export class DeviceLibrary extends Library {
 	}
 
 	/**
-	 * Load from localStorage with proper $state wrapping
+	 * Load from localStorage
+	 * Items are automatically reactive since this.items is wrapped in $state
 	 */
 	load() {
 		try {
@@ -155,7 +156,7 @@ export class DeviceLibrary extends Library {
 					type: deviceData.type,
 					startChannel: deviceData.startChannel,
 					name: deviceData.name,
-					defaultValues: $state([...(deviceData.defaultValues || DEVICE_TYPES[deviceData.type].getDefaultValues())]),
+					defaultValues: [...(deviceData.defaultValues || DEVICE_TYPES[deviceData.type].getDefaultValues())],
 					linkedTo: deviceData.linkedTo || null,
 					syncedControls: deviceData.syncedControls || null,
 					mirrorPan: deviceData.mirrorPan || false,
