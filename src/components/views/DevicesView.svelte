@@ -4,6 +4,7 @@
     import { DEVICE_TYPES, Device } from '../../lib/outputs/devices.js';
     import { canLinkDevices, applyLinkedValues, getMappedChannels, getAvailableSyncControls } from '../../lib/channelMapping.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
+    import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import Controls from '../controls/Controls.svelte';
     import Dialog from '../common/Dialog.svelte';
     import Button from '../common/Button.svelte';
@@ -23,138 +24,49 @@
     // Dialog reference
     let editDeviceDialog;
 
-    // Drag and drop state
-    let draggedDevice = $state(null);
-    let draggedIndex = $state(null);
-    let dragOverIndex = $state(null);
-    let isAfterMidpoint = $state(false);
-    let lastMouseDownTarget = null;
-
     // Preview state for special device types
     let deviceFlamethrower = $state({});
     let deviceSmoke = $state({});
 
-    function handleMouseDown(event) {
-        // Track where the mouse was pressed down
-        lastMouseDownTarget = event.target;
-    }
-
-    function handleDragStart(event, device) {
-        // Check where the mousedown happened (not where drag started)
-        let clickedElement = lastMouseDownTarget;
-
-        if (!clickedElement) {
-            event.preventDefault();
-            return;
-        }
-
-        // Check if mousedown was on an interactive element
-        if (clickedElement.tagName === 'INPUT' ||
-            clickedElement.tagName === 'BUTTON' ||
-            clickedElement.tagName === 'TEXTAREA') {
-            event.preventDefault();
-            return;
-        }
-
-        // Walk up from the mousedown target to see if we're in header or controls
-        let foundHeader = false;
-        let foundControls = false;
-
-        let el = clickedElement;
-        while (el && el !== event.currentTarget) {
-            if (el.classList) {
-                if (el.classList.contains('device-header')) {
-                    foundHeader = true;
-                }
-                if (el.classList.contains('controls') ||
-                    el.classList.contains('control') ||
-                    el.classList.contains('icon-button')) {
-                    foundControls = true;
-                }
+    // Drag and drop helper
+    const dnd = createDragDrop({
+        items: () => devices,
+        onReorder: (newDevices) => { devices = newDevices; },
+        orientation: 'horizontal',
+        shouldAllowDrag: (target) => {
+            // Check if mousedown was on an interactive element
+            if (target.tagName === 'INPUT' ||
+                target.tagName === 'BUTTON' ||
+                target.tagName === 'TEXTAREA') {
+                return false;
             }
-            el = el.parentElement;
+
+            // Walk up from the mousedown target to see if we're in header or controls
+            let foundHeader = false;
+            let foundControls = false;
+
+            let el = target;
+            while (el && !el.classList?.contains('device-card')) {
+                if (el.classList) {
+                    if (el.classList.contains('device-header')) {
+                        foundHeader = true;
+                    }
+                    if (el.classList.contains('controls') ||
+                        el.classList.contains('control') ||
+                        el.classList.contains('icon-button')) {
+                        foundControls = true;
+                    }
+                }
+                el = el.parentElement;
+            }
+
+            // Only allow drag from header, not from controls
+            return foundHeader && !foundControls;
         }
-
-        // Only allow drag from header, not from controls
-        if (!foundHeader || foundControls) {
-            event.preventDefault();
-            return;
-        }
-
-        draggedDevice = device;
-        draggedIndex = devices.findIndex(d => d.id === device.id);
-        event.dataTransfer.effectAllowed = 'move';
-    }
-
-    function handleDragOver(event, index) {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-        dragOverIndex = index;
-
-        // Calculate if mouse is in the second half of the card
-        const rect = event.currentTarget.getBoundingClientRect();
-        const mouseX = event.clientX;
-        const cardMidpoint = rect.left + rect.width / 2;
-        isAfterMidpoint = mouseX > cardMidpoint;
-    }
+    });
 
     function isDragAfter(index) {
-        return dragOverIndex === index && isAfterMidpoint;
-    }
-
-    function handleDragLeave() {
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
-
-    function handleDrop(event, targetIndex) {
-        event.preventDefault();
-
-        if (!draggedDevice) return;
-
-        const currentIndex = devices.findIndex(d => d.id === draggedDevice.id);
-        if (currentIndex === -1) {
-            draggedDevice = null;
-            draggedIndex = null;
-            dragOverIndex = null;
-            isAfterMidpoint = false;
-            return;
-        }
-
-        // Adjust target index based on whether we're inserting after the midpoint
-        let insertIndex = targetIndex;
-        if (isAfterMidpoint) {
-            insertIndex = targetIndex + 1;
-        }
-
-        // If dragging from before to after in the same position, no change needed
-        if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
-            draggedDevice = null;
-            draggedIndex = null;
-            dragOverIndex = null;
-            isAfterMidpoint = false;
-            return;
-        }
-
-        // Reorder the array
-        const newDevices = [...devices];
-        const [removed] = newDevices.splice(currentIndex, 1);
-        // Adjust insert position if we removed an item before it
-        const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
-        newDevices.splice(finalInsertIndex, 0, removed);
-        devices = newDevices;
-
-        draggedDevice = null;
-        draggedIndex = null;
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
-
-    function handleDragEnd() {
-        draggedDevice = null;
-        draggedIndex = null;
-        dragOverIndex = null;
-        isAfterMidpoint = false;
+        return dnd.dragOverIndex === index && dnd.isAfterMidpoint;
     }
 
     async function openSettingsDialog(device) {
@@ -483,16 +395,16 @@
         {#each devices as device, index (`${device.id}-${device.version}`)}
             <div
                 class="device-card"
-                class:dragging={draggedDevice?.id === device.id}
-                class:drag-over={dragOverIndex === index && !isAfterMidpoint}
+                class:dragging={dnd.draggedItem?.id === device.id}
+                class:drag-over={dnd.dragOverIndex === index && !dnd.isAfterMidpoint}
                 class:drag-after={isDragAfter(index)}
                 draggable="true"
-                onmousedown={handleMouseDown}
-                ondragstart={(e) => handleDragStart(e, device)}
-                ondragover={(e) => handleDragOver(e, index)}
-                ondragleave={handleDragLeave}
-                ondrop={(e) => handleDrop(e, index)}
-                ondragend={handleDragEnd}
+                onmousedown={dnd.handleMouseDown}
+                ondragstart={(e) => dnd.handleDragStart(e, device, index)}
+                ondragover={(e) => dnd.handleDragOver(e, index)}
+                ondragleave={dnd.handleDragLeave}
+                ondrop={(e) => dnd.handleDrop(e, index)}
+                ondragend={dnd.handleDragEnd}
             >
                 <div class="device-header">
                     {#if device.type === 'FLAMETHROWER'}
