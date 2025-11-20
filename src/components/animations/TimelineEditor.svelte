@@ -98,6 +98,12 @@
         return keyframe.time * timelineWidth;
     }
 
+    function getKeyframePercentage(keyframe) {
+        animation.version; // Make reactive to animation version changes
+        localVersion; // Make reactive to local changes
+        return (keyframe.time * 100).toFixed(0);
+    }
+
     function selectKeyframe(index, buttonElement = null) {
         if (!animation) return;
 
@@ -314,9 +320,9 @@
                     }
                 }}
                 draggable="false"
-                title="{(keyframe.time * 100).toFixed(0)}%"
+                title="{getKeyframePercentage(keyframe)}%"
             >
-                <div class="keyframe-time">{(keyframe.time * 100).toFixed(0)}%</div>
+                <div class="keyframe-time">{getKeyframePercentage(keyframe)}%</div>
             </div>
         {/each}
     </div>
