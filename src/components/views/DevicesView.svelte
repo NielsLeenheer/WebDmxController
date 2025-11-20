@@ -205,16 +205,16 @@
                 {device}
                 {dnd}
                 {devices}
-                onsettings={openSettingsDialog}
-                onvaluechange={handleDeviceValueChange}
+                onSettings={openSettingsDialog}
+                onValueChange={handleDeviceValueChange}
             />
         {/each}
     </div>
 
-<!-- Edit Device Dialog -->
-<EditDeviceDialog
-    bind:this={editDeviceDialog}
-/>
+    <!-- Edit Device Dialog -->
+    <EditDeviceDialog
+        bind:this={editDeviceDialog}
+    />
 </div>
 
 <style>
@@ -259,16 +259,5 @@
         align-content: center;
         color: #999;
         font-size: 0.9em;
-    }
-
-    :global(.card-header) h3 {
-        margin: 0;
-        font-size: 11pt;
-        font-weight: 600;
-        color: #333;
-    }
-
-    :global(.card-header) :global(.icon-button) {
-        margin-left: auto;
     }
 </style>

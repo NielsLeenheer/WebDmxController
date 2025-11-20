@@ -16,8 +16,8 @@
 		device,       // Device object
 		dnd,          // Drag-and-drop helper
 		devices,      // All devices (for linked device lookup)
-		onsettings,   // Callback when settings button clicked
-		onvaluechange // Callback when device value changes
+		onSettings,   // Callback when settings button clicked
+		onValueChange // Callback when device value changes
 	} = $props();
 
 	/**
@@ -85,7 +85,7 @@
 		{/if}
 		<IconButton
 			icon={editIcon}
-			onclick={() => onsettings?.(device)}
+			onclick={() => onSettings?.(device)}
 			title="Device settings"
 			size="small"
 		/>
@@ -95,7 +95,22 @@
 		controls={DEVICE_TYPES[device.type].controls}
 		components={DEVICE_TYPES[device.type].components}
 		values={device.defaultValues}
-		onChange={(channelIndex, value) => onvaluechange?.(device, channelIndex, value)}
+		onChange={(channelIndex, value) => onValueChange?.(device, channelIndex, value)}
 		disabledChannels={disabledChannels}
 	/>
 </DraggableCard>
+
+<style>
+
+	:global(.card-header) h3 {
+        margin: 0;
+        font-size: 11pt;
+        font-weight: 600;
+        color: #333;
+    }
+
+    :global(.card-header) :global(.icon-button) {
+        margin-left: auto;
+    }
+
+</style>
