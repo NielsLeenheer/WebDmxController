@@ -89,6 +89,22 @@ export class DeviceLibrary extends Library {
 	}
 
 	/**
+	 * Remove a device and unlink any devices that were linked to it
+	 * @param {string} deviceId - Device ID to remove
+	 */
+	remove(deviceId) {
+		// Unlink any devices that were linked to this device
+		for (const device of this.items) {
+			if (device.linkedTo === deviceId) {
+				device.linkedTo = null;
+			}
+		}
+
+		// Call parent remove method
+		super.remove(deviceId);
+	}
+
+	/**
 	 * Propagate value changes to all linked devices
 	 * @param {Object} sourceDevice - Source device that changed
 	 */

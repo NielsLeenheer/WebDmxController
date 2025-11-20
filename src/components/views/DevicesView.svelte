@@ -94,12 +94,6 @@
     }
 
     function removeDevice(deviceId) {
-        // Also unlink any devices linked to this one
-        devices.forEach(d => {
-            if (d.linkedTo === deviceId) {
-                deviceLibrary.updateDevice(d.id, { linkedTo: null });
-            }
-        });
         deviceLibrary.remove(deviceId);
     }
 
