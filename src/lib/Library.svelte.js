@@ -108,14 +108,14 @@ export class Library {
 
 	/**
 	 * Reorder items based on drag and drop
-	 * @param {Array} newOrder - New array order
+	 * @param {Array<string>} orderedIds - Array of item IDs in new visual order
 	 */
-	reorder(newOrder) {
-		// Update order property for each item based on position in array
-		newOrder.forEach((item, index) => {
-			const existingItem = this.get(item.id);
-			if (existingItem) {
-				existingItem.order = index;
+	reorder(orderedIds) {
+		// Update order property for each item based on position in ID array
+		orderedIds.forEach((id, index) => {
+			const item = this.get(id);
+			if (item) {
+				item.order = index;
 			}
 		});
 		this.save();

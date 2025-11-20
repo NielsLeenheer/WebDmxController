@@ -25,7 +25,7 @@
  * Create a drag-and-drop controller
  * @param {Object} options
  * @param {Function} options.items - Function that returns the current items array
- * @param {Function} options.onReorder - Callback when items are reordered, receives new array
+ * @param {Function} options.onReorder - Callback when items are reordered, receives array of IDs in new visual order
  * @param {Function} [options.getItemId] - Function to get unique ID from item (default: item => item.id)
  * @param {boolean} [options.dragByHeader] - If true, only allow drag from CardHeader component
  * @param {string} [options.orientation] - Drag orientation: 'vertical' (default) or 'horizontal'
@@ -141,34 +141,50 @@ export function createDragDrop(options) {
 		if (!draggedItem) return;
 
 		const itemsArray = items();
-		const currentIndex = itemsArray.findIndex(item => getItemId(item) === getItemId(draggedItem));
 
-		if (currentIndex === -1) {
+		// Sort items by their order property to get visual order
+		const visualOrder = [...itemsArray].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+		// Find current visual index of dragged item
+		const currentVisualIndex = visualOrder.findIndex(item => getItemId(item) === getItemId(draggedItem));
+
+		if (currentVisualIndex === -1) {
+			resetDragState();
+			return;
+		}
+
+		// Find target visual index from the array index
+		const targetItem = itemsArray[targetIndex];
+		let targetVisualIndex = visualOrder.findIndex(item => getItemId(item) === getItemId(targetItem));
+
+		if (targetVisualIndex === -1) {
 			resetDragState();
 			return;
 		}
 
 		// Adjust target index based on whether we're inserting after the midpoint
-		let insertIndex = targetIndex;
 		if (isAfterMidpoint) {
-			insertIndex = targetIndex + 1;
+			targetVisualIndex = targetVisualIndex + 1;
 		}
 
-		// If dragging from before to after in the same position, no change needed
-		if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
+		// If dragging to the same position, no change needed
+		if (currentVisualIndex === targetVisualIndex || currentVisualIndex === targetVisualIndex - 1) {
 			resetDragState();
 			return;
 		}
 
-		// Reorder the array
-		const newItems = [...itemsArray];
-		const [removed] = newItems.splice(currentIndex, 1);
+		// Reorder the visual array
+		const newVisualOrder = [...visualOrder];
+		const [removed] = newVisualOrder.splice(currentVisualIndex, 1);
 		// Adjust insert position if we removed an item before it
-		const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
-		newItems.splice(finalInsertIndex, 0, removed);
+		const finalInsertIndex = currentVisualIndex < targetVisualIndex ? targetVisualIndex - 1 : targetVisualIndex;
+		newVisualOrder.splice(finalInsertIndex, 0, removed);
 
-		// Call the reorder callback
-		onReorder(newItems);
+		// Extract IDs in the new visual order
+		const orderedIds = newVisualOrder.map(item => getItemId(item));
+
+		// Call the reorder callback with array of IDs
+		onReorder(orderedIds);
 
 		resetDragState();
 	}

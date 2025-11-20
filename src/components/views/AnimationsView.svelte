@@ -35,9 +35,8 @@
     // Drag and drop helper
     const dnd = createDragDrop({
         items: () => animationsList,
-        onReorder: (newAnimations) => {
-            animationsList = newAnimations;
-            animationLibrary.reorder(newAnimations);
+        onReorder: (orderedIds) => {
+            animationLibrary.reorder(orderedIds);
         },
         getItemId: (item) => item.name,
         dragByHeader: true,

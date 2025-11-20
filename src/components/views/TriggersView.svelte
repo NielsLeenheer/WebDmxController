@@ -73,9 +73,8 @@
     // Drag and drop helper
     const dnd = createDragDrop({
         items: () => triggers,
-        onReorder: (newTriggers) => {
-            triggers = newTriggers;
-            triggerLibrary.reorder(newTriggers);
+        onReorder: (orderedIds) => {
+            triggerLibrary.reorder(orderedIds);
         },
         orientation: 'vertical'
     });

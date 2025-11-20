@@ -36,7 +36,7 @@
     // Drag and drop helper
     const dnd = createDragDrop({
         items: () => devices,
-        onReorder: (newDevices) => { deviceLibrary.reorder(newDevices); },
+        onReorder: (orderedIds) => { deviceLibrary.reorder(orderedIds); },
         orientation: 'horizontal',
         dragByHeader: true
     });

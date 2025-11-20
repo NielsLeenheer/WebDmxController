@@ -31,9 +31,8 @@
     // Drag and drop helper
     const dnd = createDragDrop({
         items: () => savedInputs,
-        onReorder: (newInputs) => {
-            savedInputs = newInputs;
-            inputLibrary.reorder(newInputs);
+        onReorder: (orderedIds) => {
+            inputLibrary.reorder(orderedIds);
         },
         orientation: 'horizontal'
     });
