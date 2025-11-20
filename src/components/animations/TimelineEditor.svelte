@@ -26,15 +26,20 @@
     let dragStartTime = $state(0);
     let hasActuallyDragged = $state(false);
 
+    // Local version counter for immediate visual updates
+    let localVersion = $state(0);
+
     // Display keyframes (for rendering) - reactive to animation.version
     let displayKeyframes = $derived.by(() => {
-        animation.version; // Make reactive to version changes
+        animation.version; // Make reactive to animation version changes
+        localVersion; // Make reactive to local changes (e.g., during drag)
         return animation ? animation.keyframes : [];
     });
 
     // Gradient segments for visualization - reactive to animation.version
     let gradientSegments = $derived.by(() => {
-        animation.version; // Make reactive to version changes
+        animation.version; // Make reactive to animation version changes
+        localVersion; // Make reactive to local changes
 
         if (!animation || animation.keyframes.length < 2) return [];
 
@@ -88,7 +93,8 @@
     });
 
     function getKeyframePosition(keyframe) {
-        animation.version; // Make reactive to version changes
+        animation.version; // Make reactive to animation version changes
+        localVersion; // Make reactive to local changes
         return keyframe.time * timelineWidth;
     }
 
@@ -120,6 +126,8 @@
         const keyframe = animation.keyframes[selectedKeyframeIndex];
         keyframe.values = [...editingKeyframeValues];
 
+        animation.version = (animation.version || 0) + 1;
+        localVersion++;
         animationLibrary.save();
         if (onUpdate) onUpdate();
     }
@@ -145,6 +153,8 @@
         }
 
         animation.keyframes = animation.keyframes.filter((_, i) => i !== index);
+        animation.version = (animation.version || 0) + 1;
+        localVersion++;
         animationLibrary.save();
         if (onUpdate) onUpdate();
         selectedKeyframeIndex = null;
@@ -247,6 +257,7 @@
 
         // Increment version to trigger reactivity
         animation.version = (animation.version || 0) + 1;
+        localVersion++;
 
         if (Math.abs(deltaX) > 3) {
             hasActuallyDragged = true;
