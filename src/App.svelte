@@ -2,7 +2,7 @@
     import { onMount, onDestroy } from 'svelte';
     import { DMXController } from './lib/outputs/dmx.js';
     import { convertChannelsToArray } from './lib/outputs/devices.js';
-    import { DeviceLibrary } from './lib/outputs/DeviceLibrary.js';
+    import { DeviceLibrary } from './lib/outputs/DeviceLibrary.svelte.js';
     import { AnimationLibrary } from './lib/animations.js';
     import { InputLibrary } from './lib/inputs.js';
     import { TriggerLibrary } from './lib/triggers.js';

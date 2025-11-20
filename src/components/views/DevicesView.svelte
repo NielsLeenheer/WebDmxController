@@ -1,8 +1,8 @@
 <script>
     import { Icon } from 'svelte-icon';
     import { untrack } from 'svelte';
-    import { DEVICE_TYPES, Device } from '../../lib/outputs/devices.js';
-    import { canLinkDevices, applyLinkedValues, getMappedChannels, getAvailableSyncControls } from '../../lib/channelMapping.js';
+    import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+    import { applyLinkedValues, getMappedChannels } from '../../lib/channelMapping.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import DraggableCard from '../common/DraggableCard.svelte';
@@ -20,27 +20,8 @@
 
     let { dmxController, deviceLibrary, isActive = false } = $props();
 
-    // Reactive version counter that increments when library changes
-    let libraryVersion = $state(0);
-
-    // Subscribe to library changes
-    $effect(() => {
-        const handleChange = () => {
-            libraryVersion++;
-        };
-
-        deviceLibrary.on('changed', handleChange);
-
-        return () => {
-            deviceLibrary.off('changed', handleChange);
-        };
-    });
-
-    // Get devices reactively - depends on library version
-    let devices = $derived.by(() => {
-        libraryVersion; // Track library changes
-        return deviceLibrary.getAll();
-    });
+    // Get devices reactively - automatic thanks to $state in library!
+    let devices = $derived(deviceLibrary.getAll());
 
     // Device type selection
     let selectedType = $state('RGB');
@@ -71,19 +52,14 @@
             return;
         }
 
-        // Handle save - mutate device in place
-        const nameChanged = result.name !== device.name;
-
-        device.startChannel = result.startChannel;
-        device.name = result.name;
-        device.linkedTo = result.linkedTo;
-        device.syncedControls = result.syncedControls;
-        device.mirrorPan = result.mirrorPan;
-
-        // Update cssId if name changed
-        if (nameChanged) {
-            device.updateCssId();
-        }
+        // Update device in library
+        deviceLibrary.updateDevice(device.id, {
+            startChannel: result.startChannel,
+            name: result.name,
+            linkedTo: result.linkedTo,
+            syncedControls: result.syncedControls,
+            mirrorPan: result.mirrorPan
+        });
 
         // If linking, apply values from source device
         if (result.linkedTo !== null) {
@@ -97,7 +73,11 @@
                     result.syncedControls,
                     result.mirrorPan
                 );
-                device.defaultValues = newValues;
+                // Update values in place
+                newValues.forEach((value, index) => {
+                    device.defaultValues[index] = value;
+                });
+                deviceLibrary.save();
             }
         }
 
@@ -108,9 +88,6 @@
                 dmxController.setChannel(channelIndex, value);
             });
         }
-
-        // Update in library (increments version automatically)
-        deviceLibrary.update(device);
     }
 
 
@@ -165,17 +142,15 @@
         // Also unlink any devices linked to this one
         devices.forEach(d => {
             if (d.linkedTo === deviceId) {
-                d.linkedTo = null;
-                deviceLibrary.update(d);
+                deviceLibrary.updateDevice(d.id, { linkedTo: null });
             }
         });
         deviceLibrary.remove(deviceId);
     }
 
     function handleDeviceValueChange(device, channelIndex, value) {
-        // Update the device's value with new array reference for reactivity
-        device.defaultValues = [...device.defaultValues];
-        device.defaultValues[channelIndex] = value;
+        // Update the device value in library (automatically propagates to linked devices)
+        deviceLibrary.updateValue(device.id, channelIndex, value);
 
         // Update preview state for special device types
         if (device.type === 'FLAMETHROWER') {
@@ -192,11 +167,12 @@
         // Update DMX controller
         updateDeviceToDMX(device);
 
-        // Update in library
-        deviceLibrary.update(device);
-
-        // Propagate to linked devices
-        propagateToLinkedDevices(device);
+        // Update all linked devices to DMX
+        devices.forEach(d => {
+            if (d.linkedTo === device.id) {
+                updateDeviceToDMX(d);
+            }
+        });
     }
 
     function updateDeviceToDMX(device) {
@@ -205,29 +181,6 @@
         device.defaultValues.forEach((value, index) => {
             const channelIndex = device.startChannel + index;
             dmxController.setChannel(channelIndex, value);
-        });
-    }
-
-    function propagateToLinkedDevices(sourceDevice) {
-        // Update all linked devices
-        devices.forEach(device => {
-            if (device.linkedTo === sourceDevice.id) {
-                // Apply linked values with selective syncing and pan mirroring
-                device.defaultValues = applyLinkedValues(
-                    sourceDevice.type,
-                    device.type,
-                    sourceDevice.defaultValues,
-                    device.defaultValues,
-                    device.syncedControls,
-                    device.mirrorPan
-                );
-
-                // Update DMX
-                updateDeviceToDMX(device);
-
-                // Update in library
-                deviceLibrary.update(device);
-            }
         });
     }
 
@@ -285,7 +238,7 @@
         {/if}
 
         {#each devices as device, index (device.id)}
-            <DraggableCard {dnd} item={device} {index} class="device-card">
+            <DraggableCard {dnd} item={device} {index} class="device-card" style="order: {device.order}">
                 <CardHeader>
                     {#if device.type === 'FLAMETHROWER'}
                         {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
@@ -312,7 +265,7 @@
                         />
                     {/if}
                     <h3>{device.name}</h3>
-                    {#if device.isLinked()}
+                    {#if device.linkedTo !== null}
                         <Icon data={linkedIcon} />
                     {/if}
                     <IconButton
