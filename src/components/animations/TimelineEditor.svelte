@@ -296,7 +296,8 @@
 
     function handleKeyframeMouseUp() {
         try {
-            if (draggingKeyframe && animation) {
+            // Only sync and save if we actually dragged
+            if (draggingKeyframe && animation && hasActuallyDragged) {
                 // Sync back to animation using snapshot to unwrap Svelte proxies
                 animation.keyframes = $state.snapshot(localKeyframes);
                 animation.version = (animation.version || 0) + 1;
@@ -311,10 +312,8 @@
             document.removeEventListener('mousemove', handleKeyframeMouseMove);
             document.removeEventListener('mouseup', handleKeyframeMouseUp);
 
-            // Reset drag detection after a brief delay
-            setTimeout(() => {
-                hasActuallyDragged = false;
-            }, 10);
+            // Reset drag detection immediately for next interaction
+            hasActuallyDragged = false;
         }
     }
 </script>
