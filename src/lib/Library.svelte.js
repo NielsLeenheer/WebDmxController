@@ -3,7 +3,9 @@
  *
  * Provides common functionality for managing collections of items with:
  * - Automatic reactivity using $state
- * - localStorage persistence
+ * - localStorage persistence with $state.snapshot()
+ * - Automatic UUID generation for new items
+ * - Automatic order property management
  * - CRUD operations
  */
 
@@ -50,10 +52,21 @@ export class Library {
 
 	/**
 	 * Add item to library
+	 * Automatically assigns UUID if not present and sets order
 	 * @param {Object} item - Item to add
 	 * @returns {Object} The added item
 	 */
 	add(item) {
+		// Auto-generate UUID if not present
+		if (!item.id) {
+			item.id = crypto.randomUUID();
+		}
+
+		// Auto-set order if not present
+		if (item.order === undefined) {
+			item.order = this.items.length;
+		}
+
 		this.items.push(item);
 		this.save();
 		return item;
@@ -108,12 +121,26 @@ export class Library {
 	}
 
 	/**
-	 * Save to localStorage
-	 * Override in subclass to customize serialization
+	 * Deserialize item from localStorage
+	 * Override in subclass to customize deserialization
+	 * @param {Object} itemData - Raw item data from storage
+	 * @param {number} index - Index in array (used for default order)
+	 * @returns {Object} Deserialized item
+	 */
+	deserializeItem(itemData, index) {
+		return {
+			...itemData,
+			order: itemData.order !== undefined ? itemData.order : index
+		};
+	}
+
+	/**
+	 * Save to localStorage using $state.snapshot()
 	 */
 	save() {
 		try {
-			localStorage.setItem(this.storageKey, JSON.stringify(this.items));
+			const snapshot = $state.snapshot(this.items);
+			localStorage.setItem(this.storageKey, JSON.stringify(snapshot));
 		} catch (error) {
 			console.error(`Failed to save ${this.storageKey}:`, error);
 		}
@@ -121,13 +148,15 @@ export class Library {
 
 	/**
 	 * Load from localStorage
-	 * Override in subclass to customize deserialization
 	 */
 	load() {
 		try {
 			const data = localStorage.getItem(this.storageKey);
 			if (data) {
-				this.items = JSON.parse(data);
+				const parsed = JSON.parse(data);
+				this.items = parsed.map((itemData, index) =>
+					this.deserializeItem(itemData, index)
+				);
 			}
 		} catch (error) {
 			console.error(`Failed to load ${this.storageKey}:`, error);

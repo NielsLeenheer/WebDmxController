@@ -21,7 +21,7 @@ export class DeviceLibrary extends Library {
 	}
 
 	/**
-	 * Create a new device with auto-generated UUID
+	 * Create a new device
 	 * @param {string} type - Device type (RGB, MOVING_HEAD, etc.)
 	 * @param {number} startChannel - Starting DMX channel
 	 * @param {string} name - Device name
@@ -32,23 +32,21 @@ export class DeviceLibrary extends Library {
 	 * @returns {Object} The created device
 	 */
 	create(type, startChannel, name = '', linkedTo = null, cssId = null, syncedControls = null, mirrorPan = false) {
-		const id = crypto.randomUUID();
+		const deviceName = name || `${DEVICE_TYPES[type].name} ${this.items.length + 1}`;
 
 		const device = {
-			id,
+			// id and order will be auto-set by base class
 			type,
 			startChannel,
-			name: name || `${DEVICE_TYPES[type].name} ${this.items.length + 1}`,
+			name: deviceName,
 			defaultValues: [...DEVICE_TYPES[type].getDefaultValues()],
 			linkedTo,
 			syncedControls,
 			mirrorPan,
-			cssId: cssId || this.generateCssId(name || `${DEVICE_TYPES[type].name} ${this.items.length + 1}`),
-			order: this.items.length // Order based on position in array
+			cssId: cssId || this.generateCssId(deviceName)
 		};
 
-		this.add(device);
-		return device;
+		return this.add(device);
 	}
 
 	/**
@@ -143,54 +141,23 @@ export class DeviceLibrary extends Library {
 	}
 
 	/**
-	 * Load from localStorage
-	 * Items are automatically reactive since this.items is wrapped in $state
+	 * Deserialize device from localStorage
+	 * @param {Object} deviceData - Raw device data from storage
+	 * @param {number} index - Index in array
+	 * @returns {Object} Deserialized device
 	 */
-	load() {
-		try {
-			const data = localStorage.getItem(this.storageKey);
-			if (data) {
-				const parsed = JSON.parse(data);
-
-				this.items = parsed.map((deviceData, index) => ({
-					id: deviceData.id,
-					type: deviceData.type,
-					startChannel: deviceData.startChannel,
-					name: deviceData.name,
-					defaultValues: [...deviceData.defaultValues],
-					linkedTo: deviceData.linkedTo || null,
-					syncedControls: deviceData.syncedControls || null,
-					mirrorPan: deviceData.mirrorPan || false,
-					cssId: deviceData.cssId,
-					order: deviceData.order !== undefined ? deviceData.order : index
-				}));
-			}
-		} catch (error) {
-			console.error('Failed to load devices:', error);
-			this.items = [];
-		}
-	}
-
-	/**
-	 * Save to localStorage
-	 */
-	save() {
-		try {
-			const data = this.items.map(device => ({
-				id: device.id,
-				type: device.type,
-				startChannel: device.startChannel,
-				name: device.name,
-				defaultValues: [...device.defaultValues],
-				linkedTo: device.linkedTo,
-				syncedControls: device.syncedControls,
-				mirrorPan: device.mirrorPan,
-				cssId: device.cssId,
-				order: device.order
-			}));
-			localStorage.setItem(this.storageKey, JSON.stringify(data));
-		} catch (error) {
-			console.error('Failed to save devices:', error);
-		}
+	deserializeItem(deviceData, index) {
+		return {
+			id: deviceData.id,
+			type: deviceData.type,
+			startChannel: deviceData.startChannel,
+			name: deviceData.name,
+			defaultValues: [...deviceData.defaultValues],
+			linkedTo: deviceData.linkedTo || null,
+			syncedControls: deviceData.syncedControls || null,
+			mirrorPan: deviceData.mirrorPan || false,
+			cssId: deviceData.cssId,
+			order: deviceData.order !== undefined ? deviceData.order : index
+		};
 	}
 }
