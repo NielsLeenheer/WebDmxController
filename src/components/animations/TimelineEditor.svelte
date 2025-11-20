@@ -277,8 +277,8 @@
         // Update time in local keyframes only
         draggingKeyframe.keyframe.time = newTime;
 
-        // Re-sort local keyframes by time
-        localKeyframes.sort((a, b) => a.time - b.time);
+        // Re-sort local keyframes by time (create new array for proper reactivity)
+        localKeyframes = [...localKeyframes].sort((a, b) => a.time - b.time);
 
         // Update the dragging index in case it changed due to sorting
         draggingKeyframe.index = localKeyframes.indexOf(draggingKeyframe.keyframe);
@@ -294,24 +294,27 @@
     }
 
     function handleKeyframeMouseUp() {
-        if (draggingKeyframe && animation) {
-            // Sync back to animation with deep copy and save once
-            animation.keyframes = structuredClone(localKeyframes);
-            animation.version = (animation.version || 0) + 1;
-            lastSyncedVersion = animation.version;
+        try {
+            if (draggingKeyframe && animation) {
+                // Sync back to animation with deep copy and save once
+                animation.keyframes = structuredClone(localKeyframes);
+                animation.version = (animation.version || 0) + 1;
+                lastSyncedVersion = animation.version;
 
-            animationLibrary.save();
-            if (onUpdate) onUpdate();
+                animationLibrary.save();
+                if (onUpdate) onUpdate();
+            }
+        } finally {
+            // Always cleanup event listeners, even if an error occurred
+            draggingKeyframe = null;
+            document.removeEventListener('mousemove', handleKeyframeMouseMove);
+            document.removeEventListener('mouseup', handleKeyframeMouseUp);
+
+            // Reset drag detection after a brief delay
+            setTimeout(() => {
+                hasActuallyDragged = false;
+            }, 10);
         }
-
-        draggingKeyframe = null;
-        document.removeEventListener('mousemove', handleKeyframeMouseMove);
-        document.removeEventListener('mouseup', handleKeyframeMouseUp);
-
-        // Reset drag detection after a brief delay
-        setTimeout(() => {
-            hasActuallyDragged = false;
-        }, 10);
     }
 </script>
 
