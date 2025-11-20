@@ -13,7 +13,8 @@ import { CSSGenerator } from './generator.js';
 import { CSSSampler } from './sampler.js';
 
 export class CSSManager {
-	constructor(animationLibrary, inputLibrary, triggerLibrary, triggerManager) {
+	constructor(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager) {
+		this.deviceLibrary = deviceLibrary;
 		this.animationLibrary = animationLibrary;
 		this.inputLibrary = inputLibrary;
 		this.triggerLibrary = triggerLibrary;
@@ -35,10 +36,11 @@ export class CSSManager {
 		this.animationFrameId = null;
 		this.subscribers = new Set();
 
-		// Current devices
+		// Current devices (cached from library)
 		this.devices = [];
 
 		// Bind methods
+		this.handleDeviceChange = this.handleDeviceChange.bind(this);
 		this.handleTriggerChange = this.handleTriggerChange.bind(this);
 		this.handleInputChange = this.handleInputChange.bind(this);
 		this.handleAnimationChange = this.handleAnimationChange.bind(this);
@@ -81,9 +83,13 @@ export class CSSManager {
 		document.head.appendChild(this.styleElement);
 
 		// Listen for library changes
+		this.deviceLibrary.on('changed', this.handleDeviceChange);
 		this.inputLibrary.on('changed', this.handleInputChange);
 		this.triggerLibrary.on('changed', this.handleTriggerChange);
 		this.animationLibrary.on('changed', this.handleAnimationChange);
+
+		// Initialize devices from library
+		this.updateDevices(this.deviceLibrary.getAll());
 
 		// Generate initial CSS
 		this.regenerateCSS();
@@ -188,6 +194,13 @@ export class CSSManager {
 	}
 
 	/**
+	 * Handle device library changes
+	 */
+	handleDeviceChange() {
+		this.updateDevices(this.deviceLibrary.getAll());
+	}
+
+	/**
 	 * Start the CSS sampling loop
 	 */
 	startSampling() {
@@ -230,6 +243,7 @@ export class CSSManager {
 		this.stopSampling();
 
 		// Remove event listeners
+		this.deviceLibrary.off('changed', this.handleDeviceChange);
 		this.inputLibrary.off('changed', this.handleInputChange);
 		this.triggerLibrary.off('changed', this.handleTriggerChange);
 		this.animationLibrary.off('changed', this.handleAnimationChange);

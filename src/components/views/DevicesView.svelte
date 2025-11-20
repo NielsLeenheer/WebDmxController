@@ -18,7 +18,10 @@
     import linkedIcon from '../../assets/icons/linked.svg?raw';
     import removeIcon from '../../assets/icons/remove.svg?raw';
 
-    let { dmxController, devices = $bindable([]), isActive = false } = $props();
+    let { dmxController, deviceLibrary, isActive = false } = $props();
+
+    // Get devices reactively from library
+    let devices = $derived(deviceLibrary.getAll());
 
     // Device type selection
     let selectedType = $state('RGB');
@@ -33,7 +36,7 @@
     // Drag and drop helper
     const dnd = createDragDrop({
         items: () => devices,
-        onReorder: (newDevices) => { devices = newDevices; },
+        onReorder: (newDevices) => { deviceLibrary.reorder(newDevices); },
         orientation: 'horizontal',
         dragByHeader: true
     });
@@ -49,7 +52,7 @@
             return;
         }
 
-        // Handle save - mutate device in place and increment version
+        // Handle save - mutate device in place
         const nameChanged = result.name !== device.name;
 
         device.startChannel = result.startChannel;
@@ -87,78 +90,10 @@
             });
         }
 
-        // Increment version for reactivity and trigger array update
-        device.version = (device.version || 0) + 1;
-        devices = [...devices];
+        // Update in library (increments version automatically)
+        deviceLibrary.update(device);
     }
 
-    // Load initial state from localStorage
-    function loadFromLocalStorage() {
-        try {
-            const saved = localStorage.getItem('dmx-devices');
-            if (saved) {
-                const data = JSON.parse(saved);
-                // Reconstruct Device objects
-                const loadedDevices = data.devices.map(d => {
-                    const device = new Device(
-                        d.id,
-                        d.type,
-                        d.startChannel,
-                        d.name,
-                        d.linkedTo,
-                        d.cssId,
-                        d.syncedControls || null,
-                        d.mirrorPan || false,
-                        d.version || 0
-                    );
-                    device.defaultValues = d.defaultValues || new Array(DEVICE_TYPES[d.type].channels).fill(0);
-                    return device;
-                });
-                return {
-                    devices: loadedDevices,
-                    nextId: data.nextId || 1
-                };
-            }
-        } catch (e) {
-            console.error('Failed to load from localStorage:', e);
-        }
-        return { devices: [], nextId: 1 };
-    }
-
-    // Initialize nextId - must be calculated from devices after loading
-    const initialState = devices.length === 0 ? loadFromLocalStorage() : { devices, nextId: null };
-
-    if (devices.length === 0) {
-        devices = initialState.devices;
-    }
-
-    // Always calculate nextId from current devices to ensure uniqueness
-    const maxId = devices.length > 0 ? Math.max(...devices.map(d => d.id)) : 0;
-    let nextId = $state(Math.max(maxId + 1, initialState.nextId || 1));
-
-    // Save to localStorage whenever devices change
-    $effect(() => {
-        try {
-            const data = {
-                devices: devices.map(d => ({
-                    id: d.id,
-                    name: d.name,
-                    type: d.type,
-                    startChannel: d.startChannel,
-                    defaultValues: d.defaultValues,
-                    linkedTo: d.linkedTo,
-                    cssId: d.cssId,
-                    syncedControls: d.syncedControls,
-                    mirrorPan: d.mirrorPan,
-                    version: d.version
-                })),
-                nextId
-            };
-            localStorage.setItem('dmx-devices', JSON.stringify(data));
-        } catch (e) {
-            console.error('Failed to save to localStorage:', e);
-        }
-    });
 
     function getNextFreeChannel() {
         if (devices.length === 0) return 0; // Channel 1 (0-indexed)
@@ -204,63 +139,45 @@
 
     export function addDevice(type = selectedType) {
         const startChannel = getNextFreeChannel();
-        const device = new Device(nextId++, type, startChannel);
-        devices = [...devices, device];
-    }
-
-    export function clearAllDeviceValues() {
-        // Reset all device default values to 0
-        devices = devices.map(d => {
-            d.defaultValues = d.defaultValues.map(() => 0);
-            return d;
-        });
+        deviceLibrary.create(type, startChannel);
     }
 
     function removeDevice(deviceId) {
         // Also unlink any devices linked to this one
-        devices = devices.map(d => {
+        devices.forEach(d => {
             if (d.linkedTo === deviceId) {
                 d.linkedTo = null;
+                deviceLibrary.update(d);
             }
-            return d;
-        }).filter(d => d.id !== deviceId);
+        });
+        deviceLibrary.remove(deviceId);
     }
 
     function handleDeviceValueChange(device, channelIndex, value) {
-        // Create new device instance with updated value
-        const updatedDevice = new Device(
-            device.id,
-            device.type,
-            device.startChannel,
-            device.name,
-            device.linkedTo,
-            device.cssId,
-            device.syncedControls,
-            device.mirrorPan
-        );
-        updatedDevice.defaultValues = [...device.defaultValues];
-        updatedDevice.defaultValues[channelIndex] = value;
-
-        // Update devices array with new instance
-        devices = devices.map(d => d.id === device.id ? updatedDevice : d);
+        // Update the device's value
+        device.defaultValues = [...device.defaultValues];
+        device.defaultValues[channelIndex] = value;
 
         // Update preview state for special device types
-        if (updatedDevice.type === 'FLAMETHROWER') {
-            deviceFlamethrower[updatedDevice.id] = {
-                safety: updatedDevice.defaultValues[0] || 0,
-                fuel: updatedDevice.defaultValues[1] || 0
+        if (device.type === 'FLAMETHROWER') {
+            deviceFlamethrower[device.id] = {
+                safety: device.defaultValues[0] || 0,
+                fuel: device.defaultValues[1] || 0
             };
-        } else if (updatedDevice.type === 'SMOKE') {
-            deviceSmoke[updatedDevice.id] = {
-                output: updatedDevice.defaultValues[0] || 0
+        } else if (device.type === 'SMOKE') {
+            deviceSmoke[device.id] = {
+                output: device.defaultValues[0] || 0
             };
         }
 
         // Update DMX controller
-        updateDeviceToDMX(updatedDevice);
+        updateDeviceToDMX(device);
+
+        // Update in library
+        deviceLibrary.update(device);
 
         // Propagate to linked devices
-        propagateToLinkedDevices(updatedDevice);
+        propagateToLinkedDevices(device);
     }
 
     function updateDeviceToDMX(device) {
@@ -273,21 +190,9 @@
     }
 
     function propagateToLinkedDevices(sourceDevice) {
-        // Create new device instances for all linked devices
-        devices = devices.map(device => {
+        // Update all linked devices
+        devices.forEach(device => {
             if (device.linkedTo === sourceDevice.id) {
-                // Create new device instance to trigger reactivity
-                const updatedDevice = new Device(
-                    device.id,
-                    device.type,
-                    device.startChannel,
-                    device.name,
-                    device.linkedTo,
-                    device.cssId,
-                    device.syncedControls,
-                    device.mirrorPan
-                );
-
                 // Apply linked values with selective syncing and pan mirroring
                 const newValues = applyLinkedValues(
                     sourceDevice.type,
@@ -297,14 +202,14 @@
                     device.syncedControls,
                     device.mirrorPan
                 );
-                updatedDevice.defaultValues = newValues;
+                device.defaultValues = newValues;
 
                 // Update DMX
-                updateDeviceToDMX(updatedDevice);
+                updateDeviceToDMX(device);
 
-                return updatedDevice;
+                // Update in library
+                deviceLibrary.update(device);
             }
-            return device;
         });
     }
 

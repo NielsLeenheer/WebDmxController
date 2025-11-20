@@ -5,11 +5,14 @@
 
     let {
         cssManager,
-        devices = [],
+        deviceLibrary,
         animationLibrary,
         inputLibrary,
         triggerLibrary
     } = $props();
+
+    // Get devices reactively from library
+    let devices = $derived(deviceLibrary.getAll());
 
     // Store sampled device data (Map of deviceId -> channels object)
     let sampledDeviceData = $state(new Map());

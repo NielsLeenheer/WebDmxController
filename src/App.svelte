@@ -2,6 +2,7 @@
     import { onMount, onDestroy } from 'svelte';
     import { DMXController } from './lib/outputs/dmx.js';
     import { convertChannelsToArray } from './lib/outputs/devices.js';
+    import { DeviceLibrary } from './lib/outputs/DeviceLibrary.js';
     import { AnimationLibrary } from './lib/animations.js';
     import { InputLibrary } from './lib/inputs.js';
     import { TriggerLibrary } from './lib/triggers.js';
@@ -21,9 +22,9 @@
     let connected = $state(false);
     let dmxController = $state(new DMXController());
     let devicesViewRef = $state(null);
-    let devices = $state([]);
 
     // Reactive systems
+    let deviceLibrary = $state(new DeviceLibrary());
     let animationLibrary = $state(new AnimationLibrary());
     let inputLibrary = $state(new InputLibrary());
     let triggerLibrary = $state(new TriggerLibrary());
@@ -59,9 +60,7 @@
             dmxController.clearUniverse();
         }
         // Also clear device values
-        if (devicesViewRef?.clearAllDeviceValues) {
-            devicesViewRef.clearAllDeviceValues();
-        }
+        deviceLibrary.clearAllValues();
     }
 
     // Handle sampled CSS values from CSSManager
@@ -73,7 +72,7 @@
             return;
         }
 
-        devices.forEach(device => {
+        deviceLibrary.getAll().forEach(device => {
             const channels = sampledValues.get(device.id);
             if (!channels) return;
 
@@ -90,7 +89,7 @@
 
     onMount(() => {
         // Create CSS Manager
-        cssManager = new CSSManager(animationLibrary, inputLibrary, triggerLibrary, triggerManager);
+        cssManager = new CSSManager(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager);
         cssManager.initialize(mainElement);
 
         // Subscribe to sampled values for DMX output
@@ -101,13 +100,6 @@
             unsubscribe();
             cssManager.destroy();
         };
-    });
-
-    // Watch for device changes and update CSS manager
-    $effect(() => {
-        if (cssManager && devices) {
-            cssManager.updateDevices(devices);
-        }
     });
 </script>
 
@@ -128,7 +120,7 @@
         <DevicesView
             {dmxController}
             bind:this={devicesViewRef}
-            bind:devices
+            {deviceLibrary}
             isActive={view === 'devices'}
         />
     </div>
@@ -140,7 +132,7 @@
     <div class="view-container" class:hidden={view !== 'animations'}>
         <AnimationsView
             {animationLibrary}
-            {devices}
+            {deviceLibrary}
         />
     </div>
 
@@ -156,14 +148,14 @@
             {triggerLibrary}
             {inputLibrary}
             {animationLibrary}
-            {devices}
+            {deviceLibrary}
         />
     </div>
 
     <div class="view-container" class:hidden={view !== 'css'}>
         <CSSView
             {cssManager}
-            {devices}
+            {deviceLibrary}
             {animationLibrary}
             {inputLibrary}
             {triggerLibrary}

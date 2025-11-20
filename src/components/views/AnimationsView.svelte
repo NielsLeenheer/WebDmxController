@@ -15,8 +15,11 @@
 
     let {
         animationLibrary,
-        devices = []
+        deviceLibrary
     } = $props();
+
+    // Get devices reactively from library
+    let devices = $derived(deviceLibrary.getAll());
 
     let animationsList = $state([]);
 

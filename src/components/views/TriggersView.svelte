@@ -20,8 +20,11 @@
         triggerLibrary,
         inputLibrary,
         animationLibrary,
-        devices = []
+        deviceLibrary
     } = $props();
+
+    // Get devices reactively from library
+    let devices = $derived(deviceLibrary.getAll());
 
     let availableInputs = $state([]);
     let availableAnimations = $state([]);
