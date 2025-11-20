@@ -29,14 +29,21 @@
     // Local state for immediate UI updates without expensive animation saves
     let localKeyframes = $state([]);
     let localVersion = $state(0);
-    let isSyncing = $state(false); // Prevent reactivity loops
+    let lastSyncedVersion = $state(0); // Track which animation version we last synced
 
     // Watch for animation changes and sync to local state
     $effect(() => {
-        if (animation && !isSyncing) {
-            animation.version; // Track external changes
-            localKeyframes = [...animation.keyframes];
-            localVersion++;
+        if (animation) {
+            const currentVersion = animation.version || 0;
+            if (currentVersion !== lastSyncedVersion) {
+                // External change detected - sync from animation to local state
+                localKeyframes = animation.keyframes.map(kf => ({
+                    ...kf,
+                    values: [...kf.values]
+                }));
+                lastSyncedVersion = currentVersion;
+                localVersion++;
+            }
         }
     });
 
@@ -141,11 +148,13 @@
         keyframe.values = [...editingKeyframeValues];
         localVersion++;
 
-        // Sync to animation
-        isSyncing = true;
-        animation.keyframes = [...localKeyframes];
+        // Sync to animation with deep copy
+        animation.keyframes = localKeyframes.map(kf => ({
+            ...kf,
+            values: [...kf.values]
+        }));
         animation.version = (animation.version || 0) + 1;
-        isSyncing = false;
+        lastSyncedVersion = animation.version;
 
         animationLibrary.save();
         if (onUpdate) onUpdate();
@@ -175,11 +184,13 @@
         localKeyframes = localKeyframes.filter((_, i) => i !== index);
         localVersion++;
 
-        // Sync to animation
-        isSyncing = true;
-        animation.keyframes = [...localKeyframes];
+        // Sync to animation with deep copy
+        animation.keyframes = localKeyframes.map(kf => ({
+            ...kf,
+            values: [...kf.values]
+        }));
         animation.version = (animation.version || 0) + 1;
-        isSyncing = false;
+        lastSyncedVersion = animation.version;
 
         animationLibrary.save();
         if (onUpdate) onUpdate();
@@ -293,11 +304,13 @@
 
     function handleKeyframeMouseUp() {
         if (draggingKeyframe && animation) {
-            // Now sync back to animation and save once
-            isSyncing = true;
-            animation.keyframes = [...localKeyframes];
+            // Sync back to animation with deep copy and save once
+            animation.keyframes = localKeyframes.map(kf => ({
+                ...kf,
+                values: [...kf.values]
+            }));
             animation.version = (animation.version || 0) + 1;
-            isSyncing = false;
+            lastSyncedVersion = animation.version;
 
             animationLibrary.save();
             if (onUpdate) onUpdate();
