@@ -559,8 +559,8 @@
                 <p>No triggers created yet. Click Add Trigger to create one!</p>
             </div>
         {:else}
-            {#each triggers as trigger, index (`${trigger.id}-${trigger.version}`)}
-                <DraggableCard {dnd} item={trigger} {index} class="trigger-card">
+            {#each triggers as trigger (`${trigger.id}-${trigger.version}`)}
+                <DraggableCard {dnd} item={trigger} class="trigger-card">
                     <!-- Column 1: Input -->
                     <div class="trigger-column trigger-input-column">
                         {#if trigger.triggerType === 'always'}

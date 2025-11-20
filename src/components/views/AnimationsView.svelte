@@ -211,8 +211,8 @@
                 <p>No animations yet. Create one to get started!</p>
             </div>
         {:else}
-            {#each animationsList as animation, index (`${animation.name}-${animation.version}`)}
-                <DraggableCard {dnd} item={animation} {index} class="animation-card">
+            {#each animationsList as animation (`${animation.name}-${animation.version}`)}
+                <DraggableCard {dnd} item={animation} class="animation-card">
                     <CardHeader>
                         <Preview
                             type="animation"

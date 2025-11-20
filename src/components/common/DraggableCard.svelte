@@ -5,7 +5,7 @@
 	 * Handles all drag event bindings and class states automatically.
 	 *
 	 * Usage:
-	 *   <DraggableCard {dnd} {item} {index} class="device-card">
+	 *   <DraggableCard {dnd} {item} class="device-card">
 	 *     <!-- Your card content here -->
 	 *   </DraggableCard>
 	 */
@@ -13,19 +13,18 @@
 	let {
 		dnd,              // Drag-and-drop helper from createDragDrop()
 		item,             // The item being rendered
-		index,            // Index in the list
 		class: className = '',  // Additional CSS classes
 		children
 	} = $props();
 
 	// Helper to check if this is the drag-after position
 	function isDragAfter() {
-		return dnd.dragOverIndex === index && dnd.isAfterMidpoint;
+		return dnd.dragOverItem === item && dnd.isAfterMidpoint;
 	}
 
 	// Helper to check if this is the drag-before position
 	function isDragBefore() {
-		return dnd.dragOverIndex === index && !dnd.isAfterMidpoint;
+		return dnd.dragOverItem === item && !dnd.isAfterMidpoint;
 	}
 </script>
 
@@ -41,10 +40,10 @@
 	style:order={item.order}
 	draggable="true"
 	onmousedown={dnd.handleMouseDown}
-	ondragstart={(e) => dnd.handleDragStart(e, item, index)}
-	ondragover={(e) => dnd.handleDragOver(e, index)}
+	ondragstart={(e) => dnd.handleDragStart(e, item)}
+	ondragover={(e) => dnd.handleDragOver(e, item)}
 	ondragleave={dnd.handleDragLeave}
-	ondrop={(e) => dnd.handleDrop(e, index)}
+	ondrop={(e) => dnd.handleDrop(e, item)}
 	ondragend={dnd.handleDragEnd}
 >
 	{@render children()}

@@ -14,7 +14,6 @@
 
 	let {
 		device,       // Device object
-		index,        // Array index
 		dnd,          // Drag-and-drop helper
 		devices,      // All devices (for linked device lookup)
 		onsettings,   // Callback when settings button clicked
@@ -72,7 +71,7 @@
 	let disabledChannels = $derived(getDisabledChannels());
 </script>
 
-<DraggableCard {dnd} item={device} {index} class="device-card">
+<DraggableCard {dnd} item={device} class="device-card">
 	<CardHeader>
 		<Preview
 			type={previewData.type}

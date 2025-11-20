@@ -200,10 +200,9 @@
             </div>
         {/if}
 
-        {#each devices as device, index (device.id)}
+        {#each devices as device (device.id)}
             <DeviceCard
                 {device}
-                {index}
                 {dnd}
                 {devices}
                 onsettings={openSettingsDialog}

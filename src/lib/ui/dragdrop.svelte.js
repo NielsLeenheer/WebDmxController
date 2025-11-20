@@ -4,20 +4,20 @@
  * Usage:
  *   const dnd = createDragDrop({
  *     items: () => myArray,
- *     onReorder: (newArray) => { myArray = newArray; }
+ *     onReorder: (orderedIds) => { /* handle reorder */ }
  *   });
  *
  * Then in template:
  *   <div
  *     draggable="true"
- *     ondragstart={(e) => dnd.handleDragStart(e, item, index)}
- *     ondragover={(e) => dnd.handleDragOver(e, index)}
+ *     ondragstart={(e) => dnd.handleDragStart(e, item)}
+ *     ondragover={(e) => dnd.handleDragOver(e, item)}
  *     ondragleave={dnd.handleDragLeave}
- *     ondrop={(e) => dnd.handleDrop(e, index)}
+ *     ondrop={(e) => dnd.handleDrop(e, item)}
  *     ondragend={dnd.handleDragEnd}
  *     class:dragging={dnd.draggedItem === item}
- *     class:drag-over-before={dnd.dragOverIndex === index && !dnd.isAfterMidpoint}
- *     class:drag-over-after={dnd.dragOverIndex === index && dnd.isAfterMidpoint}
+ *     class:drag-over-before={dnd.dragOverItem === item && !dnd.isAfterMidpoint}
+ *     class:drag-over-after={dnd.dragOverItem === item && dnd.isAfterMidpoint}
  *   >
  */
 
@@ -45,8 +45,7 @@ export function createDragDrop(options) {
 
 	// Drag state
 	let draggedItem = $state(null);
-	let draggedIndex = $state(null);
-	let dragOverIndex = $state(null);
+	let dragOverItem = $state(null);
 	let isAfterMidpoint = $state(false);
 
 	/**
@@ -59,7 +58,7 @@ export function createDragDrop(options) {
 	/**
 	 * Start dragging an item
 	 */
-	function handleDragStart(event, item, index) {
+	function handleDragStart(event, item) {
 		// Check if drag should be allowed based on where mousedown happened
 		if (lastMouseDownTarget) {
 			// Prevent drag if started on interactive elements
@@ -101,17 +100,16 @@ export function createDragDrop(options) {
 		}
 
 		draggedItem = item;
-		draggedIndex = index;
 		event.dataTransfer.effectAllowed = 'move';
 	}
 
 	/**
-	 * Handle drag over a target position
+	 * Handle drag over a target item
 	 */
-	function handleDragOver(event, index) {
+	function handleDragOver(event, item) {
 		event.preventDefault();
 		event.dataTransfer.dropEffect = 'move';
-		dragOverIndex = index;
+		dragOverItem = item;
 
 		// Calculate if mouse is in the second half of the card
 		const rect = event.currentTarget.getBoundingClientRect();
@@ -128,14 +126,14 @@ export function createDragDrop(options) {
 	 * Handle drag leave
 	 */
 	function handleDragLeave() {
-		dragOverIndex = null;
+		dragOverItem = null;
 		isAfterMidpoint = false;
 	}
 
 	/**
-	 * Handle drop at target position
+	 * Handle drop at target item
 	 */
-	function handleDrop(event, targetIndex) {
+	function handleDrop(event, targetItem) {
 		event.preventDefault();
 
 		if (!draggedItem) return;
@@ -153,8 +151,7 @@ export function createDragDrop(options) {
 			return;
 		}
 
-		// Find target visual index from the array index
-		const targetItem = itemsArray[targetIndex];
+		// Find target visual index
 		let targetVisualIndex = visualOrder.findIndex(item => getItemId(item) === getItemId(targetItem));
 
 		if (targetVisualIndex === -1) {
@@ -201,16 +198,14 @@ export function createDragDrop(options) {
 	 */
 	function resetDragState() {
 		draggedItem = null;
-		draggedIndex = null;
-		dragOverIndex = null;
+		dragOverItem = null;
 		isAfterMidpoint = false;
 	}
 
 	return {
 		// State (for template bindings)
 		get draggedItem() { return draggedItem; },
-		get draggedIndex() { return draggedIndex; },
-		get dragOverIndex() { return dragOverIndex; },
+		get dragOverItem() { return dragOverItem; },
 		get isAfterMidpoint() { return isAfterMidpoint; },
 		get orientation() { return orientation; },
 		get dragByHeader() { return dragByHeader; },

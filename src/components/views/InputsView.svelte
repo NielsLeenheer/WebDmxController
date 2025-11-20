@@ -554,8 +554,8 @@
                 <p>No inputs detected yet. Start listening to detect inputs!</p>
             </div>
         {:else}
-            {#each savedInputs as input, index (`${input.id}-${input.version}`)}
-                <DraggableCard {dnd} item={input} {index} class="input-card">
+            {#each savedInputs as input (`${input.id}-${input.version}`)}
+                <DraggableCard {dnd} item={input} class="input-card">
                     {#if input.color && isColorCapableControl(input.inputControlId)}
                         <Preview
                             type="input"
