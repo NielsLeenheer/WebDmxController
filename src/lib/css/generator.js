@@ -67,7 +67,7 @@ export class CSSGenerator {
 		if (!deviceType) return null;
 
 		// Skip default values for linked devices
-		if (device.isLinked && device.isLinked()) {
+		if (device.linkedTo !== null) {
 			return null;
 		}
 

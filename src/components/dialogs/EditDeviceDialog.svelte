@@ -98,7 +98,7 @@
 		if (!device) return [];
 		return allDevices.filter(d =>
 			d.id !== device.id &&
-			!d.isLinked() && // Can't link to a device that's already linked
+			d.linkedTo === null && // Can't link to a device that's already linked
 			canLinkDevices(device.type, d.type) &&
 			d.linkedTo !== device.id // Don't allow circular links
 		);
@@ -222,7 +222,7 @@
 
 		<div class="dialog-input-group">
 			<label for="link-select">Link to device:</label>
-			{#if getLinkableDevices(editingDevice).length > 0 || editingDevice.isLinked()}
+			{#if getLinkableDevices(editingDevice).length > 0 || editingDevice.linkedTo !== null}
 				<div class="link-select-row">
 					<select id="link-select" bind:value={selectedLinkTarget}>
 						<option value={null}>None</option>
