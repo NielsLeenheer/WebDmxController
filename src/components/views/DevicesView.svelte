@@ -23,14 +23,10 @@
     // Reactive version counter that increments when library changes
     let libraryVersion = $state(0);
 
-    // Subscribe to library changes - only for structural changes
+    // Subscribe to library changes
     $effect(() => {
-        const handleChange = (event) => {
-            // Only refresh device list for structural changes (add/remove/reorder/clear)
-            // For 'update' and 'clear_values', arrays are mutated in place via $bindable
-            if (event.type !== 'update' && event.type !== 'clear_values') {
-                libraryVersion++;
-            }
+        const handleChange = () => {
+            libraryVersion++;
         };
 
         deviceLibrary.on('changed', handleChange);
@@ -177,7 +173,9 @@
     }
 
     function handleDeviceValueChange(device, channelIndex, value) {
-        // Note: device.defaultValues is already mutated by Controls component via $bindable
+        // Update the device's value with new array reference for reactivity
+        device.defaultValues = [...device.defaultValues];
+        device.defaultValues[channelIndex] = value;
 
         // Update preview state for special device types
         if (device.type === 'FLAMETHROWER') {
@@ -215,7 +213,7 @@
         devices.forEach(device => {
             if (device.linkedTo === sourceDevice.id) {
                 // Apply linked values with selective syncing and pan mirroring
-                const newValues = applyLinkedValues(
+                device.defaultValues = applyLinkedValues(
                     sourceDevice.type,
                     device.type,
                     sourceDevice.defaultValues,
@@ -223,10 +221,6 @@
                     device.syncedControls,
                     device.mirrorPan
                 );
-                // Mutate array in place to preserve $bindable references
-                newValues.forEach((value, index) => {
-                    device.defaultValues[index] = value;
-                });
 
                 // Update DMX
                 updateDeviceToDMX(device);

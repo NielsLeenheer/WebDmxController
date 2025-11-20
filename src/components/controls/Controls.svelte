@@ -35,18 +35,22 @@
     }
 
     function handleSliderChange(channelIndex, value) {
-        values[channelIndex] = value;
         if (onChange) {
             onChange(channelIndex, value);
+        } else {
+            // If no onChange handler, mutate directly (for $bindable use case)
+            values[channelIndex] = value;
         }
     }
 
     function handleXYPadChange(xChannel, yChannel, xValue, yValue) {
-        values[xChannel] = xValue;
-        values[yChannel] = yValue;
         if (onChange) {
             onChange(xChannel, xValue);
             onChange(yChannel, yValue);
+        } else {
+            // If no onChange handler, mutate directly (for $bindable use case)
+            values[xChannel] = xValue;
+            values[yChannel] = yValue;
         }
     }
 
