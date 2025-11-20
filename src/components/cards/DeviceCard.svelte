@@ -1,0 +1,102 @@
+<script>
+	import { Icon } from 'svelte-icon';
+	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+	import { getMappedChannels } from '../../lib/channelMapping.js';
+	import { getDeviceColor } from '../../lib/colorUtils.js';
+	import DraggableCard from '../common/DraggableCard.svelte';
+	import CardHeader from '../common/CardHeader.svelte';
+	import Controls from '../controls/Controls.svelte';
+	import IconButton from '../common/IconButton.svelte';
+	import Preview from '../common/Preview.svelte';
+
+	import editIcon from '../../assets/glyphs/edit.svg?raw';
+	import linkedIcon from '../../assets/icons/linked.svg?raw';
+
+	let {
+		device,       // Device object
+		index,        // Array index
+		dnd,          // Drag-and-drop helper
+		devices,      // All devices (for linked device lookup)
+		onsettings,   // Callback when settings button clicked
+		onvaluechange // Callback when device value changes
+	} = $props();
+
+	/**
+	 * Get disabled channels for this device based on linked device
+	 */
+	function getDisabledChannels() {
+		if (!device.linkedTo) return [];
+
+		const sourceDevice = devices.find(d => d.id === device.linkedTo);
+		if (!sourceDevice) return [];
+
+		return getMappedChannels(sourceDevice.type, device.type, device.syncedControls);
+	}
+
+	/**
+	 * Get preview data for device based on type
+	 */
+	function getPreviewData() {
+		if (device.type === 'FLAMETHROWER') {
+			return {
+				type: 'device',
+				size: 'medium',
+				controls: ['fuel', 'safety'],
+				data: {
+					fuel: device.defaultValues[1] || 0,
+					safety: device.defaultValues[0] || 0
+				}
+			};
+		} else if (device.type === 'SMOKE') {
+			return {
+				type: 'device',
+				size: 'medium',
+				controls: ['output'],
+				data: {
+					output: device.defaultValues[0] || 0
+				}
+			};
+		} else {
+			return {
+				type: 'device',
+				size: 'medium',
+				controls: ['color'],
+				data: {
+					color: getDeviceColor(device.type, device.defaultValues)
+				}
+			};
+		}
+	}
+
+	let previewData = $derived(getPreviewData());
+	let disabledChannels = $derived(getDisabledChannels());
+</script>
+
+<DraggableCard {dnd} item={device} {index} class="device-card">
+	<CardHeader>
+		<Preview
+			type={previewData.type}
+			size={previewData.size}
+			controls={previewData.controls}
+			data={previewData.data}
+		/>
+		<h3>{device.name}</h3>
+		{#if device.linkedTo !== null}
+			<Icon data={linkedIcon} />
+		{/if}
+		<IconButton
+			icon={editIcon}
+			onclick={() => onsettings?.(device)}
+			title="Device settings"
+			size="small"
+		/>
+	</CardHeader>
+
+	<Controls
+		controls={DEVICE_TYPES[device.type].controls}
+		components={DEVICE_TYPES[device.type].components}
+		values={device.defaultValues}
+		onChange={(channelIndex, value) => onvaluechange?.(device, channelIndex, value)}
+		disabledChannels={disabledChannels}
+	/>
+</DraggableCard>

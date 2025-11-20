@@ -1,22 +1,10 @@
 <script>
-    import { Icon } from 'svelte-icon';
     import { untrack } from 'svelte';
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-    import { applyLinkedValues, getMappedChannels } from '../../lib/channelMapping.js';
-    import { getDeviceColor } from '../../lib/colorUtils.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
-    import DraggableCard from '../common/DraggableCard.svelte';
-    import CardHeader from '../common/CardHeader.svelte';
-    import Controls from '../controls/Controls.svelte';
-    import Dialog from '../common/Dialog.svelte';
+    import DeviceCard from '../cards/DeviceCard.svelte';
     import Button from '../common/Button.svelte';
-    import IconButton from '../common/IconButton.svelte';
-    import Preview from '../common/Preview.svelte';
     import EditDeviceDialog from '../dialogs/EditDeviceDialog.svelte';
-
-    import editIcon from '../../assets/glyphs/edit.svg?raw';
-    import linkedIcon from '../../assets/icons/linked.svg?raw';
-    import removeIcon from '../../assets/icons/remove.svg?raw';
 
     let { dmxController, deviceLibrary, isActive = false } = $props();
 
@@ -28,10 +16,6 @@
 
     // Dialog reference
     let editDeviceDialog;
-
-    // Preview state for special device types
-    let deviceFlamethrower = $state({});
-    let deviceSmoke = $state({});
 
     // Drag and drop helper
     const dnd = createDragDrop({
@@ -152,18 +136,6 @@
         // Update the device value in library (automatically propagates to linked devices)
         deviceLibrary.updateValue(device.id, channelIndex, value);
 
-        // Update preview state for special device types
-        if (device.type === 'FLAMETHROWER') {
-            deviceFlamethrower[device.id] = {
-                safety: device.defaultValues[0] || 0,
-                fuel: device.defaultValues[1] || 0
-            };
-        } else if (device.type === 'SMOKE') {
-            deviceSmoke[device.id] = {
-                output: device.defaultValues[0] || 0
-            };
-        }
-
         // Update DMX controller
         updateDeviceToDMX(device);
 
@@ -182,15 +154,6 @@
             const channelIndex = device.startChannel + index;
             dmxController.setChannel(channelIndex, value);
         });
-    }
-
-    function getDisabledChannels(device) {
-        if (!device.linkedTo) return [];
-
-        const sourceDevice = devices.find(d => d.id === device.linkedTo);
-        if (!sourceDevice) return [];
-
-        return getMappedChannels(sourceDevice.type, device.type, device.syncedControls);
     }
 
     // Restore all device values to DMX controller on load (only when controller changes, not on devices updates)
@@ -238,52 +201,14 @@
         {/if}
 
         {#each devices as device, index (device.id)}
-            <DraggableCard {dnd} item={device} {index} class="device-card">
-                <CardHeader>
-                    {#if device.type === 'FLAMETHROWER'}
-                        {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
-                        <Preview
-                            type="device"
-                            size="medium"
-                            controls={['fuel', 'safety']}
-                            data={{ fuel: flame.fuel, safety: flame.safety }}
-                        />
-                    {:else if device.type === 'SMOKE'}
-                        {@const smoke = deviceSmoke[device.id] || { output: device.defaultValues[0] || 0 }}
-                        <Preview
-                            type="device"
-                            size="medium"
-                            controls={['output']}
-                            data={{ output: smoke.output }}
-                        />
-                    {:else}
-                        <Preview
-                            type="device"
-                            size="medium"
-                            controls={['color']}
-                            data={{ color: getDeviceColor(device.type, device.defaultValues) }}
-                        />
-                    {/if}
-                    <h3>{device.name}</h3>
-                    {#if device.linkedTo !== null}
-                        <Icon data={linkedIcon} />
-                    {/if}
-                    <IconButton
-                        icon={editIcon}
-                        onclick={() => openSettingsDialog(device)}
-                        title="Device settings"
-                        size="small"
-                    />
-                </CardHeader>
-
-                <Controls
-                    controls={DEVICE_TYPES[device.type].controls}
-                    components={DEVICE_TYPES[device.type].components}
-                    values={device.defaultValues}
-                    onChange={(channelIndex, value) => handleDeviceValueChange(device, channelIndex, value)}
-                    disabledChannels={getDisabledChannels(device)}
-                />
-            </DraggableCard>
+            <DeviceCard
+                {device}
+                {index}
+                {dnd}
+                {devices}
+                onsettings={openSettingsDialog}
+                onvaluechange={handleDeviceValueChange}
+            />
         {/each}
     </div>
 
