@@ -37,11 +37,8 @@
             const currentVersion = animation.version || 0;
             if (currentVersion !== lastSyncedVersion) {
                 // External change detected - sync from animation to local state
-                // Deep copy to avoid shared references (copy all properties, but clone the values array)
-                localKeyframes = animation.keyframes.map(kf => ({
-                    ...kf,
-                    values: [...kf.values]
-                }));
+                // Use structuredClone to deep copy plain objects from animation
+                localKeyframes = structuredClone(animation.keyframes);
                 lastSyncedVersion = currentVersion;
                 localVersion++;
             }
