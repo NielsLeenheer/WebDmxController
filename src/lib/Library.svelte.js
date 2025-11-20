@@ -43,11 +43,11 @@ export class Library {
 	}
 
 	/**
-	 * Get all items sorted by order property
-	 * @returns {Array} All items in the library, sorted by their order property
+	 * Get all items
+	 * @returns {Array} All items in the library
 	 */
 	getAll() {
-		return [...this.items].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+		return this.items;
 	}
 
 	/**
