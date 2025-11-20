@@ -245,6 +245,9 @@
         // Update the dragging index in case it changed due to sorting
         draggingKeyframe.index = animation.keyframes.indexOf(draggingKeyframe.keyframe);
 
+        // Increment version to trigger reactivity
+        animation.version = (animation.version || 0) + 1;
+
         if (Math.abs(deltaX) > 3) {
             hasActuallyDragged = true;
         }
