@@ -390,7 +390,7 @@
         {/if}
 
         {#each devices as device, index (`${device.id}-${device.version}`)}
-            <DraggableCard {dnd} item={device} {index} class="device-card">
+            <DraggableCard {dnd} item={device} {index} class="device-card" orientation="horizontal">
                 <div class="device-header">
                     {#if device.type === 'FLAMETHROWER'}
                         {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
@@ -487,37 +487,6 @@
         align-content: center;
         color: #999;
         font-size: 0.9em;
-    }
-
-    .device-card {
-        background: #f0f0f0;
-        border-radius: 8px;
-        padding: 15px;
-        transition: opacity 0.2s, transform 0.2s;
-    }
-
-    .device-card.dragging {
-        opacity: 0.4;
-    }
-
-    .device-card.drag-over {
-        position: relative;
-    }
-
-    .device-card.drag-over::before {
-        content: '';
-        position: absolute;
-        left: -8px;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        background: #2196F3;
-        border-radius: 2px;
-    }
-
-    .device-card.drag-after::before {
-        left: auto;
-        right: -8px;
     }
 
     .device-header {
