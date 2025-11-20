@@ -5,6 +5,7 @@
  * for preview and applied to devices for playback.
  */
 
+import { EventEmitter } from './EventEmitter.js';
 import { getDeviceColor } from './colorUtils.js';
 import { DEVICE_TYPES } from './outputs/devices.js';
 import { CONTROL_CSS_MAPPING } from './css/mapping/index.js';
@@ -414,41 +415,11 @@ export class Animation {
 /**
  * Manages a library of reusable animations
  */
-export class AnimationLibrary {
+export class AnimationLibrary extends EventEmitter {
 	constructor() {
+		super();
 		this.animations = new Map(); // name -> Animation
-		this.listeners = new Map(); // event -> Set of callbacks
 		this.load();
-	}
-
-	/**
-	 * Add event listener
-	 */
-	on(event, callback) {
-		if (!this.listeners.has(event)) {
-			this.listeners.set(event, new Set());
-		}
-		this.listeners.get(event).add(callback);
-	}
-
-	/**
-	 * Remove event listener
-	 */
-	off(event, callback) {
-		if (this.listeners.has(event)) {
-			this.listeners.get(event).delete(callback);
-		}
-	}
-
-	/**
-	 * Emit event
-	 */
-	_emit(event, data) {
-		if (!this.listeners.has(event)) return;
-		const callbacks = this.listeners.get(event);
-		for (const callback of callbacks) {
-			callback(data);
-		}
 	}
 
 	/**

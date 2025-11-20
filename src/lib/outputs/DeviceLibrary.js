@@ -5,33 +5,8 @@
  * AnimationLibrary, InputLibrary, and TriggerLibrary
  */
 
+import { EventEmitter } from '../EventEmitter.js';
 import { Device, DEVICE_TYPES } from './devices.js';
-
-/**
- * Simple EventEmitter for library change notifications
- */
-class EventEmitter {
-	constructor() {
-		this.listeners = {};
-	}
-
-	on(event, callback) {
-		if (!this.listeners[event]) {
-			this.listeners[event] = [];
-		}
-		this.listeners[event].push(callback);
-	}
-
-	off(event, callback) {
-		if (!this.listeners[event]) return;
-		this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
-	}
-
-	_emit(event, data) {
-		if (!this.listeners[event]) return;
-		this.listeners[event].forEach(callback => callback(data));
-	}
-}
 
 /**
  * Manages the collection of devices

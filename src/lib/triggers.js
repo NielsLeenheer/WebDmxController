@@ -4,6 +4,7 @@
  * Maps input events to actions (running animations or setting device values)
  */
 
+import { EventEmitter } from './EventEmitter.js';
 import { toCSSIdentifier } from './css/utils.js';
 import { DEVICE_TYPES } from './outputs/devices.js';
 import { generateCSSProperties } from './css/generator.js';
@@ -238,32 +239,6 @@ ${props.join('\n')}
 	 */
 	static fromJSON(json) {
 		return new Trigger(json);
-	}
-}
-
-/**
- * Event emitter helper
- */
-class EventEmitter {
-	constructor() {
-		this.listeners = {};
-	}
-
-	on(event, callback) {
-		if (!this.listeners[event]) {
-			this.listeners[event] = [];
-		}
-		this.listeners[event].push(callback);
-	}
-
-	off(event, callback) {
-		if (!this.listeners[event]) return;
-		this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
-	}
-
-	_emit(event, data) {
-		if (!this.listeners[event]) return;
-		this.listeners[event].forEach(callback => callback(data));
 	}
 }
 

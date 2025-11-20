@@ -4,6 +4,7 @@
  * Manages physical input controls (buttons, sliders, knobs) from MIDI/HID devices
  */
 
+import { EventEmitter } from './EventEmitter.js';
 import { toCSSIdentifier } from './css/utils.js';
 
 /**
@@ -130,32 +131,6 @@ export class Input {
 	 */
 	static fromJSON(json) {
 		return new Input(json);
-	}
-}
-
-/**
- * Event emitter helper
- */
-class EventEmitter {
-	constructor() {
-		this.listeners = {};
-	}
-
-	on(event, callback) {
-		if (!this.listeners[event]) {
-			this.listeners[event] = [];
-		}
-		this.listeners[event].push(callback);
-	}
-
-	off(event, callback) {
-		if (!this.listeners[event]) return;
-		this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
-	}
-
-	_emit(event, data) {
-		if (!this.listeners[event]) return;
-		this.listeners[event].forEach(callback => callback(data));
 	}
 }
 
