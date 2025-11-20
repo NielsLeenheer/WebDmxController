@@ -48,7 +48,19 @@
 
 	// Get trigger type options based on the selected input's button mode
 	function getTriggerTypeOptions() {
-		const input = availableInputs.find(i => i.id === selectedInput);
+		if (!selectedInput) {
+			return [
+				{ value: 'pressed', label: 'Pressed' },
+				{ value: 'not-pressed', label: 'Not Pressed' }
+			];
+		}
+
+		// Parse deviceId_controlId format
+		const [deviceId, controlId] = selectedInput.split('_');
+		const input = availableInputs.find(i =>
+			i.inputDeviceId === deviceId && i.inputControlId === controlId
+		);
+
 		if (!input || !input.isButtonInput()) {
 			return [
 				{ value: 'pressed', label: 'Pressed' },
@@ -125,7 +137,8 @@
 			devices = devs;
 
 			// Initialize form state
-			selectedInput = inputs[0]?.id || null;
+			// Format: deviceId_controlId (needed for parsing in TriggersView)
+			selectedInput = inputs[0] ? `${inputs[0].inputDeviceId}_${inputs[0].inputControlId}` : null;
 			triggerType = 'pressed';
 			actionType = 'animation';
 			selectedDevice = devs[0]?.id || null;
@@ -194,7 +207,7 @@
 					<label for="trigger-input">Input:</label>
 					<select id="trigger-input" bind:value={selectedInput}>
 						{#each availableInputs as input}
-							<option value={input.id}>{input.name}</option>
+							<option value={`${input.inputDeviceId}_${input.inputControlId}`}>{input.name}</option>
 						{/each}
 					</select>
 				</div>
