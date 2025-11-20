@@ -4,10 +4,13 @@
  * Provides common functionality for managing collections of items with:
  * - Automatic reactivity using $state
  * - localStorage persistence with $state.snapshot()
+ * - Debounced saves (2 second delay)
  * - Automatic UUID generation for new items
  * - Automatic order property management
  * - CRUD operations
  */
+
+const SAVE_DEBOUNCE_MS = 2000;
 
 /**
  * Base class for all libraries (Devices, Animations, Inputs, Triggers)
@@ -24,6 +27,12 @@ export class Library {
 	 * @type {string}
 	 */
 	storageKey = '';
+
+	/**
+	 * Debounce timer for saves
+	 * @type {number|null}
+	 */
+	#saveTimeout = null;
 
 	/**
 	 * @param {string} storageKey - Key for localStorage
@@ -135,9 +144,39 @@ export class Library {
 	}
 
 	/**
-	 * Save to localStorage using $state.snapshot()
+	 * Schedule a debounced save to localStorage
+	 * Saves are debounced by 2 seconds to avoid excessive writes
 	 */
 	save() {
+		// Clear existing timeout
+		if (this.#saveTimeout !== null) {
+			clearTimeout(this.#saveTimeout);
+		}
+
+		// Schedule new save
+		this.#saveTimeout = setTimeout(() => {
+			this._persistToStorage();
+			this.#saveTimeout = null;
+		}, SAVE_DEBOUNCE_MS);
+	}
+
+	/**
+	 * Flush pending saves immediately
+	 * Useful for ensuring data is saved before page unload
+	 */
+	flush() {
+		if (this.#saveTimeout !== null) {
+			clearTimeout(this.#saveTimeout);
+			this.#saveTimeout = null;
+		}
+		this._persistToStorage();
+	}
+
+	/**
+	 * Actually persist to localStorage using $state.snapshot()
+	 * @private
+	 */
+	_persistToStorage() {
 		try {
 			const snapshot = $state.snapshot(this.items);
 			localStorage.setItem(this.storageKey, JSON.stringify(snapshot));

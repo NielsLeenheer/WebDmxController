@@ -95,10 +95,20 @@
         // Subscribe to sampled values for DMX output
         const unsubscribe = cssManager.subscribe(handleSampledValues);
 
+        // Flush all pending saves before page unload
+        const handleBeforeUnload = () => {
+            deviceLibrary.flush();
+            animationLibrary.flush();
+            inputLibrary.flush();
+            triggerLibrary.flush();
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
         // Return cleanup function
         return () => {
             unsubscribe();
             cssManager.destroy();
+            window.removeEventListener('beforeunload', handleBeforeUnload);
         };
     });
 </script>
