@@ -489,7 +489,14 @@
         font-size: 0.9em;
     }
 
-    .device-header {
+	:global(.device-card) {
+		background: #f0f0f0;
+		border-radius: 8px;
+		padding: 15px;
+		transition: opacity 0.2s, transform 0.2s;
+	}
+
+    :global(.device-card) .device-header {
         display: flex;
         align-items: center;
         gap: 8px;
@@ -502,18 +509,18 @@
         cursor: grab;
     }
 
-    .device-header:active {
+    :global(.device-card) .device-header:active {
         cursor: grabbing;
     }
 
-    .device-header h3 {
+    :global(.device-card) .device-header h3 {
         margin: 0;
         font-size: 11pt;
         font-weight: 600;
         color: #333;
     }
 
-    .device-header :global(.icon-button) {
+    :global(.device-card) .device-header :global(.icon-button) {
         margin-left: auto;
     }
 </style>

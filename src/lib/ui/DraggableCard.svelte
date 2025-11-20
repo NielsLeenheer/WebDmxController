@@ -97,11 +97,4 @@
 		height: 4px;
 	}
 
-	/* Global card styling */
-	:global(.device-card) {
-		background: #f0f0f0;
-		border-radius: 8px;
-		padding: 15px;
-		transition: opacity 0.2s, transform 0.2s;
-	}
 </style>
