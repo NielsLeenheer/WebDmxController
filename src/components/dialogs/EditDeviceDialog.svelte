@@ -189,7 +189,7 @@
 			/>
 
 			<div class="css-identifiers">
-				<code class="css-identifier">#{toCSSIdentifier(dialogName.trim() || editingDevice?.name || '')}</code>
+				<code class="css-identifier">#{toCSSIdentifier(dialogName || editingDevice?.name || '')}</code>
 			</div>
 		</div>
 
