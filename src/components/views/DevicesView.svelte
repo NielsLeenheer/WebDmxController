@@ -62,32 +62,6 @@
         return maxChannel >= 512 ? 0 : maxChannel;
     }
 
-    function validateDevice(device) {
-        const deviceChannels = DEVICE_TYPES[device.type].channels;
-        const deviceEnd = device.startChannel + deviceChannels;
-
-        // Check if device goes beyond channel 512
-        if (deviceEnd > 512) {
-            return false;
-        }
-
-        // Check for overlaps with other devices
-        for (let otherDevice of devices) {
-            if (otherDevice.id === device.id) continue;
-
-            const otherChannels = DEVICE_TYPES[otherDevice.type].channels;
-            const otherStart = otherDevice.startChannel;
-            const otherEnd = otherStart + otherChannels;
-
-            // Check if ranges overlap
-            if (device.startChannel < otherEnd && deviceEnd > otherStart) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     export function addDevice(type = selectedType) {
         const startChannel = getNextFreeChannel();
         deviceLibrary.create(type, startChannel);
