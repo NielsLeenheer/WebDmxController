@@ -70,10 +70,20 @@ export function createDragDrop(options) {
 				return;
 			}
 
+			// Prevent drag if any element in the path has draggable="false"
+			let el = lastMouseDownTarget;
+			while (el && !el.classList?.contains('draggable-card')) {
+				if (el.getAttribute && el.getAttribute('draggable') === 'false') {
+					event.preventDefault();
+					return;
+				}
+				el = el.parentElement;
+			}
+
 			// If dragByHeader is enabled, only allow drag from CardHeader
 			if (dragByHeader) {
 				let foundHeader = false;
-				let el = lastMouseDownTarget;
+				el = lastMouseDownTarget;
 
 				while (el && !el.classList?.contains('draggable-card')) {
 					if (el.classList?.contains('card-header')) {
