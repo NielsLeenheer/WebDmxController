@@ -410,6 +410,112 @@ export class Animation {
 		}
 		return animation;
 	}
+
+	/**
+	 * Static utility methods for working with plain animation objects
+	 */
+
+	/**
+	 * Get controls and components for rendering (static version)
+	 * @param {Object} animation - Plain animation object
+	 */
+	static getControlsForRendering(animation) {
+		if (!animation.controls || animation.controls.length === 0) {
+			// Fallback: use RGB device controls
+			return {
+				controls: DEVICE_TYPES.RGB.controls,
+				components: DEVICE_TYPES.RGB.components
+			};
+		}
+
+		// Find a device type that has all the required controls
+		for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
+			const hasAllControls = animation.controls.every(controlName =>
+				deviceDef.controls.some(c => c.name === controlName)
+			);
+			if (hasAllControls) {
+				// Filter to only the controls we want
+				const filteredControls = deviceDef.controls.filter(c =>
+					animation.controls.includes(c.name)
+				);
+				return {
+					controls: filteredControls,
+					components: deviceDef.components
+				};
+			}
+		}
+
+		// Fallback to RGB if no device type matches
+		return {
+			controls: DEVICE_TYPES.RGB.controls,
+			components: DEVICE_TYPES.RGB.components
+		};
+	}
+
+	/**
+	 * Get number of channels for animation (static version)
+	 * @param {Object} animation - Plain animation object
+	 */
+	static getNumChannels(animation) {
+		const { controls, components } = Animation.getControlsForRendering(animation);
+
+		if (!animation.controls || animation.controls.length === 0) {
+			// Animate all channels
+			return components.length;
+		}
+
+		// Count unique channels for the specified controls
+		const channels = new Set();
+		for (const control of controls) {
+			for (const componentIndex of Object.values(control.components)) {
+				const channel = components[componentIndex].channel;
+				channels.add(channel);
+			}
+		}
+
+		return channels.size;
+	}
+
+	/**
+	 * Convert animation to CSS @keyframes rule (static version)
+	 * @param {Object} animation - Plain animation object
+	 */
+	static toCSS(animation) {
+		if (!animation.keyframes || animation.keyframes.length === 0) {
+			return '';
+		}
+
+		// Generate CSS based on controls being animated
+		const keyframeRules = animation.keyframes.map(kf => {
+			const percent = Math.round(kf.time * 100);
+			const properties = Animation._getKeyframePropertiesStatic(animation, kf);
+			const props = Object.entries(properties)
+				.map(([prop, value]) => `${prop}: ${value}`)
+				.join('; ');
+			return `${percent}% { ${props}; }`;
+		}).join('\n  ');
+
+		return `@keyframes ${animation.cssName} {\n  ${keyframeRules}\n}`;
+	}
+
+	/**
+	 * Get CSS properties for a keyframe (static helper)
+	 * @param {Object} animation - Plain animation object
+	 * @param {Object} keyframe - Keyframe object
+	 */
+	static _getKeyframePropertiesStatic(animation, keyframe) {
+		const { controls, components } = Animation.getControlsForRendering(animation);
+
+		// Use shared mapping function
+		const properties = generateCSSProperties(controls, components, keyframe.values, keyframe.deviceType);
+
+		// Fallback: if no properties generated, use color
+		if (Object.keys(properties).length === 0) {
+			properties.color = getDeviceColor(keyframe.deviceType, keyframe.values);
+		}
+
+		return properties;
+	}
 }
 
 /**

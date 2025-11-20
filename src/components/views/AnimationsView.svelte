@@ -1,6 +1,6 @@
 <script>
-    import { Animation } from '../../lib/animations.js';
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+    import { Animation } from '../../lib/animations.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import AnimationCard from '../cards/AnimationCard.svelte';
     import Button from '../common/Button.svelte';
@@ -40,18 +40,32 @@
         const parsed = parseAnimationTarget(result.target);
         const { controls, displayName } = parsed;
 
-        // Create animation with controls array (no deviceType stored)
-        const animation = new Animation(result.name, null, [], null, controls, displayName);
+        // Create animation using library
+        const animation = animationLibrary.create(result.name, controls, displayName);
+
+        // Determine device type for initial keyframes
+        const deviceType = getDeviceTypeForControls(controls);
 
         // Determine number of channels based on control selection
-        const numChannels = animation.getNumChannels();
+        const numChannels = Animation.getNumChannels(animation);
         const defaultValues = new Array(numChannels).fill(0);
 
         // Add default keyframes at start and end
-        animation.addKeyframe(0, [...defaultValues]);
-        animation.addKeyframe(1, [...defaultValues]);
+        animationLibrary.addKeyframe(animation.name, 0, deviceType, defaultValues);
+        animationLibrary.addKeyframe(animation.name, 1, deviceType, defaultValues);
+    }
 
-        animationLibrary.add(animation);
+    // Get a device type that has the specified controls (for keyframe rendering)
+    function getDeviceTypeForControls(controls) {
+        for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
+            const hasAllControls = controls.every(controlName =>
+                deviceDef.controls.some(c => c.name === controlName)
+            );
+            if (hasAllControls) {
+                return deviceKey;
+            }
+        }
+        return 'RGB'; // Fallback
     }
 
     // Parse selected target into controls array and displayName
@@ -94,16 +108,10 @@
             return;
         }
 
-        // Handle save - reactivity handles updates
-        animation.name = result.name;
-        animation.updateCSSName();
-        animation.version = (animation.version || 0) + 1;
-        animationLibrary.save();
-    }
-
-    function handleAnimationUpdate(animation) {
-        animation.version = (animation.version || 0) + 1;
-        animationLibrary.save();
+        // Handle rename - library method handles reactivity
+        if (result.name !== animation.name) {
+            animationLibrary.rename(animation.name, result.name);
+        }
     }
 </script>
 
@@ -120,13 +128,12 @@
                 <p>No animations yet. Create one to get started!</p>
             </div>
         {:else}
-            {#each animations as animation (`${animation.name}-${animation.version}`)}
+            {#each animations as animation (animation.name)}
                 <AnimationCard
                     {animation}
                     {dnd}
                     {animationLibrary}
                     onSettings={openEditDialog}
-                    onUpdate={handleAnimationUpdate}
                 />
             {/each}
         {/if}

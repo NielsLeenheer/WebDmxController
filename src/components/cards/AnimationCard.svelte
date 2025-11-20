@@ -4,16 +4,23 @@
 	import IconButton from '../common/IconButton.svelte';
 	import Preview from '../common/Preview.svelte';
 	import TimelineEditor from '../animations/TimelineEditor.svelte';
+	import { Animation } from '../../lib/animations.js';
 
 	import editIcon from '../../assets/glyphs/edit.svg?raw';
 
 	let {
-		animation,       // Animation object
+		animation,       // Animation plain object
 		dnd,             // Drag-and-drop helper
 		animationLibrary, // Animation library reference
-		onSettings,      // Callback when settings button clicked
-		onUpdate         // Callback when animation is updated
+		onSettings       // Callback when settings button clicked
 	} = $props();
+
+	/**
+	 * Get display name for animation
+	 */
+	function getDisplayName() {
+		return animation.displayName || animation.controls?.join(', ') || 'Animation';
+	}
 
 	/**
 	 * Generate preview gradient for animation
@@ -31,7 +38,7 @@
 		}
 
 		// Get control and component data for the animation
-		const { controls, components } = animation.getControlsForRendering();
+		const { controls, components } = Animation.getControlsForRendering(animation);
 
 		// Extract colors from each keyframe
 		const colors = animation.keyframes.map(keyframe => {
@@ -88,6 +95,7 @@
 	}
 
 	let previewColor = $derived(getAnimationPreview());
+	let displayName = $derived(getDisplayName());
 </script>
 
 <DraggableCard {dnd} item={animation} class="animation-card">
@@ -100,7 +108,7 @@
 		<div class="animation-info">
 			<h3>{animation.name}</h3>
 			<div class="badges">
-				<div class="target-badge">{animation.getDisplayName()}</div>
+				<div class="target-badge">{displayName}</div>
 			</div>
 		</div>
 		<IconButton
@@ -114,7 +122,6 @@
 	<TimelineEditor
 		{animation}
 		{animationLibrary}
-		onUpdate={() => onUpdate?.(animation)}
 	/>
 </DraggableCard>
 
