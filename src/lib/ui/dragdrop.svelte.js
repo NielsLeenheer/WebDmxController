@@ -4,7 +4,7 @@
  * Usage:
  *   const dnd = createDragDrop({
  *     items: () => myArray,
- *     onReorder: (orderedIds) => { /* handle reorder */ }
+ *     onReorder: (orderedIds) => { ... }
  *   });
  *
  * Then in template:
