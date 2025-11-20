@@ -14,8 +14,14 @@
     // Store sampled device data (Map of deviceId -> channels object)
     let sampledDeviceData = $state(new Map());
 
-    // Get CSS from manager
-    let generatedCSS = $derived(cssManager?.generatedCSS || '');
+    // Track CSS changes with local state (updates when libraries change)
+    let cssVersion = $state(0);
+
+    // Get CSS from manager (re-evaluated when cssVersion changes)
+    let generatedCSS = $derived.by(() => {
+        cssVersion; // Subscribe to version changes
+        return cssManager?.generatedCSS || '';
+    });
     let customCSS = $derived(cssManager?.customCSS || '');
 
     // Get animations for display
@@ -59,6 +65,25 @@
         return unsubscribe;
     });
 
+    // Listen for library changes to update CSS display
+    $effect(() => {
+        if (!triggerLibrary || !inputLibrary || !animationLibrary) return;
+
+        const handleChange = () => {
+            cssVersion++;
+        };
+
+        triggerLibrary.on('changed', handleChange);
+        inputLibrary.on('changed', handleChange);
+        animationLibrary.on('changed', handleChange);
+
+        return () => {
+            triggerLibrary.off('changed', handleChange);
+            inputLibrary.off('changed', handleChange);
+            animationLibrary.off('changed', handleChange);
+        };
+    });
+
     // Get preview data for a device
     function getPreviewData(device) {
         const channels = sampledDeviceData.get(device.id);
@@ -71,8 +96,6 @@
         const values = convertChannelsToArray(device.type, channels);
         return getDevicePreviewData(device.type, values);
     }
-
-    // Note: inputs are now reactive via $derived, so no need for onMount listeners
 </script>
 
 <div class="css-view">
