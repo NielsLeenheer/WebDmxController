@@ -22,23 +22,23 @@ export class AkaiLPD8MK2Profile extends MIDIDeviceProfile {
 	}
 
 	/**
-	 * Convert palette color to SysEx command
-	 * Updates internal state and returns a SysEx message with ALL pad colors
-	 * (Akai LPD8 MK2 requires all pads to be updated at once)
-	 * @param {string} color - Palette color name
+	 * Update a single pad color in internal state
+	 * Does NOT send to hardware - call flushColors() to send
 	 * @param {number} note - MIDI note number of the pad
+	 * @param {string} color - Palette color name
+	 */
+	setPadColor(note, color) {
+		const padIndex = this.noteToPadIndex.get(note);
+		if (padIndex !== undefined) {
+			this.padColors.set(note, color);
+		}
+	}
+
+	/**
+	 * Build and return SysEx command with current state of ALL pads
 	 * @returns {{ type: 'sysex', value: Uint8Array }}
 	 */
-	paletteColorToCommand(color, note) {
-		const padIndex = this.noteToPadIndex.get(note);
-		if (padIndex === undefined) {
-			// Unknown pad, no command
-			return;
-		}
-
-		// Update internal state for this pad
-		this.padColors.set(note, color);
-
+	flushColors() {
 		// Build SysEx message with ALL pad colors
 		const payload = [];
 		for (const padNote of this.padNotes) {
@@ -62,6 +62,28 @@ export class AkaiLPD8MK2Profile extends MIDIDeviceProfile {
 		]);
 
 		return { type: 'sysex', value: sysex };
+	}
+
+	/**
+	 * Convert palette color to SysEx command
+	 * Updates internal state and returns a SysEx message with ALL pad colors
+	 * (Akai LPD8 MK2 requires all pads to be updated at once)
+	 * @param {string} color - Palette color name
+	 * @param {number} note - MIDI note number of the pad
+	 * @returns {{ type: 'sysex', value: Uint8Array }}
+	 */
+	paletteColorToCommand(color, note) {
+		const padIndex = this.noteToPadIndex.get(note);
+		if (padIndex === undefined) {
+			// Unknown pad, no command
+			return;
+		}
+
+		// Update internal state for this pad
+		this.setPadColor(note, color);
+
+		// Return SysEx with all colors
+		return this.flushColors();
 	}
 
 	_encodeColor({ r, g, b }) {

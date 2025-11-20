@@ -448,25 +448,59 @@
                     }
                 }
 
-                // Set color for each pad
-                for (const note of device.profile.padNotes) {
-                    const controlId = `note-${note}`;
-                    const input = assignedControls.get(controlId);
+                // Check if device supports batch color updates (Akai LPD8 MK2, etc.)
+                const supportsBatchUpdate = typeof device.profile.setPadColor === 'function' &&
+                                           typeof device.profile.flushColors === 'function';
 
-                    if (input) {
-                        // Set assigned color
-                        let color = input.color;
+                if (supportsBatchUpdate) {
+                    // Batch mode: update all pad states first, then send ONE message
+                    for (const note of device.profile.padNotes) {
+                        const controlId = `note-${note}`;
+                        const input = assignedControls.get(controlId);
 
-                        // For toggle buttons, respect the current toggle state
-                        if (input.isButtonInput() && input.buttonMode === 'toggle') {
-                            const state = inputStates[input.id];
-                            color = (state?.state === 'on') ? input.color : 'black';
+                        if (input) {
+                            // Set assigned color
+                            let color = input.color;
+
+                            // For toggle buttons, respect the current toggle state
+                            if (input.isButtonInput() && input.buttonMode === 'toggle') {
+                                const state = inputStates[input.id];
+                                color = (state?.state === 'on') ? input.color : 'black';
+                            }
+
+                            device.profile.setPadColor(note, color);
+                        } else {
+                            // Set unassigned buttons to black
+                            device.profile.setPadColor(note, 'black');
                         }
+                    }
 
-                        await device.setColor(controlId, color);
-                    } else {
-                        // Set unassigned buttons to black
-                        await device.setColor(controlId, 'black');
+                    // Send single update with all pad colors
+                    const command = device.profile.flushColors();
+                    if (command && command.type === 'sysex' && device.midiOutput) {
+                        device.midiOutput.send(command.value);
+                    }
+                } else {
+                    // Non-batch mode: send individual updates
+                    for (const note of device.profile.padNotes) {
+                        const controlId = `note-${note}`;
+                        const input = assignedControls.get(controlId);
+
+                        if (input) {
+                            // Set assigned color
+                            let color = input.color;
+
+                            // For toggle buttons, respect the current toggle state
+                            if (input.isButtonInput() && input.buttonMode === 'toggle') {
+                                const state = inputStates[input.id];
+                                color = (state?.state === 'on') ? input.color : 'black';
+                            }
+
+                            await device.setColor(controlId, color);
+                        } else {
+                            // Set unassigned buttons to black
+                            await device.setColor(controlId, 'black');
+                        }
                     }
                 }
             } else {

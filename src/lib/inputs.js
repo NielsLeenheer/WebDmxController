@@ -86,8 +86,10 @@ export class Input {
 	 */
 	isButtonInput() {
 		if (!this.inputControlId) return false;
-		// Button controls end with -button
-		return this.inputControlId.endsWith('-button');
+		// Button controls: -button suffix, or MIDI notes (note-XX), or HID buttons (button-XX)
+		return this.inputControlId.endsWith('-button') ||
+		       this.inputControlId.startsWith('note-') ||
+		       this.inputControlId.startsWith('button-');
 	}
 
 	/**
