@@ -86,10 +86,15 @@ export class Input {
 	 */
 	isButtonInput() {
 		if (!this.inputControlId) return false;
-		// Button controls: -button suffix, or MIDI notes (note-XX), or HID buttons (button-XX)
-		return this.inputControlId.endsWith('-button') ||
-		       this.inputControlId.startsWith('note-') ||
-		       this.inputControlId.startsWith('button-');
+		// Button controls:
+		// - MIDI notes: note-XX
+		// - HID/StreamDeck buttons: button-XX or just 'button' (Thingy:52)
+		// - Keyboard keys: key-XX
+		// - CC/control changes are sliders/knobs
+		return this.inputControlId.startsWith('note-') ||
+		       this.inputControlId.startsWith('button-') ||
+		       this.inputControlId === 'button' ||
+		       this.inputControlId.startsWith('key-');
 	}
 
 	/**
