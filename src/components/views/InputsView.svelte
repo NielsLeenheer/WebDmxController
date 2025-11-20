@@ -2,6 +2,8 @@
     import { onMount, onDestroy } from 'svelte';
     import { Input } from '../../lib/inputs.js';
     import { paletteColorToHex, getUnusedFromPalette, getPalette } from '../../lib/inputs/colors.js';
+    import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
+    import DraggableCard from '../../lib/ui/DraggableCard.svelte';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Preview from '../common/Preview.svelte';
@@ -22,100 +24,24 @@
     let inputStates = $state({}); // Track state/value for each input: { inputId: { state: 'on'|'off', value: number } }
     let thingyEulerAngles = $state({}); // Track Euler angles for Thingy devices: { deviceId: { roll, pitch, yaw } }
 
-    // Drag and drop state
-    let draggedInput = $state(null);
-    let draggedIndex = $state(null);
-    let dragOverIndex = $state(null);
-    let isAfterMidpoint = $state(false);
-
     const deviceColorUsage = new Map(); // deviceId -> Set(colors)
     const deviceColorIndices = new Map(); // deviceId -> last palette index used when cycling
     const COLOR_CAPABLE_PREFIXES = ['button-', 'note-'];
 
-    function handleDragStart(event, input) {
-        draggedInput = input;
-        draggedIndex = savedInputs.findIndex(i => i.id === input.id);
-        event.dataTransfer.effectAllowed = 'move';
-    }
-
-    function handleDragOver(event, index) {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-        dragOverIndex = index;
-
-        // Calculate if mouse is in the second half of the card
-        const rect = event.currentTarget.getBoundingClientRect();
-        const mouseX = event.clientX;
-        const cardMidpoint = rect.left + rect.width / 2;
-        isAfterMidpoint = mouseX > cardMidpoint;
-    }
-
-    function isDragAfter(index) {
-        return dragOverIndex === index && isAfterMidpoint;
-    }
-
-    function handleDragLeave() {
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
-
-    function handleDrop(event, targetIndex) {
-        event.preventDefault();
-
-        if (!draggedInput) return;
-
-        const currentIndex = savedInputs.findIndex(i => i.id === draggedInput.id);
-        if (currentIndex === -1) {
-            draggedInput = null;
-            draggedIndex = null;
-            dragOverIndex = null;
-            isAfterMidpoint = false;
-            return;
-        }
-
-        // Adjust target index based on whether we're inserting after the midpoint
-        let insertIndex = targetIndex;
-        if (isAfterMidpoint) {
-            insertIndex = targetIndex + 1;
-        }
-
-        // If dragging from before to after in the same position, no change needed
-        if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
-            draggedInput = null;
-            draggedIndex = null;
-            dragOverIndex = null;
-            isAfterMidpoint = false;
-            return;
-        }
-
-        // Reorder the savedInputs array
-        const newInputs = [...savedInputs];
-        const [removed] = newInputs.splice(currentIndex, 1);
-        // Adjust insert position if we removed an item before it
-        const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
-        newInputs.splice(finalInsertIndex, 0, removed);
-        savedInputs = newInputs;
-
-        // Update the input library order
-        // Clear and rebuild with new order
-        inputLibrary.inputs.clear();
-        newInputs.forEach(input => {
-            inputLibrary.inputs.set(input.id, input);
-        });
-        inputLibrary.save();
-
-        draggedInput = null;
-        draggedIndex = null;
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
-
-    function handleDragEnd() {
-        draggedInput = null;
-        draggedIndex = null;
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
+    // Drag and drop helper
+    const dnd = createDragDrop({
+        items: () => savedInputs,
+        onReorder: (newInputs) => {
+            savedInputs = newInputs;
+            // Update the input library order - clear and rebuild with new order
+            inputLibrary.inputs.clear();
+            newInputs.forEach(input => {
+                inputLibrary.inputs.set(input.id, input);
+            });
+            inputLibrary.save();
+        },
+        orientation: 'horizontal'
+    });
 
     function getInputStateDisplay(input) {
         const state = inputStates[input.id];
@@ -635,18 +561,7 @@
             </div>
         {:else}
             {#each savedInputs as input, index (`${input.id}-${input.version}`)}
-                <div
-                    class="input-card"
-                    class:dragging={draggedInput?.id === input.id}
-                    class:drag-over={dragOverIndex === index && !isAfterMidpoint}
-                    class:drag-after={isDragAfter(index)}
-                    draggable="true"
-                    ondragstart={(e) => handleDragStart(e, input)}
-                    ondragover={(e) => handleDragOver(e, index)}
-                    ondragleave={handleDragLeave}
-                    ondrop={(e) => handleDrop(e, index)}
-                    ondragend={handleDragEnd}
-                >
+                <DraggableCard {dnd} item={input} {index} class="input-card">
                     {#if input.color && isColorCapableControl(input.inputControlId)}
                         <Preview
                             type="input"
@@ -691,7 +606,7 @@
                             {@html editIcon}
                         </button>
                     </div>
-                </div>
+                </DraggableCard>
             {/each}
         {/if}
     </div>
@@ -740,60 +655,26 @@
         margin: 0;
     }
 
-    .input-card {
-        background: #f0f0f0;
-        border-radius: 8px;
-        padding: 15px;
+    :global(.input-card) {
         display: flex;
         flex-direction: column;
         gap: 10px;
-        position: relative;
-        cursor: grab;
-        transition: opacity 0.2s, transform 0.2s;
     }
 
-    .input-card:active {
-        cursor: grabbing;
-    }
-
-    .input-card.dragging {
-        opacity: 0.4;
-    }
-
-    .input-card.drag-over {
-        position: relative;
-    }
-
-    .input-card.drag-over::before {
-        content: '';
-        position: absolute;
-        left: -8px;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        background: #2196F3;
-        border-radius: 2px;
-    }
-
-    .input-card.drag-after::before {
-        left: auto;
-        right: -8px;
-    }
-
-    .input-color-badge {
+    :global(.input-card) .input-color-badge {
         position: absolute;
         top: 15px;
         right: 15px;
     }
 
-    .input-header {
+    :global(.input-card) .input-header {
         display: flex;
         flex-direction: column;
         gap: 4px;
         padding-right: 40px; /* Space for color badge */
     }
 
-    .input-name {
+    :global(.input-card) .input-name {
         font-weight: 600;
         font-size: 11pt;
         color: #333;
@@ -810,12 +691,12 @@
         box-sizing: border-box;
     }
 
-    .input-device-name {
+    :global(.input-card) .input-device-name {
         font-size: 9pt;
         color: #666;
     }
 
-    .input-state {
+    :global(.input-card) .input-state {
         position: absolute;
         bottom: 14px;
         left: 14px;
@@ -825,14 +706,14 @@
         min-height: 14px;
     }
 
-    .input-actions {
+    :global(.input-card) .input-actions {
         display: flex;
         gap: 8px;
         justify-content: flex-end;
         margin-top: auto;
     }
 
-    .edit-button {
+    :global(.input-card) .edit-button {
         padding: 4px;
         background: transparent;
         border: none;
@@ -845,17 +726,17 @@
         transition: background 0.2s;
     }
 
-    .edit-button:hover {
+    :global(.input-card) .edit-button:hover {
         background: #e0e0e0;
     }
 
-    .edit-button :global(svg) {
+    :global(.input-card) .edit-button :global(svg) {
         width: 20px;
         height: 20px;
     }
 
     /* Thingy:52 Euler angle preview */
-    .thingy-euler-preview {
+    :global(.input-card) .thingy-euler-preview {
         display: flex;
         flex-direction: column;
         gap: 4px;
@@ -866,19 +747,19 @@
         font-family: var(--font-stack-mono);
     }
 
-    .euler-axis {
+    :global(.input-card) .euler-axis {
         display: flex;
         justify-content: space-between;
         align-items: center;
         font-size: 10pt;
     }
 
-    .euler-label {
+    :global(.input-card) .euler-label {
         color: #666;
         font-weight: 500;
     }
 
-    .euler-value {
+    :global(.input-card) .euler-value {
         color: #2563eb;
         font-weight: 600;
         font-variant-numeric: tabular-nums;

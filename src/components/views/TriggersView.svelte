@@ -5,6 +5,8 @@
     import { paletteColorToHex } from '../../lib/inputs/colors.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import { toCSSIdentifier } from '../../lib/css/utils.js';
+    import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
+    import DraggableCard from '../../lib/ui/DraggableCard.svelte';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Preview from '../common/Preview.svelte';
@@ -30,12 +32,6 @@
     let addAutomaticTriggerDialog;
     let editManualTriggerDialog;
     let editAutomaticTriggerDialog;
-
-    // Drag and drop state
-    let draggedTrigger = $state(null);
-    let draggedIndex = $state(null);
-    let dragOverIndex = $state(null);
-    let isAfterMidpoint = $state(false);
 
     // Get trigger type options for a trigger being edited
     function getTriggerTypeOptionsForTrigger(trigger) {
@@ -71,90 +67,20 @@
         triggers = triggerLibrary.getAll();
     }
 
-    function handleDragStart(event, trigger) {
-        draggedTrigger = trigger;
-        draggedIndex = triggers.findIndex(t => t.id === trigger.id);
-        event.dataTransfer.effectAllowed = 'move';
-    }
-
-    function handleDragOver(event, index) {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-        dragOverIndex = index;
-
-        // Calculate if mouse is in the second half of the card (vertically)
-        const rect = event.currentTarget.getBoundingClientRect();
-        const mouseY = event.clientY;
-        const cardMidpoint = rect.top + rect.height / 2;
-        isAfterMidpoint = mouseY > cardMidpoint;
-    }
-
-    function isDragAfter(index) {
-        return dragOverIndex === index && isAfterMidpoint;
-    }
-
-    function handleDragLeave() {
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
-
-    function handleDrop(event, targetIndex) {
-        event.preventDefault();
-
-        if (!draggedTrigger) return;
-
-        const currentIndex = triggers.findIndex(t => t.id === draggedTrigger.id);
-        if (currentIndex === -1) {
-            draggedTrigger = null;
-            draggedIndex = null;
-            dragOverIndex = null;
-            isAfterMidpoint = false;
-            return;
-        }
-
-        // Adjust target index based on whether we're inserting after the midpoint
-        let insertIndex = targetIndex;
-        if (isAfterMidpoint) {
-            insertIndex = targetIndex + 1;
-        }
-
-        // If dragging from before to after in the same position, no change needed
-        if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
-            draggedTrigger = null;
-            draggedIndex = null;
-            dragOverIndex = null;
-            isAfterMidpoint = false;
-            return;
-        }
-
-        // Reorder the triggers array
-        const newTriggers = [...triggers];
-        const [removed] = newTriggers.splice(currentIndex, 1);
-        // Adjust insert position if we removed an item before it
-        const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
-        newTriggers.splice(finalInsertIndex, 0, removed);
-        triggers = newTriggers;
-
-        // Update the trigger library order
-        // Clear and rebuild the library with new order
-        triggerLibrary.triggers.clear();
-        newTriggers.forEach(trigger => {
-            triggerLibrary.triggers.set(trigger.id, trigger);
-        });
-        triggerLibrary.save();
-
-        draggedTrigger = null;
-        draggedIndex = null;
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
-
-    function handleDragEnd() {
-        draggedTrigger = null;
-        draggedIndex = null;
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
+    // Drag and drop helper
+    const dnd = createDragDrop({
+        items: () => triggers,
+        onReorder: (newTriggers) => {
+            triggers = newTriggers;
+            // Update the trigger library order - clear and rebuild with new order
+            triggerLibrary.triggers.clear();
+            newTriggers.forEach(trigger => {
+                triggerLibrary.triggers.set(trigger.id, trigger);
+            });
+            triggerLibrary.save();
+        },
+        orientation: 'vertical'
+    });
 
     function handleMappingChange() {
         refreshData();
@@ -637,18 +563,7 @@
             </div>
         {:else}
             {#each triggers as trigger, index (`${trigger.id}-${trigger.version}`)}
-                <div
-                    class="trigger-card"
-                    class:dragging={draggedTrigger?.id === trigger.id}
-                    class:drag-over={dragOverIndex === index && !isAfterMidpoint}
-                    class:drag-after={isDragAfter(index)}
-                    draggable="true"
-                    ondragstart={(e) => handleDragStart(e, trigger)}
-                    ondragover={(e) => handleDragOver(e, index)}
-                    ondragleave={handleDragLeave}
-                    ondrop={(e) => handleDrop(e, index)}
-                    ondragend={handleDragEnd}
-                >
+                <DraggableCard {dnd} item={trigger} {index} class="trigger-card">
                     <!-- Column 1: Input -->
                     <div class="trigger-column trigger-input-column">
                         {#if trigger.triggerType === 'always'}
@@ -730,7 +645,7 @@
                         title="Edit trigger"
                         size="small"
                     />
-                </div>
+                </DraggableCard>
             {/each}
         {/if}
     </div>
@@ -799,70 +714,37 @@
         max-width: 500px;
     }
 
-    .trigger-card {
+    :global(.trigger-card) {
         width: 80vw;
-        background: #f0f0f0;
-        border-radius: 8px;
         display: flex;
         align-items: center;
-        padding: 15px 20px;
         gap: 20px;
-        cursor: grab;
-        transition: opacity 0.2s, transform 0.2s;
     }
 
-    .trigger-card:active {
-        cursor: grabbing;
-    }
-
-    .trigger-card.dragging {
-        opacity: 0.4;
-    }
-
-    .trigger-card.drag-over {
-        position: relative;
-    }
-
-    .trigger-card.drag-over::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: -10px;
-        height: 4px;
-        background: #2196F3;
-        border-radius: 2px;
-    }
-
-    .trigger-card.drag-after::before {
-        top: auto;
-        bottom: -10px;
-    }
-
-    .trigger-column {
+    :global(.trigger-card) .trigger-column {
         display: flex;
         align-items: center;
         gap: 12px;
         flex: 1;
     }
 
-    .trigger-input-column {
+    :global(.trigger-card) .trigger-input-column {
         min-width: 200px;
     }
 
-    .trigger-device-column {
+    :global(.trigger-card) .trigger-device-column {
         min-width: 150px;
     }
 
-    .trigger-action-column {
+    :global(.trigger-card) .trigger-action-column {
         min-width: 200px;
     }
 
-    .trigger-preview {
+    :global(.trigger-card) .trigger-preview {
         flex-shrink: 0;
     }
 
-    .trigger-text {
+    :global(.trigger-card) .trigger-text {
         font-size: 10pt;
         color: #333;
         white-space: nowrap;

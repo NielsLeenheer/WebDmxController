@@ -2,6 +2,8 @@
     import { onMount } from 'svelte';
     import { Animation } from '../../lib/animations.js';
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+    import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
+    import DraggableCard from '../../lib/ui/DraggableCard.svelte';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Preview from '../common/Preview.svelte';
@@ -21,146 +23,55 @@
     let addAnimationDialog;
     let editAnimationDialog;
 
-    // Drag and drop state
-    let draggedAnimation = $state(null);
-    let draggedIndex = $state(null);
-    let dragOverIndex = $state(null);
-    let isAfterMidpoint = $state(false);
-    let lastMouseDownTarget = null;
-
-    function handleMouseDown(event) {
-        // Track where the mouse was pressed down
-        lastMouseDownTarget = event.target;
-    }
-
     // Load animations from library
     function refreshAnimationsList() {
         animationsList = animationLibrary.getAll();
     }
 
-    function handleDragStart(event, animation) {
-        // Check where the mousedown happened (not where drag started)
-        let clickedElement = lastMouseDownTarget;
-
-        if (!clickedElement) {
-            event.preventDefault();
-            return;
-        }
-
-        // Check if mousedown was on an interactive element
-        if (clickedElement.tagName === 'INPUT' ||
-            clickedElement.tagName === 'BUTTON' ||
-            clickedElement.tagName === 'TEXTAREA') {
-            event.preventDefault();
-            return;
-        }
-
-        // Walk up from the mousedown target to see if we're in header or timeline
-        let foundHeader = false;
-        let foundBlocking = false;
-
-        let el = clickedElement;
-        while (el && el !== event.currentTarget) {
-            if (el.classList) {
-                if (el.classList.contains('animation-header')) {
-                    foundHeader = true;
-                }
-                if (el.classList.contains('timeline-container') ||
-                    el.classList.contains('icon-button')) {
-                    foundBlocking = true;
-                }
+    // Drag and drop helper
+    const dnd = createDragDrop({
+        items: () => animationsList,
+        onReorder: (newAnimations) => {
+            animationsList = newAnimations;
+            // Update the animation library order
+            animationLibrary.animations.clear();
+            newAnimations.forEach(a => {
+                animationLibrary.animations.set(a.name, a);
+            });
+            animationLibrary.save();
+        },
+        getItemId: (item) => item.name,
+        shouldAllowDrag: (target) => {
+            // Check if mousedown was on an interactive element
+            if (target.tagName === 'INPUT' ||
+                target.tagName === 'BUTTON' ||
+                target.tagName === 'TEXTAREA') {
+                return false;
             }
-            el = el.parentElement;
-        }
 
-        // Only allow drag from header, not from timeline
-        if (!foundHeader || foundBlocking) {
-            event.preventDefault();
-            return;
-        }
+            // Walk up from the mousedown target to see if we're in header or timeline
+            let foundHeader = false;
+            let foundBlocking = false;
 
-        draggedAnimation = animation;
-        draggedIndex = animationsList.findIndex(a => a.name === animation.name);
-        event.dataTransfer.effectAllowed = 'move';
-    }
+            let el = target;
+            while (el && !el.classList?.contains('animation-card')) {
+                if (el.classList) {
+                    if (el.classList.contains('animation-header')) {
+                        foundHeader = true;
+                    }
+                    if (el.classList.contains('timeline-container') ||
+                        el.classList.contains('icon-button')) {
+                        foundBlocking = true;
+                    }
+                }
+                el = el.parentElement;
+            }
 
-    function handleDragOver(event, index) {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-        dragOverIndex = index;
-
-        // Calculate if mouse is in the second half of the card (vertically)
-        const rect = event.currentTarget.getBoundingClientRect();
-        const mouseY = event.clientY;
-        const cardMidpoint = rect.top + rect.height / 2;
-        isAfterMidpoint = mouseY > cardMidpoint;
-    }
-
-    function isDragAfter(index) {
-        return dragOverIndex === index && isAfterMidpoint;
-    }
-
-    function handleDragLeave() {
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
-
-    function handleDrop(event, targetIndex) {
-        event.preventDefault();
-
-        if (!draggedAnimation) return;
-
-        const currentIndex = animationsList.findIndex(a => a.name === draggedAnimation.name);
-        if (currentIndex === -1) {
-            draggedAnimation = null;
-            draggedIndex = null;
-            dragOverIndex = null;
-            isAfterMidpoint = false;
-            return;
-        }
-
-        // Adjust target index based on whether we're inserting after the midpoint
-        let insertIndex = targetIndex;
-        if (isAfterMidpoint) {
-            insertIndex = targetIndex + 1;
-        }
-
-        // If dragging from before to after in the same position, no change needed
-        if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
-            draggedAnimation = null;
-            draggedIndex = null;
-            dragOverIndex = null;
-            isAfterMidpoint = false;
-            return;
-        }
-
-        // Reorder the array
-        const newAnimations = [...animationsList];
-        const [removed] = newAnimations.splice(currentIndex, 1);
-        // Adjust insert position if we removed an item before it
-        const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
-        newAnimations.splice(finalInsertIndex, 0, removed);
-        animationsList = newAnimations;
-
-        // Update the animation library order
-        animationLibrary.animations.clear();
-        newAnimations.forEach(a => {
-            animationLibrary.animations.set(a.name, a);
-        });
-        animationLibrary.save();
-
-        draggedAnimation = null;
-        draggedIndex = null;
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
-
-    function handleDragEnd() {
-        draggedAnimation = null;
-        draggedIndex = null;
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
+            // Only allow drag from header, not from timeline
+            return foundHeader && !foundBlocking;
+        },
+        orientation: 'vertical'
+    });
 
     // Initialize on mount
     onMount(() => {
@@ -331,19 +242,7 @@
             </div>
         {:else}
             {#each animationsList as animation, index (`${animation.name}-${animation.version}`)}
-                <div
-                    class="animation-card"
-                    class:dragging={draggedAnimation?.name === animation.name}
-                    class:drag-over={dragOverIndex === index && !isAfterMidpoint}
-                    class:drag-after={isDragAfter(index)}
-                    draggable="true"
-                    onmousedown={handleMouseDown}
-                    ondragstart={(e) => handleDragStart(e, animation)}
-                    ondragover={(e) => handleDragOver(e, index)}
-                    ondragleave={handleDragLeave}
-                    ondrop={(e) => handleDrop(e, index)}
-                    ondragend={handleDragEnd}
-                >
+                <DraggableCard {dnd} item={animation} {index} class="animation-card">
                     <div class="animation-header">
                         <Preview
                             type="animation"
@@ -369,7 +268,7 @@
                         {animationLibrary}
                         onUpdate={() => handleAnimationUpdate(animation)}
                     />
-                </div>
+                </DraggableCard>
             {/each}
         {/if}
     </div>
@@ -425,38 +324,11 @@
         margin: 0;
     }
 
-    .animation-card {
+    :global(.animation-card) {
         width: 80vw;
-        background: #f0f0f0;
-        border-radius: 8px;
-        transition: opacity 0.2s, transform 0.2s;
     }
 
-    .animation-card.dragging {
-        opacity: 0.4;
-    }
-
-    .animation-card.drag-over {
-        position: relative;
-    }
-
-    .animation-card.drag-over::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: -10px;
-        height: 4px;
-        background: #2196F3;
-        border-radius: 2px;
-    }
-
-    .animation-card.drag-after::before {
-        top: auto;
-        bottom: -10px;
-    }
-
-    .animation-header {
+    :global(.animation-card) .animation-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -467,30 +339,30 @@
         cursor: grab;
     }
 
-    .animation-header:active {
+    :global(.animation-card) .animation-header:active {
         cursor: grabbing;
     }
 
-    .animation-info {
+    :global(.animation-card) .animation-info {
         display: flex;
         align-items: center;
         gap: 12px;
         flex: 1;
     }
 
-    .animation-info h3 {
+    :global(.animation-card) .animation-info h3 {
         margin: 0;
         font-size: 11pt;
         color: #333;
     }
 
-    .badges {
+    :global(.animation-card) .badges {
         display: flex;
         gap: 8px;
         align-items: center;
     }
 
-    .target-badge {
+    :global(.animation-card) .target-badge {
         background: #f6f6f6;
         color: #1976d2;
         padding: 4px 8px;
