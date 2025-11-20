@@ -164,6 +164,7 @@ export function createDragDrop(options) {
 		get draggedIndex() { return draggedIndex; },
 		get dragOverIndex() { return dragOverIndex; },
 		get isAfterMidpoint() { return isAfterMidpoint; },
+		get orientation() { return orientation; },
 
 		// Event handlers
 		handleMouseDown,

@@ -390,7 +390,7 @@
         {/if}
 
         {#each devices as device, index (`${device.id}-${device.version}`)}
-            <DraggableCard {dnd} item={device} {index} class="device-card" orientation="horizontal">
+            <DraggableCard {dnd} item={device} {index} class="device-card">
                 <div class="device-header">
                     {#if device.type === 'FLAMETHROWER'}
                         {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}

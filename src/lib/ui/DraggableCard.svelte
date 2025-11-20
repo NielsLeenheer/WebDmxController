@@ -15,7 +15,6 @@
 		item,             // The item being rendered
 		index,            // Index in the list
 		class: className = '',  // Additional CSS classes
-		orientation = 'vertical',  // 'horizontal' or 'vertical' - defaults to vertical
 		children
 	} = $props();
 
@@ -35,8 +34,8 @@
 	class:dragging={dnd.draggedItem === item}
 	class:drag-over={isDragBefore()}
 	class:drag-after={isDragAfter()}
-	class:horizontal={orientation === 'horizontal'}
-	class:vertical={orientation === 'vertical'}
+	class:horizontal={dnd.orientation === 'horizontal'}
+	class:vertical={dnd.orientation === 'vertical'}
 	draggable="true"
 	onmousedown={dnd.handleMouseDown}
 	ondragstart={(e) => dnd.handleDragStart(e, item, index)}
