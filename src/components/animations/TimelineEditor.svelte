@@ -149,11 +149,8 @@
         keyframe.values = [...editingKeyframeValues];
         localVersion++;
 
-        // Sync to animation with deep copy
-        animation.keyframes = localKeyframes.map(kf => ({
-            time: kf.time,
-            values: [...kf.values]
-        }));
+        // Sync to animation using snapshot to unwrap Svelte proxies
+        animation.keyframes = $state.snapshot(localKeyframes);
         animation.version = (animation.version || 0) + 1;
         lastSyncedVersion = animation.version;
 
@@ -185,11 +182,8 @@
         localKeyframes = localKeyframes.filter((_, i) => i !== index);
         localVersion++;
 
-        // Sync to animation with deep copy
-        animation.keyframes = localKeyframes.map(kf => ({
-            time: kf.time,
-            values: [...kf.values]
-        }));
+        // Sync to animation using snapshot to unwrap Svelte proxies
+        animation.keyframes = $state.snapshot(localKeyframes);
         animation.version = (animation.version || 0) + 1;
         lastSyncedVersion = animation.version;
 
@@ -306,11 +300,8 @@
     function handleKeyframeMouseUp() {
         try {
             if (draggingKeyframe && animation) {
-                // Sync back to animation with deep copy and save once
-                animation.keyframes = localKeyframes.map(kf => ({
-                    time: kf.time,
-                    values: [...kf.values]
-                }));
+                // Sync back to animation using snapshot to unwrap Svelte proxies
+                animation.keyframes = $state.snapshot(localKeyframes);
                 animation.version = (animation.version || 0) + 1;
                 lastSyncedVersion = animation.version;
 
