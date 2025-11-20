@@ -1,6 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { Trigger } from '../../lib/triggers.js';
+    import { Animation } from '../../lib/animations.js';
     import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { paletteColorToHex } from '../../lib/inputs/colors.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
@@ -337,7 +338,7 @@
         }
 
         // Get control and component data for the animation
-        const { controls, components } = animation.getControlsForRendering();
+        const { controls, components } = Animation.getControlsForRendering(animation);
 
         // Extract colors from each keyframe
         const colors = animation.keyframes.map(keyframe => {

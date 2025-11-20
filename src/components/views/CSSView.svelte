@@ -17,25 +17,31 @@
     // Store sampled device data (Map of deviceId -> channels object)
     let sampledDeviceData = $state(new Map());
 
-    // Track CSS changes with local state (updates when libraries change)
-    let cssVersion = $state(0);
-
-    // Get CSS from manager (re-evaluated when cssVersion changes)
-    let generatedCSS = $derived.by(() => {
-        cssVersion; // Subscribe to version changes
-        return cssManager?.generatedCSS || '';
-    });
-    let customCSS = $derived(cssManager?.customCSS || '');
-
-    // Get animations for display
+    // Get animations for display (reactive)
     let animations = $derived(
         animationLibrary ? animationLibrary.getAll() : []
     );
 
-    // Get inputs for display
+    // Get inputs for display (reactive)
     let inputs = $derived(
         inputLibrary ? inputLibrary.getAll() : []
     );
+
+    // Get triggers for tracking changes (reactive)
+    let triggers = $derived(
+        triggerLibrary ? triggerLibrary.getAll() : []
+    );
+
+    // Get CSS from manager (re-evaluated when library data changes)
+    let generatedCSS = $derived.by(() => {
+        // Access library arrays to subscribe to changes
+        animations.length;
+        inputs.length;
+        triggers.length;
+        devices.length;
+        return cssManager?.generatedCSS || '';
+    });
+    let customCSS = $derived(cssManager?.customCSS || '');
 
     // Filter devices to only show those with independent controls
     // A device has independent controls if:
@@ -66,25 +72,6 @@
 
         // Cleanup subscription on destroy or when cssManager changes
         return unsubscribe;
-    });
-
-    // Listen for library changes to update CSS display
-    $effect(() => {
-        if (!triggerLibrary || !inputLibrary || !animationLibrary) return;
-
-        const handleChange = () => {
-            cssVersion++;
-        };
-
-        triggerLibrary.on('changed', handleChange);
-        inputLibrary.on('changed', handleChange);
-        animationLibrary.on('changed', handleChange);
-
-        return () => {
-            triggerLibrary.off('changed', handleChange);
-            inputLibrary.off('changed', handleChange);
-            animationLibrary.off('changed', handleChange);
-        };
     });
 
     // Get preview data for a device
