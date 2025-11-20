@@ -37,7 +37,11 @@
             const currentVersion = animation.version || 0;
             if (currentVersion !== lastSyncedVersion) {
                 // External change detected - sync from animation to local state
-                localKeyframes = structuredClone(animation.keyframes);
+                // Deep copy to avoid shared references
+                localKeyframes = animation.keyframes.map(kf => ({
+                    time: kf.time,
+                    values: [...kf.values]
+                }));
                 lastSyncedVersion = currentVersion;
                 localVersion++;
             }
@@ -146,7 +150,10 @@
         localVersion++;
 
         // Sync to animation with deep copy
-        animation.keyframes = structuredClone(localKeyframes);
+        animation.keyframes = localKeyframes.map(kf => ({
+            time: kf.time,
+            values: [...kf.values]
+        }));
         animation.version = (animation.version || 0) + 1;
         lastSyncedVersion = animation.version;
 
@@ -179,7 +186,10 @@
         localVersion++;
 
         // Sync to animation with deep copy
-        animation.keyframes = structuredClone(localKeyframes);
+        animation.keyframes = localKeyframes.map(kf => ({
+            time: kf.time,
+            values: [...kf.values]
+        }));
         animation.version = (animation.version || 0) + 1;
         lastSyncedVersion = animation.version;
 
@@ -297,7 +307,10 @@
         try {
             if (draggingKeyframe && animation) {
                 // Sync back to animation with deep copy and save once
-                animation.keyframes = structuredClone(localKeyframes);
+                animation.keyframes = localKeyframes.map(kf => ({
+                    time: kf.time,
+                    values: [...kf.values]
+                }));
                 animation.version = (animation.version || 0) + 1;
                 lastSyncedVersion = animation.version;
 
