@@ -36,6 +36,8 @@
 	class:drag-after={isDragAfter()}
 	class:horizontal={dnd.orientation === 'horizontal'}
 	class:vertical={dnd.orientation === 'vertical'}
+	class:drag-by-header={dnd.dragByHeader}
+	class:drag-by-card={!dnd.dragByHeader}
 	draggable="true"
 	onmousedown={dnd.handleMouseDown}
 	ondragstart={(e) => dnd.handleDragStart(e, item, index)}
@@ -104,32 +106,21 @@
 		transition: opacity 0.2s, transform 0.2s;
 	}
 
-	div.draggable-card :global(.card-header) {
+	/* Cursor styles when dragging by card (whole card is draggable) */
+	div.drag-by-card {
 		cursor: grab;
 	}
 
-	div.draggable-card :global(.card-header:active) {
+	div.drag-by-card:active {
 		cursor: grabbing;
 	}
 
-
-	/* Global card styling */
-
-	:global(.input-card) {
-		position: relative;
+	/* Cursor styles when dragging by header (only header is draggable) */
+	div.drag-by-header :global(.card-header) {
 		cursor: grab;
 	}
 
-	:global(.input-card):active {
+	div.drag-by-header :global(.card-header:active) {
 		cursor: grabbing;
 	}
-
-	:global(.trigger-card) {
-		cursor: grab;
-	}
-
-	:global(.trigger-card):active {
-		cursor: grabbing;
-	}
-
 </style>
