@@ -7,7 +7,7 @@
 
     let { dmxController, deviceLibrary, isActive = false } = $props();
 
-    // Get devices reactively - automatic thanks to $state in library!
+    // Get devices
     let devices = $derived(deviceLibrary.getAll());
 
     // Device type selection
@@ -30,12 +30,10 @@
         if (!result) return; // User cancelled
 
         if (result.delete) {
-            // Handle delete
             removeDevice(device.id);
             return;
         }
 
-        // Update device in library (reactivity handles the rest)
         deviceLibrary.updateDevice(device.id, {
             startChannel: result.startChannel,
             name: result.name,
@@ -63,8 +61,7 @@
     }
 
     export function addDevice(type = selectedType) {
-        const startChannel = getNextFreeChannel();
-        deviceLibrary.create(type, startChannel);
+        deviceLibrary.create(type, getNextFreeChannel());
     }
 
     function removeDevice(deviceId) {
@@ -72,7 +69,6 @@
     }
 
     function handleDeviceValueChange(device, channelIndex, value) {
-        // Update the device value in library (reactivity handles DMX updates)
         deviceLibrary.updateValue(device.id, channelIndex, value);
     }
 
