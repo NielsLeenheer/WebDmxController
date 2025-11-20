@@ -68,7 +68,6 @@ export class DeviceLibrary extends Library {
 		this.propagateToLinkedDevices(device);
 
 		this.save();
-		this._emit('changed', { type: 'update', device });
 	}
 
 	/**
@@ -89,7 +88,6 @@ export class DeviceLibrary extends Library {
 		}
 
 		this.save();
-		this._emit('changed', { type: 'update', device });
 	}
 
 	/**

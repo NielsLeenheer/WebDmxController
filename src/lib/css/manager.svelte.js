@@ -40,10 +40,6 @@ export class CSSManager {
 		this.devices = [];
 
 		// Bind methods
-		this.handleDeviceChange = this.handleDeviceChange.bind(this);
-		this.handleTriggerChange = this.handleTriggerChange.bind(this);
-		this.handleInputChange = this.handleInputChange.bind(this);
-		this.handleAnimationChange = this.handleAnimationChange.bind(this);
 		this.sampleLoop = this.sampleLoop.bind(this);
 	}
 
@@ -82,18 +78,32 @@ export class CSSManager {
 		this.styleElement.id = 'css-animation-styles';
 		document.head.appendChild(this.styleElement);
 
-		// Listen for library changes
-		this.deviceLibrary.on('changed', this.handleDeviceChange);
-		this.inputLibrary.on('changed', this.handleInputChange);
-		this.triggerLibrary.on('changed', this.handleTriggerChange);
-		this.animationLibrary.on('changed', this.handleAnimationChange);
+		// Watch device library changes
+		$effect(() => {
+			const devices = this.deviceLibrary.getAll();
+			this.updateDevices(devices);
+		});
 
-		// Initialize devices from library
-		this.updateDevices(this.deviceLibrary.getAll());
+		// Watch input library changes
+		$effect(() => {
+			this.inputLibrary.getAll(); // Track reactivity
+			this.regenerateCSS();
+			this.updateStyleElement();
+		});
 
-		// Generate initial CSS
-		this.regenerateCSS();
-		this.updateStyleElement();
+		// Watch trigger library changes
+		$effect(() => {
+			this.triggerLibrary.getAll(); // Track reactivity
+			this.regenerateCSS();
+			this.updateStyleElement();
+		});
+
+		// Watch animation library changes
+		$effect(() => {
+			this.animationLibrary.getAll(); // Track reactivity
+			this.regenerateCSS();
+			this.updateStyleElement();
+		});
 
 		// Start sampling loop
 		this.startSampling();
@@ -167,37 +177,6 @@ export class CSSManager {
 			const combinedCSS = this._generatedCSS + '\n\n' + this._customCSS;
 			this.styleElement.textContent = `@scope (.animation-targets) {\n${combinedCSS}\n}`;
 		}
-	}
-
-	/**
-	 * Handle input library changes
-	 */
-	handleInputChange() {
-		this.regenerateCSS();
-		this.updateStyleElement();
-	}
-
-	/**
-	 * Handle trigger library changes
-	 */
-	handleTriggerChange() {
-		this.regenerateCSS();
-		this.updateStyleElement();
-	}
-
-	/**
-	 * Handle animation library changes
-	 */
-	handleAnimationChange() {
-		this.regenerateCSS();
-		this.updateStyleElement();
-	}
-
-	/**
-	 * Handle device library changes
-	 */
-	handleDeviceChange() {
-		this.updateDevices(this.deviceLibrary.getAll());
 	}
 
 	/**
