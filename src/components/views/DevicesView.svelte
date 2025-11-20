@@ -20,9 +20,25 @@
 
     let { dmxController, deviceLibrary, isActive = false } = $props();
 
-    // Get devices reactively from library - depends on library version
+    // Reactive version counter that increments when library changes
+    let libraryVersion = $state(0);
+
+    // Subscribe to library changes
+    $effect(() => {
+        const handleChange = () => {
+            libraryVersion++;
+        };
+
+        deviceLibrary.on('changed', handleChange);
+
+        return () => {
+            deviceLibrary.off('changed', handleChange);
+        };
+    });
+
+    // Get devices reactively - depends on library version
     let devices = $derived.by(() => {
-        deviceLibrary.version; // Track library changes
+        libraryVersion; // Track library changes
         return deviceLibrary.getAll();
     });
 

@@ -18,9 +18,25 @@
         deviceLibrary
     } = $props();
 
-    // Get devices reactively from library - depends on library version
+    // Reactive version counter that increments when device library changes
+    let deviceLibraryVersion = $state(0);
+
+    // Subscribe to device library changes
+    $effect(() => {
+        const handleChange = () => {
+            deviceLibraryVersion++;
+        };
+
+        deviceLibrary.on('changed', handleChange);
+
+        return () => {
+            deviceLibrary.off('changed', handleChange);
+        };
+    });
+
+    // Get devices reactively - depends on library version
     let devices = $derived.by(() => {
-        deviceLibrary.version; // Track library changes
+        deviceLibraryVersion; // Track library changes
         return deviceLibrary.getAll();
     });
 
