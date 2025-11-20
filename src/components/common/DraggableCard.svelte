@@ -38,6 +38,7 @@
 	class:vertical={dnd.orientation === 'vertical'}
 	class:drag-by-header={dnd.dragByHeader}
 	class:drag-by-card={!dnd.dragByHeader}
+	style:order={item.order}
 	draggable="true"
 	onmousedown={dnd.handleMouseDown}
 	ondragstart={(e) => dnd.handleDragStart(e, item, index)}

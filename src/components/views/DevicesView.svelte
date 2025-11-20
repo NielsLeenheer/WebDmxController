@@ -238,7 +238,7 @@
         {/if}
 
         {#each devices as device, index (device.id)}
-            <DraggableCard {dnd} item={device} {index} class="device-card" style="order: {device.order}">
+            <DraggableCard {dnd} item={device} {index} class="device-card">
                 <CardHeader>
                     {#if device.type === 'FLAMETHROWER'}
                         {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
