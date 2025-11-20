@@ -21,13 +21,10 @@
     // Reactive version counter that increments when device library changes
     let deviceLibraryVersion = $state(0);
 
-    // Subscribe to device library changes - only for structural changes (add/remove/reorder)
+    // Subscribe to device library changes
     $effect(() => {
-        const handleChange = (event) => {
-            // Only react to structural changes, not value updates
-            if (event.type !== 'update' && event.type !== 'clear_values') {
-                deviceLibraryVersion++;
-            }
+        const handleChange = () => {
+            deviceLibraryVersion++;
         };
 
         deviceLibrary.on('changed', handleChange);

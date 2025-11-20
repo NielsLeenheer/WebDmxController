@@ -23,13 +23,10 @@
     // Reactive version counter that increments when library changes
     let libraryVersion = $state(0);
 
-    // Subscribe to library changes - only for structural changes (add/remove/reorder)
+    // Subscribe to library changes
     $effect(() => {
-        const handleChange = (event) => {
-            // Only react to structural changes, not value updates
-            if (event.type !== 'update' && event.type !== 'clear_values') {
-                libraryVersion++;
-            }
+        const handleChange = () => {
+            libraryVersion++;
         };
 
         deviceLibrary.on('changed', handleChange);
@@ -288,7 +285,7 @@
             </div>
         {/if}
 
-        {#each devices as device, index (`${device.id}-${device.version}`)}
+        {#each devices as device, index (device.id)}
             <DraggableCard {dnd} item={device} {index} class="device-card">
                 <CardHeader>
                     {#if device.type === 'FLAMETHROWER'}
