@@ -3,7 +3,7 @@
     import { DMXController } from './lib/outputs/dmx.js';
     import { convertChannelsToArray } from './lib/outputs/devices.js';
     import { DeviceLibrary } from './lib/outputs/DeviceLibrary.svelte.js';
-    import { AnimationLibrary } from './lib/animations.js';
+    import { AnimationLibrary } from './lib/animations/AnimationLibrary.svelte.js';
     import { InputLibrary } from './lib/inputs.js';
     import { TriggerLibrary } from './lib/triggers.js';
     import { TriggerManager } from './lib/mappings.js';
