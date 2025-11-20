@@ -1,5 +1,4 @@
 <script>
-    import { untrack } from 'svelte';
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import DeviceCard from '../cards/DeviceCard.svelte';
@@ -36,7 +35,7 @@
             return;
         }
 
-        // Update device in library
+        // Update device in library (reactivity handles the rest)
         deviceLibrary.updateDevice(device.id, {
             startChannel: result.startChannel,
             name: result.name,
@@ -44,34 +43,6 @@
             syncedControls: result.syncedControls,
             mirrorPan: result.mirrorPan
         });
-
-        // If linking, apply values from source device
-        if (result.linkedTo !== null) {
-            const sourceDevice = devices.find(d => d.id === result.linkedTo);
-            if (sourceDevice) {
-                const newValues = applyLinkedValues(
-                    sourceDevice.type,
-                    device.type,
-                    sourceDevice.defaultValues,
-                    device.defaultValues,
-                    result.syncedControls,
-                    result.mirrorPan
-                );
-                // Update values in place
-                newValues.forEach((value, index) => {
-                    device.defaultValues[index] = value;
-                });
-                deviceLibrary.save();
-            }
-        }
-
-        // Update DMX controller with new channel values
-        if (dmxController) {
-            device.defaultValues.forEach((value, index) => {
-                const channelIndex = device.startChannel + index;
-                dmxController.setChannel(channelIndex, value);
-            });
-        }
     }
 
 
@@ -133,18 +104,8 @@
     }
 
     function handleDeviceValueChange(device, channelIndex, value) {
-        // Update the device value in library (automatically propagates to linked devices)
+        // Update the device value in library (reactivity handles DMX updates)
         deviceLibrary.updateValue(device.id, channelIndex, value);
-
-        // Update DMX controller
-        updateDeviceToDMX(device);
-
-        // Update all linked devices to DMX
-        devices.forEach(d => {
-            if (d.linkedTo === device.id) {
-                updateDeviceToDMX(d);
-            }
-        });
     }
 
     function updateDeviceToDMX(device) {
@@ -156,26 +117,12 @@
         });
     }
 
-    // Restore all device values to DMX controller on load (only when controller changes, not on devices updates)
+    // Reactively update DMX controller when device values change
+    // This runs when: controller changes, tab becomes active, or device values change
     $effect(() => {
-        if (dmxController) {
-            // Use untrack to prevent this effect from re-running when devices array changes
-            untrack(() => {
-                devices.forEach(device => {
-                    updateDeviceToDMX(device);
-                });
-            });
-        }
-    });
-
-    // Re-output default device values when Devices tab becomes active
-    // This ensures default values are restored when switching from other tabs
-    $effect(() => {
-        if (isActive && dmxController) {
-            untrack(() => {
-                devices.forEach(device => {
-                    updateDeviceToDMX(device);
-                });
+        if (dmxController && isActive) {
+            devices.forEach(device => {
+                updateDeviceToDMX(device);
             });
         }
     });
