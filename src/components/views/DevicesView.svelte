@@ -23,10 +23,14 @@
     // Reactive version counter that increments when library changes
     let libraryVersion = $state(0);
 
-    // Subscribe to library changes
+    // Subscribe to library changes - only for structural changes
     $effect(() => {
-        const handleChange = () => {
-            libraryVersion++;
+        const handleChange = (event) => {
+            // Only refresh device list for structural changes (add/remove/reorder/clear)
+            // For 'update' and 'clear_values', arrays are mutated in place via $bindable
+            if (event.type !== 'update' && event.type !== 'clear_values') {
+                libraryVersion++;
+            }
         };
 
         deviceLibrary.on('changed', handleChange);
@@ -173,9 +177,7 @@
     }
 
     function handleDeviceValueChange(device, channelIndex, value) {
-        // Update the device's value
-        device.defaultValues = [...device.defaultValues];
-        device.defaultValues[channelIndex] = value;
+        // Note: device.defaultValues is already mutated by Controls component via $bindable
 
         // Update preview state for special device types
         if (device.type === 'FLAMETHROWER') {
@@ -221,7 +223,10 @@
                     device.syncedControls,
                     device.mirrorPan
                 );
-                device.defaultValues = newValues;
+                // Mutate array in place to preserve $bindable references
+                newValues.forEach((value, index) => {
+                    device.defaultValues[index] = value;
+                });
 
                 // Update DMX
                 updateDeviceToDMX(device);
