@@ -68,6 +68,7 @@ export class DeviceLibrary extends Library {
 		this.propagateToLinkedDevices(device);
 
 		this.save();
+		this._emit('changed', { type: 'update', device });
 	}
 
 	/**
@@ -88,6 +89,7 @@ export class DeviceLibrary extends Library {
 		}
 
 		this.save();
+		this._emit('changed', { type: 'update', device });
 	}
 
 	/**
@@ -151,16 +153,17 @@ export class DeviceLibrary extends Library {
 			const data = localStorage.getItem(this.storageKey);
 			if (data) {
 				const parsed = JSON.parse(data);
+
 				this.items = parsed.map((deviceData, index) => ({
-					id: deviceData.id || crypto.randomUUID(), // Migrate old numeric IDs to UUIDs
+					id: deviceData.id,
 					type: deviceData.type,
 					startChannel: deviceData.startChannel,
 					name: deviceData.name,
-					defaultValues: [...(deviceData.defaultValues || DEVICE_TYPES[deviceData.type].getDefaultValues())],
+					defaultValues: [...deviceData.defaultValues],
 					linkedTo: deviceData.linkedTo || null,
 					syncedControls: deviceData.syncedControls || null,
 					mirrorPan: deviceData.mirrorPan || false,
-					cssId: deviceData.cssId || this.generateCssId(deviceData.name),
+					cssId: deviceData.cssId,
 					order: deviceData.order !== undefined ? deviceData.order : index
 				}));
 			}

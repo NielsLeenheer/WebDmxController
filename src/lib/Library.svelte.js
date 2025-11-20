@@ -24,11 +24,51 @@ export class Library {
 	storageKey = '';
 
 	/**
+	 * Event listeners for backwards compatibility
+	 * @type {Object}
+	 */
+	#listeners = {};
+
+	/**
 	 * @param {string} storageKey - Key for localStorage
 	 */
 	constructor(storageKey) {
 		this.storageKey = storageKey;
 		this.load();
+	}
+
+	/**
+	 * Add event listener (for backwards compatibility with EventEmitter)
+	 * @param {string} event - Event name
+	 * @param {Function} handler - Event handler
+	 */
+	on(event, handler) {
+		if (!this.#listeners[event]) {
+			this.#listeners[event] = [];
+		}
+		this.#listeners[event].push(handler);
+	}
+
+	/**
+	 * Remove event listener (for backwards compatibility with EventEmitter)
+	 * @param {string} event - Event name
+	 * @param {Function} handler - Event handler
+	 */
+	off(event, handler) {
+		if (this.#listeners[event]) {
+			this.#listeners[event] = this.#listeners[event].filter(h => h !== handler);
+		}
+	}
+
+	/**
+	 * Emit event (for backwards compatibility with EventEmitter)
+	 * @param {string} event - Event name
+	 * @param {*} data - Event data
+	 */
+	_emit(event, data) {
+		if (this.#listeners[event]) {
+			this.#listeners[event].forEach(handler => handler(data));
+		}
 	}
 
 	/**
@@ -56,6 +96,7 @@ export class Library {
 	add(item) {
 		this.items.push(item);
 		this.save();
+		this._emit('changed', { type: 'add', item });
 		return item;
 	}
 
@@ -66,8 +107,10 @@ export class Library {
 	remove(id) {
 		const index = this.items.findIndex(item => item.id === id);
 		if (index !== -1) {
+			const item = this.items[index];
 			this.items.splice(index, 1);
 			this.save();
+			this._emit('changed', { type: 'remove', item });
 		}
 	}
 
