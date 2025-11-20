@@ -5,6 +5,7 @@
     import { canLinkDevices, applyLinkedValues, getMappedChannels, getAvailableSyncControls } from '../../lib/channelMapping.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
+    import DraggableCard from '../../lib/ui/DraggableCard.svelte';
     import Controls from '../controls/Controls.svelte';
     import Dialog from '../common/Dialog.svelte';
     import Button from '../common/Button.svelte';
@@ -64,10 +65,6 @@
             return foundHeader && !foundControls;
         }
     });
-
-    function isDragAfter(index) {
-        return dnd.dragOverIndex === index && dnd.isAfterMidpoint;
-    }
 
     async function openSettingsDialog(device) {
         const result = await editDeviceDialog.open(device, devices);
@@ -393,19 +390,7 @@
         {/if}
 
         {#each devices as device, index (`${device.id}-${device.version}`)}
-            <div
-                class="device-card"
-                class:dragging={dnd.draggedItem?.id === device.id}
-                class:drag-over={dnd.dragOverIndex === index && !dnd.isAfterMidpoint}
-                class:drag-after={isDragAfter(index)}
-                draggable="true"
-                onmousedown={dnd.handleMouseDown}
-                ondragstart={(e) => dnd.handleDragStart(e, device, index)}
-                ondragover={(e) => dnd.handleDragOver(e, index)}
-                ondragleave={dnd.handleDragLeave}
-                ondrop={(e) => dnd.handleDrop(e, index)}
-                ondragend={dnd.handleDragEnd}
-            >
+            <DraggableCard {dnd} item={device} {index} class="device-card">
                 <div class="device-header">
                     {#if device.type === 'FLAMETHROWER'}
                         {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
@@ -450,7 +435,7 @@
                     onChange={(channelIndex, value) => handleDeviceValueChange(device, channelIndex, value)}
                     disabledChannels={getDisabledChannels(device)}
                 />
-            </div>
+            </DraggableCard>
         {/each}
     </div>
 
