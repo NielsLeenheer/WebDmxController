@@ -366,29 +366,14 @@
         font-size: 0.9em;
     }
 
-	:global(.device-card) {
-		background: #f0f0f0;
-		border-radius: 8px;
-		padding: 15px;
-		transition: opacity 0.2s, transform 0.2s;
-	}
-
-    :global(.device-card) :global(.card-header) {
-        background: #e6e6e6;
-        margin: -15px -15px 12px -15px;
-        padding: 12px 15px;
-        border-top-left-radius: 8px;
-        border-top-right-radius: 8px;
-    }
-
-    :global(.device-card) :global(.card-header) h3 {
+    :global(.card-header) h3 {
         margin: 0;
         font-size: 11pt;
         font-weight: 600;
         color: #333;
     }
 
-    :global(.device-card) :global(.card-header) :global(.icon-button) {
+    :global(.card-header) :global(.icon-button) {
         margin-left: auto;
     }
 </style>

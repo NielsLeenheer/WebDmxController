@@ -299,14 +299,6 @@
         width: 80vw;
     }
 
-    :global(.animation-card) :global(.card-header) {
-        justify-content: space-between;
-        padding: 15px 20px;
-        background: #e6e6e6;
-        gap: 15px;
-        border-radius: 8px 8px 0 0;
-    }
-
     :global(.animation-card) .animation-info {
         display: flex;
         align-items: center;

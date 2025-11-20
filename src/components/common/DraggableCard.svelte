@@ -97,21 +97,27 @@
 		height: 4px;
 	}
 
-	/* Global card styling */
-	:global(.device-card) {
+	div.draggable-card {
 		background: #f0f0f0;
 		border-radius: 8px;
 		padding: 15px;
 		transition: opacity 0.2s, transform 0.2s;
 	}
 
+	div.draggable-card :global(.card-header) {
+		cursor: grab;
+	}
+
+	div.draggable-card :global(.card-header:active) {
+		cursor: grabbing;
+	}
+
+
+	/* Global card styling */
+
 	:global(.input-card) {
-		background: #f0f0f0;
-		border-radius: 8px;
-		padding: 15px;
 		position: relative;
 		cursor: grab;
-		transition: opacity 0.2s, transform 0.2s;
 	}
 
 	:global(.input-card):active {
@@ -119,20 +125,11 @@
 	}
 
 	:global(.trigger-card) {
-		background: #f0f0f0;
-		border-radius: 8px;
-		padding: 15px 20px;
 		cursor: grab;
-		transition: opacity 0.2s, transform 0.2s;
 	}
 
 	:global(.trigger-card):active {
 		cursor: grabbing;
 	}
 
-	:global(.animation-card) {
-		background: #f0f0f0;
-		border-radius: 8px;
-		transition: opacity 0.2s, transform 0.2s;
-	}
 </style>

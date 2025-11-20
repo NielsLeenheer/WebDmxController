@@ -25,11 +25,13 @@
 	.card-header {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		gap: 8px;
-		cursor: grab;
-	}
 
-	.card-header:active {
-		cursor: grabbing;
+		background: #e6e6e6;
+        margin: -15px -15px 12px -15px;
+        padding: 12px 15px;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
 	}
 </style>
