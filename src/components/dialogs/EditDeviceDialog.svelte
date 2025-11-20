@@ -4,6 +4,7 @@
 	import CustomizeControlsDialog from './CustomizeControlsDialog.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { canLinkDevices, getAvailableSyncControls } from '../../lib/channelMapping.js';
+	import { toCSSIdentifier } from '../../lib/css/utils.js';
 	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
@@ -57,15 +58,6 @@
 				dialogRef?.showModal();
 			});
 		});
-	}
-
-	function getPreviewCssId() {
-		const name = dialogName.trim() || editingDevice?.name || '';
-		return name
-			.toLowerCase()
-			.replace(/[^a-z0-9]/g, '_')
-			.replace(/_+/g, '_')
-			.replace(/^_|_$/g, '');
 	}
 
 	function isChannelValid(device, startChannel0indexed) {
@@ -197,7 +189,7 @@
 			/>
 
 			<div class="css-identifiers">
-				<code class="css-identifier">#{getPreviewCssId()}</code>
+				<code class="css-identifier">#{toCSSIdentifier(dialogName.trim() || editingDevice?.name || '')}</code>
 			</div>
 		</div>
 
