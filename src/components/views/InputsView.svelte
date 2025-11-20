@@ -3,7 +3,7 @@
     import { Input } from '../../lib/inputs.js';
     import { paletteColorToHex, getUnusedFromPalette, getPalette } from '../../lib/inputs/colors.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
-    import DraggableCard from '../../lib/ui/DraggableCard.svelte';
+    import DraggableCard from '../common/DraggableCard.svelte';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Preview from '../common/Preview.svelte';
@@ -33,12 +33,7 @@
         items: () => savedInputs,
         onReorder: (newInputs) => {
             savedInputs = newInputs;
-            // Update the input library order - clear and rebuild with new order
-            inputLibrary.inputs.clear();
-            newInputs.forEach(input => {
-                inputLibrary.inputs.set(input.id, input);
-            });
-            inputLibrary.save();
+            inputLibrary.reorder(newInputs);
         },
         orientation: 'horizontal'
     });

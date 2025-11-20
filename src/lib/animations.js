@@ -485,6 +485,18 @@ export class AnimationLibrary {
 	}
 
 	/**
+	 * Reorder animations
+	 */
+	reorder(newOrder) {
+		this.animations.clear();
+		newOrder.forEach(animation => {
+			this.animations.set(animation.name, animation);
+		});
+		this.save();
+		this._emit('changed', { type: 'reorder' });
+	}
+
+	/**
 	 * Check if animation exists
 	 */
 	has(name) {

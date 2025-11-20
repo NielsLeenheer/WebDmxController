@@ -6,7 +6,7 @@
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import { toCSSIdentifier } from '../../lib/css/utils.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
-    import DraggableCard from '../../lib/ui/DraggableCard.svelte';
+    import DraggableCard from '../common/DraggableCard.svelte';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Preview from '../common/Preview.svelte';
@@ -72,12 +72,7 @@
         items: () => triggers,
         onReorder: (newTriggers) => {
             triggers = newTriggers;
-            // Update the trigger library order - clear and rebuild with new order
-            triggerLibrary.triggers.clear();
-            newTriggers.forEach(trigger => {
-                triggerLibrary.triggers.set(trigger.id, trigger);
-            });
-            triggerLibrary.save();
+            triggerLibrary.reorder(newTriggers);
         },
         orientation: 'vertical'
     });

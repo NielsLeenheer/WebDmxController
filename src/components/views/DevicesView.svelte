@@ -5,7 +5,8 @@
     import { canLinkDevices, applyLinkedValues, getMappedChannels, getAvailableSyncControls } from '../../lib/channelMapping.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
-    import DraggableCard from '../../lib/ui/DraggableCard.svelte';
+    import DraggableCard from '../common/DraggableCard.svelte';
+    import CardHeader from '../common/CardHeader.svelte';
     import Controls from '../controls/Controls.svelte';
     import Dialog from '../common/Dialog.svelte';
     import Button from '../common/Button.svelte';
@@ -34,36 +35,7 @@
         items: () => devices,
         onReorder: (newDevices) => { devices = newDevices; },
         orientation: 'horizontal',
-        shouldAllowDrag: (target) => {
-            // Check if mousedown was on an interactive element
-            if (target.tagName === 'INPUT' ||
-                target.tagName === 'BUTTON' ||
-                target.tagName === 'TEXTAREA') {
-                return false;
-            }
-
-            // Walk up from the mousedown target to see if we're in header or controls
-            let foundHeader = false;
-            let foundControls = false;
-
-            let el = target;
-            while (el && !el.classList?.contains('device-card')) {
-                if (el.classList) {
-                    if (el.classList.contains('device-header')) {
-                        foundHeader = true;
-                    }
-                    if (el.classList.contains('controls') ||
-                        el.classList.contains('control') ||
-                        el.classList.contains('icon-button')) {
-                        foundControls = true;
-                    }
-                }
-                el = el.parentElement;
-            }
-
-            // Only allow drag from header, not from controls
-            return foundHeader && !foundControls;
-        }
+        dragByHeader: true
     });
 
     async function openSettingsDialog(device) {
@@ -391,7 +363,7 @@
 
         {#each devices as device, index (`${device.id}-${device.version}`)}
             <DraggableCard {dnd} item={device} {index} class="device-card">
-                <div class="device-header">
+                <CardHeader>
                     {#if device.type === 'FLAMETHROWER'}
                         {@const flame = deviceFlamethrower[device.id] || { safety: device.defaultValues[0] || 0, fuel: device.defaultValues[1] || 0 }}
                         <Preview
@@ -426,7 +398,7 @@
                         title="Device settings"
                         size="small"
                     />
-                </div>
+                </CardHeader>
 
                 <Controls
                     controls={DEVICE_TYPES[device.type].controls}
@@ -496,31 +468,22 @@
 		transition: opacity 0.2s, transform 0.2s;
 	}
 
-    :global(.device-card) .device-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+    :global(.device-card) :global(.card-header) {
         background: #e6e6e6;
-
         margin: -15px -15px 12px -15px;
         padding: 12px 15px;
         border-top-left-radius: 8px;
         border-top-right-radius: 8px;
-        cursor: grab;
     }
 
-    :global(.device-card) .device-header:active {
-        cursor: grabbing;
-    }
-
-    :global(.device-card) .device-header h3 {
+    :global(.device-card) :global(.card-header) h3 {
         margin: 0;
         font-size: 11pt;
         font-weight: 600;
         color: #333;
     }
 
-    :global(.device-card) .device-header :global(.icon-button) {
+    :global(.device-card) :global(.card-header) :global(.icon-button) {
         margin-left: auto;
     }
 </style>

@@ -27,7 +27,7 @@
  * @param {Function} options.items - Function that returns the current items array
  * @param {Function} options.onReorder - Callback when items are reordered, receives new array
  * @param {Function} [options.getItemId] - Function to get unique ID from item (default: item => item.id)
- * @param {Function} [options.shouldAllowDrag] - Function to check if drag should be allowed based on mousedown target
+ * @param {boolean} [options.dragByHeader] - If true, only allow drag from CardHeader component
  * @param {string} [options.orientation] - Drag orientation: 'vertical' (default) or 'horizontal'
  * @returns {Object} Drag-and-drop controller with handlers and state
  */
@@ -36,7 +36,7 @@ export function createDragDrop(options) {
 		items,
 		onReorder,
 		getItemId = (item) => item.id,
-		shouldAllowDrag = null,
+		dragByHeader = false,
 		orientation = 'vertical'
 	} = options;
 
@@ -61,10 +61,32 @@ export function createDragDrop(options) {
 	 */
 	function handleDragStart(event, item, index) {
 		// Check if drag should be allowed based on where mousedown happened
-		if (shouldAllowDrag && lastMouseDownTarget) {
-			if (!shouldAllowDrag(lastMouseDownTarget)) {
+		if (lastMouseDownTarget) {
+			// Prevent drag if started on interactive elements
+			if (lastMouseDownTarget.tagName === 'INPUT' ||
+				lastMouseDownTarget.tagName === 'BUTTON' ||
+				lastMouseDownTarget.tagName === 'TEXTAREA') {
 				event.preventDefault();
 				return;
+			}
+
+			// If dragByHeader is enabled, only allow drag from CardHeader
+			if (dragByHeader) {
+				let foundHeader = false;
+				let el = lastMouseDownTarget;
+
+				while (el && !el.classList?.contains('draggable-card')) {
+					if (el.classList?.contains('card-header')) {
+						foundHeader = true;
+						break;
+					}
+					el = el.parentElement;
+				}
+
+				if (!foundHeader) {
+					event.preventDefault();
+					return;
+				}
 			}
 		}
 

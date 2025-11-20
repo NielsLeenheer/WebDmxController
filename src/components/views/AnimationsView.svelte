@@ -3,7 +3,8 @@
     import { Animation } from '../../lib/animations.js';
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
-    import DraggableCard from '../../lib/ui/DraggableCard.svelte';
+    import DraggableCard from '../common/DraggableCard.svelte';
+    import CardHeader from '../common/CardHeader.svelte';
     import Button from '../common/Button.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Preview from '../common/Preview.svelte';
@@ -33,43 +34,10 @@
         items: () => animationsList,
         onReorder: (newAnimations) => {
             animationsList = newAnimations;
-            // Update the animation library order
-            animationLibrary.animations.clear();
-            newAnimations.forEach(a => {
-                animationLibrary.animations.set(a.name, a);
-            });
-            animationLibrary.save();
+            animationLibrary.reorder(newAnimations);
         },
         getItemId: (item) => item.name,
-        shouldAllowDrag: (target) => {
-            // Check if mousedown was on an interactive element
-            if (target.tagName === 'INPUT' ||
-                target.tagName === 'BUTTON' ||
-                target.tagName === 'TEXTAREA') {
-                return false;
-            }
-
-            // Walk up from the mousedown target to see if we're in header or timeline
-            let foundHeader = false;
-            let foundBlocking = false;
-
-            let el = target;
-            while (el && !el.classList?.contains('animation-card')) {
-                if (el.classList) {
-                    if (el.classList.contains('animation-header')) {
-                        foundHeader = true;
-                    }
-                    if (el.classList.contains('timeline-container') ||
-                        el.classList.contains('icon-button')) {
-                        foundBlocking = true;
-                    }
-                }
-                el = el.parentElement;
-            }
-
-            // Only allow drag from header, not from timeline
-            return foundHeader && !foundBlocking;
-        },
+        dragByHeader: true,
         orientation: 'vertical'
     });
 
@@ -243,7 +211,7 @@
         {:else}
             {#each animationsList as animation, index (`${animation.name}-${animation.version}`)}
                 <DraggableCard {dnd} item={animation} {index} class="animation-card">
-                    <div class="animation-header">
+                    <CardHeader>
                         <Preview
                             type="animation"
                             size="medium"
@@ -261,7 +229,7 @@
                             title="Edit animation"
                             size="small"
                         />
-                    </div>
+                    </CardHeader>
 
                     <TimelineEditor
                         {animation}
@@ -328,19 +296,12 @@
         width: 80vw;
     }
 
-    :global(.animation-card) .animation-header {
-        display: flex;
-        align-items: center;
+    :global(.animation-card) :global(.card-header) {
         justify-content: space-between;
         padding: 15px 20px;
         background: #e6e6e6;
         gap: 15px;
         border-radius: 8px 8px 0 0;
-        cursor: grab;
-    }
-
-    :global(.animation-card) .animation-header:active {
-        cursor: grabbing;
     }
 
     :global(.animation-card) .animation-info {

@@ -228,6 +228,18 @@ export class InputLibrary extends EventEmitter {
 	}
 
 	/**
+	 * Reorder inputs
+	 */
+	reorder(newOrder) {
+		this.inputs.clear();
+		newOrder.forEach(input => {
+			this.inputs.set(input.id, input);
+		});
+		this.save();
+		this._emit('changed', { type: 'reorder' });
+	}
+
+	/**
 	 * Save to localStorage
 	 */
 	save() {

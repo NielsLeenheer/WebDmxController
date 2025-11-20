@@ -327,6 +327,18 @@ export class TriggerLibrary extends EventEmitter {
 	}
 
 	/**
+	 * Reorder triggers
+	 */
+	reorder(newOrder) {
+		this.triggers.clear();
+		newOrder.forEach(trigger => {
+			this.triggers.set(trigger.id, trigger);
+		});
+		this.save();
+		this._emit('changed', { type: 'reorder' });
+	}
+
+	/**
 	 * Save to localStorage
 	 */
 	save() {

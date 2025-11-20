@@ -30,7 +30,7 @@
 </script>
 
 <div
-	class={className}
+	class="draggable-card {className}"
 	class:dragging={dnd.draggedItem === item}
 	class:drag-over={isDragBefore()}
 	class:drag-after={isDragAfter()}
