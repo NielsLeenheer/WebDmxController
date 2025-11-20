@@ -17,6 +17,7 @@ export class DeviceLibrary extends EventEmitter {
 		this.devices = new Map(); // id -> Device
 		this.storageKey = 'dmx-devices';
 		this.nextId = 1;
+		this.version = 0; // Reactive version counter for Svelte
 		this.load();
 	}
 
@@ -31,6 +32,7 @@ export class DeviceLibrary extends EventEmitter {
 			this.nextId = device.id + 1;
 		}
 
+		this.version++;
 		this.save();
 		this._emit('changed', { type: 'add', device });
 		return device;
@@ -75,6 +77,7 @@ export class DeviceLibrary extends EventEmitter {
 		if (this.devices.has(device.id)) {
 			device.version = (device.version || 0) + 1;
 			this.devices.set(device.id, device);
+			this.version++;
 			this.save();
 			this._emit('changed', { type: 'update', device });
 		}
@@ -87,6 +90,7 @@ export class DeviceLibrary extends EventEmitter {
 		const device = this.devices.get(id);
 		if (device) {
 			this.devices.delete(id);
+			this.version++;
 			this.save();
 			this._emit('changed', { type: 'remove', device });
 		}
@@ -100,6 +104,7 @@ export class DeviceLibrary extends EventEmitter {
 		newOrder.forEach(device => {
 			this.devices.set(device.id, device);
 		});
+		this.version++;
 		this.save();
 		this._emit('changed', { type: 'reorder' });
 	}
@@ -112,6 +117,7 @@ export class DeviceLibrary extends EventEmitter {
 			device.defaultValues = DEVICE_TYPES[device.type].getDefaultValues();
 			device.version++;
 		});
+		this.version++;
 		this.save();
 		this._emit('changed', { type: 'clear_values' });
 	}
@@ -186,6 +192,7 @@ export class DeviceLibrary extends EventEmitter {
 	clear() {
 		this.devices.clear();
 		this.nextId = 1;
+		this.version++;
 		this.save();
 		this._emit('changed', { type: 'clear' });
 	}

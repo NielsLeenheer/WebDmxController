@@ -20,8 +20,11 @@
 
     let { dmxController, deviceLibrary, isActive = false } = $props();
 
-    // Get devices reactively from library
-    let devices = $derived(deviceLibrary.getAll());
+    // Get devices reactively from library - depends on library version
+    let devices = $derived.by(() => {
+        deviceLibrary.version; // Track library changes
+        return deviceLibrary.getAll();
+    });
 
     // Device type selection
     let selectedType = $state('RGB');

@@ -18,8 +18,11 @@
         deviceLibrary
     } = $props();
 
-    // Get devices reactively from library
-    let devices = $derived(deviceLibrary.getAll());
+    // Get devices reactively from library - depends on library version
+    let devices = $derived.by(() => {
+        deviceLibrary.version; // Track library changes
+        return deviceLibrary.getAll();
+    });
 
     let animationsList = $state([]);
 
