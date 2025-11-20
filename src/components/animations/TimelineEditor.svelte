@@ -274,6 +274,7 @@
         bind:this={timelineElement}
         bind:clientWidth={timelineWidth}
         onclick={handleTimelineClick}
+        draggable="false"
     >
         <!-- Gradient segments showing color transitions -->
         {#each gradientSegments as segment}
@@ -298,6 +299,7 @@
                         selectKeyframe(index, e.currentTarget);
                     }
                 }}
+                draggable="false"
                 title="{(keyframe.time * 100).toFixed(0)}%"
             >
                 <div class="keyframe-time">{(keyframe.time * 100).toFixed(0)}%</div>
