@@ -7,19 +7,31 @@
         cssManager,
         devices = [],
         animationLibrary,
-        mappingLibrary
+        inputLibrary,
+        triggerLibrary
     } = $props();
 
     // Store sampled device data (Map of deviceId -> channels object)
     let sampledDeviceData = $state(new Map());
 
-    // Get CSS from manager
-    let generatedCSS = $derived(cssManager?.generatedCSS || '');
+    // Track CSS changes with local state (updates when libraries change)
+    let cssVersion = $state(0);
+
+    // Get CSS from manager (re-evaluated when cssVersion changes)
+    let generatedCSS = $derived.by(() => {
+        cssVersion; // Subscribe to version changes
+        return cssManager?.generatedCSS || '';
+    });
     let customCSS = $derived(cssManager?.customCSS || '');
 
     // Get animations for display
     let animations = $derived(
         animationLibrary ? animationLibrary.getAll() : []
+    );
+
+    // Get inputs for display
+    let inputs = $derived(
+        inputLibrary ? inputLibrary.getAll() : []
     );
 
     // Filter devices to only show those with independent controls
@@ -29,9 +41,6 @@
     let independentDevices = $derived(
         devices.filter(device => !device.linkedTo || device.syncedControls !== null)
     );
-
-    // Get all mappings for display (trigger and direct modes)
-    let allMappings = $state([]);
 
     function handleCustomCSSInput(event) {
         // Read the content from the contenteditable element
@@ -56,6 +65,25 @@
         return unsubscribe;
     });
 
+    // Listen for library changes to update CSS display
+    $effect(() => {
+        if (!triggerLibrary || !inputLibrary || !animationLibrary) return;
+
+        const handleChange = () => {
+            cssVersion++;
+        };
+
+        triggerLibrary.on('changed', handleChange);
+        inputLibrary.on('changed', handleChange);
+        animationLibrary.on('changed', handleChange);
+
+        return () => {
+            triggerLibrary.off('changed', handleChange);
+            inputLibrary.off('changed', handleChange);
+            animationLibrary.off('changed', handleChange);
+        };
+    });
+
     // Get preview data for a device
     function getPreviewData(device) {
         const channels = sampledDeviceData.get(device.id);
@@ -68,23 +96,6 @@
         const values = convertChannelsToArray(device.type, channels);
         return getDevicePreviewData(device.type, values);
     }
-
-    // Update mappings list when library changes
-    function handleMappingChange() {
-        allMappings = mappingLibrary.getAll();
-    }
-
-    onMount(() => {
-        // Listen for mapping changes to update the mappings list
-        mappingLibrary.on('changed', handleMappingChange);
-
-        // Initialize mappings list
-        allMappings = mappingLibrary.getAll();
-
-        return () => {
-            mappingLibrary.off('changed', handleMappingChange);
-        };
-    });
 </script>
 
 <div class="css-view">
@@ -125,29 +136,25 @@
             {/if}
 
             <!-- Inputs Section -->
-            {#if allMappings.length > 0}
+            {#if inputs.length > 0}
                 <div class="reference-section">
                     <h4>Inputs</h4>
                     <div class="css-identifiers">
-                        {#each allMappings as mapping (mapping.id)}
-                            {#if mapping.mode === 'input'}
-                                {#if mapping.isButtonInput()}
-                                    <!-- Buttons show classes based on mode -->
-                                    {#if mapping.buttonMode === 'toggle'}
-                                        <!-- Toggle buttons show on and off classes -->
-                                        <code class="css-identifier">.{mapping.getButtonOnClass()}</code>
-                                        <code class="css-identifier">.{mapping.getButtonOffClass()}</code>
-                                    {:else}
-                                        <!-- Momentary buttons show down and up classes -->
-                                        <code class="css-identifier">.{mapping.getButtonDownClass()}</code>
-                                        <code class="css-identifier">.{mapping.getButtonUpClass()}</code>
-                                    {/if}
+                        {#each inputs as input (`${input.id}-${input.version}`)}
+                            {#if input.isButtonInput()}
+                                <!-- Buttons show classes based on mode -->
+                                {#if input.buttonMode === 'toggle'}
+                                    <!-- Toggle buttons show on and off classes -->
+                                    <code class="css-identifier">.{input.cssClassOn}</code>
+                                    <code class="css-identifier">.{input.cssClassOff}</code>
                                 {:else}
-                                    <!-- Sliders/Knobs show custom property -->
-                                    <code class="css-identifier">{mapping.getInputPropertyName()}</code>
+                                    <!-- Momentary buttons show down and up classes -->
+                                    <code class="css-identifier">.{input.cssClassDown}</code>
+                                    <code class="css-identifier">.{input.cssClassUp}</code>
                                 {/if}
-                            {:else if mapping.mode === 'direct'}
-                                <code class="css-identifier">{mapping.getPropertyName()}</code>
+                            {:else}
+                                <!-- Sliders/Knobs show custom property -->
+                                <code class="css-identifier">{input.getInputPropertyName()}</code>
                             {/if}
                         {/each}
                     </div>

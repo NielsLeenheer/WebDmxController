@@ -68,7 +68,7 @@ class Keyframe {
  * Reusable animation definition (like CSS @keyframes)
  */
 export class Animation {
-	constructor(name = 'animation', deviceType = 'RGB', keyframes = [], cssName = null, controls = null, displayName = null) {
+	constructor(name = 'animation', deviceType = 'RGB', keyframes = [], cssName = null, controls = null, displayName = null, version = 0) {
 		this.name = name;
 		// NOTE: deviceType parameter kept for backwards compatibility but not stored
 		// Animations are control-based, not device-based
@@ -77,6 +77,7 @@ export class Animation {
 		this.keyframes = keyframes; // Array of Keyframe objects
 		// Stored CSS animation name (generated from name and stored)
 		this.cssName = cssName || toCSSIdentifier(this.name);
+		this.version = version; // Version counter for reactivity
 	}
 
 	/**
@@ -358,6 +359,7 @@ export class Animation {
 			// NOTE: Not storing deviceType - animations are control-based
 			controls: this.controls,
 			displayName: this.displayName,
+			version: this.version,
 			keyframes: this.keyframes.map(kf => ({
 				time: kf.time,
 				deviceType: kf.deviceType,  // Keyframes still store deviceType for rendering
@@ -390,9 +392,10 @@ export class Animation {
 		}
 
 		const displayName = json.displayName || null;
+		const version = json.version || 0;
 
 		// Pass deviceType for constructor but it won't be stored
-		const animation = new Animation(json.name, 'RGB', [], null, controls, displayName);
+		const animation = new Animation(json.name, 'RGB', [], null, controls, displayName, version);
 
 		for (const kf of json.keyframes) {
 			// Handle old format (properties) and new format (values)
@@ -479,6 +482,18 @@ export class AnimationLibrary {
 	 */
 	getAll() {
 		return Array.from(this.animations.values());
+	}
+
+	/**
+	 * Reorder animations
+	 */
+	reorder(newOrder) {
+		this.animations.clear();
+		newOrder.forEach(animation => {
+			this.animations.set(animation.name, animation);
+		});
+		this.save();
+		this._emit('changed', { type: 'reorder' });
 	}
 
 	/**

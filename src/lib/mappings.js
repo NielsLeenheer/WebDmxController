@@ -18,6 +18,7 @@ export class InputMapping {
 		this.id = config.id || `mapping-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 		this.name = config.name || 'Untitled Mapping';
 		this.mode = config.mode || 'trigger'; // 'trigger', 'direct', or 'input'
+		this.version = config.version || 0; // Version counter for reactivity
 
 		// Input source
 		this.inputDeviceId = config.inputDeviceId || null;
@@ -388,6 +389,7 @@ ${props}
 			id: this.id,
 			name: this.name,
 			mode: this.mode,
+			version: this.version,
 			inputDeviceId: this.inputDeviceId,
 			inputControlId: this.inputControlId,
 			inputDeviceName: this.inputDeviceName,
@@ -503,6 +505,8 @@ export class MappingLibrary {
 	 */
 	update(mapping) {
 		if (this.mappings.has(mapping.id)) {
+			// Increment version for reactivity
+			mapping.version = (mapping.version || 0) + 1;
 			this.mappings.set(mapping.id, mapping);
 			this.save();
 			this._emit('changed', { type: 'update', mapping });

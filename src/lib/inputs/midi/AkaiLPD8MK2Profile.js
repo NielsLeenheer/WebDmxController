@@ -11,29 +11,43 @@ export class AkaiLPD8MK2Profile extends MIDIDeviceProfile {
 		this.padNotes = [36, 37, 38, 39, 40, 41, 42, 43];
 		this.noteToPadIndex = new Map(this.padNotes.map((note, index) => [note, index]));
 		this.deviceId = 0x7f; // Broadcast to all devices by default
+
+		// Track current color state for all pads
+		// The Akai LPD8 MK2 requires all pad colors to be sent in a single SysEx message
+		this.padColors = new Map(); // note -> color name
+		// Initialize all pads to black
+		for (const note of this.padNotes) {
+			this.padColors.set(note, 'black');
+		}
 	}
 
 	/**
-	 * Convert palette color to SysEx command for single pad
-	 * @param {string} color - Palette color name
+	 * Update a single pad color in internal state
+	 * Does NOT send to hardware - call flushColors() to send
 	 * @param {number} note - MIDI note number of the pad
+	 * @param {string} color - Palette color name
+	 */
+	setPadColor(note, color) {
+		const padIndex = this.noteToPadIndex.get(note);
+		if (padIndex !== undefined) {
+			this.padColors.set(note, color);
+		}
+	}
+
+	/**
+	 * Build and return SysEx command with current state of ALL pads
 	 * @returns {{ type: 'sysex', value: Uint8Array }}
 	 */
-	paletteColorToCommand(color, note) {
-		const padIndex = this.noteToPadIndex.get(note);
-		if (padIndex === undefined) {
-			// Unknown pad, no command
-			return;
+	flushColors() {
+		// Build SysEx message with ALL pad colors
+		const payload = [];
+		for (const padNote of this.padNotes) {
+			const padColor = this.padColors.get(padNote) || 'black';
+			const rgb = paletteColorToRGB(padColor);
+			const normalized = this._normalizeRGB(rgb);
+			const encoded = this._encodeColor(normalized);
+			payload.push(...encoded);
 		}
-
-		// Get RGB values from palette color
-		const rgb = paletteColorToRGB(color);
-		const normalized = this._normalizeRGB(rgb);
-		
-		// Build SysEx message for single pad
-		const payload = new Array(this.padNotes.length * 6).fill(0);
-		const encoded = this._encodeColor(normalized);
-		payload.splice(padIndex * 6, 6, ...encoded);
 
 		const sysex = new Uint8Array([
 			0xf0,
@@ -48,6 +62,28 @@ export class AkaiLPD8MK2Profile extends MIDIDeviceProfile {
 		]);
 
 		return { type: 'sysex', value: sysex };
+	}
+
+	/**
+	 * Convert palette color to SysEx command
+	 * Updates internal state and returns a SysEx message with ALL pad colors
+	 * (Akai LPD8 MK2 requires all pads to be updated at once)
+	 * @param {string} color - Palette color name
+	 * @param {number} note - MIDI note number of the pad
+	 * @returns {{ type: 'sysex', value: Uint8Array }}
+	 */
+	paletteColorToCommand(color, note) {
+		const padIndex = this.noteToPadIndex.get(note);
+		if (padIndex === undefined) {
+			// Unknown pad, no command
+			return;
+		}
+
+		// Update internal state for this pad
+		this.setPadColor(note, color);
+
+		// Return SysEx with all colors
+		return this.flushColors();
 	}
 
 	_encodeColor({ r, g, b }) {

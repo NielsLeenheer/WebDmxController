@@ -1,7 +1,7 @@
 /**
  * CSS Generator
  *
- * Generates a complete CSS stylesheet from animations, mappings, and devices
+ * Generates a complete CSS stylesheet from animations, inputs, triggers, and devices
  */
 
 import { getDeviceColor } from '../colorUtils.js';
@@ -9,9 +9,10 @@ import { DEVICE_TYPES } from '../outputs/devices.js';
 import { CONTROL_CSS_MAPPING } from './mapping/controlToCssMapping.js';
 
 export class CSSGenerator {
-	constructor(animationLibrary, mappingLibrary) {
+	constructor(animationLibrary, inputLibrary, triggerLibrary) {
 		this.animationLibrary = animationLibrary;
-		this.mappingLibrary = mappingLibrary;
+		this.inputLibrary = inputLibrary;
+		this.triggerLibrary = triggerLibrary;
 	}
 
 	/**
@@ -44,28 +45,13 @@ export class CSSGenerator {
 			parts.push('');
 		}
 
-		// Input mappings (trigger mode)
-		const mappingsCSS = this.mappingLibrary.toCSS(devices);
-		if (mappingsCSS) {
+		// Triggers
+		const triggersCSS = this.triggerLibrary.toCSS(devices);
+		if (triggersCSS) {
 			parts.push('/* Triggers ================== */');
 			parts.push('');
-			parts.push(mappingsCSS);
+			parts.push(triggersCSS);
 			parts.push('');
-		}
-
-		// Custom properties for direct mode (documentation)
-		const directMappings = this.mappingLibrary.getDirectMappings();
-		if (directMappings.length > 0) {
-			parts.push('/* Custom Properties ================== */');
-			parts.push(':root {');
-
-			for (const mapping of directMappings) {
-				const propName = mapping.getPropertyName();
-				const defaultValue = mapping.mapValue(0);
-				parts.push(`  ${propName}: ${defaultValue}; /* ${mapping.name} */`);
-			}
-
-			parts.push('}\n');
 		}
 
 		// User customization section

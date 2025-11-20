@@ -13,12 +13,13 @@ import { CSSGenerator } from './generator.js';
 import { CSSSampler } from './sampler.js';
 
 export class CSSManager {
-	constructor(animationLibrary, mappingLibrary, triggerManager) {
+	constructor(animationLibrary, inputLibrary, triggerLibrary, triggerManager) {
 		this.animationLibrary = animationLibrary;
-		this.mappingLibrary = mappingLibrary;
+		this.inputLibrary = inputLibrary;
+		this.triggerLibrary = triggerLibrary;
 		this.triggerManager = triggerManager;
 
-		this.cssGenerator = new CSSGenerator(animationLibrary, mappingLibrary);
+		this.cssGenerator = new CSSGenerator(animationLibrary, inputLibrary, triggerLibrary);
 		this.cssSampler = new CSSSampler();
 
 		// DOM elements
@@ -38,7 +39,8 @@ export class CSSManager {
 		this.devices = [];
 
 		// Bind methods
-		this.handleMappingChange = this.handleMappingChange.bind(this);
+		this.handleTriggerChange = this.handleTriggerChange.bind(this);
+		this.handleInputChange = this.handleInputChange.bind(this);
 		this.handleAnimationChange = this.handleAnimationChange.bind(this);
 		this.sampleLoop = this.sampleLoop.bind(this);
 	}
@@ -79,7 +81,8 @@ export class CSSManager {
 		document.head.appendChild(this.styleElement);
 
 		// Listen for library changes
-		this.mappingLibrary.on('changed', this.handleMappingChange);
+		this.inputLibrary.on('changed', this.handleInputChange);
+		this.triggerLibrary.on('changed', this.handleTriggerChange);
 		this.animationLibrary.on('changed', this.handleAnimationChange);
 
 		// Generate initial CSS
@@ -161,9 +164,17 @@ export class CSSManager {
 	}
 
 	/**
-	 * Handle mapping library changes
+	 * Handle input library changes
 	 */
-	handleMappingChange() {
+	handleInputChange() {
+		this.regenerateCSS();
+		this.updateStyleElement();
+	}
+
+	/**
+	 * Handle trigger library changes
+	 */
+	handleTriggerChange() {
 		this.regenerateCSS();
 		this.updateStyleElement();
 	}
@@ -219,7 +230,8 @@ export class CSSManager {
 		this.stopSampling();
 
 		// Remove event listeners
-		this.mappingLibrary.off('changed', this.handleMappingChange);
+		this.inputLibrary.off('changed', this.handleInputChange);
+		this.triggerLibrary.off('changed', this.handleTriggerChange);
 		this.animationLibrary.off('changed', this.handleAnimationChange);
 
 		// Remove DOM elements

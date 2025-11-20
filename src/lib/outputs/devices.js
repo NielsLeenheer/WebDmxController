@@ -25,11 +25,12 @@ export const DEVICE_TYPES = {
 };
 
 export class Device {
-    constructor(id, type, startChannel, name = '', linkedTo = null, cssId = null, syncedControls = null, mirrorPan = false) {
+    constructor(id, type, startChannel, name = '', linkedTo = null, cssId = null, syncedControls = null, mirrorPan = false, version = 0) {
         this.id = id;
         this.type = type;
         this.startChannel = startChannel;
         this.name = name || `${DEVICE_TYPES[type].name} ${id}`;
+        this.version = version; // Version counter for reactivity
 
         // Get default values from device type profile
         this.defaultValues = DEVICE_TYPES[type].getDefaultValues();

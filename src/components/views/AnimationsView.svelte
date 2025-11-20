@@ -2,13 +2,15 @@
     import { onMount } from 'svelte';
     import { Animation } from '../../lib/animations.js';
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-    import { toCSSIdentifier } from '../../lib/css/utils.js';
+    import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
+    import DraggableCard from '../common/DraggableCard.svelte';
+    import CardHeader from '../common/CardHeader.svelte';
     import Button from '../common/Button.svelte';
-    import Dialog from '../common/Dialog.svelte';
     import IconButton from '../common/IconButton.svelte';
     import Preview from '../common/Preview.svelte';
     import TimelineEditor from '../animations/TimelineEditor.svelte';
-    import removeIcon from '../../assets/icons/remove.svg?raw';
+    import AddAnimationDialog from '../dialogs/AddAnimationDialog.svelte';
+    import EditAnimationDialog from '../dialogs/EditAnimationDialog.svelte';
     import editIcon from '../../assets/glyphs/edit.svg?raw';
 
     let {
@@ -18,217 +20,54 @@
 
     let animationsList = $state([]);
 
-    // Dialog states
-    let newAnimationDialog = null; // DOM reference - should NOT be $state
-    let newAnimationName = $state('');
-    let selectedAnimationTarget = $state('RGB|all'); // Format: "deviceType|all" or "deviceType|control|ControlName"
-
-    // Edit dialog states
-    let editDialog = null; // DOM reference - should NOT be $state
-    let editingAnimation = $state(null);
-    let editingName = $state('');
-
-    // Animation version for forcing re-renders
-    let animationVersion = $state(0);
-
-    // Drag and drop state
-    let draggedAnimation = $state(null);
-    let draggedIndex = $state(null);
-    let dragOverIndex = $state(null);
-    let isAfterMidpoint = $state(false);
-    let lastMouseDownTarget = null;
-
-    function handleMouseDown(event) {
-        // Track where the mouse was pressed down
-        lastMouseDownTarget = event.target;
-    }
+    // Dialog references
+    let addAnimationDialog;
+    let editAnimationDialog;
 
     // Load animations from library
     function refreshAnimationsList() {
         animationsList = animationLibrary.getAll();
-
-        // Update editingAnimation reference to the refreshed copy
-        if (editingAnimation) {
-            const refreshedAnimation = animationsList.find(a => a.name === editingAnimation.name);
-            if (refreshedAnimation) {
-                editingAnimation = refreshedAnimation;
-            } else {
-                // Animation was deleted
-                editingAnimation = null;
-            }
-        }
     }
 
-    function handleDragStart(event, animation) {
-        // Check where the mousedown happened (not where drag started)
-        let clickedElement = lastMouseDownTarget;
-
-        if (!clickedElement) {
-            event.preventDefault();
-            return;
-        }
-
-        // Check if mousedown was on an interactive element
-        if (clickedElement.tagName === 'INPUT' ||
-            clickedElement.tagName === 'BUTTON' ||
-            clickedElement.tagName === 'TEXTAREA') {
-            event.preventDefault();
-            return;
-        }
-
-        // Walk up from the mousedown target to see if we're in header or timeline
-        let foundHeader = false;
-        let foundBlocking = false;
-
-        let el = clickedElement;
-        while (el && el !== event.currentTarget) {
-            if (el.classList) {
-                if (el.classList.contains('animation-header')) {
-                    foundHeader = true;
-                }
-                if (el.classList.contains('timeline-container') ||
-                    el.classList.contains('icon-button')) {
-                    foundBlocking = true;
-                }
-            }
-            el = el.parentElement;
-        }
-
-        // Only allow drag from header, not from timeline
-        if (!foundHeader || foundBlocking) {
-            event.preventDefault();
-            return;
-        }
-
-        draggedAnimation = animation;
-        draggedIndex = animationsList.findIndex(a => a.name === animation.name);
-        event.dataTransfer.effectAllowed = 'move';
-    }
-
-    function handleDragOver(event, index) {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-        dragOverIndex = index;
-
-        // Calculate if mouse is in the second half of the card (vertically)
-        const rect = event.currentTarget.getBoundingClientRect();
-        const mouseY = event.clientY;
-        const cardMidpoint = rect.top + rect.height / 2;
-        isAfterMidpoint = mouseY > cardMidpoint;
-    }
-
-    function isDragAfter(index) {
-        return dragOverIndex === index && isAfterMidpoint;
-    }
-
-    function handleDragLeave() {
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
-
-    function handleDrop(event, targetIndex) {
-        event.preventDefault();
-
-        if (!draggedAnimation) return;
-
-        const currentIndex = animationsList.findIndex(a => a.name === draggedAnimation.name);
-        if (currentIndex === -1) {
-            draggedAnimation = null;
-            draggedIndex = null;
-            dragOverIndex = null;
-            isAfterMidpoint = false;
-            return;
-        }
-
-        // Adjust target index based on whether we're inserting after the midpoint
-        let insertIndex = targetIndex;
-        if (isAfterMidpoint) {
-            insertIndex = targetIndex + 1;
-        }
-
-        // If dragging from before to after in the same position, no change needed
-        if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
-            draggedAnimation = null;
-            draggedIndex = null;
-            dragOverIndex = null;
-            isAfterMidpoint = false;
-            return;
-        }
-
-        // Reorder the array
-        const newAnimations = [...animationsList];
-        const [removed] = newAnimations.splice(currentIndex, 1);
-        // Adjust insert position if we removed an item before it
-        const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
-        newAnimations.splice(finalInsertIndex, 0, removed);
-        animationsList = newAnimations;
-
-        // Update the animation library order
-        animationLibrary.animations.clear();
-        newAnimations.forEach(a => {
-            animationLibrary.animations.set(a.name, a);
-        });
-        animationLibrary.save();
-
-        draggedAnimation = null;
-        draggedIndex = null;
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
-
-    function handleDragEnd() {
-        draggedAnimation = null;
-        draggedIndex = null;
-        dragOverIndex = null;
-        isAfterMidpoint = false;
-    }
+    // Drag and drop helper
+    const dnd = createDragDrop({
+        items: () => animationsList,
+        onReorder: (newAnimations) => {
+            animationsList = newAnimations;
+            animationLibrary.reorder(newAnimations);
+        },
+        getItemId: (item) => item.name,
+        dragByHeader: true,
+        orientation: 'vertical'
+    });
 
     // Initialize on mount
     onMount(() => {
         refreshAnimationsList();
     });
 
-    function openNewAnimationDialog() {
-        newAnimationName = '';
-        selectedAnimationTarget = 'control|Color'; // Default to Color control
-        newAnimationDialog?.showModal();
-    }
+    async function openNewAnimationDialog() {
+        const result = await addAnimationDialog.open();
 
-    // Build complete list of animation targets (controls + device types)
-    function getAllAnimationTargets() {
-        const targets = [];
+        if (!result) return; // User cancelled
 
-        // First, collect all unique control names across all device types
-        const controlNamesSet = new Set();
-        for (const deviceDef of Object.values(DEVICE_TYPES)) {
-            for (const control of deviceDef.controls) {
-                controlNamesSet.add(control.name);
-            }
-        }
+        // Parse selected target
+        const parsed = parseAnimationTarget(result.target);
+        const { controls, displayName } = parsed;
 
-        // Add individual controls (device-agnostic)
-        const sortedControlNames = Array.from(controlNamesSet).sort();
-        for (const controlName of sortedControlNames) {
-            targets.push({
-                type: 'control',
-                value: `control|${controlName}`,
-                label: controlName
-            });
-        }
+        // Create animation with controls array (no deviceType stored)
+        const animation = new Animation(result.name, null, [], null, controls, displayName);
 
-        // Add separator
-        targets.push({ type: 'separator' });
+        // Determine number of channels based on control selection
+        const numChannels = animation.getNumChannels();
+        const defaultValues = new Array(numChannels).fill(0);
 
-        // Add device types (all controls)
-        for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
-            targets.push({
-                type: 'device',
-                value: `device|${deviceKey}`,
-                label: deviceDef.name
-            });
-        }
+        // Add default keyframes at start and end
+        animation.addKeyframe(0, [...defaultValues]);
+        animation.addKeyframe(1, [...defaultValues]);
 
-        return targets;
+        animationLibrary.add(animation);
+        refreshAnimationsList();
     }
 
     // Parse selected target into controls array and displayName
@@ -261,71 +100,29 @@
         };
     }
 
-    function createNewAnimation() {
-        if (!newAnimationName.trim()) return;
+    async function openEditDialog(animation) {
+        const result = await editAnimationDialog.open(animation);
 
-        // Parse selected target
-        const parsed = parseAnimationTarget(selectedAnimationTarget);
-        const { controls, displayName } = parsed;
+        if (!result) return; // User cancelled
 
-        // Create animation with controls array (no deviceType stored)
-        const animation = new Animation(newAnimationName.trim(), null, [], null, controls, displayName);
+        if (result.delete) {
+            // Handle delete
+            animationLibrary.remove(animation.name);
+            refreshAnimationsList();
+            return;
+        }
 
-        // Determine number of channels based on control selection
-        const numChannels = animation.getNumChannels();
-        const defaultValues = new Array(numChannels).fill(0);
-
-        // Add default keyframes at start and end
-        animation.addKeyframe(0, [...defaultValues]);
-        animation.addKeyframe(1, [...defaultValues]);
-
-        animationLibrary.add(animation);
-        refreshAnimationsList();
-        newAnimationDialog?.close();
-    }
-
-    function openEditDialog(animation) {
-        editingAnimation = animation;
-        editingName = animation.name;
-
-        requestAnimationFrame(() => {
-            editDialog?.showModal();
-        });
-    }
-
-    function closeEditDialog() {
-        editDialog?.close();
-        editingAnimation = null;
-        editingName = '';
-    }
-
-    function saveEdit() {
-        if (!editingAnimation || !editingName.trim()) return;
-
-        // Update animation name
-        const oldName = editingAnimation.name;
-        editingAnimation.name = editingName.trim();
-        // Update CSS name based on new animation name
-        editingAnimation.updateCSSName();
-
-        // Save to library
+        // Handle save
+        animation.name = result.name;
+        animation.updateCSSName();
+        animation.version = (animation.version || 0) + 1;
         animationLibrary.save();
         refreshAnimationsList();
-        closeEditDialog();
     }
 
-    function confirmDeleteAnimation() {
-        if (!editingAnimation) return;
-
-        if (confirm(`Are you sure you want to delete "${editingAnimation.name}"?`)) {
-            animationLibrary.remove(editingAnimation.name);
-            refreshAnimationsList();
-            closeEditDialog();
-        }
-    }
-
-    function handleAnimationUpdate() {
-        animationVersion++;
+    function handleAnimationUpdate(animation) {
+        animation.version = (animation.version || 0) + 1;
+        animationLibrary.save();
     }
 
     // Generate preview gradient for animation
@@ -412,21 +209,9 @@
                 <p>No animations yet. Create one to get started!</p>
             </div>
         {:else}
-            {#each animationsList as animation, index (animation.name)}
-                <div
-                    class="animation-card"
-                    class:dragging={draggedAnimation?.name === animation.name}
-                    class:drag-over={dragOverIndex === index && !isAfterMidpoint}
-                    class:drag-after={isDragAfter(index)}
-                    draggable="true"
-                    onmousedown={handleMouseDown}
-                    ondragstart={(e) => handleDragStart(e, animation)}
-                    ondragover={(e) => handleDragOver(e, index)}
-                    ondragleave={handleDragLeave}
-                    ondrop={(e) => handleDrop(e, index)}
-                    ondragend={handleDragEnd}
-                >
-                    <div class="animation-header">
+            {#each animationsList as animation, index (`${animation.name}-${animation.version}`)}
+                <DraggableCard {dnd} item={animation} {index} class="animation-card">
+                    <CardHeader>
                         <Preview
                             type="animation"
                             size="medium"
@@ -444,90 +229,28 @@
                             title="Edit animation"
                             size="small"
                         />
-                    </div>
+                    </CardHeader>
 
                     <TimelineEditor
                         {animation}
                         {animationLibrary}
-                        {animationVersion}
-                        onUpdate={handleAnimationUpdate}
+                        onUpdate={() => handleAnimationUpdate(animation)}
                     />
-                </div>
+                </DraggableCard>
             {/each}
         {/if}
     </div>
 </div>
 
-<!-- New Animation Dialog -->
-<Dialog bind:dialogRef={newAnimationDialog} title="Create New Animation" onclose={() => newAnimationDialog?.close()}>
-    <form id="new-animation-form" method="dialog" onsubmit={(e) => { e.preventDefault(); createNewAnimation(); }}>
-        <div class="dialog-input-group">
-            <label for="animation-name">Animation Name:</label>
-            <input
-                id="animation-name"
-                type="text"
-                bind:value={newAnimationName}
-                placeholder="e.g., rainbow, pulse, sweep"
-                autofocus
-            />
-            <div class="css-identifiers">
-                <code class="css-identifier">@keyframes {toCSSIdentifier(newAnimationName)}</code>
-            </div>
-        </div>
-
-        <div class="dialog-input-group">
-            <label for="animation-target">Target:</label>
-            <select id="animation-target" bind:value={selectedAnimationTarget} class="animation-target-select">
-                {#each getAllAnimationTargets() as target}
-                    {#if target.type === 'separator'}
-                        <option disabled>──────────</option>
-                    {:else}
-                        <option value={target.value}>{target.label}</option>
-                    {/if}
-                {/each}
-            </select>
-            <small class="help-text">Select a specific control or entire device type</small>
-        </div>
-    </form>
-
-    {#snippet buttons()}
-        <Button type="button" onclick={() => newAnimationDialog?.close()} variant="secondary">Cancel</Button>
-        <Button type="submit" form="new-animation-form" variant="primary">Create</Button>
-    {/snippet}
-</Dialog>
+<!-- Add Animation Dialog -->
+<AddAnimationDialog
+    bind:this={addAnimationDialog}
+/>
 
 <!-- Edit Animation Dialog -->
-{#if editingAnimation}
-<Dialog bind:dialogRef={editDialog} title="Animation" onclose={closeEditDialog}>
-    <form id="edit-animation-form" method="dialog" onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
-        <div class="dialog-input-group">
-            <label for="edit-animation-name">Name:</label>
-            <input
-                id="edit-animation-name"
-                type="text"
-                bind:value={editingName}
-                placeholder="Animation name"
-                autofocus
-            />
-            <div class="css-identifiers">
-                <code class="css-identifier">@keyframes {toCSSIdentifier(editingName)} &lbrace; &rbrace;</code>
-            </div>
-        </div>
-    </form>
-
-    {#snippet tools()}
-        <Button onclick={confirmDeleteAnimation} variant="secondary">
-            {@html removeIcon}
-            Delete
-        </Button>
-    {/snippet}
-
-    {#snippet buttons()}
-        <Button onclick={closeEditDialog} variant="secondary">Cancel</Button>
-        <Button type="submit" form="edit-animation-form" variant="primary">Save</Button>
-    {/snippet}
-</Dialog>
-{/if}
+<EditAnimationDialog
+    bind:this={editAnimationDialog}
+/>
 
 <style>
     .animations-view {
@@ -569,72 +292,38 @@
         margin: 0;
     }
 
-    .animation-card {
+    :global(.animation-card) {
         width: 80vw;
-        background: #f0f0f0;
-        border-radius: 8px;
-        transition: opacity 0.2s, transform 0.2s;
     }
 
-    .animation-card.dragging {
-        opacity: 0.4;
-    }
-
-    .animation-card.drag-over {
-        position: relative;
-    }
-
-    .animation-card.drag-over::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: -10px;
-        height: 4px;
-        background: #2196F3;
-        border-radius: 2px;
-    }
-
-    .animation-card.drag-after::before {
-        top: auto;
-        bottom: -10px;
-    }
-
-    .animation-header {
-        display: flex;
-        align-items: center;
+    :global(.animation-card) :global(.card-header) {
         justify-content: space-between;
         padding: 15px 20px;
         background: #e6e6e6;
         gap: 15px;
         border-radius: 8px 8px 0 0;
-        cursor: grab;
     }
 
-    .animation-header:active {
-        cursor: grabbing;
-    }
-
-    .animation-info {
+    :global(.animation-card) .animation-info {
         display: flex;
         align-items: center;
         gap: 12px;
         flex: 1;
     }
 
-    .animation-info h3 {
+    :global(.animation-card) .animation-info h3 {
         margin: 0;
         font-size: 11pt;
         color: #333;
     }
 
-    .badges {
+    :global(.animation-card) .badges {
         display: flex;
         gap: 8px;
         align-items: center;
     }
 
-    .target-badge {
+    :global(.animation-card) .target-badge {
         background: #f6f6f6;
         color: #1976d2;
         padding: 4px 8px;
