@@ -86,23 +86,45 @@ export class Input {
 	 * Check if this input is a button (vs slider/knob)
 	 */
 	isButtonInput() {
-		if (!this.inputControlId) return false;
-		// Button controls:
-		// - MIDI notes: note-XX
-		// - HID/StreamDeck buttons: button-XX or just 'button' (Thingy:52)
-		// - Keyboard keys: key-XX
-		// - CC/control changes are sliders/knobs
-		return this.inputControlId.startsWith('note-') ||
-		       this.inputControlId.startsWith('button-') ||
-		       this.inputControlId === 'button' ||
-		       this.inputControlId.startsWith('key-');
+		return Input.isButtonInput(this);
 	}
 
 	/**
 	 * Get CSS property name for this input (for sliders/knobs)
 	 */
 	getInputPropertyName() {
-		return this.cssProperty || `--${toCSSIdentifier(this.name)}`;
+		return Input.getInputPropertyName(this);
+	}
+
+	/**
+	 * Static utility methods for working with plain input objects
+	 */
+
+	/**
+	 * Check if an input is a button (vs slider/knob)
+	 * @param {Object} input - Input object or instance
+	 * @returns {boolean}
+	 */
+	static isButtonInput(input) {
+		if (!input.inputControlId) return false;
+		// Button controls:
+		// - MIDI notes: note-XX
+		// - HID/StreamDeck buttons: button-XX or just 'button' (Thingy:52)
+		// - Keyboard keys: key-XX
+		// - CC/control changes are sliders/knobs
+		return input.inputControlId.startsWith('note-') ||
+		       input.inputControlId.startsWith('button-') ||
+		       input.inputControlId === 'button' ||
+		       input.inputControlId.startsWith('key-');
+	}
+
+	/**
+	 * Get CSS property name for an input (for sliders/knobs)
+	 * @param {Object} input - Input object or instance
+	 * @returns {string}
+	 */
+	static getInputPropertyName(input) {
+		return input.cssProperty || `--${toCSSIdentifier(input.name)}`;
 	}
 
 	/**
