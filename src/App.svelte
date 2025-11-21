@@ -2,10 +2,7 @@
     import { onMount, onDestroy } from 'svelte';
     import { DMXController } from './lib/outputs/dmx.js';
     import { convertChannelsToArray } from './lib/outputs/devices.js';
-    import { DeviceLibrary } from './lib/outputs/DeviceLibrary.svelte.js';
-    import { AnimationLibrary } from './lib/animations/AnimationLibrary.svelte.js';
-    import { InputLibrary } from './lib/inputs/InputLibrary.svelte.js';
-    import { TriggerLibrary } from './lib/triggers/TriggerLibrary.svelte.js';
+    import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from './lib/libraries.svelte.js';
     import { TriggerManager } from './lib/mappings.js';
     import { CustomPropertyManager, CSSManager } from './lib/css/index.js';
     import { InputController } from './lib/inputController.js';
@@ -24,10 +21,6 @@
     let devicesViewRef = $state(null);
 
     // Reactive systems
-    let deviceLibrary = $state(new DeviceLibrary());
-    let animationLibrary = $state(new AnimationLibrary());
-    let inputLibrary = $state(new InputLibrary());
-    let triggerLibrary = $state(new TriggerLibrary());
     let triggerManager = $state(new TriggerManager());
     let customPropertyManager = $state(new CustomPropertyManager());
     let inputController = $state(new InputController(inputLibrary, customPropertyManager, triggerManager));
@@ -130,7 +123,6 @@
         <DevicesView
             {dmxController}
             bind:this={devicesViewRef}
-            {deviceLibrary}
             isActive={view === 'devices'}
         />
     </div>
@@ -140,35 +132,22 @@
     </div>
 
     <div class="view-container" class:hidden={view !== 'animations'}>
-        <AnimationsView
-            {animationLibrary}
-            {deviceLibrary}
-        />
+        <AnimationsView />
     </div>
 
     <div class="view-container" class:hidden={view !== 'inputs'}>
         <InputsView
             {inputController}
-            {inputLibrary}
         />
     </div>
 
     <div class="view-container" class:hidden={view !== 'triggers'}>
-        <TriggersView
-            {triggerLibrary}
-            {inputLibrary}
-            {animationLibrary}
-            {deviceLibrary}
-        />
+        <TriggersView />
     </div>
 
     <div class="view-container" class:hidden={view !== 'css'}>
         <CSSView
             {cssManager}
-            {deviceLibrary}
-            {animationLibrary}
-            {inputLibrary}
-            {triggerLibrary}
         />
     </div>
 </main>

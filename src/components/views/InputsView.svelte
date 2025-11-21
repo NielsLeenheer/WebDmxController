@@ -1,6 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { Input } from '../../lib/inputs.js';
+    import { inputLibrary } from '../../lib/libraries.svelte.js';
     import { paletteColorToHex, getUnusedFromPalette, getPalette } from '../../lib/inputs/colors.js';
     import { toCSSIdentifier } from '../../lib/css/utils.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
@@ -11,8 +12,7 @@
     import stopIcon from '../../assets/icons/stop.svg?raw';
 
     let {
-        inputController,
-        inputLibrary
+        inputController
     } = $props();
 
     // Get inputs reactively from library

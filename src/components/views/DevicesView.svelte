@@ -1,11 +1,12 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+    import { deviceLibrary } from '../../lib/libraries.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import DeviceCard from '../cards/DeviceCard.svelte';
     import Button from '../common/Button.svelte';
     import EditDeviceDialog from '../dialogs/EditDeviceDialog.svelte';
 
-    let { dmxController, deviceLibrary, isActive = false } = $props();
+    let { dmxController, isActive = false } = $props();
 
     // Get devices
     let devices = $derived(deviceLibrary.getAll());

@@ -2,6 +2,7 @@
     import { Trigger } from '../../lib/triggers.js';
     import { Animation } from '../../lib/animations.js';
     import { Input } from '../../lib/inputs.js';
+    import { triggerLibrary, inputLibrary, animationLibrary, deviceLibrary } from '../../lib/libraries.svelte.js';
     import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { paletteColorToHex } from '../../lib/inputs/colors.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
@@ -12,13 +13,6 @@
     import AddAutomaticTriggerDialog from '../dialogs/AddAutomaticTriggerDialog.svelte';
     import EditManualTriggerDialog from '../dialogs/EditManualTriggerDialog.svelte';
     import EditAutomaticTriggerDialog from '../dialogs/EditAutomaticTriggerDialog.svelte';
-
-    let {
-        triggerLibrary,
-        inputLibrary,
-        animationLibrary,
-        deviceLibrary
-    } = $props();
 
     // Get devices reactively from library
     let devices = $derived(deviceLibrary.getAll());

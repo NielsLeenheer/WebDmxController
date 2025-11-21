@@ -1,16 +1,12 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import { Animation } from '../../lib/animations.js';
+    import { animationLibrary, deviceLibrary } from '../../lib/libraries.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import AnimationCard from '../cards/AnimationCard.svelte';
     import Button from '../common/Button.svelte';
     import AddAnimationDialog from '../dialogs/AddAnimationDialog.svelte';
     import EditAnimationDialog from '../dialogs/EditAnimationDialog.svelte';
-
-    let {
-        animationLibrary,
-        deviceLibrary
-    } = $props();
 
     // Get data reactively
     let devices = $derived(deviceLibrary.getAll());

@@ -1,15 +1,12 @@
 <script>
     import { onMount } from 'svelte';
     import { convertChannelsToArray, getDevicePreviewData } from '../../lib/outputs/devices.js';
+    import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from '../../lib/libraries.svelte.js';
     import { Input } from '../../lib/inputs.js';
     import Preview from '../common/Preview.svelte';
 
     let {
-        cssManager,
-        deviceLibrary,
-        animationLibrary,
-        inputLibrary,
-        triggerLibrary
+        cssManager
     } = $props();
 
     // Get devices reactively from library
@@ -101,7 +98,7 @@
                             {@const previewData = getPreviewData(device)}
                             <div class="device-preview-item">
                                 <Preview
-                                    type="device"
+                                    type="controls"
                                     size="large"
                                     controls={previewData.controls}
                                     data={previewData.data}
