@@ -52,19 +52,7 @@ export class TriggerLibrary extends Library {
 		return this.add(trigger);
 	}
 
-	/**
-	 * Add an existing trigger (from external source)
-	 * Overrides base class to handle Trigger class instances
-	 * @param {Object} trigger - Trigger object or Trigger class instance
-	 * @returns {Object} Added trigger object
-	 */
-	add(trigger) {
-		// Convert Trigger class instance to plain object if needed
-		const plainTrigger = trigger.toJSON ? trigger.toJSON() : trigger;
 
-		// Use base class add() which handles ID generation and order
-		return super.add(plainTrigger);
-	}
 
 	/**
 	 * Update trigger properties
@@ -176,26 +164,23 @@ export class TriggerLibrary extends Library {
 	 * @param {number} index - Array index for order
 	 */
 	deserializeItem(triggerData, index) {
-		// Use Trigger.fromJSON to handle backward compatibility
-		const trigger = Trigger.fromJSON(triggerData);
-
-		// Convert to plain object
+		// Ensure ID exists (generate UUID if missing for old data)
 		return {
-			id: trigger.id || crypto.randomUUID(), // Generate UUID if not present
-			name: trigger.name,
-			triggerType: trigger.triggerType,
-			inputDeviceId: trigger.inputDeviceId,
-			inputControlId: trigger.inputControlId,
-			actionType: trigger.actionType,
-			animationName: trigger.animationName,
-			targetDeviceIds: trigger.targetDeviceIds,
-			duration: trigger.duration,
-			easing: trigger.easing,
-			iterations: trigger.iterations,
-			setValueDeviceId: trigger.setValueDeviceId,
-			channelValues: trigger.channelValues,
-			enabledControls: trigger.enabledControls,
-			cssClassName: trigger.cssClassName,
+			id: triggerData.id || crypto.randomUUID(),
+			name: triggerData.name,
+			triggerType: triggerData.triggerType,
+			inputDeviceId: triggerData.inputDeviceId,
+			inputControlId: triggerData.inputControlId,
+			actionType: triggerData.actionType,
+			animationName: triggerData.animationName,
+			targetDeviceIds: triggerData.targetDeviceIds,
+			duration: triggerData.duration,
+			easing: triggerData.easing,
+			iterations: triggerData.iterations,
+			setValueDeviceId: triggerData.setValueDeviceId,
+			channelValues: triggerData.channelValues,
+			enabledControls: triggerData.enabledControls,
+			cssClassName: triggerData.cssClassName,
 			order: triggerData.order !== undefined ? triggerData.order : index
 		};
 	}
