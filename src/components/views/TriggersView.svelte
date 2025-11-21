@@ -1,7 +1,7 @@
 <script>
-    import { onMount, onDestroy } from 'svelte';
     import { Trigger } from '../../lib/triggers.js';
     import { Animation } from '../../lib/animations.js';
+    import { Input } from '../../lib/inputs.js';
     import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { paletteColorToHex } from '../../lib/inputs/colors.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
@@ -27,9 +27,10 @@
     // Get devices reactively from library
     let devices = $derived(deviceLibrary.getAll());
 
-    let availableInputs = $state([]);
-    let availableAnimations = $state([]);
-    let triggers = $state([]);
+    // Get inputs, animations, and triggers reactively from libraries
+    let availableInputs = $derived(inputLibrary.getAll());
+    let availableAnimations = $derived(animationLibrary.getAll());
+    let triggers = $derived(triggerLibrary.getAll());
 
     // Dialog references
     let addManualTriggerDialog;
@@ -43,7 +44,7 @@
             i.inputDeviceId === trigger.inputDeviceId &&
             i.inputControlId === trigger.inputControlId
         );
-        if (!input || !input.isButtonInput()) {
+        if (!input || !Input.isButtonInput(input)) {
             return [
                 { value: 'pressed', label: 'Pressed' },
                 { value: 'not-pressed', label: 'Not Pressed' }
@@ -65,12 +66,6 @@
         }
     }
 
-    function refreshData() {
-        availableInputs = inputLibrary.getAll();
-        availableAnimations = animationLibrary.getAll();
-        triggers = triggerLibrary.getAll();
-    }
-
     // Drag and drop helper
     const dnd = createDragDrop({
         items: () => triggers,
@@ -79,10 +74,6 @@
         },
         orientation: 'vertical'
     });
-
-    function handleMappingChange() {
-        refreshData();
-    }
 
     async function openManualTriggerDialog() {
         const result = await addManualTriggerDialog.open(availableInputs, availableAnimations, devices);
@@ -135,7 +126,6 @@
         });
 
         triggerLibrary.add(trigger);
-        refreshData();
     }
 
     async function openAutomaticTriggerDialog() {
@@ -158,7 +148,6 @@
         });
 
         triggerLibrary.add(trigger);
-        refreshData();
     }
 
     async function openEditDialog(trigger) {
@@ -171,7 +160,6 @@
             if (result.delete) {
                 // Handle delete
                 triggerLibrary.remove(trigger.id);
-                refreshData();
                 return;
             }
 
@@ -184,7 +172,6 @@
             trigger.name = `always_${result.animation}`;
 
             triggerLibrary.update(trigger);
-            refreshData();
         } else {
             // Manual trigger
             const result = await editManualTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
@@ -194,7 +181,6 @@
             if (result.delete) {
                 // Handle delete
                 triggerLibrary.remove(trigger.id);
-                refreshData();
                 return;
             }
 
@@ -251,7 +237,6 @@
             trigger.cssClassName = cssClassName;
 
             triggerLibrary.update(trigger);
-            refreshData();
         }
     }
 
@@ -512,16 +497,6 @@
         }));
     }
 
-    onMount(() => {
-        refreshData();
-        triggerLibrary.on('changed', handleMappingChange);
-        inputLibrary.on('changed', handleMappingChange);
-    });
-
-    onDestroy(() => {
-        triggerLibrary.off('changed', handleMappingChange);
-        inputLibrary.off('changed', handleMappingChange);
-    });
 </script>
 
 <div class="triggers-view">
