@@ -169,12 +169,4 @@ export class InputLibrary extends Library {
 			order: inputData.order !== undefined ? inputData.order : index
 		};
 	}
-
-	/**
-	 * Clear all inputs
-	 */
-	clear() {
-		this.items = [];
-		this.save();
-	}
 }
