@@ -38,7 +38,7 @@
 
 	const ACTION_TYPES = [
 		{ value: 'animation', label: 'Run Animation' },
-		{ value: 'setValue', label: 'Set values' }
+		{ value: 'values', label: 'Set values' }
 	];
 
 	const EASING_FUNCTIONS = [
@@ -112,7 +112,7 @@
 
 	// Handle device change - initialize enabled controls
 	function handleDeviceChange() {
-		if (actionType === 'setValue' && selectedDevice) {
+		if (actionType === 'values' && selectedDevice) {
 			const device = devices.find(d => d.id === selectedDevice);
 			if (device) {
 				const deviceType = DEVICE_TYPES[device.type];
@@ -149,7 +149,7 @@
 			easing = 'linear';
 			channelValues = {};
 
-			// Initialize enabled controls for setValue
+			// Initialize enabled controls for values
 			handleDeviceChange();
 
 			requestAnimationFrame(() => {
@@ -289,7 +289,7 @@
 								{/each}
 							</select>
 						</div>
-					{:else if actionType === 'setValue' && selectedDevice}
+					{:else if actionType === 'values' && selectedDevice}
 						{@const device = devices.find(d => d.id === selectedDevice)}
 						{#if device}
 							<div class="dialog-input-group">

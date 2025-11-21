@@ -35,7 +35,7 @@
 				class="trigger-preview"
 			/>
 			<div class="trigger-text">
-				{getInputName(trigger.inputDeviceId, trigger.inputControlId)} → {getInputTypeLabel(trigger)}
+				{getInputName(trigger.inputId)} → {getInputTypeLabel(trigger)}
 			</div>
 		{/if}
 	</div>
@@ -63,11 +63,11 @@
 			<Preview
 				type="animation"
 				size="medium"
-				data={{ color: getAnimationPreview(trigger.animationName) }}
+				data={{ color: getAnimationPreview(trigger.animation?.id) }}
 				class="trigger-preview"
 			/>
 			<div class="trigger-text">
-				{getAnimationDisplayName(trigger.animationName)}
+				{getAnimationDisplayName(trigger.animation?.id)}
 			</div>
 		{:else}
 			{@const specialControls = getSpecialControls(trigger)}
@@ -93,7 +93,7 @@
 				/>
 			{/if}
 			<div class="trigger-text">
-				{Object.keys(trigger.channelValues || {}).length} values
+				{Object.keys(trigger.values?.channelValues || {}).length} values
 			</div>
 		{/if}
 	</div>

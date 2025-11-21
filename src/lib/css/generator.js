@@ -46,7 +46,7 @@ export class CSSGenerator {
 		}
 
 		// Triggers
-		const triggersCSS = this.triggerLibrary.toCSS(devices);
+		const triggersCSS = this.triggerLibrary.toCSS(devices, this.inputLibrary);
 		if (triggersCSS) {
 			parts.push('/* Triggers ================== */');
 			parts.push('');

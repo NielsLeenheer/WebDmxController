@@ -5,7 +5,6 @@
     import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { paletteColorToHex } from '../../lib/inputs/colors.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
-    import { toCSSIdentifier } from '../../lib/css/utils.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import TriggerCard from '../cards/TriggerCard.svelte';
     import Button from '../common/Button.svelte';
@@ -37,10 +36,7 @@
 
     // Get trigger type options for a trigger being edited
     function getTriggerTypeOptionsForTrigger(trigger) {
-        const input = availableInputs.find(i =>
-            i.inputDeviceId === trigger.inputDeviceId &&
-            i.inputControlId === trigger.inputControlId
-        );
+        const input = availableInputs.find(i => i.id === trigger.inputId);
         if (!input || !Input.isButtonInput(input)) {
             return [
                 { value: 'pressed', label: 'Pressed' },
@@ -83,38 +79,24 @@
         );
         if (!input) return;
 
-        // Get button mode from the input
-        const buttonMode = input.buttonMode || 'momentary';
-
-        // Generate CSS class name from input name with state suffix
-        const baseClassName = toCSSIdentifier(input.name);
-
-        // Determine suffix based on button mode
-        let suffix;
-        if (buttonMode === 'toggle') {
-            suffix = result.triggerType === 'pressed' ? 'on' : 'off';
-        } else {
-            suffix = result.triggerType === 'pressed' ? 'down' : 'up';
-        }
-        const cssClassName = `${baseClassName}-${suffix}`;
-
         // Create trigger using library method
         triggerLibrary.create({
             triggerType: result.triggerType,
             actionType: result.actionType,
-            inputDeviceId: input.inputDeviceId,
-            inputControlId: input.inputControlId,
+            inputId: input.id,
+            deviceId: result.device,
             // Animation action properties
-            animationName: result.actionType === 'animation' ? result.animation : null,
-            targetDeviceIds: result.actionType === 'animation' ? [result.device] : [],
-            duration: result.duration,
-            easing: result.easing,
-            iterations: result.looping ? 'infinite' : 1,
-            // SetValue action properties
-            setValueDeviceId: result.actionType === 'setValue' ? result.device : null,
-            channelValues: result.actionType === 'setValue' ? result.channelValues : {},
-            enabledControls: result.actionType === 'setValue' ? result.enabledControls : [],
-            cssClassName: cssClassName
+            animation: result.actionType === 'animation' ? {
+                id: result.animation,
+                duration: result.duration,
+                easing: result.easing,
+                iterations: result.looping ? 'infinite' : 1
+            } : null,
+            // Values action properties
+            values: result.actionType === 'values' ? {
+                channelValues: result.channelValues,
+                enabledControls: result.enabledControls
+            } : null
         });
     }
 
@@ -126,14 +108,15 @@
         // Create trigger using library method
         triggerLibrary.create({
             triggerType: 'always',
-            inputDeviceId: null,
-            inputControlId: null,
-            animationName: result.animation,
-            targetDeviceIds: [result.device],
-            duration: result.duration,
-            easing: result.easing,
-            iterations: result.looping ? 'infinite' : 1,
-            cssClassName: 'always'
+            actionType: 'animation',
+            inputId: null,
+            deviceId: result.device,
+            animation: {
+                id: result.animation,
+                duration: result.duration,
+                easing: result.easing,
+                iterations: result.looping ? 'infinite' : 1
+            }
         });
     }
 
@@ -152,11 +135,13 @@
 
             // Handle save using library update method
             triggerLibrary.update(trigger.id, {
-                targetDeviceIds: [result.device],
-                animationName: result.animation,
-                duration: result.duration,
-                easing: result.easing,
-                iterations: result.looping ? 'infinite' : 1
+                deviceId: result.device,
+                animation: {
+                    id: result.animation,
+                    duration: result.duration,
+                    easing: result.easing,
+                    iterations: result.looping ? 'infinite' : 1
+                }
             });
         } else {
             // Manual trigger
@@ -182,44 +167,29 @@
             // Get button mode from the input
             const buttonMode = selectedInput.buttonMode || 'momentary';
 
-            // Generate new CSS class name
-            const baseClassName = toCSSIdentifier(selectedInput.name);
-
-            // Determine suffix based on button mode
-            let suffix;
-            if (buttonMode === 'toggle') {
-                suffix = result.triggerType === 'pressed' ? 'on' : 'off';
-            } else {
-                suffix = result.triggerType === 'pressed' ? 'down' : 'up';
-            }
-            const cssClassName = `${baseClassName}-${suffix}`;
-
             // Build updates object based on action type
             const updates = {
-                inputDeviceId: newInputDeviceId,
-                inputControlId: newInputControlId,
+                inputId: selectedInput.id,
                 triggerType: result.triggerType,
                 actionType: result.actionType,
-                duration: result.duration,
-                easing: result.easing,
-                iterations: result.looping ? 'infinite' : 1,
-                cssClassName: cssClassName
+                deviceId: result.device
             };
 
             if (result.actionType === 'animation') {
-                updates.animationName = result.animation;
-                updates.targetDeviceIds = [result.device];
-                updates.setValueDeviceId = null;
-                updates.channelValues = {};
-                updates.enabledControls = [];
-                updates.name = `${selectedInput.name}_${result.triggerType}_${result.animation}`;
+                updates.animation = {
+                    id: result.animation,
+                    duration: result.duration,
+                    easing: result.easing,
+                    iterations: result.looping ? 'infinite' : 1
+                };
+                updates.values = null;
             } else {
-                updates.setValueDeviceId = result.device;
-                updates.channelValues = result.channelValues;
-                updates.enabledControls = result.enabledControls;
+                updates.animation = null;
+                updates.values = {
+                    channelValues: result.channelValues,
+                    enabledControls: result.enabledControls
+                };
                 updates.animationName = null;
-                updates.targetDeviceIds = [];
-                updates.name = `${selectedInput.name}_${result.triggerType}_setValue`;
             }
 
             // Update using library method
@@ -227,11 +197,9 @@
         }
     }
 
-    function getInputName(inputDeviceId, inputControlId) {
-        const input = availableInputs.find(
-            i => i.inputDeviceId === inputDeviceId && i.inputControlId === inputControlId
-        );
-        return input?.name || `${inputDeviceId}_${inputControlId}`;
+    function getInputName(inputId) {
+        const input = availableInputs.find(i => i.id === inputId);
+        return input?.name || 'Unknown Input';
     }
 
     function getDeviceName(deviceId) {
@@ -248,40 +216,35 @@
         const actionType = trigger.actionType || 'animation';
 
         if (trigger.triggerType === 'always') {
-            const deviceName = getDeviceName(trigger.targetDeviceIds[0]);
-            const animationName = getAnimationDisplayName(trigger.animationName);
+            const deviceName = getDeviceName(trigger.deviceId);
+            const animationName = getAnimationDisplayName(trigger.animation?.id);
             return `Always → ${animationName} → ${deviceName}`;
         }
 
-        const inputName = getInputName(trigger.inputDeviceId, trigger.inputControlId);
+        const input = availableInputs.find(i => i.id === trigger.inputId);
+        const inputName = input?.name || 'Unknown Input';
         const typeLabel = trigger.triggerType === 'pressed' ? 'Pressed' : 'Not Pressed';
 
         if (actionType === 'animation') {
-            const deviceName = getDeviceName(trigger.targetDeviceIds[0]);
-            const animationName = getAnimationDisplayName(trigger.animationName);
+            const deviceName = getDeviceName(trigger.deviceId);
+            const animationName = getAnimationDisplayName(trigger.animation?.id);
             return `${inputName} → ${typeLabel} → ${animationName} → ${deviceName}`;
         } else {
-            const deviceName = getDeviceName(trigger.setValueDeviceId);
-            const channelCount = Object.keys(trigger.channelValues || {}).length;
+            const deviceName = getDeviceName(trigger.deviceId);
+            const channelCount = Object.keys(trigger.values?.channelValues || {}).length;
             return `${inputName} → ${typeLabel} → Set ${channelCount} channel(s) → ${deviceName}`;
         }
     }
 
     // Get input preview color
     function getInputPreview(trigger) {
-        const input = availableInputs.find(
-            i => i.inputDeviceId === trigger.inputDeviceId &&
-                 i.inputControlId === trigger.inputControlId
-        );
+        const input = availableInputs.find(i => i.id === trigger.inputId);
         return input?.color ? paletteColorToHex(input.color) : '#888';
     }
 
     // Get input type label (On/Off/Up/Down)
     function getInputTypeLabel(trigger) {
-        const input = availableInputs.find(
-            i => i.inputDeviceId === trigger.inputDeviceId &&
-                 i.inputControlId === trigger.inputControlId
-        );
+        const input = availableInputs.find(i => i.id === trigger.inputId);
 
         if (!input) return trigger.triggerType === 'pressed' ? 'Down' : 'Up';
 
@@ -366,7 +329,7 @@
 
     // Get preview for value-based trigger
     function getValuePreview(trigger) {
-        const device = devices.find(d => d.id === trigger.setValueDeviceId);
+        const device = devices.find(d => d.id === trigger.deviceId);
         if (!device) return '#888';
 
         const deviceType = DEVICE_TYPES[device.type];
@@ -374,22 +337,22 @@
 
         // Build values array from channelValues
         const values = new Array(deviceType.channels).fill(0);
-        for (const [channelIndex, value] of Object.entries(trigger.channelValues || {})) {
+        for (const [channelIndex, value] of Object.entries(trigger.values?.channelValues || {})) {
             values[parseInt(channelIndex)] = value;
         }
 
         return getDeviceColor(device.type, values);
     }
 
-    // Get all special controls being set by a setValue trigger
+    // Get all special controls being set by a values trigger
     function getSpecialControls(trigger) {
-        if (trigger.actionType !== 'setValue') return null;
+        if (trigger.actionType !== 'values') return null;
 
-        const device = devices.find(d => d.id === trigger.setValueDeviceId);
+        const device = devices.find(d => d.id === trigger.deviceId);
         if (!device) return null;
 
         // Check which channels are being set
-        const channelIndices = Object.keys(trigger.channelValues || {}).map(k => parseInt(k));
+        const channelIndices = Object.keys(trigger.values?.channelValues || {}).map(k => parseInt(k));
         if (channelIndices.length === 0) return null;
 
         const deviceType = DEVICE_TYPES[device.type];
@@ -415,9 +378,9 @@
         return specialControls.length > 0 ? specialControls : null;
     }
 
-    // Get the value for a specific control in a setValue trigger
+    // Get the value for a specific control in a values trigger
     function getControlValue(trigger, controlName) {
-        const device = devices.find(d => d.id === trigger.setValueDeviceId);
+        const device = devices.find(d => d.id === trigger.deviceId);
         if (!device) return 0;
 
         const deviceType = DEVICE_TYPES[device.type];
@@ -427,16 +390,12 @@
         const channelIndex = deviceType.components.findIndex(c => c.name === controlName);
         if (channelIndex === -1) return 0;
 
-        return trigger.channelValues?.[channelIndex] || 0;
+        return trigger.values?.channelValues?.[channelIndex] || 0;
     }
 
-    // Get device ID from trigger (works for both animation and setValue actions)
+    // Get device ID from trigger (unified property)
     function getTriggerDeviceId(trigger) {
-        if (trigger.actionType === 'animation') {
-            return trigger.targetDeviceIds?.[0];
-        } else {
-            return trigger.setValueDeviceId;
-        }
+        return trigger.deviceId;
     }
 
     // Get device preview based on default values
