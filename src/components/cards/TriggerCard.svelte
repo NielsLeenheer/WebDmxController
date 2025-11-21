@@ -42,17 +42,19 @@
 
 	<!-- Column 2: Device -->
 	<div class="trigger-column trigger-device-column">
-		{@const devicePreview = getDevicePreviewControls(trigger)}
-		<Preview
-			type="device"
-			size="medium"
-			controls={devicePreview.controls}
-			data={devicePreview.data}
-			class="trigger-preview"
-		/>
-		<div class="trigger-text">
-			{getTriggerDeviceName(trigger)}
-		</div>
+		{#if true}
+			{@const devicePreview = getDevicePreviewControls(trigger)}
+			<Preview
+				type="device"
+				size="medium"
+				controls={devicePreview.controls}
+				data={devicePreview.data}
+				class="trigger-preview"
+			/>
+			<div class="trigger-text">
+				{getTriggerDeviceName(trigger)}
+			</div>
+		{/if}
 	</div>
 
 	<!-- Column 3: Action -->
