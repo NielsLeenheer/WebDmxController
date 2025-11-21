@@ -1,5 +1,5 @@
 <script>
-	import { deviceLibrary } from '../../lib/libraries.svelte.js';
+	import { deviceLibrary, animationLibrary } from '../../lib/libraries.svelte.js';
 	import DraggableCard from '../common/DraggableCard.svelte';
 	import Preview from '../common/Preview.svelte';
 	import IconButton from '../common/IconButton.svelte';
@@ -13,14 +13,13 @@
 		getInputName,
 		getInputTypeLabel,
 		getInputPreview,
-		getAnimationDisplayName,
-		getAnimationPreview,
 		getSpecialControls,
 		getControlValue,
 		getValuePreview
 	} = $props();
 
 	let device = $derived(deviceLibrary.get(trigger.deviceId));
+	let animation = $derived(trigger.animation?.id ? animationLibrary.get(trigger.animation.id) : null);
 </script>
 
 <DraggableCard {dnd} item={trigger} class="trigger-card">
@@ -62,11 +61,11 @@
 			<Preview
 				type="animation"
 				size="medium"
-				data={{ color: getAnimationPreview(trigger.animation?.id) }}
+				data={animation}
 				class="trigger-preview"
 			/>
 			<div class="trigger-text">
-				{getAnimationDisplayName(trigger.animation?.id)}
+				{animation?.name || 'Unknown'}
 			</div>
 		{:else}
 			{@const specialControls = getSpecialControls(trigger)}

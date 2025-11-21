@@ -1,6 +1,7 @@
 <script>
     import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { getDeviceColor } from '../../lib/colorUtils.js';
+    import { Animation } from '../../lib/animations.js';
 
     /**
      * Preview Component
@@ -10,7 +11,7 @@
      * @prop {string} type - Type of preview: 'device', 'controls', 'animation', 'input'
      * @prop {string} size - Size: 'small', 'medium', 'large' (default: 'medium')
      * @prop {Array<string>} controls - Array of control types to stack (for type='controls')
-     * @prop {Object} data - Data for rendering the preview (device object for type='device', control values for type='controls')
+     * @prop {Object} data - Data for rendering (device object, animation object, or control values)
      * @prop {Object} euler - Euler angles for 3D rotation: { roll, pitch, yaw } (optional)
      */
 
@@ -22,6 +23,78 @@
         euler = null,
         class: className = '',
     } = $props();
+
+    // Generate animation preview gradient
+    function generateAnimationPreview(animation) {
+        if (!animation) return '#888';
+        
+        // Check if animation has color-related controls
+        const hasColor = animation.controls && (
+            animation.controls.includes('Color') ||
+            animation.controls.includes('Amber') ||
+            animation.controls.includes('White')
+        );
+
+        if (!hasColor || !animation.keyframes || animation.keyframes.length === 0) {
+            return '#888';
+        }
+
+        // Get control and component data for the animation
+        const { controls, components } = Animation.getControlsForRendering(animation);
+
+        // Extract colors from each keyframe
+        const colors = animation.keyframes.map(keyframe => {
+            const values = keyframe.values || [];
+
+            // Find Color control
+            const colorControl = controls.find(c => c.name === 'Color' && c.type === 'rgb');
+            let r = 0, g = 0, b = 0;
+
+            if (colorControl) {
+                const rIdx = colorControl.components.r;
+                const gIdx = colorControl.components.g;
+                const bIdx = colorControl.components.b;
+                r = values[rIdx] || 0;
+                g = values[gIdx] || 0;
+                b = values[bIdx] || 0;
+            }
+
+            // Add Amber if present
+            const amberControl = controls.find(c => c.name === 'Amber' && c.type === 'slider');
+            if (amberControl) {
+                const amberIdx = amberControl.components.value;
+                const amber = values[amberIdx] || 0;
+                // Amber is #FFBF00 - adds to red and green
+                r = Math.min(255, r + (255 * amber / 255));
+                g = Math.min(255, g + (191 * amber / 255));
+            }
+
+            // Add White if present
+            const whiteControl = controls.find(c => c.name === 'White' && c.type === 'slider');
+            if (whiteControl) {
+                const whiteIdx = whiteControl.components.value;
+                const white = values[whiteIdx] || 0;
+                // White adds equally to all channels
+                r = Math.min(255, r + white);
+                g = Math.min(255, g + white);
+                b = Math.min(255, b + white);
+            }
+
+            return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+        });
+
+        // Create stepped gradient with equal steps
+        const numSteps = colors.length;
+        const stepSize = 100 / numSteps;
+
+        const gradientStops = colors.map((color, index) => {
+            const start = index * stepSize;
+            const end = (index + 1) * stepSize;
+            return `${color} ${start}% ${end}%`;
+        }).join(', ');
+
+        return `linear-gradient(90deg, ${gradientStops})`;
+    }
 
     // Extract controls and data from device object if type is 'device'
     const effectiveControls = $derived(() => {
@@ -202,10 +275,11 @@
         {/each}
 
     {:else if type === 'animation'}
-        <!-- Animation color/gradient preview -->
+        <!-- Animation preview with gradient -->
+        {@const animationPreview = generateAnimationPreview(data)}
         <div 
             class="preview-animation" 
-            style="background: {effectiveData().color || '#888'}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
+            style="background: {animationPreview}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
         ></div>
 
     {:else if type === 'input'}
