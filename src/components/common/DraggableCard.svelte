@@ -104,6 +104,7 @@
 		border-radius: 8px;
 		padding: 15px;
 		transition: opacity 0.2s, transform 0.2s;
+		position: relative;
 	}
 
 	/* Cursor styles when dragging by card (whole card is draggable) */
