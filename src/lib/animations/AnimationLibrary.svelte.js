@@ -28,7 +28,8 @@ export class AnimationLibrary extends Library {
 			displayName: displayName || null,
 			keyframes: [],
 			cssName: toCSSIdentifier(name),
-			order: this.items.length
+			order: this.items.length,
+			version: 0
 		};
 
 		return this.add(animation);
@@ -76,6 +77,7 @@ export class AnimationLibrary extends Library {
 		animation.keyframes.push(keyframe);
 		// Sort keyframes by time
 		animation.keyframes.sort((a, b) => a.time - b.time);
+		animation.version = (animation.version || 0) + 1;
 		this.save();
 	}
 
@@ -89,6 +91,7 @@ export class AnimationLibrary extends Library {
 		if (!animation) return;
 
 		animation.keyframes.splice(keyframeIndex, 1);
+		animation.version = (animation.version || 0) + 1;
 		this.save();
 	}
 

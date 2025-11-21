@@ -2,6 +2,7 @@
     import Dialog from '../common/Dialog.svelte';
     import Button from '../common/Button.svelte';
     import Controls from '../controls/Controls.svelte';
+    import { Animation } from '../../lib/animations.js';
     import removeIcon from '../../assets/icons/remove.svg?raw';
 
     let {
@@ -11,7 +12,6 @@
     } = $props();
 
     // Keyframe editing
-    let editingKeyframeValues = $state([0, 0, 0]);
     let selectedKeyframeIndex = $state(null);
     let editDialog = $state(null);
     let editButtonRef = $state(null);
@@ -25,45 +25,31 @@
     let dragStartX = $state(0);
     let dragStartTime = $state(0);
     let hasActuallyDragged = $state(false);
-
-    // Local state for immediate UI updates without expensive animation saves
+    
+    // Local state for smooth dragging and consistent display
     let localKeyframes = $state([]);
-    let localVersion = $state(0);
-    let lastSyncedVersion = $state(0); // Track which animation version we last synced
+    let isDragging = $state(false);
 
-    // Watch for animation changes and sync to local state
+    // Sync local keyframes from animation when external changes occur (but not during drag)
     $effect(() => {
-        if (animation) {
-            const currentVersion = animation.version || 0;
-            if (currentVersion !== lastSyncedVersion) {
-                // External change detected - sync from animation to local state
-                // Use structuredClone to deep copy plain objects from animation
-                localKeyframes = structuredClone(animation.keyframes);
-                lastSyncedVersion = currentVersion;
-                localVersion++;
-            }
+        if (!isDragging && animation) {
+            localKeyframes = $state.snapshot(animation.keyframes);
         }
     });
 
-    // Display keyframes from local state
-    let displayKeyframes = $derived.by(() => {
-        localVersion; // Make reactive to local changes
-        return localKeyframes;
-    });
+    // Always display from local keyframes
+    let displayKeyframes = $derived(localKeyframes);
 
     // Gradient segments for visualization using local keyframes
     let gradientSegments = $derived.by(() => {
-        localVersion; // Make reactive to local changes
-
         if (!animation || localKeyframes.length < 2) return [];
 
         const segments = [];
-        const keyframes = localKeyframes;
 
         // Extend gradient from 0% if first keyframe is after the start
-        const firstKeyframe = keyframes[0];
+        const firstKeyframe = localKeyframes[0];
         if (firstKeyframe.time > 0) {
-            const color = animation.getKeyframeColor(firstKeyframe);
+            const color = Animation.getKeyframeColor(firstKeyframe);
             segments.push({
                 left: 0,
                 width: firstKeyframe.time * timelineWidth,
@@ -72,12 +58,12 @@
         }
 
         // Create segments between keyframes
-        for (let i = 0; i < keyframes.length - 1; i++) {
-            const kf1 = keyframes[i];
-            const kf2 = keyframes[i + 1];
+        for (let i = 0; i < localKeyframes.length - 1; i++) {
+            const kf1 = localKeyframes[i];
+            const kf2 = localKeyframes[i + 1];
 
-            const color1 = animation.getKeyframeColor(kf1);
-            const color2 = animation.getKeyframeColor(kf2);
+            const color1 = Animation.getKeyframeColor(kf1);
+            const color2 = Animation.getKeyframeColor(kf2);
 
             const left = kf1.time * timelineWidth;
             const width = (kf2.time - kf1.time) * timelineWidth;
@@ -90,9 +76,9 @@
         }
 
         // Extend gradient to 100% if last keyframe is before the end
-        const lastKeyframe = keyframes[keyframes.length - 1];
+        const lastKeyframe = localKeyframes[localKeyframes.length - 1];
         if (lastKeyframe.time < 1) {
-            const color = animation.getKeyframeColor(lastKeyframe);
+            const color = Animation.getKeyframeColor(lastKeyframe);
             const left = lastKeyframe.time * timelineWidth;
             const width = (1 - lastKeyframe.time) * timelineWidth;
 
@@ -107,12 +93,10 @@
     });
 
     function getKeyframePosition(keyframe) {
-        localVersion; // Make reactive to local changes
         return keyframe.time * timelineWidth;
     }
 
     function getKeyframePercentage(keyframe) {
-        localVersion; // Make reactive to local changes
         return (keyframe.time * 100).toFixed(0);
     }
 
@@ -120,10 +104,6 @@
         if (!animation) return;
 
         selectedKeyframeIndex = index;
-        const keyframe = localKeyframes[index];
-
-        // Load keyframe values into editor
-        editingKeyframeValues = [...keyframe.values];
         editButtonRef = buttonElement;
 
         // Show dialog after a brief delay to ensure keyframe is rendered
@@ -133,58 +113,43 @@
     }
 
     function closeEditDialog() {
+        // Save changes to library when dialog closes
+        if (selectedKeyframeIndex !== null) {
+            animationLibrary.updateKeyframe(animation.id, selectedKeyframeIndex, {
+                values: [...localKeyframes[selectedKeyframeIndex].values]
+            });
+            
+            if (onUpdate) onUpdate();
+        }
+
         editDialog?.close();
         selectedKeyframeIndex = null;
         editButtonRef = null;
     }
 
-    function updateKeyframeValues() {
-        if (!animation || selectedKeyframeIndex === null) return;
-
-        // Update in local keyframes first
-        const keyframe = localKeyframes[selectedKeyframeIndex];
-        keyframe.values = [...editingKeyframeValues];
-        localVersion++;
-
-        // Sync to animation using snapshot to unwrap Svelte proxies
-        animation.keyframes = $state.snapshot(localKeyframes);
-        animation.version = (animation.version || 0) + 1;
-        lastSyncedVersion = animation.version;
-
-        animationLibrary.save();
-        if (onUpdate) onUpdate();
-    }
-
     function confirmDeleteKeyframe() {
         if (!animation || selectedKeyframeIndex === null) return;
 
-        if (localKeyframes.length <= 2) {
+        if (animation.keyframes.length <= 2) {
             alert('Animation must have at least 2 keyframes');
             return;
         }
 
-        if (confirm(`Delete keyframe at ${(localKeyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%?`)) {
+        if (confirm(`Delete keyframe at ${(animation.keyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%?`)) {
             deleteKeyframe(selectedKeyframeIndex);
             closeEditDialog();
         }
     }
 
     function deleteKeyframe(index) {
-        if (!animation || localKeyframes.length <= 2) {
+        if (!animation || animation.keyframes.length <= 2) {
             alert('Animation must have at least 2 keyframes');
             return;
         }
 
-        // Remove from local keyframes
-        localKeyframes = localKeyframes.filter((_, i) => i !== index);
-        localVersion++;
+        // Use library method to remove keyframe
+        animationLibrary.removeKeyframe(animation.id, index);
 
-        // Sync to animation using snapshot to unwrap Svelte proxies
-        animation.keyframes = $state.snapshot(localKeyframes);
-        animation.version = (animation.version || 0) + 1;
-        lastSyncedVersion = animation.version;
-
-        animationLibrary.save();
         if (onUpdate) onUpdate();
         selectedKeyframeIndex = null;
     }
@@ -216,11 +181,13 @@
         if (exists) return;
 
         // Get interpolated values at this time
-        const values = animation.getValuesAtTime(roundedTime);
+        const values = Animation.getValuesAtTime(animation, roundedTime);
 
-        // Add new keyframe
-        animation.addKeyframe(roundedTime, values);
-        animationLibrary.save();
+        // Add new keyframe using library method
+        const deviceType = animation.keyframes[0]?.deviceType || 'RGB';
+        animationLibrary.addKeyframe(animation.id, roundedTime, deviceType, values);
+
+        if (onUpdate) onUpdate();
         if (onUpdate) onUpdate();
 
         // Select the new keyframe for editing
@@ -242,6 +209,7 @@
         e.preventDefault();
         e.stopPropagation();
 
+        isDragging = true;
         draggingKeyframe = { keyframe, index };
         dragStartX = e.clientX;
         dragStartTime = keyframe.time;
@@ -275,7 +243,7 @@
             return;
         }
 
-        // Update time in local keyframes only
+        // Update time in local keyframes only (for smooth dragging)
         draggingKeyframe.keyframe.time = newTime;
 
         // Re-sort local keyframes by time (create new array for proper reactivity)
@@ -284,35 +252,27 @@
         // Update the dragging index in case it changed due to sorting
         draggingKeyframe.index = localKeyframes.indexOf(draggingKeyframe.keyframe);
 
-        // Increment only local version (no animation.version, no expensive save)
-        localVersion++;
-
         if (Math.abs(deltaX) > 3) {
             hasActuallyDragged = true;
         }
-
-        // Don't call onUpdate during drag - wait until mouseup
     }
 
     function handleKeyframeMouseUp() {
         try {
-            // Only sync and save if we actually dragged
+            // Only save if we actually dragged
             if (draggingKeyframe && animation && hasActuallyDragged) {
-                // Sync back to animation using snapshot to unwrap Svelte proxies
-                animation.keyframes = $state.snapshot(localKeyframes);
-                animation.version = (animation.version || 0) + 1;
-                lastSyncedVersion = animation.version;
-
-                animationLibrary.save();
+                // Use library method to update the keyframe's time
+                const newTime = draggingKeyframe.keyframe.time;
+                animationLibrary.updateKeyframe(animation.id, draggingKeyframe.index, { time: newTime });
+                
                 if (onUpdate) onUpdate();
             }
         } finally {
-            // Always cleanup event listeners, even if an error occurred
+            // Always cleanup event listeners and state
+            isDragging = false;
             draggingKeyframe = null;
             document.removeEventListener('mousemove', handleKeyframeMouseMove);
             document.removeEventListener('mouseup', handleKeyframeMouseUp);
-
-            // Reset drag detection immediately for next interaction
             hasActuallyDragged = false;
         }
     }
@@ -335,12 +295,12 @@
         {/each}
 
         <!-- Keyframe markers -->
-        {#each displayKeyframes as keyframe, index (keyframe.time + '-' + index + '-' + animation.version)}
+        {#each displayKeyframes as keyframe, index (keyframe.time + '-' + index)}
             <div
                 id="keyframe-{animation.name}-{index}"
                 class="timeline-keyframe-marker"
                 class:dragging={draggingKeyframe?.keyframe === keyframe}
-                style="left: {getKeyframePosition(keyframe)}px; --keyframe-color: {animation.getKeyframeColor(keyframe)}; anchor-name: --keyframe-{animation.name}-{index}"
+                style="left: {getKeyframePosition(keyframe)}px; --keyframe-color: {Animation.getKeyframeColor(keyframe)}; anchor-name: --keyframe-{animation.name}-{index}"
                 onmousedown={(e) => handleKeyframeMouseDown(e, keyframe, index)}
                 onclick={(e) => {
                     e.stopPropagation();
@@ -370,9 +330,8 @@
     title="Keyframe at {(localKeyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%"
 >
     <Controls
-        {...animation.getControlsForRendering()}
-        bind:values={editingKeyframeValues}
-        onChange={updateKeyframeValues}
+        {...Animation.getControlsForRendering(animation)}
+        bind:values={localKeyframes[selectedKeyframeIndex].values}
     />
 
     {#snippet tools()}

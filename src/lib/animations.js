@@ -83,10 +83,10 @@ export class Animation {
 
 	/**
 	 * Get controls and components arrays for rendering
-	 * Returns {controls: [], components: []} needed by the Controls component
+	 * Static helper version
 	 */
-	getControlsForRendering() {
-		if (!this.controls || this.controls.length === 0) {
+	static getControlsForRendering(animation) {
+		if (!animation.controls || animation.controls.length === 0) {
 			// Fallback: use RGB device controls
 			return {
 				controls: DEVICE_TYPES.RGB.controls,
@@ -96,13 +96,13 @@ export class Animation {
 
 		// Find a device type that has all the required controls
 		for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
-			const hasAllControls = this.controls.every(controlName =>
+			const hasAllControls = animation.controls.every(controlName =>
 				deviceDef.controls.some(c => c.name === controlName)
 			);
 			if (hasAllControls) {
 				// Filter to only the controls we want
 				const filteredControls = deviceDef.controls.filter(c =>
-					this.controls.includes(c.name)
+					animation.controls.includes(c.name)
 				);
 				return {
 					controls: filteredControls,
@@ -116,6 +116,14 @@ export class Animation {
 			controls: DEVICE_TYPES.RGB.controls,
 			components: DEVICE_TYPES.RGB.components
 		};
+	}
+
+	/**
+	 * Get controls and components arrays for rendering
+	 * Instance method for backwards compatibility
+	 */
+	getControlsForRendering() {
+		return Animation.getControlsForRendering(this);
 	}
 
 	/**
@@ -194,24 +202,31 @@ export class Animation {
 
 	/**
 	 * Get color for a keyframe (for visualization)
+	 * Static helper version
 	 */
-	getKeyframeColor(keyframe) {
-		// Use the keyframe's own deviceType (keyframes store deviceType for rendering)
+	static getKeyframeColor(keyframe) {
 		return getDeviceColor(keyframe.deviceType, keyframe.values);
 	}
 
 	/**
-	 * Get interpolated values at a specific time
+	 * Get color for a keyframe (for visualization)
+	 * Instance method for backwards compatibility
 	 */
-	getValuesAtTime(time) {
-		if (this.keyframes.length === 0) {
-			// No keyframes - return zeros based on controls
-			const { components } = this.getControlsForRendering();
-			const numChannels = components.length;
-			return new Array(numChannels).fill(0);
+	getKeyframeColor(keyframe) {
+		return Animation.getKeyframeColor(keyframe);
+	}
+
+	/**
+	 * Get interpolated values at a specific time
+	 * Static helper version
+	 */
+	static getValuesAtTime(animation, time) {
+		if (!animation.keyframes || animation.keyframes.length === 0) {
+			// No keyframes - return zeros (default to RGB)
+			return [0, 0, 0];
 		}
 
-		const sortedKeyframes = [...this.keyframes].sort((a, b) => a.time - b.time);
+		const sortedKeyframes = [...animation.keyframes].sort((a, b) => a.time - b.time);
 
 		// Before first keyframe - use first keyframe values
 		if (time <= sortedKeyframes[0].time) {
@@ -243,6 +258,14 @@ export class Animation {
 
 		// Fallback - shouldn't reach here
 		return [...sortedKeyframes[0].values];
+	}
+
+	/**
+	 * Get interpolated values at a specific time
+	 * Instance method for backwards compatibility
+	 */
+	getValuesAtTime(time) {
+		return Animation.getValuesAtTime(this, time);
 	}
 
 	/**
