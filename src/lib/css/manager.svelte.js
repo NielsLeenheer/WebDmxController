@@ -130,9 +130,10 @@ export class CSSManager {
 
 	/**
 	 * Get generated CSS (read-only)
+	 * Dynamically generates CSS from current library state
 	 */
 	get generatedCSS() {
-		return this._generatedCSS;
+		return this.cssGenerator.generate(this.devices);
 	}
 
 	/**
