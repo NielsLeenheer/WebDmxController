@@ -98,13 +98,8 @@
         }
         const cssClassName = `${baseClassName}-${suffix}`;
 
-        const triggerName = result.actionType === 'animation'
-            ? `${input.name}_${result.triggerType}_${result.animation}`
-            : `${input.name}_${result.triggerType}_setValue`;
-
         // Create trigger using library method
         triggerLibrary.create({
-            name: triggerName,
             triggerType: result.triggerType,
             actionType: result.actionType,
             inputDeviceId: input.inputDeviceId,
@@ -130,7 +125,6 @@
 
         // Create trigger using library method
         triggerLibrary.create({
-            name: `always_${result.animation}`,
             triggerType: 'always',
             inputDeviceId: null,
             inputControlId: null,
@@ -162,8 +156,7 @@
                 animationName: result.animation,
                 duration: result.duration,
                 easing: result.easing,
-                iterations: result.looping ? 'infinite' : 1,
-                name: `always_${result.animation}`
+                iterations: result.looping ? 'infinite' : 1
             });
         } else {
             // Manual trigger
