@@ -3,6 +3,7 @@
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+	import { Input } from '../../lib/inputs.js';
 	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
@@ -64,7 +65,7 @@
 			i.inputDeviceId === deviceId && i.inputControlId === controlId
 		);
 
-		if (!input || !input.isButtonInput()) {
+		if (!input || !Input.isButtonInput(input)) {
 			return [
 				{ value: 'pressed', label: 'Pressed' },
 				{ value: 'not-pressed', label: 'Not Pressed' }
