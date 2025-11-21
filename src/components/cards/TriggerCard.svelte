@@ -1,4 +1,5 @@
 <script>
+	import { deviceLibrary } from '../../lib/libraries.svelte.js';
 	import DraggableCard from '../common/DraggableCard.svelte';
 	import Preview from '../common/Preview.svelte';
 	import IconButton from '../common/IconButton.svelte';
@@ -12,14 +13,14 @@
 		getInputName,
 		getInputTypeLabel,
 		getInputPreview,
-		getDevicePreviewControls,
-		getTriggerDeviceName,
 		getAnimationDisplayName,
 		getAnimationPreview,
 		getSpecialControls,
 		getControlValue,
 		getValuePreview
 	} = $props();
+
+	let device = $derived(deviceLibrary.get(trigger.deviceId));
 </script>
 
 <DraggableCard {dnd} item={trigger} class="trigger-card">
@@ -42,17 +43,15 @@
 
 	<!-- Column 2: Device -->
 	<div class="trigger-column trigger-device-column">
-		{#if true}
-			{@const devicePreview = getDevicePreviewControls(trigger)}
+		{#if device}
 			<Preview
 				type="device"
 				size="medium"
-				controls={devicePreview.controls}
-				data={devicePreview.data}
+				data={device}
 				class="trigger-preview"
 			/>
 			<div class="trigger-text">
-				{getTriggerDeviceName(trigger)}
+				{device.name}
 			</div>
 		{/if}
 	</div>
@@ -73,7 +72,7 @@
 			{@const specialControls = getSpecialControls(trigger)}
 			{#if specialControls}
 				<Preview
-					type="device"
+					type="controls"
 					size="medium"
 					controls={specialControls}
 					data={{
@@ -85,7 +84,7 @@
 				/>
 			{:else}
 				<Preview
-					type="device"
+					type="controls"
 					size="medium"
 					controls={['color']}
 					data={{ color: getValuePreview(trigger) }}

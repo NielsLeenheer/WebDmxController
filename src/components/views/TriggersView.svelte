@@ -401,23 +401,6 @@
         return getDeviceColor(device.type, device.defaultValues);
     }
 
-    // Get device controls and data for preview based on device type
-    function getDevicePreviewControls(trigger) {
-        const deviceId = getTriggerDeviceId(trigger);
-        const device = devices.find(d => d.id === deviceId);
-        if (!device) {
-            return { controls: [], data: {} };
-        }
-
-        return getDevicePreviewData(device.type, device.defaultValues);
-    }
-
-    // Get device name from trigger
-    function getTriggerDeviceName(trigger) {
-        const deviceId = getTriggerDeviceId(trigger);
-        return getDeviceName(deviceId);
-    }
-
     // Helper functions for channel value management
     function getSelectedDevice(deviceId) {
         return devices.find(d => d.id === deviceId);
@@ -480,8 +463,6 @@
                     {getInputName}
                     {getInputTypeLabel}
                     {getInputPreview}
-                    {getDevicePreviewControls}
-                    {getTriggerDeviceName}
                     {getAnimationDisplayName}
                     {getAnimationPreview}
                     {getSpecialControls}
