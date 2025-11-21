@@ -35,7 +35,7 @@ export class InputController {
 
 		// Listen for input changes to initialize pressure for new inputs
 		this.inputLibrary.on('changed', ({ type, input }) => {
-			if (type === 'add' && input.name && input.isButtonInput()) {
+			if (type === 'add' && input.name && Input.isButtonInput(input)) {
 				this.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
 			}
 
@@ -215,7 +215,7 @@ export class InputController {
 
 		// Handle input CSS classes and properties
 		if (input) {
-			if (input.isButtonInput()) {
+			if (Input.isButtonInput(input)) {
 				// Handle toggle vs momentary mode
 				const buttonMode = input.buttonMode || 'momentary';
 
@@ -277,7 +277,7 @@ export class InputController {
 		const input = this.inputLibrary.findByDeviceControl(deviceId, controlId);
 
 		// Handle input CSS classes and properties
-		if (input && input.isButtonInput()) {
+		if (input && Input.isButtonInput(input)) {
 			// Handle toggle vs momentary mode
 			const buttonMode = input.buttonMode || 'momentary';
 
@@ -405,7 +405,7 @@ export class InputController {
 		const inputs = this.inputLibrary.getAll();
 
 		for (const input of inputs) {
-			if (input.name && input.isButtonInput()) {
+			if (input.name && Input.isButtonInput(input)) {
 				// Initialize to 0%
 				this.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
 			}
