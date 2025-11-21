@@ -221,12 +221,6 @@ export class CSSManager {
 		// Stop sampling
 		this.stopSampling();
 
-		// Remove event listeners
-		this.deviceLibrary.off('changed', this.handleDeviceChange);
-		this.inputLibrary.off('changed', this.handleInputChange);
-		this.triggerLibrary.off('changed', this.handleTriggerChange);
-		this.animationLibrary.off('changed', this.handleAnimationChange);
-
 		// Remove DOM elements
 		if (this.animationTargetsContainer && this.animationTargetsContainer.parentNode) {
 			this.animationTargetsContainer.parentNode.removeChild(this.animationTargetsContainer);
