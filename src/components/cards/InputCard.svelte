@@ -34,22 +34,6 @@
 			{input.inputDeviceName || input.inputDeviceId}
 		</div>
 	</div>
-	{#if input.inputControlId === 'button' && eulerAngles}
-		<div class="thingy-euler-preview">
-			<div class="euler-axis">
-				<span class="euler-label">Roll:</span>
-				<span class="euler-value">{eulerAngles.roll.toFixed(0)}°</span>
-			</div>
-			<div class="euler-axis">
-				<span class="euler-label">Pitch:</span>
-				<span class="euler-value">{eulerAngles.pitch.toFixed(0)}°</span>
-			</div>
-			<div class="euler-axis">
-				<span class="euler-label">Yaw:</span>
-				<span class="euler-value">{eulerAngles.yaw.toFixed(0)}°</span>
-			</div>
-		</div>
-	{/if}
 	<div class="input-state">
 		{stateDisplay}
 	</div>
@@ -133,35 +117,5 @@
 	:global(.input-card) .edit-button :global(svg) {
 		width: 20px;
 		height: 20px;
-	}
-
-	/* Thingy:52 Euler angle preview */
-	:global(.input-card) .thingy-euler-preview {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		padding: 8px 12px;
-		background: #f6f6f6;
-		border-radius: 4px;
-		margin: 8px 0;
-		font-family: var(--font-stack-mono);
-	}
-
-	:global(.input-card) .euler-axis {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		font-size: 10pt;
-	}
-
-	:global(.input-card) .euler-label {
-		color: #666;
-		font-weight: 500;
-	}
-
-	:global(.input-card) .euler-value {
-		color: #2563eb;
-		font-weight: 600;
-		font-variant-numeric: tabular-nums;
 	}
 </style>
