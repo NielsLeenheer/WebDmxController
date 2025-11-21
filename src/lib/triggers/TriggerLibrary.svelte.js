@@ -47,23 +47,6 @@ export class TriggerLibrary extends Library {
 	}
 
 
-
-	/**
-	 * Update trigger properties
-	 * @param {string} id - Trigger ID
-	 * @param {Object} updates - Properties to update
-	 * @returns {boolean} Success status
-	 */
-	update(id, updates) {
-		const trigger = this.get(id);
-		if (!trigger) return false;
-
-		// Apply updates
-		Object.assign(trigger, updates);
-
-		this.save();
-		return true;
-	}
 	/**
 	 * Generate CSS for all triggers
 	 * @param {Array} devices - Array of device objects

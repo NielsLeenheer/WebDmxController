@@ -41,19 +41,12 @@ export class AnimationLibrary extends Library {
 	 * @returns {boolean} Success status
 	 */
 	update(id, updates) {
-		const animation = this.get(id);
-		if (!animation) return false;
-
-		// Apply updates
-		Object.assign(animation, updates);
-
 		// Update CSS name if name changed
 		if (updates.name) {
-			animation.cssName = toCSSIdentifier(updates.name);
+			updates.cssName = toCSSIdentifier(updates.name);
 		}
 
-		this.save();
-		return true;
+		return super.update(id, updates);
 	}
 
 	/**

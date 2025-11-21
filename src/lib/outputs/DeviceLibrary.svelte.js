@@ -73,20 +73,15 @@ export class DeviceLibrary extends Library {
 	 * Update device properties (name, startChannel, etc.)
 	 * @param {string} deviceId - Device ID
 	 * @param {Object} updates - Properties to update
+	 * @returns {boolean} Success status
 	 */
 	update(deviceId, updates) {
-		const device = this.get(deviceId);
-		if (!device) return;
-
-		// Apply updates
-		Object.assign(device, updates);
-
 		// Update CSS ID if name changed
 		if (updates.name) {
-			device.cssId = toCSSIdentifier(updates.name);
+			updates.cssId = toCSSIdentifier(updates.name);
 		}
 
-		this.save();
+		return super.update(deviceId, updates);
 	}
 
 	/**

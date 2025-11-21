@@ -94,6 +94,23 @@ export class Library {
 	}
 
 	/**
+	 * Update item properties
+	 * @param {string} id - Item ID
+	 * @param {Object} updates - Properties to update
+	 * @returns {boolean} Success status
+	 */
+	update(id, updates) {
+		const item = this.get(id);
+		if (!item) return false;
+
+		// Apply updates
+		Object.assign(item, updates);
+
+		this.save();
+		return true;
+	}
+
+	/**
 	 * Reorder items based on drag and drop
 	 * @param {Array<string>} orderedIds - Array of item IDs in new visual order
 	 */

@@ -85,19 +85,17 @@ export class InputLibrary extends Library {
 	 * @returns {boolean} Success status
 	 */
 	update(id, updates) {
-		const input = this.get(id);
-		if (!input) return false;
-
-		// Apply updates
-		Object.assign(input, updates);
-
 		// Update CSS identifiers if name or buttonMode changed
 		if (updates.name !== undefined || updates.buttonMode !== undefined) {
+			const input = this.get(id);
+			if (!input) return false;
+			
+			// Apply updates temporarily to generate CSS identifiers
+			Object.assign(input, updates);
 			this.updateCSSIdentifiers(input);
 		}
 
-		this.save();
-		return true;
+		return super.update(id, updates);
 	}
 
 	/**
