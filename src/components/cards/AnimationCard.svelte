@@ -105,12 +105,13 @@
 			size="medium"
 			data={{ color: previewColor }}
 		/>
-		<div class="animation-info">
-			<h3>{animation.name}</h3>
-			<div class="badges">
-				<div class="target-badge">{displayName}</div>
-			</div>
+
+		<h3>{animation.name}</h3>
+
+		<div class="badge">
+			{displayName}
 		</div>
+
 		<IconButton
 			icon={editIcon}
 			onclick={() => onSettings?.(animation)}
@@ -126,15 +127,12 @@
 </DraggableCard>
 
 <style>
-	:global(.card-header) .animation-info {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-		flex: 1;
-		min-width: 0;
+
+	:global(.animation-card) {
+		width: 80vw;
 	}
 
-	:global(.card-header) .animation-info h3 {
+	:global(.card-header) h3 {
 		margin: 0;
 		font-size: 11pt;
 		font-weight: 600;
@@ -144,19 +142,14 @@
 		white-space: nowrap;
 	}
 
-	.badges {
-		display: flex;
-		gap: 6px;
-		flex-wrap: wrap;
-	}
-
-	.target-badge {
-		background: #e8f5e9;
-		color: #2e7d32;
-		padding: 2px 8px;
-		border-radius: 12px;
+	:global(.card-header) .badge {
+		background: #f6f6f6;
+		color: #888;
+		padding: 4px 8px;
+		border-radius: 6px;
 		font-size: 9pt;
 		font-weight: 500;
+		margin-left: 10px;
 	}
 
 	:global(.card-header) :global(.icon-button) {
