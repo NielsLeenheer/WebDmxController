@@ -2,6 +2,7 @@
     import { onMount, onDestroy } from 'svelte';
     import { Input } from '../../lib/inputs.js';
     import { paletteColorToHex, getUnusedFromPalette, getPalette } from '../../lib/inputs/colors.js';
+    import { toCSSIdentifier } from '../../lib/css/utils.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import InputCard from '../cards/InputCard.svelte';
     import Button from '../common/Button.svelte';
@@ -187,6 +188,11 @@
                 color: supportsColor ? getNextAvailableColor(deviceId) : null  // unique random color if supported
             });
 
+            // Initialize pressure property for button inputs
+            if (Input.isButtonInput(input)) {
+                inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
+            }
+
             if (supportsColor) {
                 registerColorUsage(deviceId, controlId, input.color);
 
@@ -300,6 +306,11 @@
 
                     // Use generic setColor method
                     await inputDevice.setColor(existingInput.inputControlId, color);
+
+                    // Update Thingy device LED color if it's a Thingy device
+                    if (inputDevice.type === 'bluetooth' && inputDevice.thingyDevice) {
+                        inputDevice.thingyDevice.setDeviceColor(result.color);
+                    }
                 }
             }
 

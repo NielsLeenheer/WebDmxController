@@ -33,22 +33,7 @@ export class InputController {
 		// Initialize pressure properties to 0% for all inputs
 		this._initializePressureProperties();
 
-		// Listen for input changes to initialize pressure for new inputs
-		this.inputLibrary.on('changed', ({ type, input }) => {
-			if (type === 'add' && input.name && Input.isButtonInput(input)) {
-				this.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
-			}
-
-			// Update Thingy LED color when input color changes
-			if (type === 'update') {
-				const device = this.inputDeviceManager.getInputDevices().find(
-					d => d.id === input.inputDeviceId && d.type === 'bluetooth' && d.thingyDevice
-				);
-				if (device && input.color) {
-					device.thingyDevice.setDeviceColor(input.color);
-				}
-			}
-		});		// IMPORTANT: Set up device listeners BEFORE initializing devices
+		// IMPORTANT: Set up device listeners BEFORE initializing devices
 		// Otherwise auto-reconnected devices won't have their listeners attached
 		this.inputDeviceManager.on('deviceadded', (device) => {
 			this._setupDeviceListeners(device);
