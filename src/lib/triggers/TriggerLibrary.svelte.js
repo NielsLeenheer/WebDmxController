@@ -79,21 +79,6 @@ export class TriggerLibrary extends Library {
 	}
 
 	/**
-	 * Reorder triggers based on array of trigger objects
-	 * @param {Array} orderedTriggers - Array of trigger objects in new order
-	 */
-	reorder(orderedTriggers) {
-		// Update order property for each trigger
-		orderedTriggers.forEach((trigger, index) => {
-			const existing = this.get(trigger.id);
-			if (existing) {
-				existing.order = index;
-			}
-		});
-		this.save();
-	}
-
-	/**
 	 * Generate CSS for all triggers
 	 * @param {Array} devices - Array of device objects
 	 * @returns {string} Combined CSS
