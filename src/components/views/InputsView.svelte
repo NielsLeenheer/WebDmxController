@@ -461,6 +461,115 @@
     }
 
     onMount(() => {
+        // Set up device event handlers FIRST, before processing existing devices
+        // Apply colors when devices connect
+        inputController.on('deviceadded', (device) => {
+            // Track Euler angles for Thingy:52 devices
+            if (device.type === 'bluetooth') {
+                if (device.thingyDevice) {
+                    device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
+                        thingyEulerAngles[device.id] = { roll, pitch, yaw };
+                    });
+                }
+
+                // Auto-create button input for Thingy:52 (it always has exactly one button)
+                const controlId = 'button';
+                const existing = inputs.find(
+                    input => input.inputDeviceId === device.id && input.inputControlId === controlId
+                );
+
+                if (!existing) {
+                    const name = formatInputName(device.name || device.id, controlId);
+                    const supportsColor = shouldAssignColor(device, controlId);
+                    
+                    const color = supportsColor ? getNextAvailableColor(device.id) : null;
+
+                    const input = inputLibrary.create({
+                        name,
+                        inputDeviceId: device.id,
+                        inputControlId: controlId,
+                        inputDeviceName: device.name || device.id,
+                        color: color
+                    });
+
+                    // Initialize pressure property for button input
+                    if (Input.isButtonInput(input)) {
+                        inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
+                    }
+
+                    if (supportsColor) {
+                        registerColorUsage(device.id, controlId, input.color);
+                    }
+                } else if (!existing.color) {
+                    // Input exists but has no color assigned - assign one now
+                    const supportsColor = shouldAssignColor(device, controlId);
+                    if (supportsColor) {
+                        const color = getNextAvailableColor(device.id);
+                        inputLibrary.update(existing.id, { color });
+                        registerColorUsage(device.id, controlId, color);
+                    }
+                }
+            }
+
+            // Apply colors to devices that support them (HID, MIDI, and Bluetooth)
+            if (deviceSupportsColors(device)) {
+                // Small delay to ensure device is fully initialized
+                setTimeout(() => {
+                    applyColorsToDevices().catch(err => {
+                        console.warn('Failed to apply colors on device added:', err);
+                    });
+                }, 500);
+            }
+        });
+
+        // Now process already-connected devices
+        // Auto-create button inputs for any already-connected Thingy:52 devices
+        const devices = inputController.getInputDevices();
+        for (const device of devices) {
+            if (device.type === 'bluetooth' && device.thingyDevice) {
+                // Auto-create button input for Thingy:52 (it always has exactly one button)
+                const controlId = 'button';
+                const existing = inputs.find(
+                    input => input.inputDeviceId === device.id && input.inputControlId === controlId
+                );
+
+                if (!existing) {
+                    const name = formatInputName(device.name || device.id, controlId);
+                    const supportsColor = shouldAssignColor(device, controlId);
+
+                    const input = inputLibrary.create({
+                        name,
+                        inputDeviceId: device.id,
+                        inputControlId: controlId,
+                        inputDeviceName: device.name || device.id,
+                        color: supportsColor ? getNextAvailableColor(device.id) : null
+                    });
+
+                    // Initialize pressure property for button input
+                    if (Input.isButtonInput(input)) {
+                        inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
+                    }
+
+                    if (supportsColor) {
+                        registerColorUsage(device.id, controlId, input.color);
+                    }
+                } else if (!existing.color) {
+                    // Input exists but has no color assigned - assign one now
+                    const supportsColor = shouldAssignColor(device, controlId);
+                    if (supportsColor) {
+                        const color = getNextAvailableColor(device.id);
+                        inputLibrary.update(existing.id, { color });
+                        registerColorUsage(device.id, controlId, color);
+                    }
+                }
+
+                // Track Euler angles
+                device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
+                    thingyEulerAngles[device.id] = { roll, pitch, yaw };
+                });
+            }
+        }
+
         // Apply colors immediately after inputs are loaded
         // Use a small delay to ensure devices are ready
         setTimeout(() => {
@@ -468,16 +577,6 @@
                 console.warn('Failed to apply colors on initial load:', err);
             });
         }, 100);
-
-        // Track Euler angles for Thingy:52 devices
-        const devices = inputController.getInputDevices();
-        for (const device of devices) {
-            if (device.type === 'bluetooth' && device.thingyDevice) {
-                device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
-                    thingyEulerAngles[device.id] = { roll, pitch, yaw };
-                });
-            }
-        }
 
         // Track input state changes for display
         inputController.on('input-trigger', ({ mapping, velocity, toggleState }) => {
@@ -487,42 +586,23 @@
 
                 // Update button color based on toggle state
                 updateButtonColorForToggleState(mapping, toggleState);
-            } else if (mapping.isButtonInput()) {
+            } else if (Input.isButtonInput(mapping)) {
                 // For momentary buttons, show pressed state
                 inputStates[mapping.id] = { state: 'pressed' };
             }
         });
 
         inputController.on('input-release', ({ mapping }) => {
-            if (mapping.isButtonInput() && mapping.buttonMode !== 'toggle') {
+            if (Input.isButtonInput(mapping) && mapping.buttonMode !== 'toggle') {
                 // For momentary buttons, clear pressed state
                 inputStates[mapping.id] = { state: 'released' };
             }
         });
 
         inputController.on('input-valuechange', ({ mapping, value }) => {
-            if (!mapping.isButtonInput()) {
+            if (!Input.isButtonInput(mapping)) {
                 // For knobs/sliders, store the value (0-1)
                 inputStates[mapping.id] = { value: Math.round(value * 100) };
-            }
-        });
-
-        // Apply colors when devices connect
-        inputController.on('deviceadded', (device) => {
-            // Track Euler angles for Thingy:52 devices
-            if (device.type === 'bluetooth' && device.thingyDevice) {
-                device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
-                    thingyEulerAngles[device.id] = { roll, pitch, yaw };
-                });
-            }
-
-            if (device.type === 'hid' || device.type === 'midi') {
-                // Small delay to ensure device is fully initialized
-                setTimeout(() => {
-                    applyColorsToDevices().catch(err => {
-                        console.warn('Failed to apply colors on device added:', err);
-                    });
-                }, 500);
             }
         });
     });
