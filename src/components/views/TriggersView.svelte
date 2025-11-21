@@ -498,7 +498,7 @@
         <Button
             onclick={openManualTriggerDialog}
             variant="secondary"
-            disabled={availableInputs.length === 0 || availableAnimations.length === 0 || devices.length === 0}
+            disabled={availableInputs.length === 0 || devices.length === 0}
         >
             Add Manual Trigger
         </Button>
