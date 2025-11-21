@@ -512,13 +512,10 @@
     </div>
 
     <div class="triggers-list">
-        {#if availableInputs.length === 0 || availableAnimations.length === 0 || devices.length === 0}
+        {#if availableInputs.length === 0 || devices.length === 0}
             <div class="empty-state">
                 {#if availableInputs.length === 0}
                     <p>No inputs available. Go to the Inputs tab to detect and save inputs first.</p>
-                {/if}
-                {#if availableAnimations.length === 0}
-                    <p>No animations available. Go to the Animations tab to create animations first.</p>
                 {/if}
                 {#if devices.length === 0}
                     <p>No devices available. Go to the Devices tab to add devices first.</p>
