@@ -545,7 +545,7 @@
                     {dnd}
                     stateDisplay={getInputStateDisplay(input)}
                     eulerAngles={thingyEulerAngles[input.inputDeviceId]}
-                    {isColorCapableControl}
+                    isColorCapable={isColorCapableControl}
                     onEdit={startEditing}
                 />
             {/each}
