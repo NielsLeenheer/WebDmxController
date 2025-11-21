@@ -69,24 +69,199 @@ export class Trigger {
 	}
 
 	/**
-	 * Update CSS class name when input changes
-	 */
-	updateClassName() {
-		this.cssClassName = this._generateClassName();
-	}
-
-	/**
 	 * Check if this is an automatic (always-running) trigger
 	 */
 	isAutomatic() {
-		return this.triggerType === 'always';
+		return Trigger.isAutomatic(this);
 	}
 
 	/**
 	 * Check if this is a manual (input-based) trigger
 	 */
 	isManual() {
-		return !this.isAutomatic();
+		return Trigger.isManual(this);
+	}
+
+	/**
+	 * Update CSS class name when input changes
+	 */
+	updateClassName() {
+		this.cssClassName = Trigger.generateClassName(this);
+	}
+
+	/**
+	 * Static utility methods for working with plain trigger objects
+	 */
+
+	/**
+	 * Generate CSS class name from input device/control and trigger type
+	 * @param {Object} trigger - Trigger object or instance
+	 * @returns {string} CSS class name
+	 */
+	static generateClassName(trigger) {
+		// For automatic (always) triggers
+		if (trigger.triggerType === 'always') {
+			return 'always';
+		}
+
+		// For manual triggers
+		if (!trigger.inputDeviceId || !trigger.inputControlId) {
+			return `trigger-${trigger.id || 'new'}`;
+		}
+
+		// Convert input IDs to valid CSS class names
+		const controlPart = trigger.inputControlId.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+
+		// Add suffix based on trigger type
+		const suffix = trigger.triggerType === 'pressed' ? 'down' :
+		               trigger.triggerType === 'not-pressed' ? 'up' : 'always';
+
+		return `${controlPart}-${suffix}`;
+	}
+
+	/**
+	 * Check if trigger is automatic (always-running)
+	 * @param {Object} trigger - Trigger object or instance
+	 * @returns {boolean}
+	 */
+	static isAutomatic(trigger) {
+		return trigger.triggerType === 'always';
+	}
+
+	/**
+	 * Check if trigger is manual (input-based)
+	 * @param {Object} trigger - Trigger object or instance
+	 * @returns {boolean}
+	 */
+	static isManual(trigger) {
+		return !Trigger.isAutomatic(trigger);
+	}
+
+	/**
+	 * Generate CSS for a trigger
+	 * @param {Object} trigger - Trigger object or instance
+	 * @param {Array} devices - Array of device objects
+	 * @param {Array} allTriggers - Array of all trigger objects
+	 * @returns {string} CSS string
+	 */
+	static toCSS(trigger, devices = [], allTriggers = []) {
+		if (trigger.actionType === 'animation') {
+			return Trigger._generateAnimationCSS(trigger, devices, allTriggers);
+		} else if (trigger.actionType === 'setValue') {
+			return Trigger._generateSetValueCSS(trigger, devices);
+		}
+		return '';
+	}
+
+	/**
+	 * Generate CSS for animation actions (static version)
+	 * @private
+	 */
+	static _generateAnimationCSS(trigger, devices = [], allTriggers = []) {
+		if (!trigger.animationName) return '';
+
+		// Map device IDs to CSS IDs
+		const targetSelectors = trigger.targetDeviceIds
+			.map(deviceId => {
+				const device = devices.find(d => d.id === deviceId);
+				return device ? `#${device.cssId}` : null;
+			})
+			.filter(selector => selector !== null)
+			.join(', ');
+
+		if (!targetSelectors) return '';
+
+		const iterationsValue = trigger.iterations === 'infinite' ? 'infinite' : trigger.iterations;
+		const durationSec = (trigger.duration / 1000).toFixed(3);
+
+		// Build the animation specification for this trigger
+		const thisAnimation = `${trigger.animationName} ${durationSec}s ${trigger.easing} ${iterationsValue}`;
+
+		// For manual triggers (non-automatic), check for automatic triggers on the same devices
+		// and prepend their animations to preserve them
+		let animationValue = thisAnimation;
+		if (trigger.triggerType !== 'always') {
+			// Find all automatic triggers that target any of the same devices
+			const automaticAnimations = allTriggers
+				.filter(t =>
+					t.actionType === 'animation' &&
+					t.triggerType === 'always' &&
+					t.animationName &&
+					// Check if this automatic trigger targets any of our devices
+					t.targetDeviceIds.some(deviceId => trigger.targetDeviceIds.includes(deviceId))
+				)
+				.map(t => {
+					const iterVal = t.iterations === 'infinite' ? 'infinite' : t.iterations;
+					const durSec = (t.duration / 1000).toFixed(3);
+					return `${t.animationName} ${durSec}s ${t.easing} ${iterVal}`;
+				});
+
+			// Combine automatic animations with this animation
+			if (automaticAnimations.length > 0) {
+				animationValue = [...automaticAnimations, thisAnimation].join(', ');
+			}
+		}
+
+		// For automatic triggers (always), don't use a class selector
+		// For input triggers, use the class selector
+		const selector = trigger.triggerType === 'always'
+			? targetSelectors
+			: `.${trigger.cssClassName} ${targetSelectors}`;
+
+		return `${selector} {
+  animation: ${animationValue};
+}`;
+	}
+
+	/**
+	 * Generate CSS for setValue actions (static version)
+	 * @private
+	 */
+	static _generateSetValueCSS(trigger, devices = []) {
+		if (!trigger.setValueDeviceId || !trigger.channelValues) return '';
+
+		// Find the target device
+		const device = devices.find(d => d.id === trigger.setValueDeviceId);
+		if (!device) return '';
+
+		// Get device type to access controls/components
+		const deviceType = DEVICE_TYPES[device.type];
+		if (!deviceType) return '';
+
+		// Convert channelValues object to array format
+		const valuesArray = new Array(deviceType.channels).fill(0);
+		for (const [channelStr, value] of Object.entries(trigger.channelValues)) {
+			const channel = parseInt(channelStr);
+			if (channel < valuesArray.length) {
+				valuesArray[channel] = value;
+			}
+		}
+
+		// Filter controls to only include enabled ones
+		const filteredControls = Array.isArray(trigger.enabledControls)
+			? deviceType.controls.filter(control =>
+				trigger.enabledControls.includes(control.name)
+			)
+			: deviceType.controls;
+
+		// Generate CSS properties only for enabled controls
+		const properties = generateCSSProperties(
+			filteredControls,
+			deviceType.components,
+			valuesArray,
+			device.type
+		);
+
+		if (Object.keys(properties).length === 0) return '';
+
+		// Convert properties object to CSS string
+		const props = Object.entries(properties).map(([prop, value]) => `  ${prop}: ${value};`);
+
+		const selector = `.${trigger.cssClassName} #${device.cssId}`;
+
+		return `${selector} {
+${props.join('\n')}
+}`;
 	}
 
 	/**

@@ -5,7 +5,7 @@
     import { DeviceLibrary } from './lib/outputs/DeviceLibrary.svelte.js';
     import { AnimationLibrary } from './lib/animations/AnimationLibrary.svelte.js';
     import { InputLibrary } from './lib/inputs/InputLibrary.svelte.js';
-    import { TriggerLibrary } from './lib/triggers.js';
+    import { TriggerLibrary } from './lib/triggers/TriggerLibrary.svelte.js';
     import { TriggerManager } from './lib/mappings.js';
     import { CustomPropertyManager, CSSManager } from './lib/css/index.js';
     import { InputController } from './lib/inputController.js';

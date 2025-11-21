@@ -7,15 +7,12 @@
     import { getDeviceColor } from '../../lib/colorUtils.js';
     import { toCSSIdentifier } from '../../lib/css/utils.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
-    import DraggableCard from '../common/DraggableCard.svelte';
+    import TriggerCard from '../cards/TriggerCard.svelte';
     import Button from '../common/Button.svelte';
-    import IconButton from '../common/IconButton.svelte';
-    import Preview from '../common/Preview.svelte';
     import AddManualTriggerDialog from '../dialogs/AddManualTriggerDialog.svelte';
     import AddAutomaticTriggerDialog from '../dialogs/AddAutomaticTriggerDialog.svelte';
     import EditManualTriggerDialog from '../dialogs/EditManualTriggerDialog.svelte';
     import EditAutomaticTriggerDialog from '../dialogs/EditAutomaticTriggerDialog.svelte';
-    import editIcon from '../../assets/glyphs/edit.svg?raw';
 
     let {
         triggerLibrary,
@@ -105,8 +102,8 @@
             ? `${input.name}_${result.triggerType}_${result.animation}`
             : `${input.name}_${result.triggerType}_setValue`;
 
-        // Create trigger
-        const trigger = new Trigger({
+        // Create trigger using library method
+        triggerLibrary.create({
             name: triggerName,
             triggerType: result.triggerType,
             actionType: result.actionType,
@@ -124,8 +121,6 @@
             enabledControls: result.actionType === 'setValue' ? result.enabledControls : [],
             cssClassName: cssClassName
         });
-
-        triggerLibrary.add(trigger);
     }
 
     async function openAutomaticTriggerDialog() {
@@ -133,8 +128,8 @@
 
         if (!result) return; // User cancelled
 
-        // Create trigger for automatic (always) trigger
-        const trigger = new Trigger({
+        // Create trigger using library method
+        triggerLibrary.create({
             name: `always_${result.animation}`,
             triggerType: 'always',
             inputDeviceId: null,
@@ -146,8 +141,6 @@
             iterations: result.looping ? 'infinite' : 1,
             cssClassName: 'always'
         });
-
-        triggerLibrary.add(trigger);
     }
 
     async function openEditDialog(trigger) {
@@ -163,15 +156,15 @@
                 return;
             }
 
-            // Handle save
-            trigger.targetDeviceIds = [result.device];
-            trigger.animationName = result.animation;
-            trigger.duration = result.duration;
-            trigger.easing = result.easing;
-            trigger.iterations = result.looping ? 'infinite' : 1;
-            trigger.name = `always_${result.animation}`;
-
-            triggerLibrary.update(trigger);
+            // Handle save using library update method
+            triggerLibrary.update(trigger.id, {
+                targetDeviceIds: [result.device],
+                animationName: result.animation,
+                duration: result.duration,
+                easing: result.easing,
+                iterations: result.looping ? 'infinite' : 1,
+                name: `always_${result.animation}`
+            });
         } else {
             // Manual trigger
             const result = await editManualTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
@@ -193,10 +186,6 @@
 
             if (!selectedInput) return;
 
-            // Update the trigger's input references
-            trigger.inputDeviceId = newInputDeviceId;
-            trigger.inputControlId = newInputControlId;
-
             // Get button mode from the input
             const buttonMode = selectedInput.buttonMode || 'momentary';
 
@@ -212,31 +201,36 @@
             }
             const cssClassName = `${baseClassName}-${suffix}`;
 
-            trigger.triggerType = result.triggerType;
-            trigger.actionType = result.actionType;
+            // Build updates object based on action type
+            const updates = {
+                inputDeviceId: newInputDeviceId,
+                inputControlId: newInputControlId,
+                triggerType: result.triggerType,
+                actionType: result.actionType,
+                duration: result.duration,
+                easing: result.easing,
+                iterations: result.looping ? 'infinite' : 1,
+                cssClassName: cssClassName
+            };
 
             if (result.actionType === 'animation') {
-                trigger.animationName = result.animation;
-                trigger.targetDeviceIds = [result.device];
-                trigger.setValueDeviceId = null;
-                trigger.channelValues = {};
-                trigger.enabledControls = [];
-                trigger.name = `${selectedInput.name}_${result.triggerType}_${result.animation}`;
+                updates.animationName = result.animation;
+                updates.targetDeviceIds = [result.device];
+                updates.setValueDeviceId = null;
+                updates.channelValues = {};
+                updates.enabledControls = [];
+                updates.name = `${selectedInput.name}_${result.triggerType}_${result.animation}`;
             } else {
-                trigger.setValueDeviceId = result.device;
-                trigger.channelValues = result.channelValues;
-                trigger.enabledControls = result.enabledControls;
-                trigger.animationName = null;
-                trigger.targetDeviceIds = [];
-                trigger.name = `${selectedInput.name}_${result.triggerType}_setValue`;
+                updates.setValueDeviceId = result.device;
+                updates.channelValues = result.channelValues;
+                updates.enabledControls = result.enabledControls;
+                updates.animationName = null;
+                updates.targetDeviceIds = [];
+                updates.name = `${selectedInput.name}_${result.triggerType}_setValue`;
             }
 
-            trigger.duration = result.duration;
-            trigger.easing = result.easing;
-            trigger.iterations = result.looping ? 'infinite' : 1;
-            trigger.cssClassName = cssClassName;
-
-            triggerLibrary.update(trigger);
+            // Update using library method
+            triggerLibrary.update(trigger.id, updates);
         }
     }
 
@@ -535,90 +529,22 @@
                 <p>No triggers created yet. Click Add Trigger to create one!</p>
             </div>
         {:else}
-            {#each triggers as trigger (`${trigger.id}-${trigger.version}`)}
-                <DraggableCard {dnd} item={trigger} class="trigger-card">
-                    <!-- Column 1: Input -->
-                    <div class="trigger-column trigger-input-column">
-                        {#if trigger.triggerType === 'always'}
-                            <div class="trigger-text">Always</div>
-                        {:else}
-                            <Preview
-                                type="input"
-                                size="medium"
-                                data={{ color: getInputPreview(trigger) }}
-                                class="trigger-preview"
-                            />
-                            <div class="trigger-text">
-                                {getInputName(trigger.inputDeviceId, trigger.inputControlId)} → {getInputTypeLabel(trigger)}
-                            </div>
-                        {/if}
-                    </div>
-
-                    <!-- Column 2: Device -->
-                    <div class="trigger-column trigger-device-column">
-                        {#if true}
-                            {@const devicePreview = getDevicePreviewControls(trigger)}
-                            <Preview
-                                type="device"
-                                size="medium"
-                                controls={devicePreview.controls}
-                                data={devicePreview.data}
-                                class="trigger-preview"
-                            />
-                            <div class="trigger-text">
-                                {getTriggerDeviceName(trigger)}
-                            </div>
-                        {/if}
-                    </div>
-
-                    <!-- Column 3: Action -->
-                    <div class="trigger-column trigger-action-column">
-                        {#if trigger.actionType === 'animation'}
-                            <Preview
-                                type="animation"
-                                size="medium"
-                                data={{ color: getAnimationPreview(trigger.animationName) }}
-                                class="trigger-preview"
-                            />
-                            <div class="trigger-text">
-                                {getAnimationDisplayName(trigger.animationName)}
-                            </div>
-                        {:else}
-                            {@const specialControls = getSpecialControls(trigger)}
-                            {#if specialControls}
-                                <Preview
-                                    type="device"
-                                    size="medium"
-                                    controls={specialControls}
-                                    data={{
-                                        fuel: getControlValue(trigger, 'Fuel'),
-                                        safety: getControlValue(trigger, 'Safety'),
-                                        output: getControlValue(trigger, 'Output')
-                                    }}
-                                    class="trigger-preview"
-                                />
-                            {:else}
-                                <Preview
-                                    type="device"
-                                    size="medium"
-                                    controls={['color']}
-                                    data={{ color: getValuePreview(trigger) }}
-                                    class="trigger-preview"
-                                />
-                            {/if}
-                            <div class="trigger-text">
-                                {Object.keys(trigger.channelValues || {}).length} values
-                            </div>
-                        {/if}
-                    </div>
-
-                    <IconButton
-                        icon={editIcon}
-                        onclick={() => openEditDialog(trigger)}
-                        title="Edit trigger"
-                        size="small"
-                    />
-                </DraggableCard>
+            {#each triggers as trigger (trigger.id)}
+                <TriggerCard
+                    {trigger}
+                    {dnd}
+                    onEdit={openEditDialog}
+                    {getInputName}
+                    {getInputTypeLabel}
+                    {getInputPreview}
+                    {getDevicePreviewControls}
+                    {getTriggerDeviceName}
+                    {getAnimationDisplayName}
+                    {getAnimationPreview}
+                    {getSpecialControls}
+                    {getControlValue}
+                    {getValuePreview}
+                />
             {/each}
         {/if}
     </div>
@@ -685,44 +611,6 @@
         margin: 0;
         padding: 12px;
         max-width: 500px;
-    }
-
-    :global(.trigger-card) {
-        width: 80vw;
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }
-
-    :global(.trigger-card) .trigger-column {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex: 1;
-    }
-
-    :global(.trigger-card) .trigger-input-column {
-        min-width: 200px;
-    }
-
-    :global(.trigger-card) .trigger-device-column {
-        min-width: 150px;
-    }
-
-    :global(.trigger-card) .trigger-action-column {
-        min-width: 200px;
-    }
-
-    :global(.trigger-card) .trigger-preview {
-        flex-shrink: 0;
-    }
-
-    :global(.trigger-card) .trigger-text {
-        font-size: 10pt;
-        color: #333;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
 
     /* Dialog column layout */
