@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { convertChannelsToArray, getDevicePreviewData } from '../../lib/outputs/devices.js';
+    import { Input } from '../../lib/inputs.js';
     import Preview from '../common/Preview.svelte';
 
     let {
@@ -130,8 +131,8 @@
                 <div class="reference-section">
                     <h4>Inputs</h4>
                     <div class="css-identifiers">
-                        {#each inputs as input (`${input.id}-${input.version}`)}
-                            {#if input.isButtonInput()}
+                        {#each inputs as input (input.id)}
+                            {#if Input.isButtonInput(input)}
                                 <!-- Buttons show classes based on mode -->
                                 {#if input.buttonMode === 'toggle'}
                                     <!-- Toggle buttons show on and off classes -->
@@ -144,7 +145,7 @@
                                 {/if}
                             {:else}
                                 <!-- Sliders/Knobs show custom property -->
-                                <code class="css-identifier">{input.getInputPropertyName()}</code>
+                                <code class="css-identifier">{Input.getInputPropertyName(input)}</code>
                             {/if}
                         {/each}
                     </div>
