@@ -272,9 +272,9 @@
 					{#if actionType === 'animation'}
 						<div class="dialog-input-group">
 							<label for="edit-trigger-animation">Animation:</label>
-							<select id="edit-trigger-animation" bind:value={selectedAnimation}>
+							<select id="trigger-animation" bind:value={selectedAnimation}>
 								{#each availableAnimations as animation}
-									<option value={animation.cssName}>{animation.name}</option>
+									<option value={animation.id}>{animation.name}</option>
 								{/each}
 							</select>
 						</div>

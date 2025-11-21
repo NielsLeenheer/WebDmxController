@@ -252,7 +252,7 @@
 							<label for="trigger-animation">Animation:</label>
 							<select id="trigger-animation" bind:value={selectedAnimation}>
 								{#each availableAnimations as animation}
-									<option value={animation.cssName}>{animation.name}</option>
+									<option value={animation.id}>{animation.name}</option>
 								{/each}
 							</select>
 						</div>
