@@ -34,7 +34,7 @@
             return;
         }
 
-        deviceLibrary.updateDevice(device.id, {
+        deviceLibrary.update(device.id, {
             startChannel: result.startChannel,
             name: result.name,
             linkedTo: result.linkedTo,

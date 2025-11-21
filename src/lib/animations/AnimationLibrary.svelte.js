@@ -23,7 +23,6 @@ export class AnimationLibrary extends Library {
 	 */
 	create(name, controls, displayName) {
 		const animation = {
-			id: name,  // Use name as ID for compatibility
 			name,
 			controls: controls || [],
 			displayName: displayName || null,
@@ -32,65 +31,40 @@ export class AnimationLibrary extends Library {
 			order: this.items.length
 		};
 
-		this.items.push(animation);
-		this.save();
-		return animation;
+		return this.add(animation);
 	}
 
 	/**
-	 * Get animation by name
-	 * @param {string} name - Animation name
-	 */
-	get(name) {
-		return this.items.find(item => item.name === name);
-	}
-
-	/**
-	 * Check if animation exists
-	 * @param {string} name - Animation name
-	 */
-	has(name) {
-		return this.items.some(item => item.name === name);
-	}
-
-	/**
-	 * Remove an animation by name
-	 * @param {string} name - Animation name to remove
-	 */
-	remove(name) {
-		const index = this.items.findIndex(item => item.name === name);
-		if (index !== -1) {
-			this.items.splice(index, 1);
-			this.save();
-		}
-	}
-
-	/**
-	 * Rename an animation and update its CSS name
-	 * @param {string} oldName - Current animation name
-	 * @param {string} newName - New animation name
+	 * Update animation properties
+	 * @param {string} id - Animation ID
+	 * @param {Object} updates - Properties to update (name, controls, displayName, etc.)
 	 * @returns {boolean} Success status
 	 */
-	rename(oldName, newName) {
-		const animation = this.get(oldName);
+	update(id, updates) {
+		const animation = this.get(id);
 		if (!animation) return false;
 
-		animation.name = newName;
-		animation.id = newName;
-		animation.cssName = toCSSIdentifier(newName);
+		// Apply updates
+		Object.assign(animation, updates);
+
+		// Update CSS name if name changed
+		if (updates.name) {
+			animation.cssName = toCSSIdentifier(updates.name);
+		}
+
 		this.save();
 		return true;
 	}
 
 	/**
 	 * Add a keyframe to an animation
-	 * @param {string} animationName - Animation name
+	 * @param {string} animationId - Animation ID
 	 * @param {number} time - Time (0-1)
 	 * @param {string} deviceType - Device type for rendering
 	 * @param {Array<number>} values - Channel values
 	 */
-	addKeyframe(animationName, time, deviceType, values) {
-		const animation = this.get(animationName);
+	addKeyframe(animationId, time, deviceType, values) {
+		const animation = this.get(animationId);
 		if (!animation) return;
 
 		const keyframe = {
@@ -107,11 +81,11 @@ export class AnimationLibrary extends Library {
 
 	/**
 	 * Remove a keyframe from an animation
-	 * @param {string} animationName - Animation name
+	 * @param {string} animationId - Animation ID
 	 * @param {number} keyframeIndex - Index of keyframe to remove
 	 */
-	removeKeyframe(animationName, keyframeIndex) {
-		const animation = this.get(animationName);
+	removeKeyframe(animationId, keyframeIndex) {
+		const animation = this.get(animationId);
 		if (!animation) return;
 
 		animation.keyframes.splice(keyframeIndex, 1);
@@ -120,12 +94,12 @@ export class AnimationLibrary extends Library {
 
 	/**
 	 * Update a keyframe's time or values
-	 * @param {string} animationName - Animation name
+	 * @param {string} animationId - Animation ID
 	 * @param {number} keyframeIndex - Index of keyframe
 	 * @param {Object} updates - Properties to update (time, values)
 	 */
-	updateKeyframe(animationName, keyframeIndex, updates) {
-		const animation = this.get(animationName);
+	updateKeyframe(animationId, keyframeIndex, updates) {
+		const animation = this.get(animationId);
 		if (!animation || !animation.keyframes[keyframeIndex]) return;
 
 		Object.assign(animation.keyframes[keyframeIndex], updates);
@@ -160,7 +134,7 @@ export class AnimationLibrary extends Library {
 
 		// Convert to plain object
 		return {
-			id: animation.name,
+			id: animData.id || crypto.randomUUID(), // Generate UUID if not present
 			name: animation.name,
 			controls: animation.controls || [],
 			displayName: animation.displayName || null,
@@ -172,20 +146,6 @@ export class AnimationLibrary extends Library {
 			cssName: animation.cssName || toCSSIdentifier(animation.name),
 			order: animData.order !== undefined ? animData.order : index
 		};
-	}
-
-	/**
-	 * Reorder animations based on array of names (not IDs)
-	 * @param {Array<string>} orderedNames - Array of animation names in new order
-	 */
-	reorder(orderedNames) {
-		orderedNames.forEach((name, index) => {
-			const animation = this.get(name);
-			if (animation) {
-				animation.order = index;
-			}
-		});
-		this.save();
 	}
 
 	/**

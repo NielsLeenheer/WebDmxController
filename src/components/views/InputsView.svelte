@@ -272,11 +272,15 @@
         const existingInput = inputLibrary.get(input.id);
         if (existingInput) {
             const oldColor = existingInput.color;
-            existingInput.name = result.name;
+            
+            // Prepare updates object
+            const updates = {
+                name: result.name
+            };
 
             // Update button mode for button inputs
             if (Input.isButtonInput(existingInput)) {
-                existingInput.buttonMode = result.buttonMode;
+                updates.buttonMode = result.buttonMode;
             }
 
             // Update color if it changed and control is color-capable
@@ -287,7 +291,7 @@
                 }
 
                 // Update color
-                existingInput.color = result.color;
+                updates.color = result.color;
 
                 // Register new color usage
                 if (result.color) {
@@ -314,9 +318,8 @@
                 }
             }
 
-            // Update CSS identifiers based on new name and button mode
-            inputLibrary.updateCSSIdentifiers(existingInput);
-            inputLibrary.update(existingInput);
+            // Apply updates (includes CSS identifier update if name/buttonMode changed)
+            inputLibrary.update(existingInput.id, updates);
         }
     }
 

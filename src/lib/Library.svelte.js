@@ -94,19 +94,6 @@ export class Library {
 	}
 
 	/**
-	 * Update item order
-	 * @param {string} id - Item ID
-	 * @param {number} newOrder - New order value
-	 */
-	updateOrder(id, newOrder) {
-		const item = this.get(id);
-		if (item) {
-			item.order = newOrder;
-			this.save();
-		}
-	}
-
-	/**
 	 * Reorder items based on drag and drop
 	 * @param {Array<string>} orderedIds - Array of item IDs in new visual order
 	 */

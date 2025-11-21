@@ -23,10 +23,10 @@
     // Drag and drop helper
     const dnd = createDragDrop({
         items: () => animations,
-        onReorder: (orderedNames) => {
-            animationLibrary.reorder(orderedNames);
+        onReorder: (orderedIds) => {
+            animationLibrary.reorder(orderedIds);
         },
-        getItemId: (item) => item.name,
+        getItemId: (item) => item.id,
         dragByHeader: true,
         orientation: 'vertical'
     });
@@ -51,8 +51,8 @@
         const defaultValues = new Array(numChannels).fill(0);
 
         // Add default keyframes at start and end
-        animationLibrary.addKeyframe(animation.name, 0, deviceType, defaultValues);
-        animationLibrary.addKeyframe(animation.name, 1, deviceType, defaultValues);
+        animationLibrary.addKeyframe(animation.id, 0, deviceType, defaultValues);
+        animationLibrary.addKeyframe(animation.id, 1, deviceType, defaultValues);
     }
 
     // Get a device type that has the specified controls (for keyframe rendering)
@@ -104,13 +104,13 @@
         if (!result) return; // User cancelled
 
         if (result.delete) {
-            animationLibrary.remove(animation.name);
+            animationLibrary.remove(animation.id);
             return;
         }
 
-        // Handle rename - library method handles reactivity
+        // Handle update - library method handles reactivity
         if (result.name !== animation.name) {
-            animationLibrary.rename(animation.name, result.name);
+            animationLibrary.update(animation.id, { name: result.name });
         }
     }
 </script>
@@ -128,7 +128,7 @@
                 <p>No animations yet. Create one to get started!</p>
             </div>
         {:else}
-            {#each animations as animation (animation.name)}
+            {#each animations as animation (animation.id)}
                 <AnimationCard
                     {animation}
                     {dnd}

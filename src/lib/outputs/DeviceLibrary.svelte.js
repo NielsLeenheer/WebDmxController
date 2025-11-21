@@ -11,6 +11,7 @@
 import { Library } from '../Library.svelte.js';
 import { DEVICE_TYPES } from './devices.js';
 import { applyLinkedValues } from '../channelMapping.js';
+import { toCSSIdentifier } from '../css/utils.js';
 
 /**
  * Manages the collection of devices with built-in reactivity
@@ -43,7 +44,7 @@ export class DeviceLibrary extends Library {
 			linkedTo,
 			syncedControls,
 			mirrorPan,
-			cssId: cssId || this.generateCssId(deviceName)
+			cssId: cssId || toCSSIdentifier(deviceName)
 		};
 
 		return this.add(device);
@@ -73,7 +74,7 @@ export class DeviceLibrary extends Library {
 	 * @param {string} deviceId - Device ID
 	 * @param {Object} updates - Properties to update
 	 */
-	updateDevice(deviceId, updates) {
+	update(deviceId, updates) {
 		const device = this.get(deviceId);
 		if (!device) return;
 
@@ -82,7 +83,7 @@ export class DeviceLibrary extends Library {
 
 		// Update CSS ID if name changed
 		if (updates.name) {
-			device.cssId = this.generateCssId(updates.name);
+			device.cssId = toCSSIdentifier(updates.name);
 		}
 
 		this.save();
@@ -140,20 +141,6 @@ export class DeviceLibrary extends Library {
 				device.defaultValues[index] = value;
 			});
 		}
-		this.save();
-	}
-
-	/**
-	 * Generate CSS-safe ID from device name
-	 * @param {string} name - Device name
-	 * @returns {string} CSS-safe ID
-	 */
-	generateCssId(name) {
-		return name
-			.toLowerCase()
-			.replace(/[^a-z0-9]/g, '_')
-			.replace(/_+/g, '_')
-			.replace(/^_|_$/g, '');
 	}
 
 	/**
