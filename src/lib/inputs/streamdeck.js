@@ -240,25 +240,27 @@ export class StreamDeckManager {
 			return false;
 		}
 
-	// Validate button index is within range for this device
-	const buttonCount = streamDeck.NUM_KEYS || 15;
-	if (buttonIndex < 0 || buttonIndex >= buttonCount) {
-		// Button index out of range for this device
-		return false;
-	}
+		// Validate button index is within range for this device
+		const buttonCount = streamDeck.NUM_KEYS || 15;
+		if (buttonIndex < 0 || buttonIndex >= buttonCount) {
+			// Button index out of range for this device
+			return false;
+		}
 
-	try {
-		// Get RGB from palette color name
-		const rgb = paletteColorToRGB(color);
+		try {
+			// Get RGB from palette color name
+			const rgb = paletteColorToRGB(color);
 
-		// Use the library's fillKeyColor method
-		await streamDeck.fillKeyColor(buttonIndex, rgb.r, rgb.g, rgb.b);
-		return true;
-	} catch (error) {
-		console.error(`Failed to set button ${buttonIndex} color on ${serialNumber}:`, error);
-		return false;
-	}
-}	/**
+			// Use the library's fillKeyColor method
+			await streamDeck.fillKeyColor(buttonIndex, rgb.r, rgb.g, rgb.b);
+			return true;
+		} catch (error) {
+			console.error(`Failed to set button ${buttonIndex} color on ${serialNumber}:`, error);
+			return false;
+		}
+	}	
+
+	/**
 	 * Clear button color (set to black) on a Stream Deck device
 	 */
 	async clearButtonColor(serialNumber, buttonIndex) {
