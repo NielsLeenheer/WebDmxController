@@ -67,29 +67,37 @@
 - ✅ Updated `getDeviceColor()` - works with control values
 - ✅ Deprecated `convertChannelsToArray()` - use `controlValuesToDMX()` instead
 
-## 🚧 REMAINING WORK (Stages 8-9)
+## ✅ COMPLETED (Stages 1-8)
 
-### Stage 8: UI Component Updates (IN PROGRESS)
-**Critical**: UI components need updating to work with control values instead of channel indices.
+### Stage 8: UI Component Updates ✅ COMPLETE
+All UI components updated to work with control values instead of channel indices.
 
-#### Preview Component ✅ FIXED
+#### Preview Component ✅
 - ✅ Fixed animation preview gradient generation
 - ✅ Updated device preview data extraction
 - ✅ Fixed FLAMETHROWER/SMOKE/Pan-Tilt rendering
 - ✅ Now works with control values object
 
-#### DeviceCard Component (REMAINING)
-- [ ] Update control rendering to use control names
-- [ ] Change value change handlers from `(channelIndex, value)` to `(controlName, value)`
-- [ ] Update control UI components (RGBControl, SliderControl, XYPadControl)
+#### DeviceCard Component ✅
+- ✅ Updated getMappedChannels() to getMappedControls()
+- ✅ Changed disabledChannels to disabledControls
+- ✅ Updated onChange callback: (device, controlName, value)
 
-#### Other Components to Update
-- [ ] TriggerCard - preview rendering (may already work with fixed Preview)
-- [ ] AnimationKeyframeEditor - keyframe value editing
-- [ ] Any component that displays/edits device values
+#### Controls Component ✅
+- ✅ Complete rewrite for control-based architecture
+- ✅ Removed components prop (no longer exists)
+- ✅ Changed values from DMX array to control values object
+- ✅ Updated all control types (RGB, slider, toggle, xypad)
+- ✅ New onChange signature: (controlName, value)
 
-### Stage 9: Cleanup & Testing (NOT STARTED)
-- [ ] Remove deprecated functions (or clearly mark them)
+#### Trigger Dialogs ✅
+- ✅ EditManualTriggerDialog - uses control values
+- ✅ AddManualTriggerDialog - uses control values
+- ✅ Both return 'values' field with control values object
+
+## 🚧 REMAINING WORK (Stage 9)
+
+### Stage 9: Testing & Cleanup (IN PROGRESS)
 - [ ] Test all workflows:
   - [ ] Creating devices with different types
   - [ ] Editing device values
@@ -171,25 +179,24 @@ Device Control Values          → DMX Output
 
 ## 📊 Implementation Stats
 
-- **Files Modified**: ~26 files
-- **Lines Changed**: ~2100+ lines
-- **Commits**: 6 commits (4 major architecture + 2 fixes)
-- **Time**: ~2-3 hours of focused development
-- **Completion**: ~80% (core + critical UI fix done)
+- **Files Modified**: ~30 files
+- **Lines Changed**: ~2400+ lines
+- **Commits**: 8 commits (4 major architecture + 4 UI updates)
+- **Time**: ~3-4 hours of focused development
+- **Completion**: ~95% (core + all UI components done)
 
 ## 🚀 Next Steps
 
-1. Update UI components (Stage 8)
-   - Start with DeviceCard.svelte
-   - Update control components
-   - Test with each device type
+1. ✅ ~~Update UI components (Stage 8)~~ - COMPLETE
 
-2. Complete testing (Stage 9)
+2. Testing (Stage 9) - IN PROGRESS
    - Manual testing of all features
-   - Verify DMX output
-   - Check animations and triggers
+   - Verify DMX output with actual hardware
+   - Test device linking and mirroring
+   - Test animations and triggers
+   - Test all device types
 
 3. Optional future enhancements:
-   - Update CSS sampler for consistency
+   - Update CSS sampler for consistency (low priority)
    - Add unit tests for converters
    - Performance optimization if needed
