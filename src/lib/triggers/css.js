@@ -132,49 +132,37 @@ function _generateManualAnimationCSS(device, trigger, automaticTriggers, animati
 
 /**
  * Generate CSS for manual values trigger
+ *
+ * NEW: Works with control-based values
+ *
  * @private
  */
 function _generateManualValuesCSS(device, trigger, inputLibrary) {
 	if (!trigger.values) return '';
-	
-	// Get device type to access controls/components
+
+	// Get device type
 	const deviceType = DEVICE_TYPES[device.type];
 	if (!deviceType) return '';
-	
-	// Convert channelValues object to array format
-	const valuesArray = new Array(deviceType.channels).fill(0);
-	for (const [channelStr, value] of Object.entries(trigger.values.channelValues)) {
-		const channel = parseInt(channelStr);
-		if (channel < valuesArray.length) {
-			valuesArray[channel] = value;
-		}
-	}
-	
-	// Filter controls to only include enabled ones
-	const filteredControls = Array.isArray(trigger.values.enabledControls)
-		? deviceType.controls.filter(control =>
-			trigger.values.enabledControls.includes(control.name)
-		)
-		: deviceType.controls;
-	
-	// Generate CSS properties only for enabled controls
-	const properties = getProperties(
-		filteredControls,
-		deviceType.components,
-		valuesArray,
-		device.type
+
+	// NEW: trigger.values is now a control values object
+	// Filter controls to only those present in trigger.values (implicit enabling)
+	const filteredControls = deviceType.controls.filter(control =>
+		trigger.values.hasOwnProperty(control.name)
 	);
-	
+
+	// Generate CSS properties from control values
+	const properties = getProperties(trigger.values, filteredControls);
+
 	if (Object.keys(properties).length === 0) return '';
-	
+
 	// Convert properties object to CSS string
 	const props = Object.entries(properties)
 		.map(([prop, value]) => `  ${prop}: ${value};`)
 		.join('\n');
-	
+
 	const cssClassName = getCSSClassName(trigger, inputLibrary);
 	const selector = `.${cssClassName} #${device.cssId}`;
-	
+
 	return `${selector} {
 ${props}
 }`;

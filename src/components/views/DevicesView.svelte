@@ -1,5 +1,6 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+    import { controlValuesToDMX } from '../../lib/controls/converter.js';
     import { deviceLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import DeviceCard from '../cards/DeviceCard.svelte';
@@ -69,14 +70,26 @@
         deviceLibrary.remove(deviceId);
     }
 
-    function handleDeviceValueChange(device, channelIndex, value) {
-        deviceLibrary.updateValue(device.id, channelIndex, value);
+    function handleDeviceValueChange(device, controlName, value) {
+        deviceLibrary.updateValue(device.id, controlName, value);
     }
 
+    /**
+     * Update DMX controller from device control values
+     * NEW: Converts control values to DMX array before output
+     */
     function updateDeviceToDMX(device) {
         if (!dmxController) return;
 
-        device.defaultValues.forEach((value, index) => {
+        // Get device type definition
+        const deviceType = DEVICE_TYPES[device.type];
+        if (!deviceType) return;
+
+        // Convert control values to DMX array
+        const dmxArray = controlValuesToDMX(deviceType, device.defaultValues);
+
+        // Write DMX array to universe
+        dmxArray.forEach((value, index) => {
             const channelIndex = device.startChannel + index;
             dmxController.setChannel(channelIndex, value);
         });
