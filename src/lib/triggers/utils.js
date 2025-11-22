@@ -6,7 +6,7 @@
 
 import { toCSSIdentifier } from '../css/utils.js';
 import { DEVICE_TYPES } from '../outputs/devices.js';
-import { generateCSSProperties } from '../css/generator.js';
+import { generateCSSProperties } from '../outputs/css.js';
 
 /**
  * Check if trigger is automatic (always-running)

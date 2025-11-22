@@ -6,7 +6,7 @@
  */
 
 import { getDeviceColor, DEVICE_TYPES } from '../outputs/devices.js';
-import { generateCSSProperties } from '../css/generator.js';
+import { generateCSSProperties } from '../outputs/css.js';
 
 /**
  * Get controls and components arrays for rendering

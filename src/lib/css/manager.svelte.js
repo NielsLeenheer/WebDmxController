@@ -23,7 +23,7 @@ export class CSSManager {
 		this.triggerLibrary = triggerLibrary;
 		this.triggerManager = triggerManager;
 
-		this.cssGenerator = new CSSGenerator(animationLibrary, inputLibrary, triggerLibrary);
+		this.cssGenerator = new CSSGenerator(animationLibrary, inputLibrary, triggerLibrary, deviceLibrary);
 		this.cssSampler = new CSSSampler();
 
 		// DOM elements
