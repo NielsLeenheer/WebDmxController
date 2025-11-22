@@ -6,11 +6,11 @@
  */
 
 import { Library } from './Library.svelte.js';
-import { toCSS } from './triggers/utils.js';
+import { generateCSSTriggers } from './triggers/css.js';
 
 export class TriggerLibrary extends Library {
 	constructor() {
-		super('webdmx-triggers');
+		super('dmx-triggers');
 	}
 
 	/**
@@ -56,65 +56,20 @@ export class TriggerLibrary extends Library {
 	 */
 	toCSS(devices = [], animationLibrary = null, inputLibrary = null) {
 		const allTriggers = this.getAll();
+		
+		// Get unique device IDs that are used in triggers
+		const deviceIds = new Set(allTriggers.map(t => t.deviceId).filter(id => id));
+		
+		// Generate CSS for each device
 		const cssRules = [];
-
-		// Group automatic animation triggers by device to combine them
-		const automaticAnimationsByDevice = new Map(); // deviceId -> array of triggers
-
-		// Separate automatic animations from other triggers
-		const automaticAnimations = [];
-		const otherTriggers = [];
-
-		for (const trigger of allTriggers) {
-			if (trigger.actionType === 'animation' &&
-			    trigger.triggerType === 'always' &&
-			    trigger.animation?.id) {
-				automaticAnimations.push(trigger);
-			} else {
-				otherTriggers.push(trigger);
-			}
-		}
-
-		// Group automatic animations by device
-		for (const trigger of automaticAnimations) {
-			const deviceId = trigger.deviceId;
-			if (deviceId) {
-				if (!automaticAnimationsByDevice.has(deviceId)) {
-					automaticAnimationsByDevice.set(deviceId, []);
-				}
-				automaticAnimationsByDevice.get(deviceId).push(trigger);
-			}
-		}
-
-		// Generate combined CSS for automatic animations
-		for (const [deviceId, triggers] of automaticAnimationsByDevice.entries()) {
+		for (const deviceId of deviceIds) {
 			const device = devices.find(d => d.id === deviceId);
 			if (!device) continue;
-
-			// Combine all automatic animations for this device
-			const animationSpecs = triggers.map(trigger => {
-				const iterVal = trigger.animation.iterations === 'infinite' ? 'infinite' : trigger.animation.iterations;
-				const durSec = (trigger.animation.duration / 1000).toFixed(3);
-				// Look up animation to get cssName
-				const animation = animationLibrary?.get(trigger.animation.id);
-				const animName = animation?.cssName || trigger.animation.id;
-				return `${animName} ${durSec}s ${trigger.animation.easing} ${iterVal}`;
-			});
-
-			const animationValue = animationSpecs.join(', ');
-			cssRules.push(`#${device.cssId} {
-  animation: ${animationValue};
-}`);
+			
+			const css = generateCSSTriggers(device, allTriggers, animationLibrary, inputLibrary);
+			if (css) cssRules.push(css);
 		}
-
-		// Generate CSS for all other triggers (including manual animations)
-		for (const trigger of otherTriggers) {
-			const css = toCSS(trigger, devices, allTriggers, animationLibrary, inputLibrary);
-			if (css) {
-				cssRules.push(css);
-			}
-		}
-
+		
 		return cssRules.join('\n\n');
 	}	/**
 	 * Deserialize trigger data from storage
@@ -122,6 +77,8 @@ export class TriggerLibrary extends Library {
 	 * @param {number} index - Array index for order
 	 */
 	deserializeItem(triggerData, index) {
+		const actionType = triggerData.actionType || 'animation';
+		
 		return {
 			id: triggerData.id || crypto.randomUUID(),
 			triggerType: triggerData.triggerType,

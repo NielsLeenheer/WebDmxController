@@ -11,7 +11,7 @@ import { toCSSIdentifier } from './css/utils.js';
 
 export class InputLibrary extends Library {
 	constructor() {
-		super('webdmx-inputs');
+		super('dmx-inputs');
 	}
 
 	/**
