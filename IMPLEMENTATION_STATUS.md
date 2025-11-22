@@ -69,16 +69,22 @@
 
 ## 🚧 REMAINING WORK (Stages 8-9)
 
-### Stage 8: UI Component Updates (NOT STARTED)
+### Stage 8: UI Component Updates (IN PROGRESS)
 **Critical**: UI components need updating to work with control values instead of channel indices.
 
-#### DeviceCard Component
+#### Preview Component ✅ FIXED
+- ✅ Fixed animation preview gradient generation
+- ✅ Updated device preview data extraction
+- ✅ Fixed FLAMETHROWER/SMOKE/Pan-Tilt rendering
+- ✅ Now works with control values object
+
+#### DeviceCard Component (REMAINING)
 - [ ] Update control rendering to use control names
 - [ ] Change value change handlers from `(channelIndex, value)` to `(controlName, value)`
 - [ ] Update control UI components (RGBControl, SliderControl, XYPadControl)
 
 #### Other Components to Update
-- [ ] TriggerCard - preview rendering
+- [ ] TriggerCard - preview rendering (may already work with fixed Preview)
 - [ ] AnimationKeyframeEditor - keyframe value editing
 - [ ] Any component that displays/edits device values
 
@@ -165,11 +171,11 @@ Device Control Values          → DMX Output
 
 ## 📊 Implementation Stats
 
-- **Files Modified**: ~25 files
-- **Lines Changed**: ~2000+ lines
-- **Commits**: 4 major commits
+- **Files Modified**: ~26 files
+- **Lines Changed**: ~2100+ lines
+- **Commits**: 6 commits (4 major architecture + 2 fixes)
 - **Time**: ~2-3 hours of focused development
-- **Completion**: ~75% (core done, UI remaining)
+- **Completion**: ~80% (core + critical UI fix done)
 
 ## 🚀 Next Steps
 
