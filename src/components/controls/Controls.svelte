@@ -161,7 +161,7 @@
 
 <div class="controls">
     {#each controls as control}
-        {#if control.type === 'xypad' || control.type === 'xypad16'}
+        {#if control.type.type === 'xypad' || control.type.type === 'xypad16'}
             {@const controlValue = values[control.name] || { x: 128, y: 128 }}
             {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
             <div class="control-xypad">
@@ -206,7 +206,7 @@
                     />
                 </div>
             </div>
-        {:else if control.type === 'rgb' || control.type === 'rgba'}
+        {:else if control.type.type === 'rgb' || control.type.type === 'rgba'}
             {@const colorValue = values[control.name] || { r: 0, g: 0, b: 0 }}
             {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
             <!-- Red -->
@@ -256,7 +256,7 @@
                     onchange={(e) => !controlDisabled && handleTextInputChange(control.name, e.target.value, e, 'b')}
                     class="value-input" disabled={controlDisabled} maxlength="3" />
             </div>
-        {:else if control.type === 'toggle'}
+        {:else if control.type.type === 'toggle'}
             {@const controlValue = values[control.name] ?? control.offValue}
             {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
             {@const isOn = controlValue === control.onValue}
@@ -288,7 +288,7 @@
                     maxlength="3"
                 />
             </div>
-        {:else if control.type === 'slider'}
+        {:else if control.type.type === 'slider'}
             {@const controlValue = values[control.name] ?? 0}
             {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
