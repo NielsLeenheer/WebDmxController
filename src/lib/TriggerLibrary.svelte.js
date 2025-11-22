@@ -122,12 +122,6 @@ export class TriggerLibrary extends Library {
 	 * @param {number} index - Array index for order
 	 */
 	deserializeItem(triggerData, index) {
-		// Normalize actionType: 'setValue' -> 'values'
-		let actionType = triggerData.actionType;
-		if (actionType === 'setValue') {
-			actionType = 'values';
-		}
-		
 		return {
 			id: triggerData.id || crypto.randomUUID(),
 			triggerType: triggerData.triggerType,
