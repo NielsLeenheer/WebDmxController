@@ -50,10 +50,11 @@ export class TriggerLibrary extends Library {
 	/**
 	 * Generate CSS for all triggers
 	 * @param {Array} devices - Array of device objects
+	 * @param {Object} animationLibrary - AnimationLibrary instance to resolve animation cssNames
 	 * @param {Object} inputLibrary - InputLibrary instance to resolve input names
 	 * @returns {string} Combined CSS
 	 */
-	toCSS(devices = [], inputLibrary = null) {
+	toCSS(devices = [], animationLibrary = null, inputLibrary = null) {
 		const allTriggers = this.getAll();
 		const cssRules = [];
 
@@ -94,7 +95,10 @@ export class TriggerLibrary extends Library {
 			const animationSpecs = triggers.map(trigger => {
 				const iterVal = trigger.animation.iterations === 'infinite' ? 'infinite' : trigger.animation.iterations;
 				const durSec = (trigger.animation.duration / 1000).toFixed(3);
-				return `${trigger.animation.id} ${durSec}s ${trigger.animation.easing} ${iterVal}`;
+				// Look up animation to get cssName
+				const animation = animationLibrary?.get(trigger.animation.id);
+				const animName = animation?.cssName || trigger.animation.id;
+				return `${animName} ${durSec}s ${trigger.animation.easing} ${iterVal}`;
 			});
 
 			const animationValue = animationSpecs.join(', ');
@@ -105,7 +109,7 @@ export class TriggerLibrary extends Library {
 
 		// Generate CSS for all other triggers (including manual animations)
 		for (const trigger of otherTriggers) {
-			const css = toCSS(trigger, devices, allTriggers, inputLibrary);
+			const css = toCSS(trigger, devices, allTriggers, animationLibrary, inputLibrary);
 			if (css) {
 				cssRules.push(css);
 			}

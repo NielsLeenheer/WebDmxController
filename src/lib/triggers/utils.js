@@ -62,7 +62,7 @@ export function getCSSClassName(trigger, inputLibrary) {
  * Generate CSS for animation actions
  * @private
  */
-function _generateAnimationCSS(trigger, devices = [], allTriggers = [], inputLibrary = null) {
+function _generateAnimationCSS(trigger, devices = [], allTriggers = [], animationLibrary = null, inputLibrary = null) {
 	if (!trigger.animation?.id) return '';
 
 	// Get device by single deviceId
@@ -74,8 +74,13 @@ function _generateAnimationCSS(trigger, devices = [], allTriggers = [], inputLib
 	const iterationsValue = trigger.animation.iterations === 'infinite' ? 'infinite' : trigger.animation.iterations;
 	const durationSec = (trigger.animation.duration / 1000).toFixed(3);
 
+	// Look up animation to get cssName
+	const animation = animationLibrary?.get(trigger.animation.id);
+	const animName = animation?.cssName || trigger.animation.id;
+
 	// Build the animation specification for this trigger
-	const thisAnimation = `${trigger.animation.id} ${durationSec}s ${trigger.animation.easing} ${iterationsValue}`;
+	// Use cssName for the animation identifier in CSS
+	const thisAnimation = `${animName} ${durationSec}s ${trigger.animation.easing} ${iterationsValue}`;
 
 	// For manual triggers (non-automatic), check for automatic triggers on the same device
 	// and prepend their animations to preserve them
@@ -93,7 +98,10 @@ function _generateAnimationCSS(trigger, devices = [], allTriggers = [], inputLib
 			.map(t => {
 				const iterVal = t.animation.iterations === 'infinite' ? 'infinite' : t.animation.iterations;
 				const durSec = (t.animation.duration / 1000).toFixed(3);
-				return `${t.animation.id} ${durSec}s ${t.animation.easing} ${iterVal}`;
+				// Look up animation to get cssName
+				const anim = animationLibrary?.get(t.animation.id);
+				const animName = anim?.cssName || t.animation.id;
+				return `${animName} ${durSec}s ${t.animation.easing} ${iterVal}`;
 			});
 
 		// Combine automatic animations with this animation
@@ -171,12 +179,13 @@ ${props.join('\n')}
  * @param {Object} trigger - Trigger object
  * @param {Array} devices - Array of device objects
  * @param {Array} allTriggers - Array of all trigger objects
+ * @param {Object} animationLibrary - AnimationLibrary instance to resolve animation cssNames
  * @param {Object} inputLibrary - InputLibrary instance to resolve input names
  * @returns {string} CSS string
  */
-export function toCSS(trigger, devices = [], allTriggers = [], inputLibrary = null) {
+export function toCSS(trigger, devices = [], allTriggers = [], animationLibrary = null, inputLibrary = null) {
 	if (trigger.actionType === 'animation') {
-		return _generateAnimationCSS(trigger, devices, allTriggers, inputLibrary);
+		return _generateAnimationCSS(trigger, devices, allTriggers, animationLibrary, inputLibrary);
 	} else if (trigger.actionType === 'values' || trigger.actionType === 'setValue') {
 		return _generateSetValueCSS(trigger, devices, inputLibrary);
 	}
