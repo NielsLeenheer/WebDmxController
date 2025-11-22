@@ -13,13 +13,17 @@ import { CSSGenerator } from './generator.js';
 import { CSSSampler } from './sampler.js';
 
 export class CSSManager {
-	constructor(animationLibrary, inputLibrary, triggerLibrary, triggerManager) {
+	// Reactive devices array
+	devices = $state.raw([]);
+
+	constructor(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager) {
+		this.deviceLibrary = deviceLibrary;
 		this.animationLibrary = animationLibrary;
 		this.inputLibrary = inputLibrary;
 		this.triggerLibrary = triggerLibrary;
 		this.triggerManager = triggerManager;
 
-		this.cssGenerator = new CSSGenerator(animationLibrary, inputLibrary, triggerLibrary);
+		this.cssGenerator = new CSSGenerator(animationLibrary, inputLibrary, triggerLibrary, deviceLibrary);
 		this.cssSampler = new CSSSampler();
 
 		// DOM elements
@@ -35,13 +39,7 @@ export class CSSManager {
 		this.animationFrameId = null;
 		this.subscribers = new Set();
 
-		// Current devices
-		this.devices = [];
-
 		// Bind methods
-		this.handleTriggerChange = this.handleTriggerChange.bind(this);
-		this.handleInputChange = this.handleInputChange.bind(this);
-		this.handleAnimationChange = this.handleAnimationChange.bind(this);
 		this.sampleLoop = this.sampleLoop.bind(this);
 	}
 
@@ -80,14 +78,32 @@ export class CSSManager {
 		this.styleElement.id = 'css-animation-styles';
 		document.head.appendChild(this.styleElement);
 
-		// Listen for library changes
-		this.inputLibrary.on('changed', this.handleInputChange);
-		this.triggerLibrary.on('changed', this.handleTriggerChange);
-		this.animationLibrary.on('changed', this.handleAnimationChange);
+		// Watch device library changes
+		$effect(() => {
+			const devices = this.deviceLibrary.getAll();
+			this.updateDevices(devices);
+		});
 
-		// Generate initial CSS
-		this.regenerateCSS();
-		this.updateStyleElement();
+		// Watch input library changes
+		$effect(() => {
+			this.inputLibrary.getAll(); // Track reactivity
+			this.regenerateCSS();
+			this.updateStyleElement();
+		});
+
+		// Watch trigger library changes
+		$effect(() => {
+			this.triggerLibrary.getAll(); // Track reactivity
+			this.regenerateCSS();
+			this.updateStyleElement();
+		});
+
+		// Watch animation library changes
+		$effect(() => {
+			this.animationLibrary.getAll(); // Track reactivity
+			this.regenerateCSS();
+			this.updateStyleElement();
+		});
 
 		// Start sampling loop
 		this.startSampling();
@@ -114,9 +130,10 @@ export class CSSManager {
 
 	/**
 	 * Get generated CSS (read-only)
+	 * Dynamically generates CSS from current library state
 	 */
 	get generatedCSS() {
-		return this._generatedCSS;
+		return this.cssGenerator.generate(this.devices);
 	}
 
 	/**
@@ -164,30 +181,6 @@ export class CSSManager {
 	}
 
 	/**
-	 * Handle input library changes
-	 */
-	handleInputChange() {
-		this.regenerateCSS();
-		this.updateStyleElement();
-	}
-
-	/**
-	 * Handle trigger library changes
-	 */
-	handleTriggerChange() {
-		this.regenerateCSS();
-		this.updateStyleElement();
-	}
-
-	/**
-	 * Handle animation library changes
-	 */
-	handleAnimationChange() {
-		this.regenerateCSS();
-		this.updateStyleElement();
-	}
-
-	/**
 	 * Start the CSS sampling loop
 	 */
 	startSampling() {
@@ -228,11 +221,6 @@ export class CSSManager {
 	destroy() {
 		// Stop sampling
 		this.stopSampling();
-
-		// Remove event listeners
-		this.inputLibrary.off('changed', this.handleInputChange);
-		this.triggerLibrary.off('changed', this.handleTriggerChange);
-		this.animationLibrary.off('changed', this.handleAnimationChange);
 
 		// Remove DOM elements
 		if (this.animationTargetsContainer && this.animationTargetsContainer.parentNode) {

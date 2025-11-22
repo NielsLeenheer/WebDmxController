@@ -4,20 +4,20 @@
  * Usage:
  *   const dnd = createDragDrop({
  *     items: () => myArray,
- *     onReorder: (newArray) => { myArray = newArray; }
+ *     onReorder: (orderedIds) => { ... }
  *   });
  *
  * Then in template:
  *   <div
  *     draggable="true"
- *     ondragstart={(e) => dnd.handleDragStart(e, item, index)}
- *     ondragover={(e) => dnd.handleDragOver(e, index)}
+ *     ondragstart={(e) => dnd.handleDragStart(e, item)}
+ *     ondragover={(e) => dnd.handleDragOver(e, item)}
  *     ondragleave={dnd.handleDragLeave}
- *     ondrop={(e) => dnd.handleDrop(e, index)}
+ *     ondrop={(e) => dnd.handleDrop(e, item)}
  *     ondragend={dnd.handleDragEnd}
  *     class:dragging={dnd.draggedItem === item}
- *     class:drag-over-before={dnd.dragOverIndex === index && !dnd.isAfterMidpoint}
- *     class:drag-over-after={dnd.dragOverIndex === index && dnd.isAfterMidpoint}
+ *     class:drag-over-before={dnd.dragOverItem === item && !dnd.isAfterMidpoint}
+ *     class:drag-over-after={dnd.dragOverItem === item && dnd.isAfterMidpoint}
  *   >
  */
 
@@ -25,7 +25,7 @@
  * Create a drag-and-drop controller
  * @param {Object} options
  * @param {Function} options.items - Function that returns the current items array
- * @param {Function} options.onReorder - Callback when items are reordered, receives new array
+ * @param {Function} options.onReorder - Callback when items are reordered, receives array of IDs in new visual order
  * @param {Function} [options.getItemId] - Function to get unique ID from item (default: item => item.id)
  * @param {boolean} [options.dragByHeader] - If true, only allow drag from CardHeader component
  * @param {string} [options.orientation] - Drag orientation: 'vertical' (default) or 'horizontal'
@@ -45,8 +45,7 @@ export function createDragDrop(options) {
 
 	// Drag state
 	let draggedItem = $state(null);
-	let draggedIndex = $state(null);
-	let dragOverIndex = $state(null);
+	let dragOverItem = $state(null);
 	let isAfterMidpoint = $state(false);
 
 	/**
@@ -59,7 +58,7 @@ export function createDragDrop(options) {
 	/**
 	 * Start dragging an item
 	 */
-	function handleDragStart(event, item, index) {
+	function handleDragStart(event, item) {
 		// Check if drag should be allowed based on where mousedown happened
 		if (lastMouseDownTarget) {
 			// Prevent drag if started on interactive elements
@@ -70,10 +69,20 @@ export function createDragDrop(options) {
 				return;
 			}
 
+			// Prevent drag if any element in the path has draggable="false"
+			let el = lastMouseDownTarget;
+			while (el && !el.classList?.contains('draggable-card')) {
+				if (el.getAttribute && el.getAttribute('draggable') === 'false') {
+					event.preventDefault();
+					return;
+				}
+				el = el.parentElement;
+			}
+
 			// If dragByHeader is enabled, only allow drag from CardHeader
 			if (dragByHeader) {
 				let foundHeader = false;
-				let el = lastMouseDownTarget;
+				el = lastMouseDownTarget;
 
 				while (el && !el.classList?.contains('draggable-card')) {
 					if (el.classList?.contains('card-header')) {
@@ -91,17 +100,16 @@ export function createDragDrop(options) {
 		}
 
 		draggedItem = item;
-		draggedIndex = index;
 		event.dataTransfer.effectAllowed = 'move';
 	}
 
 	/**
-	 * Handle drag over a target position
+	 * Handle drag over a target item
 	 */
-	function handleDragOver(event, index) {
+	function handleDragOver(event, item) {
 		event.preventDefault();
 		event.dataTransfer.dropEffect = 'move';
-		dragOverIndex = index;
+		dragOverItem = item;
 
 		// Calculate if mouse is in the second half of the card
 		const rect = event.currentTarget.getBoundingClientRect();
@@ -118,47 +126,62 @@ export function createDragDrop(options) {
 	 * Handle drag leave
 	 */
 	function handleDragLeave() {
-		dragOverIndex = null;
+		dragOverItem = null;
 		isAfterMidpoint = false;
 	}
 
 	/**
-	 * Handle drop at target position
+	 * Handle drop at target item
 	 */
-	function handleDrop(event, targetIndex) {
+	function handleDrop(event, targetItem) {
 		event.preventDefault();
 
 		if (!draggedItem) return;
 
 		const itemsArray = items();
-		const currentIndex = itemsArray.findIndex(item => getItemId(item) === getItemId(draggedItem));
 
-		if (currentIndex === -1) {
+		// Sort items by their order property to get visual order
+		const visualOrder = [...itemsArray].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+		// Find current visual index of dragged item
+		const currentVisualIndex = visualOrder.findIndex(item => getItemId(item) === getItemId(draggedItem));
+
+		if (currentVisualIndex === -1) {
+			resetDragState();
+			return;
+		}
+
+		// Find target visual index
+		let targetVisualIndex = visualOrder.findIndex(item => getItemId(item) === getItemId(targetItem));
+
+		if (targetVisualIndex === -1) {
 			resetDragState();
 			return;
 		}
 
 		// Adjust target index based on whether we're inserting after the midpoint
-		let insertIndex = targetIndex;
 		if (isAfterMidpoint) {
-			insertIndex = targetIndex + 1;
+			targetVisualIndex = targetVisualIndex + 1;
 		}
 
-		// If dragging from before to after in the same position, no change needed
-		if (currentIndex === insertIndex || currentIndex === insertIndex - 1) {
+		// If dragging to the same position, no change needed
+		if (currentVisualIndex === targetVisualIndex || currentVisualIndex === targetVisualIndex - 1) {
 			resetDragState();
 			return;
 		}
 
-		// Reorder the array
-		const newItems = [...itemsArray];
-		const [removed] = newItems.splice(currentIndex, 1);
+		// Reorder the visual array
+		const newVisualOrder = [...visualOrder];
+		const [removed] = newVisualOrder.splice(currentVisualIndex, 1);
 		// Adjust insert position if we removed an item before it
-		const finalInsertIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
-		newItems.splice(finalInsertIndex, 0, removed);
+		const finalInsertIndex = currentVisualIndex < targetVisualIndex ? targetVisualIndex - 1 : targetVisualIndex;
+		newVisualOrder.splice(finalInsertIndex, 0, removed);
 
-		// Call the reorder callback
-		onReorder(newItems);
+		// Extract IDs in the new visual order
+		const orderedIds = newVisualOrder.map(item => getItemId(item));
+
+		// Call the reorder callback with array of IDs
+		onReorder(orderedIds);
 
 		resetDragState();
 	}
@@ -175,18 +198,17 @@ export function createDragDrop(options) {
 	 */
 	function resetDragState() {
 		draggedItem = null;
-		draggedIndex = null;
-		dragOverIndex = null;
+		dragOverItem = null;
 		isAfterMidpoint = false;
 	}
 
 	return {
 		// State (for template bindings)
 		get draggedItem() { return draggedItem; },
-		get draggedIndex() { return draggedIndex; },
-		get dragOverIndex() { return dragOverIndex; },
+		get dragOverItem() { return dragOverItem; },
 		get isAfterMidpoint() { return isAfterMidpoint; },
 		get orientation() { return orientation; },
+		get dragByHeader() { return dragByHeader; },
 
 		// Event handlers
 		handleMouseDown,

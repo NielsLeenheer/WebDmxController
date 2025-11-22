@@ -24,58 +24,6 @@ export const DEVICE_TYPES = {
     FLAMETHROWER
 };
 
-export class Device {
-    constructor(id, type, startChannel, name = '', linkedTo = null, cssId = null, syncedControls = null, mirrorPan = false, version = 0) {
-        this.id = id;
-        this.type = type;
-        this.startChannel = startChannel;
-        this.name = name || `${DEVICE_TYPES[type].name} ${id}`;
-        this.version = version; // Version counter for reactivity
-
-        // Get default values from device type profile
-        this.defaultValues = DEVICE_TYPES[type].getDefaultValues();
-
-        this.linkedTo = linkedTo; // ID of device to follow, or null
-        this.syncedControls = syncedControls; // Array of control names to sync, or null for all
-        this.mirrorPan = mirrorPan; // Whether to mirror pan values for linked devices
-        this.cssId = cssId || this.generateCssId(this.name);
-    }
-
-    /**
-     * Generate CSS-safe ID from device name
-     */
-    generateCssId(name) {
-        return name
-            .toLowerCase()
-            .replace(/[^a-z0-9]/g, '_')  // Replace non-alphanumeric with underscore
-            .replace(/_+/g, '_')          // Collapse multiple underscores
-            .replace(/^_|_$/g, '');       // Remove leading/trailing underscores
-    }
-
-    /**
-     * Update CSS ID when name changes
-     */
-    updateCssId() {
-        this.cssId = this.generateCssId(this.name);
-    }
-
-    setValue(controlIndex, value) {
-        this.defaultValues[controlIndex] = Math.max(0, Math.min(255, value));
-    }
-
-    getValue(controlIndex) {
-        return this.defaultValues[controlIndex];
-    }
-
-    getChannelValues() {
-        return this.defaultValues;
-    }
-
-    isLinked() {
-        return this.linkedTo !== null;
-    }
-}
-
 /**
  * Get preview data for a device based on its type and values
  * Generic function that works with any device type by examining its controls
@@ -150,3 +98,103 @@ export function convertChannelsToArray(deviceType, channels) {
     return result;
 }
 
+/**
+ * Get preview data for trigger values
+ * Only includes enabled controls from the trigger
+ * 
+ * @param {string} deviceType - The device type key (e.g., 'RGB', 'FLAMETHROWER')
+ * @param {Object} triggerValues - Trigger values object with channelValues and enabledControls
+ * @returns {Object} Preview data with controls array and data object
+ */
+export function getTriggerValuesPreviewData(deviceType, triggerValues) {
+    const deviceTypeDef = DEVICE_TYPES[deviceType];
+    if (!deviceTypeDef) {
+        return { controls: [], data: {} };
+    }
+
+    if (!triggerValues || !triggerValues.channelValues || !triggerValues.enabledControls) {
+        return { controls: [], data: {} };
+    }
+
+    const enabledControls = triggerValues.enabledControls;
+    const channelValues = triggerValues.channelValues;
+    
+    // Create array filled with zeros, then populate with channel values
+    const values = new Array(deviceTypeDef.channels).fill(0);
+    for (const [channelIndex, value] of Object.entries(channelValues)) {
+        const idx = parseInt(channelIndex);
+        if (idx >= 0 && idx < values.length) {
+            values[idx] = value;
+        }
+    }
+
+    const controls = [];
+    const data = {};
+
+    // Process each control in the device type
+    for (const control of deviceTypeDef.controls) {
+        // Only include controls that are enabled in the trigger
+        if (!enabledControls.includes(control.name)) {
+            continue;
+        }
+
+        if (control.type === 'rgb') {
+            // RGB control - extract color
+            controls.push('color');
+            const r = values[control.components.r] ?? 0;
+            const g = values[control.components.g] ?? 0;
+            const b = values[control.components.b] ?? 0;
+            data.color = `rgb(${r}, ${g}, ${b})`;
+        } else if (control.type === 'slider' || control.type === 'toggle') {
+            // Slider/Toggle control - extract value
+            const componentIndex = Object.values(control.components)[0];
+            const channel = deviceTypeDef.components[componentIndex].channel;
+            const controlKey = control.name.toLowerCase();
+            controls.push(controlKey);
+            data[controlKey] = values[channel] ?? 0;
+        } else if (control.type === 'xypad') {
+            // XY Pad control (Pan/Tilt) - extract pan and tilt values
+            controls.push('pantilt');
+            const panChannel = deviceTypeDef.components[control.components.x].channel;
+            const tiltChannel = deviceTypeDef.components[control.components.y].channel;
+            data.pan = values[panChannel] ?? 0;
+            data.tilt = values[tiltChannel] ?? 0;
+        }
+    }
+
+    return { controls, data };
+}
+
+/**
+ * Get color preview for a device based on its type and values
+ * This is used for generating CSS color property from device values
+ * Returns pure RGB color - all special effects (white/amber/intensity layers, smoke, fire, etc.) 
+ * are handled by the Preview component as separate control layers
+ * 
+ * @param {string} deviceType - The type of device (RGB, RGBA, RGBW, etc.)
+ * @param {Array<number>} values - Array of channel values (0-255)
+ * @returns {string} CSS color string (RGB only, or transparent if no RGB control)
+ */
+export function getDeviceColor(deviceType, values) {
+    if (!values || values.length === 0) {
+        return 'transparent';
+    }
+
+    const deviceTypeDef = DEVICE_TYPES[deviceType];
+    if (!deviceTypeDef) {
+        return 'transparent';
+    }
+
+    // Find RGB control and extract R, G, B component indices
+    const rgbControl = deviceTypeDef.controls?.find(c => c.type === 'rgb');
+    if (rgbControl) {
+        const r = values[rgbControl.components.r] ?? 0;
+        const g = values[rgbControl.components.g] ?? 0;
+        const b = values[rgbControl.components.b] ?? 0;
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    // No RGB control - return transparent
+    // (dimmer/intensity, smoke, flamethrower, etc. are handled by Preview component layers)
+    return 'transparent';
+}

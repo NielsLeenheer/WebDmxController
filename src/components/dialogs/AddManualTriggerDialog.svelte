@@ -3,6 +3,7 @@
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+	import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
 
 	/**
 	 * AddManualTriggerDialog - Promise-based dialog for creating manual triggers
@@ -37,7 +38,7 @@
 
 	const ACTION_TYPES = [
 		{ value: 'animation', label: 'Run Animation' },
-		{ value: 'setValue', label: 'Set values' }
+		{ value: 'values', label: 'Set values' }
 	];
 
 	const EASING_FUNCTIONS = [
@@ -61,7 +62,7 @@
 			i.inputDeviceId === deviceId && i.inputControlId === controlId
 		);
 
-		if (!input || !input.isButtonInput()) {
+		if (!input || !isButtonInput(input)) {
 			return [
 				{ value: 'pressed', label: 'Pressed' },
 				{ value: 'not-pressed', label: 'Not Pressed' }
@@ -111,7 +112,7 @@
 
 	// Handle device change - initialize enabled controls
 	function handleDeviceChange() {
-		if (actionType === 'setValue' && selectedDevice) {
+		if (actionType === 'values' && selectedDevice) {
 			const device = devices.find(d => d.id === selectedDevice);
 			if (device) {
 				const deviceType = DEVICE_TYPES[device.type];
@@ -148,7 +149,7 @@
 			easing = 'linear';
 			channelValues = {};
 
-			// Initialize enabled controls for setValue
+			// Initialize enabled controls for values
 			handleDeviceChange();
 
 			requestAnimationFrame(() => {
@@ -251,7 +252,7 @@
 							<label for="trigger-animation">Animation:</label>
 							<select id="trigger-animation" bind:value={selectedAnimation}>
 								{#each availableAnimations as animation}
-									<option value={animation.cssName}>{animation.name}</option>
+									<option value={animation.id}>{animation.name}</option>
 								{/each}
 							</select>
 						</div>
@@ -288,7 +289,7 @@
 								{/each}
 							</select>
 						</div>
-					{:else if actionType === 'setValue' && selectedDevice}
+					{:else if actionType === 'values' && selectedDevice}
 						{@const device = devices.find(d => d.id === selectedDevice)}
 						{#if device}
 							<div class="dialog-input-group">

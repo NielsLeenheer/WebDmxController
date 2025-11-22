@@ -2,12 +2,10 @@
     import { onMount, onDestroy } from 'svelte';
     import { DMXController } from './lib/outputs/dmx.js';
     import { convertChannelsToArray } from './lib/outputs/devices.js';
-    import { AnimationLibrary } from './lib/animations.js';
-    import { InputLibrary } from './lib/inputs.js';
-    import { TriggerLibrary } from './lib/triggers.js';
-    import { TriggerManager } from './lib/mappings.js';
+    import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from './stores.svelte.js';
+    import { TriggerManager } from './lib/triggers/manager.js';
     import { CustomPropertyManager, CSSManager } from './lib/css/index.js';
-    import { InputController } from './lib/inputController.js';
+    import { InputController } from './lib/inputs/controller.js';
     import Header from './components/layout/Header.svelte';
     import Tabs from './components/layout/Tabs.svelte';
     import UniverseView from './components/views/UniverseView.svelte';
@@ -21,12 +19,8 @@
     let connected = $state(false);
     let dmxController = $state(new DMXController());
     let devicesViewRef = $state(null);
-    let devices = $state([]);
 
     // Reactive systems
-    let animationLibrary = $state(new AnimationLibrary());
-    let inputLibrary = $state(new InputLibrary());
-    let triggerLibrary = $state(new TriggerLibrary());
     let triggerManager = $state(new TriggerManager());
     let customPropertyManager = $state(new CustomPropertyManager());
     let inputController = $state(new InputController(inputLibrary, customPropertyManager, triggerManager));
@@ -59,9 +53,7 @@
             dmxController.clearUniverse();
         }
         // Also clear device values
-        if (devicesViewRef?.clearAllDeviceValues) {
-            devicesViewRef.clearAllDeviceValues();
-        }
+        deviceLibrary.clearAllValues();
     }
 
     // Handle sampled CSS values from CSSManager
@@ -73,7 +65,7 @@
             return;
         }
 
-        devices.forEach(device => {
+        deviceLibrary.getAll().forEach(device => {
             const channels = sampledValues.get(device.id);
             if (!channels) return;
 
@@ -90,24 +82,27 @@
 
     onMount(() => {
         // Create CSS Manager
-        cssManager = new CSSManager(animationLibrary, inputLibrary, triggerLibrary, triggerManager);
+        cssManager = new CSSManager(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager);
         cssManager.initialize(mainElement);
 
         // Subscribe to sampled values for DMX output
         const unsubscribe = cssManager.subscribe(handleSampledValues);
 
+        // Flush all pending saves before page unload
+        const handleBeforeUnload = () => {
+            deviceLibrary.flush();
+            animationLibrary.flush();
+            inputLibrary.flush();
+            triggerLibrary.flush();
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
         // Return cleanup function
         return () => {
             unsubscribe();
             cssManager.destroy();
+            window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    });
-
-    // Watch for device changes and update CSS manager
-    $effect(() => {
-        if (cssManager && devices) {
-            cssManager.updateDevices(devices);
-        }
     });
 </script>
 
@@ -128,7 +123,6 @@
         <DevicesView
             {dmxController}
             bind:this={devicesViewRef}
-            bind:devices
             isActive={view === 'devices'}
         />
     </div>
@@ -138,35 +132,22 @@
     </div>
 
     <div class="view-container" class:hidden={view !== 'animations'}>
-        <AnimationsView
-            {animationLibrary}
-            {devices}
-        />
+        <AnimationsView />
     </div>
 
     <div class="view-container" class:hidden={view !== 'inputs'}>
         <InputsView
             {inputController}
-            {inputLibrary}
         />
     </div>
 
     <div class="view-container" class:hidden={view !== 'triggers'}>
-        <TriggersView
-            {triggerLibrary}
-            {inputLibrary}
-            {animationLibrary}
-            {devices}
-        />
+        <TriggersView />
     </div>
 
     <div class="view-container" class:hidden={view !== 'css'}>
         <CSSView
             {cssManager}
-            {devices}
-            {animationLibrary}
-            {inputLibrary}
-            {triggerLibrary}
         />
     </div>
 </main>

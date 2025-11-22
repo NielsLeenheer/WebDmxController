@@ -1,18 +1,23 @@
 <script>
+    import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+    import { getDeviceColor } from '../../lib/outputs/devices.js';
+    import { getControlsForRendering } from '../../lib/animations/utils.js';
+    import { paletteColorToHex } from '../../lib/inputs/colors.js';
+
     /**
      * Preview Component
      *
      * Renders previews for devices, animations, and inputs with stacked controls
      *
-     * @prop {string} type - Type of preview: 'device', 'animation', 'input'
+     * @prop {string} type - Type of preview: 'device', 'controls', 'animation', 'input'
      * @prop {string} size - Size: 'small', 'medium', 'large' (default: 'medium')
-     * @prop {Array<string>} controls - Array of control types to stack (for type='device')
-     * @prop {Object} data - Data for rendering the preview
+     * @prop {Array<string>} controls - Array of control types to stack (for type='controls')
+     * @prop {Object} data - Data for rendering (device object, animation object, input object, or control values)
      * @prop {Object} euler - Euler angles for 3D rotation: { roll, pitch, yaw } (optional)
      */
 
     let {
-        type = 'device',
+        type = 'controls',
         size = 'medium',
         controls = [],
         data = {},
@@ -20,24 +25,154 @@
         class: className = '',
     } = $props();
 
+    // Generate animation preview gradient
+    function generateAnimationPreview(animation) {
+        if (!animation) return '#888';
+        
+        // Check if animation has color-related controls
+        const hasColor = animation.controls && (
+            animation.controls.includes('Color') ||
+            animation.controls.includes('Amber') ||
+            animation.controls.includes('White')
+        );
+
+        if (!hasColor || !animation.keyframes || animation.keyframes.length === 0) {
+            return '#888';
+        }
+
+        // Get control and component data for the animation
+        const { controls, components } = getControlsForRendering(animation);
+
+        // Extract colors from each keyframe
+        const colors = animation.keyframes.map(keyframe => {
+            const values = keyframe.values || [];
+
+            // Find Color control
+            const colorControl = controls.find(c => c.name === 'Color' && c.type === 'rgb');
+            let r = 0, g = 0, b = 0;
+
+            if (colorControl) {
+                const rIdx = colorControl.components.r;
+                const gIdx = colorControl.components.g;
+                const bIdx = colorControl.components.b;
+                r = values[rIdx] || 0;
+                g = values[gIdx] || 0;
+                b = values[bIdx] || 0;
+            }
+
+            // Add Amber if present
+            const amberControl = controls.find(c => c.name === 'Amber' && c.type === 'slider');
+            if (amberControl) {
+                const amberIdx = amberControl.components.value;
+                const amber = values[amberIdx] || 0;
+                // Amber is #FFBF00 - adds to red and green
+                r = Math.min(255, r + (255 * amber / 255));
+                g = Math.min(255, g + (191 * amber / 255));
+            }
+
+            // Add White if present
+            const whiteControl = controls.find(c => c.name === 'White' && c.type === 'slider');
+            if (whiteControl) {
+                const whiteIdx = whiteControl.components.value;
+                const white = values[whiteIdx] || 0;
+                // White adds equally to all channels
+                r = Math.min(255, r + white);
+                g = Math.min(255, g + white);
+                b = Math.min(255, b + white);
+            }
+
+            return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+        });
+
+        // Create stepped gradient with equal steps
+        const numSteps = colors.length;
+        const stepSize = 100 / numSteps;
+
+        const gradientStops = colors.map((color, index) => {
+            const start = index * stepSize;
+            const end = (index + 1) * stepSize;
+            return `${color} ${start}% ${end}%`;
+        }).join(', ');
+
+        return `linear-gradient(90deg, ${gradientStops})`;
+    }
+
+    // Extract controls and data from device object if type is 'device'
+    const effectiveControls = $derived(() => {
+        if (type === 'device' && data) {
+            const device = data;
+            // Extract controls based on device type
+            const deviceType = DEVICE_TYPES[device.type];
+            if (!deviceType) return [];
+            
+            if (device.type === 'FLAMETHROWER') {
+                return ['fuel', 'safety'];
+            } else if (device.type === 'SMOKE') {
+                return ['output'];
+            } else if (deviceType.controls.some(c => c.name === 'Pan/Tilt')) {
+                return ['color', 'pantilt'];
+            } else {
+                return ['color'];
+            }
+        }
+        return controls;
+    });
+
+    const effectiveData = $derived(() => {
+        if (type === 'device' && data) {
+            const device = data;
+            const deviceType = DEVICE_TYPES[device.type];
+            if (!deviceType) return {};
+            
+            if (device.type === 'FLAMETHROWER') {
+                return {
+                    fuel: device.defaultValues?.[1] || device.currentValues?.[1] || 0,
+                    safety: device.defaultValues?.[0] || device.currentValues?.[0] || 0
+                };
+            } else if (device.type === 'SMOKE') {
+                return {
+                    output: device.defaultValues?.[0] || device.currentValues?.[0] || 0
+                };
+            } else if (deviceType.controls.some(c => c.name === 'Pan/Tilt')) {
+                // Find pan and tilt channel indices
+                const panComp = deviceType.components.find(c => c.name === 'Pan');
+                const tiltComp = deviceType.components.find(c => c.name === 'Tilt');
+                const panIdx = panComp ? deviceType.components.indexOf(panComp) : -1;
+                const tiltIdx = tiltComp ? deviceType.components.indexOf(tiltComp) : -1;
+                
+                return {
+                    color: getDeviceColor(device.type, device.defaultValues || device.currentValues || []),
+                    pan: panIdx >= 0 ? (device.defaultValues?.[panIdx] || device.currentValues?.[panIdx] || 0) : 0,
+                    tilt: tiltIdx >= 0 ? (device.defaultValues?.[tiltIdx] || device.currentValues?.[tiltIdx] || 0) : 0
+                };
+            } else {
+                return {
+                    color: getDeviceColor(device.type, device.defaultValues || device.currentValues || [])
+                };
+            }
+        }
+        return data;
+    });
+
     // Determine the CSS class based on size
     const sizeClass = $derived(`preview-${size}`);
 
     // Reorder controls for proper visual stacking
     // Flamethrower: fuel layer must render before safety layer so safety appears on top
     const orderedControls = $derived.by(() => {
-        const safetyIndex = controls.indexOf('safety');
-        const fuelIndex = controls.indexOf('fuel');
+        const ctls = effectiveControls();
+        const safetyIndex = ctls.indexOf('safety');
+        const fuelIndex = ctls.indexOf('fuel');
 
         // If both safety and fuel exist, and safety comes first, swap them
         if (safetyIndex !== -1 && fuelIndex !== -1 && safetyIndex < fuelIndex) {
-            const reordered = [...controls];
+            const reordered = [...ctls];
             reordered[safetyIndex] = 'fuel';
             reordered[fuelIndex] = 'safety';
             return reordered;
         }
 
-        return controls;
+        return ctls;
     });
 
     // Calculate 3D transform from Euler angles
@@ -87,36 +222,36 @@
     <!-- Dark gray background (always present for devices) -->
     <div class="preview-base"></div>
 
-    {#if type === 'device'}
+    {#if type === 'device' || type === 'controls'}
         <!-- Stack device controls in order -->
         {#each orderedControls as control}
             {#if control === 'color'}
                 <div 
                     class="control-layer control-color" 
-                    style="background-color: {data.color || '#888'}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
+                    style="background-color: {effectiveData().color || '#888'}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
                 ></div>
 
             {:else if control === 'amber'}
-                {@const amberOpacity = ((data.amber ?? 0) / 255)}
+                {@const amberOpacity = ((effectiveData().amber ?? 0) / 255)}
                 <div class="control-layer control-amber" style="background-color: rgba(255, 191, 0, {amberOpacity})"></div>
 
             {:else if control === 'white'}
-                {@const whiteOpacity = ((data.white ?? 0) / 255)}
+                {@const whiteOpacity = ((effectiveData().white ?? 0) / 255)}
                 <div class="control-layer control-white" style="background-color: rgba(255, 255, 255, {whiteOpacity})"></div>
 
             {:else if control === 'intensity'}
-                {@const intensityOpacity = ((data.intensity ?? 0) / 255)}
+                {@const intensityOpacity = ((effectiveData().intensity ?? 0) / 255)}
                 <div class="control-layer control-intensity" style="background-color: rgba(0, 0, 0, {1 - intensityOpacity})"></div>
 
             {:else if control === 'fuel'}
-                {@const fuelPercent = ((data.fuel ?? 0) / 255) * 100}
+                {@const fuelPercent = ((effectiveData().fuel ?? 0) / 255) * 100}
                 <div
                     class="control-layer control-fuel"
                     style="background: linear-gradient(to top, #ff5722 0%, #ff9800 {fuelPercent/2}%, #ffc107 {fuelPercent}%, #1a1a1a {fuelPercent}%, #1a1a1a 100%)"
                 ></div>
 
             {:else if control === 'safety'}
-                {@const safetyOn = (data.safety ?? 0) >= 125}
+                {@const safetyOn = (effectiveData().safety ?? 0) >= 125}
                 <div class="control-layer control-safety" style="background: {safetyOn ? 'transparent' : '#222222'}">
                     {#if safetyOn}
                         <div class="safety-checkmark"></div>
@@ -126,14 +261,14 @@
                 </div>
 
             {:else if control === 'output'}
-                {@const outputPercent = ((data.output ?? 0) / 255) * 100}
+                {@const outputPercent = ((effectiveData().output ?? 0) / 255) * 100}
                 <div class="control-layer control-output">
                     <div class="smoke-effect" style="opacity: {outputPercent / 100}"></div>
                 </div>
 
             {:else if control === 'pantilt'}
-                {@const dotX = ((data.pan ?? 0) / 255) * 100}
-                {@const dotY = (1 - (data.tilt ?? 0) / 255) * 100}
+                {@const dotX = ((effectiveData().pan ?? 0) / 255) * 100}
+                {@const dotY = (1 - (effectiveData().tilt ?? 0) / 255) * 100}
                 <div class="control-layer control-pantilt">
                     <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
                 </div>
@@ -141,17 +276,19 @@
         {/each}
 
     {:else if type === 'animation'}
-        <!-- Animation color/gradient preview -->
+        <!-- Animation preview with gradient -->
+        {@const animationPreview = generateAnimationPreview(data)}
         <div 
             class="preview-animation" 
-            style="background: {data.color || '#888'}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
+            style="background: {animationPreview}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
         ></div>
 
     {:else if type === 'input'}
         <!-- Input color preview -->
+        {@const inputColor = data.color ? paletteColorToHex(data.color) : '#888'}
         <div 
             class="preview-input" 
-            style="background: {data.color || '#888'}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
+            style="background: {inputColor}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
         ></div>
         
         <!-- Orientation indicator dot for Thingy:52 (represents the hole) -->

@@ -3,6 +3,7 @@
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+	import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
 	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
@@ -43,7 +44,7 @@
 
 	const ACTION_TYPES = [
 		{ value: 'animation', label: 'Run Animation' },
-		{ value: 'setValue', label: 'Set values' }
+		{ value: 'values', label: 'Set values' }
 	];
 
 	const EASING_FUNCTIONS = [
@@ -64,7 +65,7 @@
 			i.inputDeviceId === deviceId && i.inputControlId === controlId
 		);
 
-		if (!input || !input.isButtonInput()) {
+		if (!input || !isButtonInput(input)) {
 			return [
 				{ value: 'pressed', label: 'Pressed' },
 				{ value: 'not-pressed', label: 'Not Pressed' }
@@ -131,14 +132,16 @@
 			devices = devs;
 
 			// Initialize form state from trigger
-			selectedInput = trigger.inputDeviceId + '_' + trigger.inputControlId;
+			// Find the input matching trigger.inputId
+			const input = inputs.find(i => i.id === trigger.inputId);
+			selectedInput = input ? `${input.inputDeviceId}_${input.inputControlId}` : null;
 			triggerType = trigger.triggerType;
-			actionType = trigger.actionType || 'animation';
+			actionType = trigger.actionType === 'setValue' ? 'values' : trigger.actionType || 'animation';
 
-			if (trigger.actionType === 'setValue') {
-				selectedDevice = trigger.setValueDeviceId;
-				channelValues = {...trigger.channelValues};
-				enabledControls = trigger.enabledControls ? [...trigger.enabledControls] : [];
+			if (actionType === 'values') {
+				selectedDevice = trigger.deviceId;
+				channelValues = {...(trigger.values?.channelValues || trigger.channelValues || {})};
+				enabledControls = trigger.values?.enabledControls || trigger.enabledControls || [];
 
 				// If enabledControls is empty, initialize with all controls
 				if (enabledControls.length === 0 && selectedDevice) {
@@ -149,14 +152,14 @@
 					}
 				}
 			} else {
-				selectedDevice = trigger.targetDeviceIds[0];
-				selectedAnimation = trigger.animationName;
+				selectedDevice = trigger.deviceId;
+				selectedAnimation = trigger.animation?.id;
 				enabledControls = [];
 			}
 
-			duration = trigger.duration;
-			looping = trigger.iterations === 'infinite';
-			easing = trigger.easing;
+			duration = trigger.animation?.duration || 1000;
+			looping = trigger.animation?.iterations === 'infinite';
+			easing = trigger.animation?.easing || 'linear';
 
 			requestAnimationFrame(() => {
 				dialogRef?.showModal();
@@ -269,9 +272,9 @@
 					{#if actionType === 'animation'}
 						<div class="dialog-input-group">
 							<label for="edit-trigger-animation">Animation:</label>
-							<select id="edit-trigger-animation" bind:value={selectedAnimation}>
+							<select id="trigger-animation" bind:value={selectedAnimation}>
 								{#each availableAnimations as animation}
-									<option value={animation.cssName}>{animation.name}</option>
+									<option value={animation.id}>{animation.name}</option>
 								{/each}
 							</select>
 						</div>
@@ -308,7 +311,7 @@
 								{/each}
 							</select>
 						</div>
-					{:else if actionType === 'setValue' && selectedDevice}
+					{:else if actionType === 'values' && selectedDevice}
 						{@const device = devices.find(d => d.id === selectedDevice)}
 						{#if device}
 							<div class="dialog-input-group">

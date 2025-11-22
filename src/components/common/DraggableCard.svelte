@@ -5,7 +5,7 @@
 	 * Handles all drag event bindings and class states automatically.
 	 *
 	 * Usage:
-	 *   <DraggableCard {dnd} {item} {index} class="device-card">
+	 *   <DraggableCard {dnd} {item} class="device-card">
 	 *     <!-- Your card content here -->
 	 *   </DraggableCard>
 	 */
@@ -13,19 +13,18 @@
 	let {
 		dnd,              // Drag-and-drop helper from createDragDrop()
 		item,             // The item being rendered
-		index,            // Index in the list
 		class: className = '',  // Additional CSS classes
 		children
 	} = $props();
 
 	// Helper to check if this is the drag-after position
 	function isDragAfter() {
-		return dnd.dragOverIndex === index && dnd.isAfterMidpoint;
+		return dnd.dragOverItem === item && dnd.isAfterMidpoint;
 	}
 
 	// Helper to check if this is the drag-before position
 	function isDragBefore() {
-		return dnd.dragOverIndex === index && !dnd.isAfterMidpoint;
+		return dnd.dragOverItem === item && !dnd.isAfterMidpoint;
 	}
 </script>
 
@@ -36,12 +35,15 @@
 	class:drag-after={isDragAfter()}
 	class:horizontal={dnd.orientation === 'horizontal'}
 	class:vertical={dnd.orientation === 'vertical'}
+	class:drag-by-header={dnd.dragByHeader}
+	class:drag-by-card={!dnd.dragByHeader}
+	style:order={item.order}
 	draggable="true"
 	onmousedown={dnd.handleMouseDown}
-	ondragstart={(e) => dnd.handleDragStart(e, item, index)}
-	ondragover={(e) => dnd.handleDragOver(e, index)}
+	ondragstart={(e) => dnd.handleDragStart(e, item)}
+	ondragover={(e) => dnd.handleDragOver(e, item)}
 	ondragleave={dnd.handleDragLeave}
-	ondrop={(e) => dnd.handleDrop(e, index)}
+	ondrop={(e) => dnd.handleDrop(e, item)}
 	ondragend={dnd.handleDragEnd}
 >
 	{@render children()}
@@ -97,42 +99,29 @@
 		height: 4px;
 	}
 
-	/* Global card styling */
-	:global(.device-card) {
+	div.draggable-card {
 		background: #f0f0f0;
 		border-radius: 8px;
 		padding: 15px;
 		transition: opacity 0.2s, transform 0.2s;
-	}
-
-	:global(.input-card) {
-		background: #f0f0f0;
-		border-radius: 8px;
-		padding: 15px;
 		position: relative;
-		cursor: grab;
-		transition: opacity 0.2s, transform 0.2s;
 	}
 
-	:global(.input-card):active {
+	/* Cursor styles when dragging by card (whole card is draggable) */
+	div.drag-by-card {
+		cursor: grab;
+	}
+
+	div.drag-by-card:active {
 		cursor: grabbing;
 	}
 
-	:global(.trigger-card) {
-		background: #f0f0f0;
-		border-radius: 8px;
-		padding: 15px 20px;
+	/* Cursor styles when dragging by header (only header is draggable) */
+	div.drag-by-header :global(.card-header) {
 		cursor: grab;
-		transition: opacity 0.2s, transform 0.2s;
 	}
 
-	:global(.trigger-card):active {
+	div.drag-by-header :global(.card-header:active) {
 		cursor: grabbing;
-	}
-
-	:global(.animation-card) {
-		background: #f0f0f0;
-		border-radius: 8px;
-		transition: opacity 0.2s, transform 0.2s;
 	}
 </style>

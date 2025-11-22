@@ -1,38 +1,45 @@
 <script>
     import { onMount } from 'svelte';
     import { convertChannelsToArray, getDevicePreviewData } from '../../lib/outputs/devices.js';
+    import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from '../../stores.svelte.js';
+    import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
     import Preview from '../common/Preview.svelte';
 
     let {
-        cssManager,
-        devices = [],
-        animationLibrary,
-        inputLibrary,
-        triggerLibrary
+        cssManager
     } = $props();
+
+    // Get devices reactively from library
+    let devices = $derived(deviceLibrary.getAll());
 
     // Store sampled device data (Map of deviceId -> channels object)
     let sampledDeviceData = $state(new Map());
 
-    // Track CSS changes with local state (updates when libraries change)
-    let cssVersion = $state(0);
-
-    // Get CSS from manager (re-evaluated when cssVersion changes)
-    let generatedCSS = $derived.by(() => {
-        cssVersion; // Subscribe to version changes
-        return cssManager?.generatedCSS || '';
-    });
-    let customCSS = $derived(cssManager?.customCSS || '');
-
-    // Get animations for display
+    // Get animations for display (reactive)
     let animations = $derived(
         animationLibrary ? animationLibrary.getAll() : []
     );
 
-    // Get inputs for display
+    // Get inputs for display (reactive)
     let inputs = $derived(
         inputLibrary ? inputLibrary.getAll() : []
     );
+
+    // Get triggers for tracking changes (reactive)
+    let triggers = $derived(
+        triggerLibrary ? triggerLibrary.getAll() : []
+    );
+
+    // Get CSS from manager (re-evaluated when library data changes)
+    let generatedCSS = $derived.by(() => {
+        // Access library arrays to subscribe to changes
+        animations.length;
+        inputs.length;
+        triggers.length;
+        devices.length;
+        return cssManager?.generatedCSS || '';
+    });
+    let customCSS = $derived(cssManager?.customCSS || '');
 
     // Filter devices to only show those with independent controls
     // A device has independent controls if:
@@ -65,25 +72,6 @@
         return unsubscribe;
     });
 
-    // Listen for library changes to update CSS display
-    $effect(() => {
-        if (!triggerLibrary || !inputLibrary || !animationLibrary) return;
-
-        const handleChange = () => {
-            cssVersion++;
-        };
-
-        triggerLibrary.on('changed', handleChange);
-        inputLibrary.on('changed', handleChange);
-        animationLibrary.on('changed', handleChange);
-
-        return () => {
-            triggerLibrary.off('changed', handleChange);
-            inputLibrary.off('changed', handleChange);
-            animationLibrary.off('changed', handleChange);
-        };
-    });
-
     // Get preview data for a device
     function getPreviewData(device) {
         const channels = sampledDeviceData.get(device.id);
@@ -110,7 +98,7 @@
                             {@const previewData = getPreviewData(device)}
                             <div class="device-preview-item">
                                 <Preview
-                                    type="device"
+                                    type="controls"
                                     size="large"
                                     controls={previewData.controls}
                                     data={previewData.data}
@@ -140,8 +128,8 @@
                 <div class="reference-section">
                     <h4>Inputs</h4>
                     <div class="css-identifiers">
-                        {#each inputs as input (`${input.id}-${input.version}`)}
-                            {#if input.isButtonInput()}
+                        {#each inputs as input (input.id)}
+                            {#if isButtonInput(input)}
                                 <!-- Buttons show classes based on mode -->
                                 {#if input.buttonMode === 'toggle'}
                                     <!-- Toggle buttons show on and off classes -->
@@ -154,7 +142,7 @@
                                 {/if}
                             {:else}
                                 <!-- Sliders/Knobs show custom property -->
-                                <code class="css-identifier">{input.getInputPropertyName()}</code>
+                                <code class="css-identifier">{getInputPropertyName(input)}</code>
                             {/if}
                         {/each}
                     </div>

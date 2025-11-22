@@ -1,8 +1,10 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
+	import CustomizeControlsDialog from './CustomizeControlsDialog.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-	import { canLinkDevices, getAvailableSyncControls } from '../../lib/channelMapping.js';
+	import { canLinkDevices, getAvailableSyncControls } from '../../lib/outputs/sync.js';
+	import { toCSSIdentifier } from '../../lib/css/utils.js';
 	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
@@ -18,10 +20,6 @@
 	 *     }
 	 *   }
 	 */
-
-	let {
-		onCustomizeControls // Callback to open customize controls dialog
-	} = $props();
 
 	// Dialog state
 	let dialogRef = $state(null);
@@ -62,15 +60,6 @@
 		});
 	}
 
-	function getPreviewCssId() {
-		const name = dialogName.trim() || editingDevice?.name || '';
-		return name
-			.toLowerCase()
-			.replace(/[^a-z0-9]/g, '_')
-			.replace(/_+/g, '_')
-			.replace(/^_|_$/g, '');
-	}
-
 	function isChannelValid(device, startChannel0indexed) {
 		if (!device) return false;
 
@@ -101,7 +90,7 @@
 		if (!device) return [];
 		return allDevices.filter(d =>
 			d.id !== device.id &&
-			!d.isLinked() && // Can't link to a device that's already linked
+			d.linkedTo === null && // Can't link to a device that's already linked
 			canLinkDevices(device.type, d.type) &&
 			d.linkedTo !== device.id // Don't allow circular links
 		);
@@ -116,49 +105,19 @@
 		return getAvailableSyncControls(sourceDevice.type, editingDevice.type);
 	}
 
-	function isSyncControlSelected(controlName) {
-		if (selectedSyncControls === null) return true; // All controls selected
-		return selectedSyncControls.includes(controlName);
-	}
+	async function openCustomizeControlsDialog() {
+		// Open customize controls dialog (will stack on top of edit dialog)
+		const result = await customizeControlsDialog.open(
+			getAvailableControlsForLink(),
+			selectedSyncControls,
+			mirrorPan
+		);
 
-	function toggleSyncControl(controlName) {
-		if (selectedSyncControls === null) {
-			// If currently syncing all, create array with all except this one
-			const available = getAvailableControlsForLink();
-			selectedSyncControls = available
-				.map(c => c.controlName)
-				.filter(name => name !== controlName);
-		} else if (selectedSyncControls.includes(controlName)) {
-			// Remove from array
-			selectedSyncControls = selectedSyncControls.filter(name => name !== controlName);
-		} else {
-			// Add to array
-			selectedSyncControls = [...selectedSyncControls, controlName];
+		// If user saved, update our state
+		if (result) {
+			selectedSyncControls = result.syncedControls;
+			mirrorPan = result.mirrorPan;
 		}
-	}
-
-	function isPanTiltControlAvailable() {
-		const available = getAvailableControlsForLink();
-		return available.some(c => c.controlName === 'Pan/Tilt');
-	}
-
-	function openCustomizeControlsDialog() {
-		// Close main dialog temporarily
-		dialogRef?.close();
-
-		// Show customize controls dialog
-		requestAnimationFrame(() => {
-			customizeControlsDialog?.showModal();
-		});
-	}
-
-	function closeCustomizeControlsDialog() {
-		customizeControlsDialog?.close();
-
-		// Reopen main dialog
-		requestAnimationFrame(() => {
-			dialogRef?.showModal();
-		});
 	}
 
 	function handleSave() {
@@ -230,7 +189,7 @@
 			/>
 
 			<div class="css-identifiers">
-				<code class="css-identifier">#{getPreviewCssId()}</code>
+				<code class="css-identifier">#{toCSSIdentifier(dialogName || editingDevice?.name || '')}</code>
 			</div>
 		</div>
 
@@ -255,7 +214,7 @@
 
 		<div class="dialog-input-group">
 			<label for="link-select">Link to device:</label>
-			{#if getLinkableDevices(editingDevice).length > 0 || editingDevice.isLinked()}
+			{#if getLinkableDevices(editingDevice).length > 0 || editingDevice.linkedTo !== null}
 				<div class="link-select-row">
 					<select id="link-select" bind:value={selectedLinkTarget}>
 						<option value={null}>None</option>
@@ -298,45 +257,8 @@
 </Dialog>
 {/if}
 
-<!-- Customize Controls Dialog (nested) -->
-<Dialog
-	bind:dialogRef={customizeControlsDialog}
-	title="Synced controls"
-	onclose={closeCustomizeControlsDialog}
->
-	<div class="customize-controls-content">
-		<p class="dialog-description">Select which controls to sync from the linked device:</p>
-		<div class="sync-controls-vertical">
-			{#each getAvailableControlsForLink() as control}
-				<div class="sync-control-row">
-					<label class="sync-control-item">
-						<input
-							type="checkbox"
-							checked={isSyncControlSelected(control.controlName)}
-							onchange={() => toggleSyncControl(control.controlName)}
-						/>
-						<span>{control.controlName}</span>
-					</label>
-					{#if control.controlName === 'Pan/Tilt'}
-						<label class="mirror-option">
-							—
-							<input
-								type="checkbox"
-								bind:checked={mirrorPan}
-								disabled={!isSyncControlSelected('Pan/Tilt')}
-							/>
-							<span>Mirror</span>
-						</label>
-					{/if}
-				</div>
-			{/each}
-		</div>
-	</div>
-
-	{#snippet buttons()}
-		<Button onclick={closeCustomizeControlsDialog} variant="primary">Done</Button>
-	{/snippet}
-</Dialog>
+<!-- Customize Controls Dialog (separate component) -->
+<CustomizeControlsDialog bind:this={customizeControlsDialog} />
 
 <style>
 	.channel-range {
@@ -360,69 +282,5 @@
 		color: #666;
 		font-size: 10pt;
 		margin: 0;
-	}
-
-	.customize-controls-content {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-	}
-
-	.dialog-description {
-		margin: 0;
-		color: #666;
-		font-size: 10pt;
-	}
-
-	.sync-controls-vertical {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.sync-control-row {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.sync-control-item {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		cursor: pointer;
-		user-select: none;
-	}
-
-	.sync-control-item input[type="checkbox"] {
-		cursor: pointer;
-		width: 16px;
-		height: 16px;
-	}
-
-	.sync-control-item span {
-		font-size: 10pt;
-		color: #333;
-	}
-
-	.mirror-option {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-		color: #666;
-		font-size: 9pt;
-		cursor: pointer;
-		user-select: none;
-	}
-
-	.mirror-option input[type="checkbox"] {
-		cursor: pointer;
-		width: 14px;
-		height: 14px;
-	}
-
-	.mirror-option input[type="checkbox"]:disabled {
-		cursor: not-allowed;
-		opacity: 0.5;
 	}
 </style>

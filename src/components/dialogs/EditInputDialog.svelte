@@ -1,6 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
+	import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
 	import { toCSSIdentifier } from '../../lib/css/utils.js';
 	import { getPalette, paletteColorToHex } from '../../lib/inputs/colors.js';
 	import removeIcon from '../../assets/icons/remove.svg?raw';
@@ -142,7 +143,7 @@
 				autofocus
 			/>
 			<div class="css-identifiers">
-				{#if editingInput.isButtonInput()}
+				{#if isButtonInput(editingInput)}
 					{#if editingButtonMode === 'toggle'}
 						<code class="css-identifier">.{toCSSIdentifier(editingName)}-on</code>
 						<code class="css-identifier">.{toCSSIdentifier(editingName)}-off</code>
@@ -156,7 +157,7 @@
 			</div>
 		</div>
 
-		{#if editingInput.isButtonInput()}
+		{#if isButtonInput(editingInput)}
 			<div class="dialog-input-group">
 				<label for="button-mode">Button Mode:</label>
 				<select id="button-mode" bind:value={editingButtonMode}>
