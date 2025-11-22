@@ -1,11 +1,5 @@
 <script>
-    import { Trigger } from '../../lib/triggers.js';
-    import { Animation } from '../../lib/animations.js';
-    import { Input } from '../../lib/inputs.js';
-    import { triggerLibrary, inputLibrary, animationLibrary, deviceLibrary } from '../../lib/libraries.svelte.js';
-    import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
-    import { paletteColorToHex } from '../../lib/inputs/colors.js';
-    import { getDeviceColor } from '../../lib/colorUtils.js';
+    import { triggerLibrary, inputLibrary, animationLibrary, deviceLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import TriggerCard from '../cards/TriggerCard.svelte';
     import Button from '../common/Button.svelte';
@@ -27,31 +21,6 @@
     let addAutomaticTriggerDialog;
     let editManualTriggerDialog;
     let editAutomaticTriggerDialog;
-
-    // Get trigger type options for a trigger being edited
-    function getTriggerTypeOptionsForTrigger(trigger) {
-        const input = availableInputs.find(i => i.id === trigger.inputId);
-        if (!input || !Input.isButtonInput(input)) {
-            return [
-                { value: 'pressed', label: 'Pressed' },
-                { value: 'not-pressed', label: 'Not Pressed' }
-            ];
-        }
-
-        const buttonMode = input.buttonMode || 'momentary';
-
-        if (buttonMode === 'toggle') {
-            return [
-                { value: 'pressed', label: 'On' },
-                { value: 'not-pressed', label: 'Off' }
-            ];
-        } else {
-            return [
-                { value: 'pressed', label: 'Down' },
-                { value: 'not-pressed', label: 'Up' }
-            ];
-        }
-    }
 
     // Drag and drop helper
     const dnd = createDragDrop({
@@ -191,135 +160,6 @@
         }
     }
 
-    function getInputName(inputId) {
-        const input = availableInputs.find(i => i.id === inputId);
-        return input?.name || 'Unknown Input';
-    }
-
-    function getDeviceName(deviceId) {
-        const device = devices.find(d => d.id === deviceId);
-        return device?.name || deviceId;
-    }
-
-    // Get input preview color
-    function getInputPreview(trigger) {
-        const input = availableInputs.find(i => i.id === trigger.inputId);
-        return input?.color ? paletteColorToHex(input.color) : '#888';
-    }
-
-    // Get input type label (On/Off/Up/Down)
-    function getInputTypeLabel(trigger) {
-        const input = availableInputs.find(i => i.id === trigger.inputId);
-
-        if (!input) return trigger.triggerType === 'pressed' ? 'Down' : 'Up';
-
-        // Check if it's toggle mode
-        if (input.buttonMode === 'toggle') {
-            return trigger.triggerType === 'pressed' ? 'On' : 'Off';
-        } else {
-            return trigger.triggerType === 'pressed' ? 'Down' : 'Up';
-        }
-    }
-
-    // Get preview for value-based trigger
-    function getValuePreview(trigger) {
-        const device = devices.find(d => d.id === trigger.deviceId);
-        if (!device) return '#888';
-
-        const deviceType = DEVICE_TYPES[device.type];
-        if (!deviceType) return '#888';
-
-        // Build values array from channelValues
-        const values = new Array(deviceType.channels).fill(0);
-        for (const [channelIndex, value] of Object.entries(trigger.values?.channelValues || {})) {
-            values[parseInt(channelIndex)] = value;
-        }
-
-        return getDeviceColor(device.type, values);
-    }
-
-    // Get all special controls being set by a values trigger
-    function getSpecialControls(trigger) {
-        if (trigger.actionType !== 'values') return null;
-
-        const device = devices.find(d => d.id === trigger.deviceId);
-        if (!device) return null;
-
-        // Check which channels are being set
-        const channelIndices = Object.keys(trigger.values?.channelValues || {}).map(k => parseInt(k));
-        if (channelIndices.length === 0) return null;
-
-        const deviceType = DEVICE_TYPES[device.type];
-        if (!deviceType) return null;
-
-        // Map channel indices to control names
-        const controls = deviceType.components.map((comp, idx) => ({
-            index: idx,
-            name: comp.name
-        }));
-
-        // Collect which special controls are being set
-        const hasFuel = channelIndices.some(idx => controls[idx]?.name === 'Fuel');
-        const hasSafety = channelIndices.some(idx => controls[idx]?.name === 'Safety');
-        const hasOutput = channelIndices.some(idx => controls[idx]?.name === 'Output');
-
-        // Build array in correct stacking order (bottom to top)
-        const specialControls = [];
-        if (hasFuel) specialControls.push('fuel');
-        if (hasOutput) specialControls.push('output');
-        if (hasSafety) specialControls.push('safety');  // Safety always on top
-
-        return specialControls.length > 0 ? specialControls : null;
-    }
-
-    // Get the value for a specific control in a values trigger
-    function getControlValue(trigger, controlName) {
-        const device = devices.find(d => d.id === trigger.deviceId);
-        if (!device) return 0;
-
-        const deviceType = DEVICE_TYPES[device.type];
-        if (!deviceType) return 0;
-
-        // Find the channel index for this control
-        const channelIndex = deviceType.components.findIndex(c => c.name === controlName);
-        if (channelIndex === -1) return 0;
-
-        return trigger.values?.channelValues?.[channelIndex] || 0;
-    }
-
-    // Get device ID from trigger (unified property)
-    function getTriggerDeviceId(trigger) {
-        return trigger.deviceId;
-    }
-
-    // Get device preview based on default values
-    function getDevicePreview(trigger) {
-        const deviceId = getTriggerDeviceId(trigger);
-        const device = devices.find(d => d.id === deviceId);
-        if (!device) return '#888';
-
-        return getDeviceColor(device.type, device.defaultValues);
-    }
-
-    // Helper functions for channel value management
-    function getSelectedDevice(deviceId) {
-        return devices.find(d => d.id === deviceId);
-    }
-
-    function getDeviceChannels(deviceId) {
-        const device = getSelectedDevice(deviceId);
-        if (!device) return [];
-
-        const deviceType = DEVICE_TYPES[device.type];
-        if (!deviceType) return [];
-
-        return deviceType.controls.map((control, index) => ({
-            index,
-            name: control.name,
-            type: control.type
-        }));
-    }
-
 </script>
 
 <div class="triggers-view">
@@ -360,12 +200,6 @@
                     {trigger}
                     {dnd}
                     onEdit={openEditDialog}
-                    {getInputName}
-                    {getInputTypeLabel}
-                    {getInputPreview}
-                    {getSpecialControls}
-                    {getControlValue}
-                    {getValuePreview}
                 />
             {/each}
         {/if}

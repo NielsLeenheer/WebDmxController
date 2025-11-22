@@ -4,19 +4,16 @@
  * Coordinates input devices, inputs, triggers, and CSS updates.
  */
 
-import { InputDeviceManager } from './inputs/manager.js';
-import { Input, InputLibrary } from './inputs.js';
-import { Trigger, TriggerLibrary } from './triggers.js';
-import { TriggerManager } from './mappings.js';
-import { CustomPropertyManager } from './css/index.js';
-import { toCSSIdentifier } from './css/utils.js';
+import { InputDeviceManager } from './manager.js';
+import { isButtonInput } from './utils.js';
+import { toCSSIdentifier } from '../css/utils.js';
 
 export class InputController {
 	constructor(inputLibrary, customPropertyManager, triggerManager) {
 		this.inputDeviceManager = new InputDeviceManager();
-		this.inputLibrary = inputLibrary || new InputLibrary();
-		this.customPropertyManager = customPropertyManager || new CustomPropertyManager();
-		this.triggerManager = triggerManager || new TriggerManager();
+		this.inputLibrary = inputLibrary;
+		this.customPropertyManager = customPropertyManager;
+		this.triggerManager = triggerManager;
 
 		this.listeners = new Map();
 		this.toggleStates = new Map(); // Track toggle button states: "deviceId:controlId" -> boolean
@@ -167,7 +164,7 @@ export class InputController {
 
 		if (!existingInput) {
 			// Create button input
-			const input = new Input({
+			this.inputLibrary.create({
 				name: `${device.name} Button`,
 				inputDeviceId: device.id,
 				inputControlId: 'button',
@@ -175,8 +172,6 @@ export class InputController {
 				buttonMode: 'momentary', // Default to momentary, user can change to toggle
 				color: null // Color can be set to control the Thingy LED
 			});
-
-			this.inputLibrary.add(input);
 		} else {
 			// If input exists with a color, set the LED
 			if (existingInput.color) {
@@ -200,7 +195,7 @@ export class InputController {
 
 		// Handle input CSS classes and properties
 		if (input) {
-			if (Input.isButtonInput(input)) {
+			if (isButtonInput(input)) {
 				// Handle toggle vs momentary mode
 				const buttonMode = input.buttonMode || 'momentary';
 
@@ -262,7 +257,7 @@ export class InputController {
 		const input = this.inputLibrary.findByDeviceControl(deviceId, controlId);
 
 		// Handle input CSS classes and properties
-		if (input && Input.isButtonInput(input)) {
+		if (input && isButtonInput(input)) {
 			// Handle toggle vs momentary mode
 			const buttonMode = input.buttonMode || 'momentary';
 
@@ -390,7 +385,7 @@ export class InputController {
 		const inputs = this.inputLibrary.getAll();
 
 		for (const input of inputs) {
-			if (input.name && Input.isButtonInput(input)) {
+			if (input.name && isButtonInput(input)) {
 				// Initialize to 0%
 				this.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
 			}

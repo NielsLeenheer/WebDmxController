@@ -4,10 +4,10 @@
  * Components can import and use them directly without prop drilling
  */
 
-import { DeviceLibrary } from './outputs/DeviceLibrary.svelte.js';
-import { AnimationLibrary } from './animations/AnimationLibrary.svelte.js';
-import { InputLibrary } from './inputs/InputLibrary.svelte.js';
-import { TriggerLibrary } from './triggers/TriggerLibrary.svelte.js';
+import { DeviceLibrary } from './lib/DeviceLibrary.svelte.js';
+import { AnimationLibrary } from './lib/AnimationLibrary.svelte.js';
+import { InputLibrary } from './lib/InputLibrary.svelte.js';
+import { TriggerLibrary } from './lib/TriggerLibrary.svelte.js';
 
 // Create singleton instances
 export const deviceLibrary = new DeviceLibrary();

@@ -13,6 +13,9 @@ import { CSSGenerator } from './generator.js';
 import { CSSSampler } from './sampler.js';
 
 export class CSSManager {
+	// Reactive devices array
+	devices = $state.raw([]);
+
 	constructor(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager) {
 		this.deviceLibrary = deviceLibrary;
 		this.animationLibrary = animationLibrary;
@@ -35,9 +38,6 @@ export class CSSManager {
 		// Sampling loop
 		this.animationFrameId = null;
 		this.subscribers = new Set();
-
-		// Current devices (cached from library)
-		this.devices = [];
 
 		// Bind methods
 		this.sampleLoop = this.sampleLoop.bind(this);

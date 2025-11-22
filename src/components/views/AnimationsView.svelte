@@ -1,7 +1,7 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-    import { Animation } from '../../lib/animations.js';
-    import { animationLibrary, deviceLibrary } from '../../lib/libraries.svelte.js';
+    import { getNumChannels } from '../../lib/animations/utils.js';
+    import { animationLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import AnimationCard from '../cards/AnimationCard.svelte';
     import Button from '../common/Button.svelte';
@@ -43,7 +43,7 @@
         const deviceType = getDeviceTypeForControls(controls);
 
         // Determine number of channels based on control selection
-        const numChannels = Animation.getNumChannels(animation);
+        const numChannels = getNumChannels(animation);
         const defaultValues = new Array(numChannels).fill(0);
 
         // Add default keyframes at start and end

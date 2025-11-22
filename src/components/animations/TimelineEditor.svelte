@@ -2,7 +2,7 @@
     import Dialog from '../common/Dialog.svelte';
     import Button from '../common/Button.svelte';
     import Controls from '../controls/Controls.svelte';
-    import { Animation } from '../../lib/animations.js';
+    import { getControlsForRendering, getKeyframeColor, getValuesAtTime } from '../../lib/animations/utils.js';
     import removeIcon from '../../assets/icons/remove.svg?raw';
 
     let {
@@ -49,7 +49,7 @@
         // Extend gradient from 0% if first keyframe is after the start
         const firstKeyframe = localKeyframes[0];
         if (firstKeyframe.time > 0) {
-            const color = Animation.getKeyframeColor(firstKeyframe);
+            const color = getKeyframeColor(firstKeyframe);
             segments.push({
                 left: 0,
                 width: firstKeyframe.time * timelineWidth,
@@ -62,8 +62,8 @@
             const kf1 = localKeyframes[i];
             const kf2 = localKeyframes[i + 1];
 
-            const color1 = Animation.getKeyframeColor(kf1);
-            const color2 = Animation.getKeyframeColor(kf2);
+            const color1 = getKeyframeColor(kf1);
+            const color2 = getKeyframeColor(kf2);
 
             const left = kf1.time * timelineWidth;
             const width = (kf2.time - kf1.time) * timelineWidth;
@@ -78,7 +78,7 @@
         // Extend gradient to 100% if last keyframe is before the end
         const lastKeyframe = localKeyframes[localKeyframes.length - 1];
         if (lastKeyframe.time < 1) {
-            const color = Animation.getKeyframeColor(lastKeyframe);
+            const color = getKeyframeColor(lastKeyframe);
             const left = lastKeyframe.time * timelineWidth;
             const width = (1 - lastKeyframe.time) * timelineWidth;
 
@@ -181,7 +181,7 @@
         if (exists) return;
 
         // Get interpolated values at this time
-        const values = Animation.getValuesAtTime(animation, roundedTime);
+        const values = getValuesAtTime(animation, roundedTime);
 
         // Add new keyframe using library method
         const deviceType = animation.keyframes[0]?.deviceType || 'RGB';
@@ -300,7 +300,7 @@
                 id="keyframe-{animation.name}-{index}"
                 class="timeline-keyframe-marker"
                 class:dragging={draggingKeyframe?.keyframe === keyframe}
-                style="left: {getKeyframePosition(keyframe)}px; --keyframe-color: {Animation.getKeyframeColor(keyframe)}; anchor-name: --keyframe-{animation.name}-{index}"
+                style="left: {getKeyframePosition(keyframe)}px; --keyframe-color: {getKeyframeColor(keyframe)}; anchor-name: --keyframe-{animation.name}-{index}"
                 onmousedown={(e) => handleKeyframeMouseDown(e, keyframe, index)}
                 onclick={(e) => {
                     e.stopPropagation();
@@ -330,7 +330,7 @@
     title="Keyframe at {(localKeyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%"
 >
     <Controls
-        {...Animation.getControlsForRendering(animation)}
+        {...getControlsForRendering(animation)}
         bind:values={localKeyframes[selectedKeyframeIndex].values}
     />
 

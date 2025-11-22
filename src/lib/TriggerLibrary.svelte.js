@@ -5,8 +5,8 @@
  * Stores triggers as plain objects (not class instances) for proper reactivity.
  */
 
-import { Library } from '../Library.svelte.js';
-import { Trigger } from '../triggers.js';
+import { Library } from './Library.svelte.js';
+import { toCSS } from './triggers/utils.js';
 
 export class TriggerLibrary extends Library {
 	constructor() {
@@ -105,7 +105,7 @@ export class TriggerLibrary extends Library {
 
 		// Generate CSS for all other triggers (including manual animations)
 		for (const trigger of otherTriggers) {
-			const css = Trigger.toCSS(trigger, devices, allTriggers, inputLibrary);
+			const css = toCSS(trigger, devices, allTriggers, inputLibrary);
 			if (css) {
 				cssRules.push(css);
 			}

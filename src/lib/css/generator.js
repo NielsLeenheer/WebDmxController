@@ -4,8 +4,7 @@
  * Generates a complete CSS stylesheet from animations, inputs, triggers, and devices
  */
 
-import { getDeviceColor } from '../colorUtils.js';
-import { DEVICE_TYPES } from '../outputs/devices.js';
+import { getDeviceColor, DEVICE_TYPES } from '../outputs/devices.js';
 import { CONTROL_CSS_MAPPING } from './mapping/controlToCssMapping.js';
 
 export class CSSGenerator {

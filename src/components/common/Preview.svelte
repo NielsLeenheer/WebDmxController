@@ -1,7 +1,8 @@
 <script>
-    import { DEVICE_TYPES, getDevicePreviewData } from '../../lib/outputs/devices.js';
-    import { getDeviceColor } from '../../lib/colorUtils.js';
-    import { Animation } from '../../lib/animations.js';
+    import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+    import { getDeviceColor } from '../../lib/outputs/devices.js';
+    import { getControlsForRendering } from '../../lib/animations/utils.js';
+    import { paletteColorToHex } from '../../lib/inputs/colors.js';
 
     /**
      * Preview Component
@@ -11,7 +12,7 @@
      * @prop {string} type - Type of preview: 'device', 'controls', 'animation', 'input'
      * @prop {string} size - Size: 'small', 'medium', 'large' (default: 'medium')
      * @prop {Array<string>} controls - Array of control types to stack (for type='controls')
-     * @prop {Object} data - Data for rendering (device object, animation object, or control values)
+     * @prop {Object} data - Data for rendering (device object, animation object, input object, or control values)
      * @prop {Object} euler - Euler angles for 3D rotation: { roll, pitch, yaw } (optional)
      */
 
@@ -40,7 +41,7 @@
         }
 
         // Get control and component data for the animation
-        const { controls, components } = Animation.getControlsForRendering(animation);
+        const { controls, components } = getControlsForRendering(animation);
 
         // Extract colors from each keyframe
         const colors = animation.keyframes.map(keyframe => {
@@ -284,9 +285,10 @@
 
     {:else if type === 'input'}
         <!-- Input color preview -->
+        {@const inputColor = data.color ? paletteColorToHex(data.color) : '#888'}
         <div 
             class="preview-input" 
-            style="background: {effectiveData().color || '#888'}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
+            style="background: {inputColor}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
         ></div>
         
         <!-- Orientation indicator dot for Thingy:52 (represents the hole) -->

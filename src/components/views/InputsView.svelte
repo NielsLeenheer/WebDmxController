@@ -1,8 +1,8 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
-    import { Input } from '../../lib/inputs.js';
-    import { inputLibrary } from '../../lib/libraries.svelte.js';
-    import { paletteColorToHex, getUnusedFromPalette, getPalette } from '../../lib/inputs/colors.js';
+    import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
+    import { inputLibrary } from '../../stores.svelte.js';
+    import { getUnusedFromPalette, getPalette } from '../../lib/inputs/colors.js';
     import { toCSSIdentifier } from '../../lib/css/utils.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import InputCard from '../cards/InputCard.svelte';
@@ -42,7 +42,7 @@
         if (!state) return '';
 
         // For buttons (toggle or momentary)
-        if (Input.isButtonInput(input)) {
+        if (isButtonInput(input)) {
             if (input.buttonMode === 'toggle') {
                 return state.state === 'on' ? 'On' : 'Off';
             } else {
@@ -79,28 +79,21 @@
         return deviceSupportsColors(device) && isColorCapableControl(controlId);
     }
 
-    function normalizeColor(color) {
-        if (!color || typeof color !== 'string') return null;
-        return color.trim().toLowerCase();
-    }
-
     function registerColorUsage(deviceId, controlId, color) {
-        const normalized = normalizeColor(color);
-        if (!deviceId || !normalized || !isColorCapableControl(controlId)) return;
+        if (!deviceId || !color || !isColorCapableControl(controlId)) return;
 
         if (!deviceColorUsage.has(deviceId)) {
             deviceColorUsage.set(deviceId, new Set());
         }
-        deviceColorUsage.get(deviceId).add(normalized);
+        deviceColorUsage.get(deviceId).add(color);
     }
 
     function releaseColorUsage(deviceId, controlId, color) {
-        const normalized = normalizeColor(color);
-        if (!deviceId || !normalized || !isColorCapableControl(controlId)) return;
+        if (!deviceId || !color || !isColorCapableControl(controlId)) return;
 
         const usage = deviceColorUsage.get(deviceId);
         if (!usage) return;
-        usage.delete(normalized);
+        usage.delete(color);
         if (usage.size === 0) {
             deviceColorUsage.delete(deviceId);
             deviceColorIndices.delete(deviceId);
@@ -189,7 +182,7 @@
             });
 
             // Initialize pressure property for button inputs
-            if (Input.isButtonInput(input)) {
+            if (isButtonInput(input)) {
                 inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
             }
 
@@ -279,7 +272,7 @@
             };
 
             // Update button mode for button inputs
-            if (Input.isButtonInput(existingInput)) {
+            if (isButtonInput(existingInput)) {
                 updates.buttonMode = result.buttonMode;
             }
 
@@ -303,7 +296,7 @@
                 if (inputDevice && result.color) {
                     // For toggle buttons, respect current state
                     let color = result.color;
-                    if (Input.isButtonInput(existingInput) && existingInput.buttonMode === 'toggle') {
+                    if (isButtonInput(existingInput) && existingInput.buttonMode === 'toggle') {
                         const state = inputStates[existingInput.id];
                         color = (state?.state === 'on') ? result.color : 'black';
                     }
@@ -340,7 +333,7 @@
     $effect(() => {
         // Initialize input states for all inputs
         for (const input of inputs) {
-            if (Input.isButtonInput(input)) {
+            if (isButtonInput(input)) {
                 // Initialize toggle buttons to 'off', momentary buttons have no initial state
                 if (input.buttonMode === 'toggle' && !inputStates[input.id]) {
                     inputStates[input.id] = { state: 'off' };
@@ -390,7 +383,7 @@
                             let color = input.color;
 
                             // For toggle buttons, respect the current toggle state
-                            if (Input.isButtonInput(input) && input.buttonMode === 'toggle') {
+                            if (isButtonInput(input) && input.buttonMode === 'toggle') {
                                 const state = inputStates[input.id];
                                 color = (state?.state === 'on') ? input.color : 'black';
                             }
@@ -418,7 +411,7 @@
                             let color = input.color;
 
                             // For toggle buttons, respect the current toggle state
-                            if (Input.isButtonInput(input) && input.buttonMode === 'toggle') {
+                            if (isButtonInput(input) && input.buttonMode === 'toggle') {
                                 const state = inputStates[input.id];
                                 color = (state?.state === 'on') ? input.color : 'black';
                             }
@@ -438,7 +431,7 @@
 
                     // For toggle buttons, respect the current toggle state
                     let color = input.color;
-                    if (Input.isButtonInput(input) && input.buttonMode === 'toggle') {
+                    if (isButtonInput(input) && input.buttonMode === 'toggle') {
                         const state = inputStates[input.id];
                         color = (state?.state === 'on') ? input.color : 'black';
                     }
@@ -493,7 +486,7 @@
                     });
 
                     // Initialize pressure property for button input
-                    if (Input.isButtonInput(input)) {
+                    if (isButtonInput(input)) {
                         inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
                     }
 
@@ -546,7 +539,7 @@
                     });
 
                     // Initialize pressure property for button input
-                    if (Input.isButtonInput(input)) {
+                    if (isButtonInput(input)) {
                         inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
                     }
 
@@ -586,21 +579,21 @@
 
                 // Update button color based on toggle state
                 updateButtonColorForToggleState(mapping, toggleState);
-            } else if (Input.isButtonInput(mapping)) {
+            } else if (isButtonInput(mapping)) {
                 // For momentary buttons, show pressed state
                 inputStates[mapping.id] = { state: 'pressed' };
             }
         });
 
         inputController.on('input-release', ({ mapping }) => {
-            if (Input.isButtonInput(mapping) && mapping.buttonMode !== 'toggle') {
+            if (isButtonInput(mapping) && mapping.buttonMode !== 'toggle') {
                 // For momentary buttons, clear pressed state
                 inputStates[mapping.id] = { state: 'released' };
             }
         });
 
         inputController.on('input-valuechange', ({ mapping, value }) => {
-            if (!Input.isButtonInput(mapping)) {
+            if (!isButtonInput(mapping)) {
                 // For knobs/sliders, store the value (0-1)
                 inputStates[mapping.id] = { value: Math.round(value * 100) };
             }

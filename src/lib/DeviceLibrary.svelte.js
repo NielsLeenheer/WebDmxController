@@ -8,10 +8,10 @@
  * - CSS flexbox order for visual sorting
  */
 
-import { Library } from '../Library.svelte.js';
-import { DEVICE_TYPES } from './devices.js';
-import { applyLinkedValues } from '../channelMapping.js';
-import { toCSSIdentifier } from '../css/utils.js';
+import { Library } from './Library.svelte.js';
+import { DEVICE_TYPES } from './outputs/devices.js';
+import { applyLinkedValues } from './outputs/sync.js';
+import { toCSSIdentifier } from './css/utils.js';
 
 /**
  * Manages the collection of devices with built-in reactivity

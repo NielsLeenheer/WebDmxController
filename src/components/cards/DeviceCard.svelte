@@ -1,8 +1,8 @@
 <script>
 	import { Icon } from 'svelte-icon';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-	import { getMappedChannels } from '../../lib/channelMapping.js';
-	import { getDeviceColor } from '../../lib/colorUtils.js';
+	import { getMappedChannels } from '../../lib/outputs/sync.js';
+	import { getDeviceColor } from '../../lib/outputs/devices.js';
 	import DraggableCard from '../common/DraggableCard.svelte';
 	import CardHeader from '../common/CardHeader.svelte';
 	import Controls from '../controls/Controls.svelte';

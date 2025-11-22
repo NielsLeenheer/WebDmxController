@@ -5,9 +5,9 @@
  * Stores inputs as plain objects (not class instances) for proper reactivity.
  */
 
-import { Library } from '../Library.svelte.js';
-import { Input } from '../inputs.js';
-import { toCSSIdentifier } from '../css/utils.js';
+import { Library } from './Library.svelte.js';
+import { isButtonInput } from './inputs/utils.js';
+import { toCSSIdentifier } from './css/utils.js';
 
 export class InputLibrary extends Library {
 	constructor() {
@@ -23,7 +23,7 @@ export class InputLibrary extends Library {
 		const name = config.name || 'Untitled Input';
 
 		// Determine if this is a button input
-		const isButton = Input.isButtonInput({ inputControlId: config.inputControlId });
+		const isButton = isButtonInput({ inputControlId: config.inputControlId });
 		const buttonMode = config.buttonMode || 'momentary';
 
 		// Generate CSS identifiers
@@ -65,21 +65,7 @@ export class InputLibrary extends Library {
 	}
 
 	/**
-	 * Add an existing input (from external source)
-	 * Overrides base class to handle Input class instances
-	 * @param {Object} input - Input object or Input class instance
-	 * @returns {Object} Added input object
-	 */
-	add(input) {
-		// Convert Input class instance to plain object if needed
-		const plainInput = input.toJSON ? input.toJSON() : input;
-
-		// Use base class add() which handles ID generation and order
-		return super.add(plainInput);
-	}
-
-	/**
-	 * Update input properties
+	 * Update an input's CSS identifiers when name or button mode changes
 	 * @param {string} id - Input ID
 	 * @param {Object} updates - Properties to update
 	 * @returns {boolean} Success status
@@ -114,7 +100,7 @@ export class InputLibrary extends Library {
 	 * @param {Object} input - Input object
 	 */
 	updateCSSIdentifiers(input) {
-		const isButton = Input.isButtonInput(input);
+		const isButton = isButtonInput(input);
 
 		if (isButton) {
 			if (input.buttonMode === 'toggle') {
@@ -147,23 +133,20 @@ export class InputLibrary extends Library {
 	 * @param {number} index - Array index for order
 	 */
 	deserializeItem(inputData, index) {
-		// Use Input.fromJSON to handle backward compatibility
-		const input = Input.fromJSON(inputData);
-
-		// Convert to plain object
+		// Handle backward compatibility - just ensure all properties are present
 		return {
-			id: input.id || crypto.randomUUID(), // Generate UUID if not present
-			name: input.name,
-			inputDeviceId: input.inputDeviceId,
-			inputControlId: input.inputControlId,
-			inputDeviceName: input.inputDeviceName,
-			color: input.color,
-			buttonMode: input.buttonMode,
-			cssClassOn: input.cssClassOn,
-			cssClassOff: input.cssClassOff,
-			cssClassDown: input.cssClassDown,
-			cssClassUp: input.cssClassUp,
-			cssProperty: input.cssProperty,
+			id: inputData.id || crypto.randomUUID(), // Generate UUID if not present
+			name: inputData.name || 'Untitled Input',
+			inputDeviceId: inputData.inputDeviceId || null,
+			inputControlId: inputData.inputControlId || null,
+			inputDeviceName: inputData.inputDeviceName || null,
+			color: inputData.color || null,
+			buttonMode: inputData.buttonMode || 'momentary',
+			cssClassOn: inputData.cssClassOn || null,
+			cssClassOff: inputData.cssClassOff || null,
+			cssClassDown: inputData.cssClassDown || null,
+			cssClassUp: inputData.cssClassUp || null,
+			cssProperty: inputData.cssProperty || null,
 			order: inputData.order !== undefined ? inputData.order : index
 		};
 	}

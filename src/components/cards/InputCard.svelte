@@ -1,6 +1,6 @@
 <script>
 	import { paletteColorToHex } from '../../lib/inputs/colors.js';
-	import { Input } from '../../lib/inputs.js';
+	import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
 	import DraggableCard from '../common/DraggableCard.svelte';
 	import Preview from '../common/Preview.svelte';
 	import editIcon from '../../assets/glyphs/edit.svg?raw';
@@ -23,7 +23,7 @@
 		<Preview
 			type="input"
 			size="medium"
-			data={{ color: paletteColorToHex(input.color) }}
+			data={input}
 			euler={input.inputControlId === 'button' && eulerAngles ? eulerAngles : null}
 			class="input-color-badge"
 		/>

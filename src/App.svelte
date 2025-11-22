@@ -2,10 +2,10 @@
     import { onMount, onDestroy } from 'svelte';
     import { DMXController } from './lib/outputs/dmx.js';
     import { convertChannelsToArray } from './lib/outputs/devices.js';
-    import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from './lib/libraries.svelte.js';
-    import { TriggerManager } from './lib/mappings.js';
+    import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from './stores.svelte.js';
+    import { TriggerManager } from './lib/triggers/manager.js';
     import { CustomPropertyManager, CSSManager } from './lib/css/index.js';
-    import { InputController } from './lib/inputController.js';
+    import { InputController } from './lib/inputs/controller.js';
     import Header from './components/layout/Header.svelte';
     import Tabs from './components/layout/Tabs.svelte';
     import UniverseView from './components/views/UniverseView.svelte';

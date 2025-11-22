@@ -5,9 +5,9 @@
  * Stores animations as plain objects (not class instances) for proper reactivity.
  */
 
-import { Library } from '../Library.svelte.js';
-import { Animation } from '../animations.js';
-import { toCSSIdentifier } from '../css/utils.js';
+import { Library } from './Library.svelte.js';
+import { animationToCSS } from './animations/utils.js';
+import { toCSSIdentifier } from './css/utils.js';
 
 export class AnimationLibrary extends Library {
 	constructor() {
@@ -111,7 +111,7 @@ export class AnimationLibrary extends Library {
 	 */
 	toCSS() {
 		return this.items
-			.map(anim => Animation.toCSS(anim))
+			.map(anim => animationToCSS(anim))
 			.filter(css => css)
 			.join('\n\n');
 	}
@@ -122,21 +122,17 @@ export class AnimationLibrary extends Library {
 	 * @param {number} index - Array index for order
 	 */
 	deserializeItem(animData, index) {
-		// Use Animation.fromJSON to handle backward compatibility
-		const animation = Animation.fromJSON(animData);
-
-		// Convert to plain object
 		return {
-			id: animData.id || crypto.randomUUID(), // Generate UUID if not present
-			name: animation.name,
-			controls: animation.controls || [],
-			displayName: animation.displayName || null,
-			keyframes: animation.keyframes.map(kf => ({
+			id: animData.id || crypto.randomUUID(),
+			name: animData.name,
+			controls: animData.controls || [],
+			displayName: animData.displayName || null,
+			keyframes: animData.keyframes?.map(kf => ({
 				time: kf.time,
 				deviceType: kf.deviceType,
 				values: [...kf.values]
-			})),
-			cssName: animation.cssName || toCSSIdentifier(animation.name),
+			})) || [],
+			cssName: animData.cssName || toCSSIdentifier(animData.name),
 			order: animData.order !== undefined ? animData.order : index
 		};
 	}

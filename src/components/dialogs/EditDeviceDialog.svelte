@@ -3,7 +3,7 @@
 	import Button from '../common/Button.svelte';
 	import CustomizeControlsDialog from './CustomizeControlsDialog.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-	import { canLinkDevices, getAvailableSyncControls } from '../../lib/channelMapping.js';
+	import { canLinkDevices, getAvailableSyncControls } from '../../lib/outputs/sync.js';
 	import { toCSSIdentifier } from '../../lib/css/utils.js';
 	import removeIcon from '../../assets/icons/remove.svg?raw';
 
