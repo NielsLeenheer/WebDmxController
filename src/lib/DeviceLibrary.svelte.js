@@ -12,7 +12,7 @@ import { Library } from './Library.svelte.js';
 import { DEVICE_TYPES } from './outputs/devices.js';
 import { applyLinkedValues } from './outputs/sync.js';
 import { toCSSIdentifier } from './css/utils.js';
-import { generateCSSProperties } from './outputs/css.js';
+import { generateCSSBlock } from './outputs/css.js';
 
 /**
  * Manages the collection of devices with built-in reactivity
@@ -144,38 +144,11 @@ export class DeviceLibrary extends Library {
 	 * @returns {string} CSS string
 	 */
 	toCSS() {
-		const parts = [];
-		const devices = this.getAll();
+		const blocks = this.getAll()
+			.map(device => generateCSSBlock(device))
+			.filter(block => block !== null);
 
-		for (const device of devices) {
-			const deviceType = DEVICE_TYPES[device.type];
-			if (!deviceType) continue;
-
-			// Skip default values for linked devices
-			if (device.linkedTo !== null) continue;
-
-			// Get default values from device
-			const defaultValues = device.defaultValues || [];
-
-			// Generate CSS properties from DMX values
-			const properties = generateCSSProperties(
-				deviceType.controls,
-				deviceType.components,
-				defaultValues,
-				device.type
-			);
-
-			if (Object.keys(properties).length === 0) continue;
-
-			// Convert properties object to CSS string
-			const props = Object.entries(properties)
-				.map(([prop, value]) => `  ${prop}: ${value};`)
-				.join('\n');
-
-			parts.push(`#${device.cssId} {\n${props}\n}`);
-		}
-
-		return parts.join('\n\n');
+		return blocks.join('\n\n');
 	}
 
 	/**

@@ -4,7 +4,7 @@
  * Functions for converting DMX channel values to CSS properties
  */
 
-import { getDeviceColor } from './devices.js';
+import { getDeviceColor, DEVICE_TYPES } from './devices.js';
 import { CONTROL_CSS_MAPPING } from '../css/mapping/controlToCssMapping.js';
 
 /**
@@ -58,4 +58,38 @@ export function generateCSSProperties(controls, components, values, deviceType) 
 	}
 
 	return properties;
+}
+
+/**
+ * Generate CSS block for a single device's default values
+ *
+ * @param {Object} device - Device object with type, defaultValues, cssId, linkedTo
+ * @returns {string|null} CSS block string or null if no CSS should be generated
+ */
+export function generateCSSBlock(device) {
+	const deviceType = DEVICE_TYPES[device.type];
+	if (!deviceType) return null;
+
+	// Skip default values for linked devices
+	if (device.linkedTo !== null) return null;
+
+	// Get default values from device
+	const defaultValues = device.defaultValues || [];
+
+	// Generate CSS properties from DMX values
+	const properties = generateCSSProperties(
+		deviceType.controls,
+		deviceType.components,
+		defaultValues,
+		device.type
+	);
+
+	if (Object.keys(properties).length === 0) return null;
+
+	// Convert properties object to CSS string
+	const props = Object.entries(properties)
+		.map(([prop, value]) => `  ${prop}: ${value};`)
+		.join('\n');
+
+	return `#${device.cssId} {\n${props}\n}`;
 }
