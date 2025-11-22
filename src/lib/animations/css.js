@@ -33,13 +33,16 @@ export function generateCSSAnimation(animation) {
 
 /**
  * Get CSS properties for a keyframe
+ *
+ * NEW: Works with control-based values
+ *
  * @param {Object} animation - Plain animation object
  * @param {Object} keyframe - Keyframe object
  * @returns {Object} CSS properties object
  */
 function getKeyframeProperties(animation, keyframe) {
-	const { controls, components } = getControlsForRendering(animation);
+	const controls = getControlsForRendering(animation);
 
-	// Use shared mapping function
-	return getProperties(controls, components, keyframe.values, keyframe.deviceType);
+	// Use shared mapping function - NEW signature: (controlValues, controls)
+	return getProperties(keyframe.values, controls);
 }
