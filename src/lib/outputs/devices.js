@@ -39,14 +39,16 @@ export const DEVICE_TYPES = {
 };
 
 /**
- * Get preview data for a device based on its type and values
+ * Get preview data for a device based on its type and control values
  * Generic function that works with any device type by examining its controls
- * 
+ *
+ * NEW: Accepts control values object instead of DMX array
+ *
  * @param {string} deviceType - The device type key (e.g., 'RGB', 'FLAMETHROWER')
- * @param {Array<number>} values - Array of channel values
+ * @param {Object} controlValues - Control values object { "Color": { r, g, b }, "Dimmer": 255, ... }
  * @returns {Object} Preview data with controls array and data object
  */
-export function getDevicePreviewData(deviceType, values) {
+export function getDevicePreviewData(deviceType, controlValues) {
     const deviceTypeDef = DEVICE_TYPES[deviceType];
     if (!deviceTypeDef) {
         return { controls: [], data: {} };
@@ -57,27 +59,28 @@ export function getDevicePreviewData(deviceType, values) {
 
     // Process each control in the device type
     for (const control of deviceTypeDef.controls) {
-        if (control.type === 'rgb') {
-            // RGB control - extract color
+        const value = controlValues[control.name];
+        if (value === undefined) continue;
+
+        const controlTypeId = control.type.type;  // e.g., 'rgb', 'slider', 'xypad'
+
+        if (controlTypeId === 'rgb' || controlTypeId === 'rgba') {
+            // RGB/RGBA control - extract color
             controls.push('color');
-            const r = values[control.components.r] ?? 0;
-            const g = values[control.components.g] ?? 0;
-            const b = values[control.components.b] ?? 0;
+            const r = value.r ?? 0;
+            const g = value.g ?? 0;
+            const b = value.b ?? 0;
             data.color = `rgb(${r}, ${g}, ${b})`;
-        } else if (control.type === 'slider' || control.type === 'toggle') {
-            // Slider/Toggle control - extract value
-            const componentIndex = Object.values(control.components)[0];
-            const channel = deviceTypeDef.components[componentIndex].channel;
+        } else if (controlTypeId === 'slider') {
+            // Slider control - extract value
             const controlKey = control.name.toLowerCase();
             controls.push(controlKey);
-            data[controlKey] = values[channel] ?? 0;
-        } else if (control.type === 'xypad') {
+            data[controlKey] = value ?? 0;
+        } else if (controlTypeId === 'xypad') {
             // XY Pad control (Pan/Tilt) - extract pan and tilt values
             controls.push('pantilt');
-            const panChannel = deviceTypeDef.components[control.components.x].channel;
-            const tiltChannel = deviceTypeDef.components[control.components.y].channel;
-            data.pan = values[panChannel] ?? 0;
-            data.tilt = values[tiltChannel] ?? 0;
+            data.pan = value.x ?? 128;
+            data.tilt = value.y ?? 128;
         }
     }
 
@@ -86,111 +89,54 @@ export function getDevicePreviewData(deviceType, values) {
 
 /**
  * Convert named channels object to device channel array
- * Maps channel names to the correct array indices for a device type
- * 
- * @param {string} deviceType - The device type key (e.g., 'RGB', 'FLAMETHROWER')
- * @param {Object} channels - Object with channel names as keys and values
- * @returns {Array<number>} Array of channel values in correct order
+ * DEPRECATED: Use controlValuesToDMX from converter.js instead
+ *
+ * This function is kept for backward compatibility with CSS sampling,
+ * but should not be used in new code.
  */
 export function convertChannelsToArray(deviceType, channels) {
+    console.warn('convertChannelsToArray() is deprecated. Use controlValuesToDMX() from converter.js instead.');
+
     const deviceTypeDef = DEVICE_TYPES[deviceType];
     if (!deviceTypeDef) {
         console.warn(`Unknown device type: ${deviceType}`);
         return [];
     }
 
-    // Create array with default values
-    const result = deviceTypeDef.getDefaultValues();
-
-    // Map named channels to array indices
-    for (const component of deviceTypeDef.components) {
-        if (channels[component.name] !== undefined) {
-            result[component.channel] = channels[component.name];
-        }
-    }
-
-    return result;
+    // Return default DMX array as fallback
+    return deviceTypeDef.getDefaultValues();
 }
 
 /**
- * Get preview data for trigger values
- * Only includes enabled controls from the trigger
- * 
+ * Get preview data for trigger control values
+ * Only includes enabled controls (those present in triggerValues)
+ *
+ * NEW: Accepts control values object instead of channelValues/enabledControls
+ *
  * @param {string} deviceType - The device type key (e.g., 'RGB', 'FLAMETHROWER')
- * @param {Object} triggerValues - Trigger values object with channelValues and enabledControls
+ * @param {Object} triggerValues - Control values object { "Color": { r, g, b }, ... }
  * @returns {Object} Preview data with controls array and data object
  */
 export function getTriggerValuesPreviewData(deviceType, triggerValues) {
-    const deviceTypeDef = DEVICE_TYPES[deviceType];
-    if (!deviceTypeDef) {
-        return { controls: [], data: {} };
-    }
-
-    if (!triggerValues || !triggerValues.channelValues || !triggerValues.enabledControls) {
-        return { controls: [], data: {} };
-    }
-
-    const enabledControls = triggerValues.enabledControls;
-    const channelValues = triggerValues.channelValues;
-    
-    // Create array filled with zeros, then populate with channel values
-    const values = new Array(deviceTypeDef.channels).fill(0);
-    for (const [channelIndex, value] of Object.entries(channelValues)) {
-        const idx = parseInt(channelIndex);
-        if (idx >= 0 && idx < values.length) {
-            values[idx] = value;
-        }
-    }
-
-    const controls = [];
-    const data = {};
-
-    // Process each control in the device type
-    for (const control of deviceTypeDef.controls) {
-        // Only include controls that are enabled in the trigger
-        if (!enabledControls.includes(control.name)) {
-            continue;
-        }
-
-        if (control.type === 'rgb') {
-            // RGB control - extract color
-            controls.push('color');
-            const r = values[control.components.r] ?? 0;
-            const g = values[control.components.g] ?? 0;
-            const b = values[control.components.b] ?? 0;
-            data.color = `rgb(${r}, ${g}, ${b})`;
-        } else if (control.type === 'slider' || control.type === 'toggle') {
-            // Slider/Toggle control - extract value
-            const componentIndex = Object.values(control.components)[0];
-            const channel = deviceTypeDef.components[componentIndex].channel;
-            const controlKey = control.name.toLowerCase();
-            controls.push(controlKey);
-            data[controlKey] = values[channel] ?? 0;
-        } else if (control.type === 'xypad') {
-            // XY Pad control (Pan/Tilt) - extract pan and tilt values
-            controls.push('pantilt');
-            const panChannel = deviceTypeDef.components[control.components.x].channel;
-            const tiltChannel = deviceTypeDef.components[control.components.y].channel;
-            data.pan = values[panChannel] ?? 0;
-            data.tilt = values[tiltChannel] ?? 0;
-        }
-    }
-
-    return { controls, data };
+    // With the new architecture, this is the same as getDevicePreviewData
+    // since enabled controls are implicitly those present in the object
+    return getDevicePreviewData(deviceType, triggerValues);
 }
 
 /**
- * Get color preview for a device based on its type and values
+ * Get color preview for a device based on its type and control values
  * This is used for generating CSS color property from device values
- * Returns pure RGB color - all special effects (white/amber/intensity layers, smoke, fire, etc.) 
+ * Returns pure RGB color - all special effects (white/amber/intensity layers, smoke, fire, etc.)
  * are handled by the Preview component as separate control layers
- * 
+ *
+ * NEW: Accepts control values object instead of DMX array
+ *
  * @param {string} deviceType - The type of device (RGB, RGBA, RGBW, etc.)
- * @param {Array<number>} values - Array of channel values (0-255)
+ * @param {Object} controlValues - Control values object { "Color": { r, g, b }, ... }
  * @returns {string} CSS color string (RGB only, or transparent if no RGB control)
  */
-export function getDeviceColor(deviceType, values) {
-    if (!values || values.length === 0) {
+export function getDeviceColor(deviceType, controlValues) {
+    if (!controlValues || typeof controlValues !== 'object') {
         return 'transparent';
     }
 
@@ -199,16 +145,22 @@ export function getDeviceColor(deviceType, values) {
         return 'transparent';
     }
 
-    // Find RGB control and extract R, G, B component indices
-    const rgbControl = deviceTypeDef.controls?.find(c => c.type === 'rgb');
-    if (rgbControl) {
-        const r = values[rgbControl.components.r] ?? 0;
-        const g = values[rgbControl.components.g] ?? 0;
-        const b = values[rgbControl.components.b] ?? 0;
-        return `rgb(${r}, ${g}, ${b})`;
+    // Find Color control (RGB or RGBA type)
+    const colorControl = deviceTypeDef.controls?.find(
+        c => c.type.type === 'rgb' || c.type.type === 'rgba'
+    );
+
+    if (colorControl) {
+        const colorValue = controlValues[colorControl.name];
+        if (colorValue && typeof colorValue === 'object') {
+            const r = colorValue.r ?? 0;
+            const g = colorValue.g ?? 0;
+            const b = colorValue.b ?? 0;
+            return `rgb(${r}, ${g}, ${b})`;
+        }
     }
 
-    // No RGB control - return transparent
+    // No RGB/RGBA control - return transparent
     // (dimmer/intensity, smoke, flamethrower, etc. are handled by Preview component layers)
     return 'transparent';
 }
