@@ -6,7 +6,6 @@
  */
 
 import { getDeviceColor, DEVICE_TYPES } from '../outputs/devices.js';
-import { generateCSSProperties } from '../outputs/css.js';
 
 /**
  * Get controls and components arrays for rendering
@@ -124,47 +123,4 @@ export function getNumChannels(animation) {
 	}
 
 	return channels.size;
-}
-
-/**
- * Convert animation to CSS @keyframes rule
- * @param {Object} animation - Plain animation object
- * @returns {string} CSS @keyframes rule
- */
-export function animationToCSS(animation) {
-	if (!animation.keyframes || animation.keyframes.length === 0) {
-		return '';
-	}
-
-	// Generate CSS based on controls being animated
-	const keyframeRules = animation.keyframes.map(kf => {
-		const percent = Math.round(kf.time * 100);
-		const properties = getKeyframeProperties(animation, kf);
-		const props = Object.entries(properties)
-			.map(([prop, value]) => `${prop}: ${value}`)
-			.join('; ');
-		return `${percent}% { ${props}; }`;
-	}).join('\n  ');
-
-	return `@keyframes ${animation.cssName} {\n  ${keyframeRules}\n}`;
-}
-
-/**
- * Get CSS properties for a keyframe
- * @param {Object} animation - Plain animation object
- * @param {Object} keyframe - Keyframe object
- * @returns {Object} CSS properties object
- */
-function getKeyframeProperties(animation, keyframe) {
-	const { controls, components } = getControlsForRendering(animation);
-
-	// Use shared mapping function
-	const properties = generateCSSProperties(controls, components, keyframe.values, keyframe.deviceType);
-
-	// Fallback: if no properties generated, use color
-	if (Object.keys(properties).length === 0) {
-		properties.color = getDeviceColor(keyframe.deviceType, keyframe.values);
-	}
-
-	return properties;
 }

@@ -8,7 +8,7 @@ import { getDeviceColor, DEVICE_TYPES } from './devices.js';
 import { CONTROL_CSS_MAPPING } from '../css/mapping/controlToCssMapping.js';
 
 /**
- * Generate CSS properties from DMX values for a set of controls
+ * Get CSS properties from DMX values for a set of controls
  *
  * @param {Array} controls - Array of control definitions
  * @param {Array} components - Array of component definitions
@@ -16,7 +16,7 @@ import { CONTROL_CSS_MAPPING } from '../css/mapping/controlToCssMapping.js';
  * @param {string} deviceType - Device type (for color generation)
  * @returns {Object} CSS properties object
  */
-export function generateCSSProperties(controls, components, values, deviceType) {
+export function getProperties(controls, components, values, deviceType) {
 	const properties = {};
 
 	for (const control of controls) {
@@ -77,7 +77,7 @@ export function generateCSSBlock(device) {
 	const defaultValues = device.defaultValues || [];
 
 	// Generate CSS properties from DMX values
-	const properties = generateCSSProperties(
+	const properties = getProperties(
 		deviceType.controls,
 		deviceType.components,
 		defaultValues,

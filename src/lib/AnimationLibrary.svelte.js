@@ -6,7 +6,7 @@
  */
 
 import { Library } from './Library.svelte.js';
-import { animationToCSS } from './animations/utils.js';
+import { generateCSSAnimation } from './animations/css.js';
 import { toCSSIdentifier } from './css/utils.js';
 
 export class AnimationLibrary extends Library {
@@ -111,7 +111,7 @@ export class AnimationLibrary extends Library {
 	 */
 	toCSS() {
 		return this.items
-			.map(anim => animationToCSS(anim))
+			.map(anim => generateCSSAnimation(anim))
 			.filter(css => css)
 			.join('\n\n');
 	}
