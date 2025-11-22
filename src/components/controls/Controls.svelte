@@ -4,10 +4,9 @@
 
     let {
         controls, // Array of control definitions
-        components, // Array of component definitions (with channel mapping)
-        values = $bindable([]),
-        onChange = null,
-        disabledChannels = [], // Array of channel indices that should be disabled
+        values = $bindable({}), // Control values object (e.g., { "Color": { r, g, b }, "Dimmer": 255 })
+        onChange = null, // Callback: (controlName, value) => void
+        disabledControls = [], // Array of control names that should be disabled
         enabledControls = $bindable(null), // Optional: array of enabled control names, null = show all without checkboxes
         showCheckboxes = false // Whether to show enable/disable checkboxes
     } = $props();
@@ -34,43 +33,56 @@
         }
     }
 
-    function handleSliderChange(channelIndex, value) {
+    function handleControlChange(controlName, value) {
         if (onChange) {
-            onChange(channelIndex, value);
+            onChange(controlName, value);
         } else {
             // If no onChange handler, mutate directly (for $bindable use case)
-            values[channelIndex] = value;
+            if (typeof value === 'object' && value !== null) {
+                values[controlName] = { ...value };
+            } else {
+                values[controlName] = value;
+            }
         }
     }
 
-    function handleXYPadChange(xChannel, yChannel, xValue, yValue) {
-        if (onChange) {
-            onChange(xChannel, xValue);
-            onChange(yChannel, yValue);
-        } else {
-            // If no onChange handler, mutate directly (for $bindable use case)
-            values[xChannel] = xValue;
-            values[yChannel] = yValue;
-        }
+    function handleRGBComponentChange(controlName, component, value) {
+        const currentValue = values[controlName] || { r: 0, g: 0, b: 0 };
+        const newValue = { ...currentValue, [component]: value };
+        handleControlChange(controlName, newValue);
     }
 
-    function handleToggleChange(channelIndex, control) {
+    function handleXYPadChange(controlName, xValue, yValue) {
+        handleControlChange(controlName, { x: xValue, y: yValue });
+    }
+
+    function handleToggleChange(controlName, control) {
         // Toggle between off and on values
-        const currentValue = values[channelIndex];
+        const currentValue = values[controlName];
         const newValue = currentValue === control.onValue ? control.offValue : control.onValue;
-        handleSliderChange(channelIndex, newValue);
+        handleControlChange(controlName, newValue);
     }
 
-    function handleTextInputChange(channelIndex, inputValue, e) {
+    function handleTextInputChange(controlName, inputValue, e, component = null) {
         const numValue = parseInt(inputValue);
         if (!isNaN(numValue) && numValue >= 0 && numValue <= 255) {
-            handleSliderChange(channelIndex, numValue);
+            if (component) {
+                // RGB component change
+                handleRGBComponentChange(controlName, component, numValue);
+            } else {
+                // Scalar value change
+                handleControlChange(controlName, numValue);
+            }
         } else if (inputValue === '') {
             // Allow empty for easier editing
             e.target.value = '';
         } else {
             // Invalid value, revert to current value
-            e.target.value = values[channelIndex];
+            if (component) {
+                e.target.value = values[controlName]?.[component] ?? 0;
+            } else {
+                e.target.value = values[controlName] ?? 0;
+            }
         }
     }
 
@@ -79,13 +91,8 @@
         e.target.value = e.target.value.replace(/[^0-9]/g, '');
     }
 
-    function isChannelDisabled(channelIndex) {
-        return disabledChannels.includes(channelIndex);
-    }
-
-    // Get the channel number for a component index
-    function getChannel(componentIndex) {
-        return components[componentIndex].channel;
+    function isControlDisabled(controlName) {
+        return disabledControls.includes(controlName);
     }
 
     // Generate gradient background for slider based on control name
@@ -154,12 +161,9 @@
 
 <div class="controls">
     {#each controls as control}
-        {#if control.type === 'xypad'}
-            {@const xChannel = getChannel(control.components.x)}
-            {@const yChannel = getChannel(control.components.y)}
-            {@const xDisabled = isChannelDisabled(xChannel)}
-            {@const yDisabled = isChannelDisabled(yChannel)}
-            {@const bothDisabled = xDisabled && yDisabled}
+        {#if control.type === 'xypad' || control.type === 'xypad16'}
+            {@const controlValue = values[control.name] || { x: 128, y: 128 }}
+            {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
             <div class="control-xypad">
                 <div class="control-header">
                     {#if showCheckboxes}
@@ -172,42 +176,40 @@
                     {/if}
                     <label>{control.name}</label>
                 </div>
-                <div class="xypad-wrapper" class:disabled={bothDisabled}>
+                <div class="xypad-wrapper" class:disabled={controlDisabled}>
                     <XYPad
-                        panValue={values[xChannel]}
-                        tiltValue={values[yChannel]}
-                        onUpdate={(x, y) => !bothDisabled && handleXYPadChange(xChannel, yChannel, x, y)}
+                        panValue={controlValue.x}
+                        tiltValue={controlValue.y}
+                        onUpdate={(x, y) => !controlDisabled && handleXYPadChange(control.name, x, y)}
                     />
                 </div>
                 <div class="xypad-inputs">
                     <input
                         type="text"
-                        value={values[xChannel]}
+                        value={controlValue.x}
                         oninput={handleTextInput}
-                        onchange={(e) => !xDisabled && handleTextInputChange(xChannel, e.target.value, e)}
+                        onchange={(e) => !controlDisabled && handleXYPadChange(control.name, parseInt(e.target.value) || 0, controlValue.y)}
                         class="value-input"
                         title="X"
-                        disabled={xDisabled}
+                        disabled={controlDisabled}
                         maxlength="3"
                     />
                     <input
                         type="text"
-                        value={values[yChannel]}
+                        value={controlValue.y}
                         oninput={handleTextInput}
-                        onchange={(e) => !yDisabled && handleTextInputChange(yChannel, e.target.value, e)}
+                        onchange={(e) => !controlDisabled && handleXYPadChange(control.name, controlValue.x, parseInt(e.target.value) || 0)}
                         class="value-input"
                         title="Y"
-                        disabled={yDisabled}
+                        disabled={controlDisabled}
                         maxlength="3"
                     />
                 </div>
             </div>
-        {:else if control.type === 'rgb'}
-            {@const rChannel = getChannel(control.components.r)}
-            {@const gChannel = getChannel(control.components.g)}
-            {@const bChannel = getChannel(control.components.b)}
+        {:else if control.type === 'rgb' || control.type === 'rgba'}
+            {@const colorValue = values[control.name] || { r: 0, g: 0, b: 0 }}
+            {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
             <!-- Red -->
-            {@const rDisabled = isChannelDisabled(rChannel) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
                     <input
@@ -217,49 +219,47 @@
                         class="control-checkbox"
                     />
                 {/if}
-                <label class:disabled={rDisabled}>{components[control.components.r].name}</label>
+                <label class:disabled={controlDisabled}>Red</label>
                 <div class="slider-wrapper">
-                    <input type="range" min="0" max="255" value={values[rChannel]}
-                        oninput={(e) => !rDisabled && handleSliderChange(rChannel, parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient('Red')}; --thumb-color: {getThumbColor('Red', values[rChannel])}"
-                        disabled={rDisabled} class="color-slider" />
+                    <input type="range" min="0" max="255" value={colorValue.r}
+                        oninput={(e) => !controlDisabled && handleRGBComponentChange(control.name, 'r', parseInt(e.target.value))}
+                        style="--slider-gradient: {getSliderGradient('Red')}; --thumb-color: {getThumbColor('Red', colorValue.r)}"
+                        disabled={controlDisabled} class="color-slider" />
                 </div>
-                <input type="text" value={values[rChannel]} oninput={handleTextInput}
-                    onchange={(e) => !rDisabled && handleTextInputChange(rChannel, e.target.value, e)}
-                    class="value-input" disabled={rDisabled} maxlength="3" />
+                <input type="text" value={colorValue.r} oninput={handleTextInput}
+                    onchange={(e) => !controlDisabled && handleTextInputChange(control.name, e.target.value, e, 'r')}
+                    class="value-input" disabled={controlDisabled} maxlength="3" />
             </div>
             <!-- Green -->
-            {@const gDisabled = isChannelDisabled(gChannel) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
-                <label class:disabled={gDisabled} style={showCheckboxes ? 'grid-column-start: 2' : ''}>{components[control.components.g].name}</label>
+                <label class:disabled={controlDisabled} style={showCheckboxes ? 'grid-column-start: 2' : ''}>Green</label>
                 <div class="slider-wrapper">
-                    <input type="range" min="0" max="255" value={values[gChannel]}
-                        oninput={(e) => !gDisabled && handleSliderChange(gChannel, parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient('Green')}; --thumb-color: {getThumbColor('Green', values[gChannel])}"
-                        disabled={gDisabled} class="color-slider" />
+                    <input type="range" min="0" max="255" value={colorValue.g}
+                        oninput={(e) => !controlDisabled && handleRGBComponentChange(control.name, 'g', parseInt(e.target.value))}
+                        style="--slider-gradient: {getSliderGradient('Green')}; --thumb-color: {getThumbColor('Green', colorValue.g)}"
+                        disabled={controlDisabled} class="color-slider" />
                 </div>
-                <input type="text" value={values[gChannel]} oninput={handleTextInput}
-                    onchange={(e) => !gDisabled && handleTextInputChange(gChannel, e.target.value, e)}
-                    class="value-input" disabled={gDisabled} maxlength="3" />
+                <input type="text" value={colorValue.g} oninput={handleTextInput}
+                    onchange={(e) => !controlDisabled && handleTextInputChange(control.name, e.target.value, e, 'g')}
+                    class="value-input" disabled={controlDisabled} maxlength="3" />
             </div>
             <!-- Blue -->
-            {@const bDisabled = isChannelDisabled(bChannel) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
-                <label class:disabled={bDisabled} style={showCheckboxes ? 'grid-column-start: 2' : ''}>{components[control.components.b].name}</label>
+                <label class:disabled={controlDisabled} style={showCheckboxes ? 'grid-column-start: 2' : ''}>Blue</label>
                 <div class="slider-wrapper">
-                    <input type="range" min="0" max="255" value={values[bChannel]}
-                        oninput={(e) => !bDisabled && handleSliderChange(bChannel, parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient('Blue')}; --thumb-color: {getThumbColor('Blue', values[bChannel])}"
-                        disabled={bDisabled} class="color-slider" />
+                    <input type="range" min="0" max="255" value={colorValue.b}
+                        oninput={(e) => !controlDisabled && handleRGBComponentChange(control.name, 'b', parseInt(e.target.value))}
+                        style="--slider-gradient: {getSliderGradient('Blue')}; --thumb-color: {getThumbColor('Blue', colorValue.b)}"
+                        disabled={controlDisabled} class="color-slider" />
                 </div>
-                <input type="text" value={values[bChannel]} oninput={handleTextInput}
-                    onchange={(e) => !bDisabled && handleTextInputChange(bChannel, e.target.value, e)}
-                    class="value-input" disabled={bDisabled} maxlength="3" />
+                <input type="text" value={colorValue.b} oninput={handleTextInput}
+                    onchange={(e) => !controlDisabled && handleTextInputChange(control.name, e.target.value, e, 'b')}
+                    class="value-input" disabled={controlDisabled} maxlength="3" />
             </div>
         {:else if control.type === 'toggle'}
-            {@const channelIndex = getChannel(control.components.value)}
-            {@const channelDisabled = isChannelDisabled(channelIndex) || !isControlEnabled(control)}
-            {@const isOn = values[channelIndex] === control.onValue}
+            {@const controlValue = values[control.name] ?? control.offValue}
+            {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
+            {@const isOn = controlValue === control.onValue}
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
                     <input
@@ -269,28 +269,28 @@
                         class="control-checkbox"
                     />
                 {/if}
-                <label class:disabled={channelDisabled}>{control.name}</label>
+                <label class:disabled={controlDisabled}>{control.name}</label>
                 <div class="toggle-wrapper">
                     <ToggleSwitch
                         checked={isOn}
-                        disabled={channelDisabled}
-                        onchange={() => handleToggleChange(channelIndex, control)}
+                        disabled={controlDisabled}
+                        onchange={() => handleToggleChange(control.name, control)}
                         label="{control.name}"
                     />
                 </div>
                 <input
                     type="text"
-                    value={values[channelIndex]}
+                    value={controlValue}
                     oninput={handleTextInput}
-                    onchange={(e) => !channelDisabled && handleTextInputChange(channelIndex, e.target.value, e)}
+                    onchange={(e) => !controlDisabled && handleTextInputChange(control.name, e.target.value, e)}
                     class="value-input"
-                    disabled={channelDisabled}
+                    disabled={controlDisabled}
                     maxlength="3"
                 />
             </div>
         {:else if control.type === 'slider'}
-            {@const channelIndex = getChannel(control.components.value)}
-            {@const channelDisabled = isChannelDisabled(channelIndex) || !isControlEnabled(control)}
+            {@const controlValue = values[control.name] ?? 0}
+            {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
                     <input
@@ -300,26 +300,26 @@
                         class="control-checkbox"
                     />
                 {/if}
-                <label class:disabled={channelDisabled}>{control.name}</label>
+                <label class:disabled={controlDisabled}>{control.name}</label>
                 <div class="slider-wrapper">
                     <input
                         type="range"
                         min="0"
                         max="255"
-                        value={values[channelIndex]}
-                        oninput={(e) => !channelDisabled && handleSliderChange(channelIndex, parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient(components[control.components.value].name)}; --thumb-color: {getThumbColor(components[control.components.value].name, values[channelIndex])}"
-                        disabled={channelDisabled}
+                        value={controlValue}
+                        oninput={(e) => !controlDisabled && handleControlChange(control.name, parseInt(e.target.value))}
+                        style="--slider-gradient: {getSliderGradient(control.name)}; --thumb-color: {getThumbColor(control.name, controlValue)}"
+                        disabled={controlDisabled}
                         class="color-slider"
                     />
                 </div>
                 <input
                     type="text"
-                    value={values[channelIndex]}
+                    value={controlValue}
                     oninput={handleTextInput}
-                    onchange={(e) => !channelDisabled && handleTextInputChange(channelIndex, e.target.value, e)}
+                    onchange={(e) => !controlDisabled && handleTextInputChange(control.name, e.target.value, e)}
                     class="value-input"
-                    disabled={channelDisabled}
+                    disabled={controlDisabled}
                     maxlength="3"
                 />
             </div>

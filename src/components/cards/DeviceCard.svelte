@@ -1,7 +1,7 @@
 <script>
 	import { Icon } from 'svelte-icon';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-	import { getMappedChannels } from '../../lib/outputs/sync.js';
+	import { getMappedControls } from '../../lib/outputs/sync.js';
 	import { getDeviceColor } from '../../lib/outputs/devices.js';
 	import DraggableCard from '../common/DraggableCard.svelte';
 	import CardHeader from '../common/CardHeader.svelte';
@@ -21,18 +21,18 @@
 	} = $props();
 
 	/**
-	 * Get disabled channels for this device based on linked device
+	 * Get disabled controls for this device based on linked device
 	 */
-	function getDisabledChannels() {
+	function getDisabledControls() {
 		if (!device.linkedTo) return [];
 
 		const sourceDevice = devices.find(d => d.id === device.linkedTo);
 		if (!sourceDevice) return [];
 
-		return getMappedChannels(sourceDevice.type, device.type, device.syncedControls);
+		return getMappedControls(sourceDevice.type, device.type, device.syncedControls);
 	}
 
-	let disabledChannels = $derived(getDisabledChannels());
+	let disabledControls = $derived(getDisabledControls());
 </script>
 
 <DraggableCard {dnd} item={device} class="device-card">
@@ -56,10 +56,9 @@
 
 	<Controls
 		controls={DEVICE_TYPES[device.type].controls}
-		components={DEVICE_TYPES[device.type].components}
 		values={device.defaultValues}
-		onChange={(channelIndex, value) => onValueChange?.(device, channelIndex, value)}
-		disabledChannels={disabledChannels}
+		onChange={(controlName, value) => onValueChange?.(device, controlName, value)}
+		disabledControls={disabledControls}
 	/>
 </DraggableCard>
 

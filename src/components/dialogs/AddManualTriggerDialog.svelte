@@ -33,7 +33,7 @@
 	let duration = $state(1000);
 	let looping = $state(false);
 	let easing = $state('linear');
-	let channelValues = $state({});
+	let controlValues = $state({});
 	let enabledControls = $state([]);
 
 	const ACTION_TYPES = [
@@ -84,30 +84,19 @@
 		}
 	}
 
-	// Convert channelValues object to full values array for Controls
-	function getValuesArrayForDevice() {
-		const device = devices.find(d => d.id === selectedDevice);
-		if (!device) return [];
-
-		const numChannels = DEVICE_TYPES[device.type].channels;
-		const values = new Array(numChannels).fill(0);
-
-		// Fill in values from channelValues object
-		for (let i = 0; i < numChannels; i++) {
-			if (channelValues[i] !== undefined) {
-				values[i] = channelValues[i];
-			}
-		}
-
-		return values;
-	}
-
 	// Handle device control changes for setValue triggers
-	function handleSetValueChange(channelIndex, value) {
-		channelValues = {
-			...channelValues,
-			[channelIndex]: Math.max(0, Math.min(255, parseInt(value) || 0))
-		};
+	function handleControlValueChange(controlName, value) {
+		if (typeof value === 'object' && value !== null) {
+			controlValues = {
+				...controlValues,
+				[controlName]: { ...value }
+			};
+		} else {
+			controlValues = {
+				...controlValues,
+				[controlName]: Math.max(0, Math.min(255, parseInt(value) || 0))
+			};
+		}
 	}
 
 	// Handle device change - initialize enabled controls
@@ -147,7 +136,7 @@
 			duration = 1000;
 			looping = false;
 			easing = 'linear';
-			channelValues = {};
+			controlValues = {};
 
 			// Initialize enabled controls for values
 			handleDeviceChange();
@@ -172,6 +161,14 @@
 		}
 
 		// Return trigger configuration
+		// Filter controlValues to only include enabled controls
+		const filteredValues = {};
+		for (const controlName of enabledControls) {
+			if (controlValues[controlName] !== undefined) {
+				filteredValues[controlName] = controlValues[controlName];
+			}
+		}
+
 		const result = {
 			input: selectedInput,
 			triggerType,
@@ -181,8 +178,7 @@
 			duration,
 			looping,
 			easing,
-			channelValues: {...channelValues},
-			enabledControls: [...enabledControls]
+			values: filteredValues
 		};
 
 		resolvePromise(result);
@@ -295,9 +291,8 @@
 							<div class="dialog-input-group">
 								<Controls
 									controls={DEVICE_TYPES[device.type].controls}
-									components={DEVICE_TYPES[device.type].components}
-									values={getValuesArrayForDevice()}
-									onChange={handleSetValueChange}
+									bind:values={controlValues}
+									onChange={handleControlValueChange}
 									showCheckboxes={true}
 									bind:enabledControls={enabledControls}
 								/>
