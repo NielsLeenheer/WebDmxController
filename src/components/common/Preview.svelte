@@ -28,7 +28,7 @@
     // Generate animation preview gradient
     function generateAnimationPreview(animation) {
         if (!animation) return '#888';
-        
+
         // Check if animation has color-related controls
         const hasColor = animation.controls && (
             animation.controls.includes('Color') ||
@@ -40,41 +40,30 @@
             return '#888';
         }
 
-        // Get control and component data for the animation
-        const { controls, components } = getControlsForRendering(animation);
-
-        // Extract colors from each keyframe
+        // Extract colors from each keyframe (NEW: control values)
         const colors = animation.keyframes.map(keyframe => {
-            const values = keyframe.values || [];
+            const values = keyframe.values || {};
 
-            // Find Color control
-            const colorControl = controls.find(c => c.name === 'Color' && c.type === 'rgb');
+            // Get Color control value
             let r = 0, g = 0, b = 0;
-
-            if (colorControl) {
-                const rIdx = colorControl.components.r;
-                const gIdx = colorControl.components.g;
-                const bIdx = colorControl.components.b;
-                r = values[rIdx] || 0;
-                g = values[gIdx] || 0;
-                b = values[bIdx] || 0;
+            const colorValue = values.Color;
+            if (colorValue && typeof colorValue === 'object') {
+                r = colorValue.r || 0;
+                g = colorValue.g || 0;
+                b = colorValue.b || 0;
             }
 
             // Add Amber if present
-            const amberControl = controls.find(c => c.name === 'Amber' && c.type === 'slider');
-            if (amberControl) {
-                const amberIdx = amberControl.components.value;
-                const amber = values[amberIdx] || 0;
+            const amber = values.Amber;
+            if (amber !== undefined) {
                 // Amber is #FFBF00 - adds to red and green
                 r = Math.min(255, r + (255 * amber / 255));
                 g = Math.min(255, g + (191 * amber / 255));
             }
 
             // Add White if present
-            const whiteControl = controls.find(c => c.name === 'White' && c.type === 'slider');
-            if (whiteControl) {
-                const whiteIdx = whiteControl.components.value;
-                const white = values[whiteIdx] || 0;
+            const white = values.White;
+            if (white !== undefined) {
                 // White adds equally to all channels
                 r = Math.min(255, r + white);
                 g = Math.min(255, g + white);
@@ -123,31 +112,31 @@
             const device = data;
             const deviceType = DEVICE_TYPES[device.type];
             if (!deviceType) return {};
-            
+
+            // Get control values (NEW: object instead of array)
+            const controlValues = device.defaultValues || device.currentValues || {};
+
             if (device.type === 'FLAMETHROWER') {
                 return {
-                    fuel: device.defaultValues?.[1] || device.currentValues?.[1] || 0,
-                    safety: device.defaultValues?.[0] || device.currentValues?.[0] || 0
+                    fuel: controlValues.Fuel || 0,
+                    safety: controlValues.Safety || 0
                 };
             } else if (device.type === 'SMOKE') {
                 return {
-                    output: device.defaultValues?.[0] || device.currentValues?.[0] || 0
+                    output: controlValues.Output || 0
                 };
             } else if (deviceType.controls.some(c => c.name === 'Pan/Tilt')) {
-                // Find pan and tilt channel indices
-                const panComp = deviceType.components.find(c => c.name === 'Pan');
-                const tiltComp = deviceType.components.find(c => c.name === 'Tilt');
-                const panIdx = panComp ? deviceType.components.indexOf(panComp) : -1;
-                const tiltIdx = tiltComp ? deviceType.components.indexOf(tiltComp) : -1;
-                
+                // Extract Pan/Tilt values
+                const panTilt = controlValues['Pan/Tilt'] || { x: 128, y: 128 };
+
                 return {
-                    color: getDeviceColor(device.type, device.defaultValues || device.currentValues || []),
-                    pan: panIdx >= 0 ? (device.defaultValues?.[panIdx] || device.currentValues?.[panIdx] || 0) : 0,
-                    tilt: tiltIdx >= 0 ? (device.defaultValues?.[tiltIdx] || device.currentValues?.[tiltIdx] || 0) : 0
+                    color: getDeviceColor(device.type, controlValues),
+                    pan: panTilt.x || 128,
+                    tilt: panTilt.y || 128
                 };
             } else {
                 return {
-                    color: getDeviceColor(device.type, device.defaultValues || device.currentValues || [])
+                    color: getDeviceColor(device.type, controlValues)
                 };
             }
         }
