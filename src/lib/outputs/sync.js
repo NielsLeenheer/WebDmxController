@@ -1,26 +1,37 @@
+/**
+ * Device Linking Utilities
+ *
+ * NEW ARCHITECTURE:
+ * - Simplified control-based linking
+ * - No more channel-level mapping
+ * - Direct control value copying by name
+ */
+
 import { DEVICE_TYPES } from './devices.js';
 
 /**
  * Get control mapping from source device type to target device type
  * Returns a map of source control name → target control name for compatible controls
+ *
+ * NEW: Simplified - just checks if control names match
+ * (controls with same name are assumed compatible)
  */
 export function getControlMapping(sourceType, targetType) {
-    const sourceControls = DEVICE_TYPES[sourceType]?.controls;
-    const targetControls = DEVICE_TYPES[targetType]?.controls;
+    const sourceDeviceType = DEVICE_TYPES[sourceType];
+    const targetDeviceType = DEVICE_TYPES[targetType];
 
-    if (!sourceControls || !targetControls) {
+    if (!sourceDeviceType || !targetDeviceType) {
         return {};
     }
 
+    const sourceControlNames = sourceDeviceType.getControlNames();
+    const targetControlNames = new Set(targetDeviceType.getControlNames());
     const mapping = {};
 
-    // Find common controls by name and type
-    for (const sourceControl of sourceControls) {
-        for (const targetControl of targetControls) {
-            if (sourceControl.name === targetControl.name && sourceControl.type === targetControl.type) {
-                mapping[sourceControl.name] = targetControl.name;
-                break;
-            }
+    // Find common controls by name
+    for (const controlName of sourceControlNames) {
+        if (targetControlNames.has(controlName)) {
+            mapping[controlName] = controlName;  // Same name on both sides
         }
     }
 
@@ -36,66 +47,15 @@ export function canLinkDevices(sourceType, targetType) {
 }
 
 /**
- * Get channels affected by a control
- * Returns array of channel indices that this control manages
- */
-function getControlChannels(deviceType, controlName) {
-    const deviceDef = DEVICE_TYPES[deviceType];
-    const control = deviceDef.controls.find(c => c.name === controlName);
-
-    if (!control) return [];
-
-    const channels = [];
-
-    // Get all component indices from the control
-    for (const componentIndex of Object.values(control.components)) {
-        const channel = deviceDef.components[componentIndex].channel;
-        channels.push(channel);
-    }
-
-    return channels;
-}
-
-/**
  * Apply source device values to target device using control mapping
- * Returns new array of target values with mapped control values updated
+ * DEPRECATED: This function is no longer used with control-based values
+ * Device linking is now handled directly in DeviceLibrary.propagateToLinkedDevices()
  *
- * @param {string} sourceType - Source device type
- * @param {string} targetType - Target device type
- * @param {Array} sourceValues - Source device channel values
- * @param {Array} targetValues - Target device channel values
- * @param {Array|null} syncedControls - Array of control names to sync, or null for all
- * @param {boolean} mirrorPan - Whether to mirror pan values (invert)
+ * This is kept for backward compatibility but should not be used in new code.
  */
 export function applyLinkedValues(sourceType, targetType, sourceValues, targetValues, syncedControls = null, mirrorPan = false) {
-    const mapping = getControlMapping(sourceType, targetType);
-    const newValues = [...targetValues];
-
-    // For each mapped control
-    for (const [sourceControlName, targetControlName] of Object.entries(mapping)) {
-        // If syncedControls is specified, only sync those controls
-        if (syncedControls !== null && !syncedControls.includes(sourceControlName)) {
-            continue;
-        }
-
-        // Get channels for source and target controls
-        const sourceChannels = getControlChannels(sourceType, sourceControlName);
-        const targetChannels = getControlChannels(targetType, targetControlName);
-
-        // Copy values from source channels to target channels
-        for (let i = 0; i < Math.min(sourceChannels.length, targetChannels.length); i++) {
-            let value = sourceValues[sourceChannels[i]];
-
-            // Mirror pan if enabled and this is Pan/Tilt control's x-axis (pan)
-            if (mirrorPan && sourceControlName === 'Pan/Tilt' && i === 0) {
-                value = 255 - value;
-            }
-
-            newValues[targetChannels[i]] = value;
-        }
-    }
-
-    return newValues;
+    console.warn('applyLinkedValues() is deprecated. Use DeviceLibrary.propagateToLinkedDevices() instead.');
+    return targetValues;
 }
 
 /**
@@ -108,29 +68,34 @@ export function getLinkableDeviceTypes(deviceType) {
 }
 
 /**
- * Get array of target channel indices that are controlled by synced controls (disabled when linked)
+ * Get array of control names that are synced between two devices
+ *
+ * NEW: Returns control names instead of channel indices
  *
  * @param {string} sourceType - Source device type
  * @param {string} targetType - Target device type
- * @param {Array|null} syncedControls - Array of control names that are synced, or null for all
+ * @param {Array<string>|null} syncedControls - Array of control names that are synced, or null for all
+ * @returns {Array<string>} Array of control names that are synced
  */
-export function getMappedChannels(sourceType, targetType, syncedControls = null) {
+export function getMappedControls(sourceType, targetType, syncedControls = null) {
     const mapping = getControlMapping(sourceType, targetType);
-    const disabledChannels = [];
 
-    // For each mapped control
-    for (const [sourceControlName, targetControlName] of Object.entries(mapping)) {
-        // If syncedControls is specified, only include channels for those controls
-        if (syncedControls !== null && !syncedControls.includes(sourceControlName)) {
-            continue;
-        }
-
-        // Get channels for the target control and add to disabled list
-        const targetChannels = getControlChannels(targetType, targetControlName);
-        disabledChannels.push(...targetChannels);
+    // If syncedControls is specified, filter the mapping
+    if (syncedControls !== null) {
+        return Object.keys(mapping).filter(name => syncedControls.includes(name));
     }
 
-    return disabledChannels;
+    // Otherwise, return all mapped control names
+    return Object.keys(mapping);
+}
+
+/**
+ * Get array of target channel indices that are controlled by synced controls
+ * DEPRECATED: Use getMappedControls() instead
+ */
+export function getMappedChannels(sourceType, targetType, syncedControls = null) {
+    console.warn('getMappedChannels() is deprecated. Use getMappedControls() instead.');
+    return [];
 }
 
 /**
@@ -139,19 +104,21 @@ export function getMappedChannels(sourceType, targetType, syncedControls = null)
  */
 export function getAvailableSyncControls(sourceType, targetType) {
     const mapping = getControlMapping(sourceType, targetType);
-    const sourceControls = DEVICE_TYPES[sourceType].controls;
-    const targetControls = DEVICE_TYPES[targetType].controls;
+    const sourceDeviceType = DEVICE_TYPES[sourceType];
+    const targetDeviceType = DEVICE_TYPES[targetType];
     const result = [];
 
-    for (const [sourceControlName, targetControlName] of Object.entries(mapping)) {
-        const sourceControl = sourceControls.find(c => c.name === sourceControlName);
-        const targetControl = targetControls.find(c => c.name === targetControlName);
+    for (const controlName of Object.keys(mapping)) {
+        const sourceControl = sourceDeviceType.getControl(controlName);
+        const targetControl = targetDeviceType.getControl(controlName);
 
-        result.push({
-            controlName: sourceControlName,
-            sourceControl,
-            targetControl
-        });
+        if (sourceControl && targetControl) {
+            result.push({
+                controlName,
+                sourceControl,
+                targetControl
+            });
+        }
     }
 
     return result;

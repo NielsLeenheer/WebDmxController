@@ -3,11 +3,14 @@
  *
  * Extends Library base class with animation-specific functionality.
  * Stores animations as plain objects (not class instances) for proper reactivity.
+ * Keyframe values are stored as control-based objects (NEW ARCHITECTURE).
  */
 
 import { Library } from './Library.svelte.js';
 import { generateCSSAnimation } from './animations/css.js';
 import { toCSSIdentifier } from './css/utils.js';
+import { createDefaultControlValues } from './controls/converter.js';
+import { DEVICE_TYPES } from './outputs/devices.js';
 
 export class AnimationLibrary extends Library {
 	constructor() {
@@ -54,16 +57,26 @@ export class AnimationLibrary extends Library {
 	 * @param {string} animationId - Animation ID
 	 * @param {number} time - Time (0-1)
 	 * @param {string} deviceType - Device type for rendering
-	 * @param {Array<number>} values - Channel values
+	 * @param {Object} values - Control values object { "Color": { r, g, b }, ... }
 	 */
 	addKeyframe(animationId, time, deviceType, values) {
 		const animation = this.get(animationId);
 		if (!animation) return;
 
+		// Deep copy control values to avoid reference sharing
+		const valuesCopy = {};
+		for (const [key, value] of Object.entries(values)) {
+			if (typeof value === 'object' && value !== null) {
+				valuesCopy[key] = { ...value };
+			} else {
+				valuesCopy[key] = value;
+			}
+		}
+
 		const keyframe = {
 			time,
 			deviceType,
-			values: [...values]
+			values: valuesCopy
 		};
 
 		animation.keyframes.push(keyframe);
@@ -89,13 +102,26 @@ export class AnimationLibrary extends Library {
 	 * Update a keyframe's time or values
 	 * @param {string} animationId - Animation ID
 	 * @param {number} keyframeIndex - Index of keyframe
-	 * @param {Object} updates - Properties to update (time, values)
+	 * @param {Object} updates - Properties to update (time, values, deviceType)
 	 */
 	updateKeyframe(animationId, keyframeIndex, updates) {
 		const animation = this.get(animationId);
 		if (!animation || !animation.keyframes[keyframeIndex]) return;
 
-		Object.assign(animation.keyframes[keyframeIndex], updates);
+		// Deep copy values if present in updates
+		const updatesCopy = { ...updates };
+		if (updates.values) {
+			updatesCopy.values = {};
+			for (const [key, value] of Object.entries(updates.values)) {
+				if (typeof value === 'object' && value !== null) {
+					updatesCopy.values[key] = { ...value };
+				} else {
+					updatesCopy.values[key] = value;
+				}
+			}
+		}
+
+		Object.assign(animation.keyframes[keyframeIndex], updatesCopy);
 
 		// Re-sort if time changed
 		if (updates.time !== undefined) {
@@ -122,16 +148,42 @@ export class AnimationLibrary extends Library {
 	 * @param {number} index - Array index for order
 	 */
 	deserializeItem(animData, index) {
+		// Process keyframes, converting old format if needed
+		const keyframes = animData.keyframes?.map(kf => {
+			let values;
+
+			// Check if values is an array (old format) or object (new format)
+			if (Array.isArray(kf.values)) {
+				// OLD FORMAT: DMX array - convert to control values
+				// For now, just reset to defaults (no users to migrate)
+				const deviceType = DEVICE_TYPES[kf.deviceType];
+				values = createDefaultControlValues(deviceType);
+				console.log(`Migrated keyframe in animation "${animData.name}" from DMX array to control values`);
+			} else {
+				// NEW FORMAT: Control-based values - deep copy
+				values = {};
+				for (const [key, value] of Object.entries(kf.values)) {
+					if (typeof value === 'object' && value !== null) {
+						values[key] = { ...value };
+					} else {
+						values[key] = value;
+					}
+				}
+			}
+
+			return {
+				time: kf.time,
+				deviceType: kf.deviceType,
+				values
+			};
+		}) || [];
+
 		return {
 			id: animData.id || crypto.randomUUID(),
 			name: animData.name,
 			controls: animData.controls || [],
 			displayName: animData.displayName || null,
-			keyframes: animData.keyframes?.map(kf => ({
-				time: kf.time,
-				deviceType: kf.deviceType,
-				values: [...kf.values]
-			})) || [],
+			keyframes,
 			cssName: animData.cssName || toCSSIdentifier(animData.name),
 			order: animData.order !== undefined ? animData.order : index
 		};

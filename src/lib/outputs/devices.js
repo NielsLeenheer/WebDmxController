@@ -1,7 +1,13 @@
 /**
- * Device Type Definitions
- * 
- * Import all device type profiles from the devices directory
+ * Device Type Registry
+ *
+ * Central registry of all device type definitions.
+ *
+ * NEW ARCHITECTURE:
+ * - Device types are singleton class instances
+ * - Registry provides lookup by string ID
+ * - Device instances (in libraries) store type as string ID
+ * - Use DEVICE_TYPES[device.type] to get the device type definition
  */
 import { RGB } from './devices/RGB.js';
 import { RGBA } from './devices/RGBA.js';
@@ -12,16 +18,24 @@ import { MOVING_HEAD } from './devices/MOVING_HEAD.js';
 import { MOVING_HEAD_11CH } from './devices/MOVING_HEAD_11CH.js';
 import { FLAMETHROWER } from './devices/FLAMETHROWER.js';
 
-// Export device types for backward compatibility
+/**
+ * Device Type Registry
+ * Singleton instances keyed by string ID
+ *
+ * Example usage:
+ *   const device = { type: "RGB", ... }
+ *   const deviceType = DEVICE_TYPES[device.type]
+ *   const dmx = controlValuesToDMX(deviceType, device.defaultValues)
+ */
 export const DEVICE_TYPES = {
-    RGB,
-    RGBA,
-    RGBW,
-    DIMMER,
-    SMOKE,
-    MOVING_HEAD,
-    MOVING_HEAD_11CH,
-    FLAMETHROWER
+    RGB,         // deviceType.id === 'RGB'
+    RGBA,        // deviceType.id === 'RGBA'
+    RGBW,        // deviceType.id === 'RGBW'
+    DIMMER,      // deviceType.id === 'DIMMER'
+    SMOKE,       // deviceType.id === 'SMOKE'
+    MOVING_HEAD, // deviceType.id === 'MOVING_HEAD'
+    MOVING_HEAD_11CH,  // deviceType.id === 'MOVING_HEAD_11CH'
+    FLAMETHROWER // deviceType.id === 'FLAMETHROWER'
 };
 
 /**

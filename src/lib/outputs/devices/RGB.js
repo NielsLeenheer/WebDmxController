@@ -1,27 +1,30 @@
 import { DeviceType } from './DeviceType.js';
+import { CONTROL_TYPES } from '../../controls/definitions.js';
 
 /**
  * RGB Light Device Type
  * Standard 3-channel RGB fixture
+ *
+ * Channels:
+ * 0: Red
+ * 1: Green
+ * 2: Blue
  */
 export class RGBDeviceType extends DeviceType {
     constructor() {
-        super(
-            'RGB Light',
-            3,
-            [
-                { name: 'Red', channel: 0 },
-                { name: 'Green', channel: 1 },
-                { name: 'Blue', channel: 2 }
-            ],
-            [
+        super({
+            id: 'RGB',
+            name: 'RGB Light',
+            channels: 3,
+            defaultValues: [0, 0, 0],
+            controls: [
                 {
                     name: 'Color',
-                    type: 'rgb',
-                    components: { r: 0, g: 1, b: 2 }
+                    type: CONTROL_TYPES.RGB,
+                    startChannel: 0
                 }
             ]
-        );
+        });
     }
 }
 

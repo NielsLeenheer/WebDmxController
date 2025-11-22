@@ -1,34 +1,37 @@
 import { DeviceType } from './DeviceType.js';
+import { CONTROL_TYPES } from '../../controls/definitions.js';
 
 /**
  * RGBW Light Device Type
  * 4-channel RGB + White fixture
+ *
+ * Channels:
+ * 0: Red
+ * 1: Green
+ * 2: Blue
+ * 3: White
  */
 export class RGBWDeviceType extends DeviceType {
     constructor() {
-        super(
-            'RGBW Light',
-            4,
-            [
-                { name: 'Red', channel: 0 },
-                { name: 'Green', channel: 1 },
-                { name: 'Blue', channel: 2 },
-                { name: 'White', channel: 3 }
-            ],
-            [
+        super({
+            id: 'RGBW',
+            name: 'RGBW Light',
+            channels: 4,
+            defaultValues: [0, 0, 0, 0],
+            controls: [
                 {
                     name: 'Color',
-                    type: 'rgb',
-                    components: { r: 0, g: 1, b: 2 }
+                    type: CONTROL_TYPES.RGB,
+                    startChannel: 0
                 },
                 {
                     name: 'White',
-                    type: 'slider',
-                    color: '#808080',
-                    components: { value: 3 }
+                    type: CONTROL_TYPES.White,
+                    startChannel: 3,
+                    color: '#808080'
                 }
             ]
-        );
+        });
     }
 }
 
