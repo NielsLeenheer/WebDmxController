@@ -64,7 +64,7 @@ export function getDevicePreviewData(deviceType, controlValues) {
 
         const controlTypeId = control.type.type;  // e.g., 'rgb', 'slider', 'xypad'
 
-        if (controlTypeId === 'rgb' || controlTypeId === 'rgba') {
+        if (controlTypeId === 'rgb') {
             // RGB/RGBA control - extract color
             controls.push('color');
             const r = value.r ?? 0;
@@ -149,7 +149,7 @@ export function getDeviceColor(deviceType, controlValues) {
 
     // Find Color control (RGB or RGBA type)
     const colorControl = deviceTypeDef.controls?.find(
-        c => c.type.type === 'rgb' || c.type.type === 'rgba'
+        c => c.type.type === 'rgb'
     );
 
     if (colorControl) {

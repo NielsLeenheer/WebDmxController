@@ -11,14 +11,12 @@
 
 export { ControlType } from './ControlType.js';
 export { RGBControl } from './RGBControl.js';
-export { RGBAControl } from './RGBAControl.js';
 export { SliderControl } from './SliderControl.js';
 export { ToggleControl } from './ToggleControl.js';
 export { XYPadControl } from './XYPadControl.js';
 export { XYPad16Control } from './XYPad16Control.js';
 
 import { RGBControl } from './RGBControl.js';
-import { RGBAControl } from './RGBAControl.js';
 import { SliderControl } from './SliderControl.js';
 import { ToggleControl } from './ToggleControl.js';
 import { XYPadControl } from './XYPadControl.js';
@@ -32,16 +30,19 @@ import { XYPad16Control } from './XYPad16Control.js';
 export const CONTROL_TYPES = {
 	// Color controls
 	RGB: new RGBControl(),
-	RGBA: new RGBAControl(),
 
 	// Single-channel controls
 	Dimmer: new SliderControl('dimmer', 'Dimmer'),
 	Strobe: new SliderControl('strobe', 'Strobe'),
 	Speed: new SliderControl('speed', 'Speed'),
 	White: new SliderControl('white', 'White'),
+	Amber: new SliderControl('amber', 'Amber'),
 	Volume: new SliderControl('volume', 'Volume'),
 	Fan: new SliderControl('fan', 'Fan'),
 	Flame: new SliderControl('flame', 'Flame'),
+
+	// Toggle controls
+	Safety: new ToggleControl('safety', 'Safety', 0, 255),
 
 	// Position controls
 	PanTilt: new XYPadControl('pantilt', 'Pan/Tilt'),

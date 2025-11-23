@@ -131,7 +131,7 @@ export class CSSSampler {
 					}
 				}
 
-			} else if (control.type.type === 'rgb' || control.type.type === 'rgba') {
+			} else if (control.type.type === 'rgb') {
 				// RGB Color control - sample the color property
 				const colorValue = computed.color;
 				if (colorValue) {

@@ -35,7 +35,7 @@ export function getProperties(controlValues, controls) {
 			properties[mapping.properties.x.name] = mapping.properties.x.convert(xValue);
 			properties[mapping.properties.y.name] = mapping.properties.y.convert(yValue);
 
-		} else if (control.type.type === 'rgb' || control.type.type === 'rgba') {
+		} else if (control.type.type === 'rgb') {
 			// RGB/RGBA Color control
 			const r = controlValue.r ?? 0;
 			const g = controlValue.g ?? 0;

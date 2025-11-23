@@ -1,6 +1,5 @@
 import { DeviceType } from './DeviceType.js';
 import { CONTROL_TYPES } from '../controls/index.js';
-import { SliderControl } from '../controls/index.js';
 
 /**
  * RGBA Light Device Type
@@ -27,7 +26,7 @@ export class RGBADeviceType extends DeviceType {
                 },
                 {
                     name: 'Amber',
-                    type: new SliderControl('amber', 'Amber'),
+                    type: CONTROL_TYPES.Amber,
                     startChannel: 3,
                     color: '#ffbf00'
                 }
