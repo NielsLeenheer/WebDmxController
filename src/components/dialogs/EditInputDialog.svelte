@@ -51,8 +51,8 @@
 			editingColor = input.color;
 
 			// Compute whether to show color picker
-			// Use the supportsColor field from the input
-			showColorPicker = input.supportsColor;
+			// Use the colorSupport field from the input
+			showColorPicker = input.colorSupport && input.colorSupport !== 'none';
 
 			requestAnimationFrame(() => {
 				dialogRef?.showModal();

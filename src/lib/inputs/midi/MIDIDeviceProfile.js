@@ -20,7 +20,7 @@ export class MIDIDeviceProfile {
 	/**
 	 * Get control definition for a given control ID
 	 * @param {string} controlId - Control ID (e.g., 'note-36', 'cc-1')
-	 * @returns {{ type: string, supportsColor: boolean, friendlyName?: string, orientation?: string }}
+	 * @returns {{ type: string, colorSupport: string, friendlyName?: string, orientation?: string }}
 	 */
 	getControlDefinition(controlId) {
 		// Look up in controls array first
@@ -28,7 +28,7 @@ export class MIDIDeviceProfile {
 		if (definition) {
 			return {
 				type: definition.type,
-				supportsColor: definition.supportsColor,
+				colorSupport: definition.colorSupport || 'none',
 				friendlyName: definition.friendlyName,
 				orientation: definition.orientation
 			};
@@ -42,20 +42,20 @@ export class MIDIDeviceProfile {
 	 * Get default control definition based on control ID pattern
 	 * Used for unknown controls not defined in the controls array
 	 * @param {string} controlId - Control ID
-	 * @returns {{ type: string, supportsColor: boolean }}
+	 * @returns {{ type: string, colorSupport: string }}
 	 */
 	_getDefaultDefinition(controlId) {
 		// Generic fallback - NO color support for unknown MIDI devices
 		if (controlId.startsWith('note-')) {
-			return { type: 'button', supportsColor: false };
+			return { type: 'button', colorSupport: 'none' };
 		}
 		if (controlId.startsWith('cc-')) {
-			return { type: 'knob', supportsColor: false };
+			return { type: 'knob', colorSupport: 'none' };
 		}
 		if (controlId === 'pitchbend') {
-			return { type: 'slider', supportsColor: false };
+			return { type: 'slider', colorSupport: 'none' };
 		}
-		return { type: 'button', supportsColor: false };
+		return { type: 'button', colorSupport: 'none' };
 	}
 
 	/**

@@ -14,25 +14,25 @@ export class AkaiLPD8MK2Profile extends MIDIDeviceProfile {
 
 		// Define control capabilities
 		this.controls = [
-			// Pads (support color via SysEx)
-			{ controlId: 'note-36', type: 'pad', supportsColor: true, friendlyName: 'Pad 1' },
-			{ controlId: 'note-37', type: 'pad', supportsColor: true, friendlyName: 'Pad 2' },
-			{ controlId: 'note-38', type: 'pad', supportsColor: true, friendlyName: 'Pad 3' },
-			{ controlId: 'note-39', type: 'pad', supportsColor: true, friendlyName: 'Pad 4' },
-			{ controlId: 'note-40', type: 'pad', supportsColor: true, friendlyName: 'Pad 5' },
-			{ controlId: 'note-41', type: 'pad', supportsColor: true, friendlyName: 'Pad 6' },
-			{ controlId: 'note-42', type: 'pad', supportsColor: true, friendlyName: 'Pad 7' },
-			{ controlId: 'note-43', type: 'pad', supportsColor: true, friendlyName: 'Pad 8' },
+			// Pads (support RGB color via SysEx)
+			{ controlId: 'note-36', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 1' },
+			{ controlId: 'note-37', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 2' },
+			{ controlId: 'note-38', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 3' },
+			{ controlId: 'note-39', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 4' },
+			{ controlId: 'note-40', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 5' },
+			{ controlId: 'note-41', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 6' },
+			{ controlId: 'note-42', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 7' },
+			{ controlId: 'note-43', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 8' },
 
 			// Knobs (no color support) - CC 70-77
-			{ controlId: 'cc-70', type: 'knob', supportsColor: false, friendlyName: 'K1' },
-			{ controlId: 'cc-71', type: 'knob', supportsColor: false, friendlyName: 'K2' },
-			{ controlId: 'cc-72', type: 'knob', supportsColor: false, friendlyName: 'K3' },
-			{ controlId: 'cc-73', type: 'knob', supportsColor: false, friendlyName: 'K4' },
-			{ controlId: 'cc-74', type: 'knob', supportsColor: false, friendlyName: 'K5' },
-			{ controlId: 'cc-75', type: 'knob', supportsColor: false, friendlyName: 'K6' },
-			{ controlId: 'cc-76', type: 'knob', supportsColor: false, friendlyName: 'K7' },
-			{ controlId: 'cc-77', type: 'knob', supportsColor: false, friendlyName: 'K8' }
+			{ controlId: 'cc-70', type: 'knob', colorSupport: 'none', friendlyName: 'K1' },
+			{ controlId: 'cc-71', type: 'knob', colorSupport: 'none', friendlyName: 'K2' },
+			{ controlId: 'cc-72', type: 'knob', colorSupport: 'none', friendlyName: 'K3' },
+			{ controlId: 'cc-73', type: 'knob', colorSupport: 'none', friendlyName: 'K4' },
+			{ controlId: 'cc-74', type: 'knob', colorSupport: 'none', friendlyName: 'K5' },
+			{ controlId: 'cc-75', type: 'knob', colorSupport: 'none', friendlyName: 'K6' },
+			{ controlId: 'cc-76', type: 'knob', colorSupport: 'none', friendlyName: 'K7' },
+			{ controlId: 'cc-77', type: 'knob', colorSupport: 'none', friendlyName: 'K8' }
 		];
 
 		// Track current color state for all pads

@@ -30,7 +30,7 @@ export class ThingyInputDevice extends InputDevice {
 			controlId,
 			velocity,
 			type: 'button',
-			supportsColor: controlId === 'button', // Only the main button supports color
+			colorSupport: controlId === 'button' ? 'rgb' : 'none', // Only the main button supports RGB color
 			friendlyName: null
 		});
 	}
@@ -54,7 +54,7 @@ export class ThingyInputDevice extends InputDevice {
 			value,
 			control,
 			type: 'sensor',
-			supportsColor: false,
+			colorSupport: 'none',
 			friendlyName: null
 		});
 	}

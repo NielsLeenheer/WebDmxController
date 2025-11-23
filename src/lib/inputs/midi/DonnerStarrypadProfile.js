@@ -10,42 +10,57 @@ import { MIDIDeviceProfile } from './MIDIDeviceProfile.js';
 export class DonnerStarrypadProfile extends MIDIDeviceProfile {
 	constructor() {
 		super('Donner Starrypad', [/starrypad/i, /donner.*pad/i]);
-		// 4x4 pad layout: top-left=48, top-right=51, bottom-left=36, bottom-right=39
-		// Map notes to pad indices 0-15 for a 4x4 grid
+		// 4x4 pad layout mapped by hardware numbering 1-16
+		// Pad 1-4 = Row 4 (bottom), Pad 5-8 = Row 3, Pad 9-12 = Row 2, Pad 13-16 = Row 1 (top)
 		this.padNotes = [
-			48, 49, 50, 51,  // Row 1 (top)
-			44, 45, 46, 47,  // Row 2
-			40, 41, 42, 43,  // Row 3
-			36, 37, 38, 39   // Row 4 (bottom)
+			36, 37, 38, 39,  // Pads 1-4 (Row 4 - bottom)
+			40, 41, 42, 43,  // Pads 5-8 (Row 3)
+			44, 45, 46, 47,  // Pads 9-12 (Row 2)
+			48, 49, 50, 51   // Pads 13-16 (Row 1 - top)
 		];
 		this.noteToPadIndex = new Map(this.padNotes.map((note, index) => [note, index]));
 
-		// Define all controls (4x4 grid of pads)
-		// Note: Color protocol not reverse-engineered, so supportsColor = false
+		// Define all controls
+		// Note: Color protocol not reverse-engineered, so colorSupport = 'none'
 		this.controls = [
-			// Row 1 (top)
-			{ controlId: 'note-48', type: 'pad', supportsColor: false, friendlyName: '1-1' },
-			{ controlId: 'note-49', type: 'pad', supportsColor: false, friendlyName: '1-2' },
-			{ controlId: 'note-50', type: 'pad', supportsColor: false, friendlyName: '1-3' },
-			{ controlId: 'note-51', type: 'pad', supportsColor: false, friendlyName: '1-4' },
+			// Pads - 4x4 grid (hardware numbers Pad 1-16)
+			// Row 1 (top) - Pad 13-16
+			{ controlId: 'note-48', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 13' },
+			{ controlId: 'note-49', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 14' },
+			{ controlId: 'note-50', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 15' },
+			{ controlId: 'note-51', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 16' },
 
-			// Row 2
-			{ controlId: 'note-44', type: 'pad', supportsColor: false, friendlyName: '2-1' },
-			{ controlId: 'note-45', type: 'pad', supportsColor: false, friendlyName: '2-2' },
-			{ controlId: 'note-46', type: 'pad', supportsColor: false, friendlyName: '2-3' },
-			{ controlId: 'note-47', type: 'pad', supportsColor: false, friendlyName: '2-4' },
+			// Row 2 - Pad 9-12
+			{ controlId: 'note-44', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 9' },
+			{ controlId: 'note-45', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 10' },
+			{ controlId: 'note-46', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 11' },
+			{ controlId: 'note-47', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 12' },
 
-			// Row 3
-			{ controlId: 'note-40', type: 'pad', supportsColor: false, friendlyName: '3-1' },
-			{ controlId: 'note-41', type: 'pad', supportsColor: false, friendlyName: '3-2' },
-			{ controlId: 'note-42', type: 'pad', supportsColor: false, friendlyName: '3-3' },
-			{ controlId: 'note-43', type: 'pad', supportsColor: false, friendlyName: '3-4' },
+			// Row 3 - Pad 5-8
+			{ controlId: 'note-40', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 5' },
+			{ controlId: 'note-41', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 6' },
+			{ controlId: 'note-42', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 7' },
+			{ controlId: 'note-43', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 8' },
 
-			// Row 4 (bottom)
-			{ controlId: 'note-36', type: 'pad', supportsColor: false, friendlyName: '4-1' },
-			{ controlId: 'note-37', type: 'pad', supportsColor: false, friendlyName: '4-2' },
-			{ controlId: 'note-38', type: 'pad', supportsColor: false, friendlyName: '4-3' },
-			{ controlId: 'note-39', type: 'pad', supportsColor: false, friendlyName: '4-4' }
+			// Row 4 (bottom) - Pad 1-4
+			{ controlId: 'note-36', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 1' },
+			{ controlId: 'note-37', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 2' },
+			{ controlId: 'note-38', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 3' },
+			{ controlId: 'note-39', type: 'pad', colorSupport: 'none', friendlyName: 'Pad 4' },
+
+			// Faders (vertical sliders)
+			{ controlId: 'cc-20', type: 'fader', colorSupport: 'none', friendlyName: 'F1' },
+			{ controlId: 'cc-21', type: 'fader', colorSupport: 'none', friendlyName: 'F2' },
+
+			// Knobs
+			{ controlId: 'cc-28', type: 'knob', colorSupport: 'none', friendlyName: 'K1' },
+			{ controlId: 'cc-9', type: 'knob', colorSupport: 'none', friendlyName: 'K2' },
+
+			// Buttons
+			{ controlId: 'cc-26', type: 'button', colorSupport: 'none', friendlyName: 'A' },
+			{ controlId: 'cc-27', type: 'button', colorSupport: 'none', friendlyName: 'B' },
+			{ controlId: 'cc-60', type: 'button', colorSupport: 'none', friendlyName: 'Play/Pause' },
+			{ controlId: 'cc-62', type: 'button', colorSupport: 'none', friendlyName: 'Record' }
 		];
 	}
 

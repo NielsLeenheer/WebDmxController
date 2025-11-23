@@ -20,7 +20,7 @@ export class StreamDeckInputDevice extends InputDevice {
 			controlId,
 			velocity,
 			type: 'button',
-			supportsColor: true,
+			colorSupport: 'rgb',
 			friendlyName: null
 		});
 	}

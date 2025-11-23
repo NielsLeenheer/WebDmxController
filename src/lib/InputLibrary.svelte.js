@@ -53,7 +53,7 @@ export class InputLibrary extends Library {
 			inputDeviceName: config.inputDeviceName || null,
 			color: config.color || null,
 			type: config.type || (isButton ? 'button' : 'knob'), // NEW: explicit type
-			supportsColor: config.supportsColor !== undefined ? config.supportsColor : false, // NEW: color support flag
+			colorSupport: config.colorSupport || 'none', // NEW: color support type (none/rgb/red/green)
 			friendlyName: config.friendlyName || null, // NEW: friendly name for known controls
 			orientation: config.orientation || null, // NEW: orientation for faders/knobs (horizontal/vertical)
 			buttonMode,
@@ -151,7 +151,7 @@ export class InputLibrary extends Library {
 			inputDeviceName: inputData.inputDeviceName || null,
 			color: inputData.color || null,
 			type: inputData.type || (isButton ? 'button' : 'knob'), // NEW: backward compat
-			supportsColor: inputData.supportsColor !== undefined ? inputData.supportsColor : false, // NEW: default false
+			colorSupport: inputData.colorSupport || (inputData.supportsColor ? 'rgb' : 'none'), // NEW: migrate from supportsColor
 			friendlyName: inputData.friendlyName || null, // NEW
 			buttonMode: inputData.buttonMode || 'momentary',
 			cssClassOn: inputData.cssClassOn || null,

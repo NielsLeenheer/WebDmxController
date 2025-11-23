@@ -22,7 +22,7 @@ export class KeyboardInputDevice extends InputDevice {
 			controlId,
 			velocity,
 			type: 'button',
-			supportsColor: false,
+			colorSupport: 'none',
 			friendlyName: null
 		});
 	}
@@ -45,7 +45,7 @@ export class KeyboardInputDevice extends InputDevice {
 			value,
 			control,
 			type: 'button',
-			supportsColor: false,
+			colorSupport: 'none',
 			friendlyName: null
 		});
 	}

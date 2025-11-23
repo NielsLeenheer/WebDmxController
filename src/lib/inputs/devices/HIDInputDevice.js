@@ -21,7 +21,7 @@ export class HIDInputDevice extends InputDevice {
 			controlId,
 			velocity,
 			type: 'button',
-			supportsColor: false,
+			colorSupport: 'none',
 			friendlyName: null
 		});
 	}

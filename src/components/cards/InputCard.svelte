@@ -14,7 +14,7 @@
 	} = $props();
 
 	// Check if this input should show a color preview
-	let showColorPreview = $derived(input.color && input.supportsColor);
+	let showColorPreview = $derived(input.color && input.colorSupport && input.colorSupport !== 'none');
 </script>
 
 <DraggableCard {dnd} item={input} class="input-card">
