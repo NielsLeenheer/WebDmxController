@@ -10,10 +10,11 @@ export class DimmerControl extends SliderControlType {
 	}
 
 	getGradient() {
-		return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,255,255) 100%)';
+		return 'linear-gradient(to right, rgb(255,255,255) 0%, rgb(0,0,0) 100%)';
 	}
 
 	getColor(value) {
-		return `rgb(${value}, ${value}, ${value})`;
+		const inverted = 255 - value;
+		return `rgb(${inverted}, ${inverted}, ${inverted})`;
 	}
 }
