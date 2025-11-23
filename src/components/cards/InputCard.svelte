@@ -31,6 +31,10 @@
 		<div class="input-name">{input.name}</div>
 		<div class="input-device-name">
 			{input.inputDeviceName || input.inputDeviceId}
+			{#if input.friendlyName}
+				<span class="separator">•</span>
+				{input.friendlyName}
+			{/if}
 		</div>
 	</div>
 	<div class="input-state">
@@ -77,6 +81,11 @@
 	:global(.input-card) .input-device-name {
 		font-size: 9pt;
 		color: #666;
+	}
+
+	:global(.input-card) .input-device-name .separator {
+		margin: 0 4px;
+		opacity: 0.5;
 	}
 
 	:global(.input-card) .input-state {
