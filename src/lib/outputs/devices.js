@@ -71,11 +71,11 @@ export function getDevicePreviewData(deviceType, controlValues) {
             const g = value.g ?? 0;
             const b = value.b ?? 0;
             data.color = `rgb(${r}, ${g}, ${b})`;
-        } else if (controlTypeId === 'slider') {
-            // Slider control - extract value
+        } else if (controlTypeId === 'slider' || controlTypeId === 'toggle') {
+            // Slider/Toggle control - extract value
             const controlKey = control.name.toLowerCase();
             controls.push(controlKey);
-            data[controlKey] = value ?? 0;
+            data[controlKey] = value ?? (controlTypeId === 'toggle' ? control.type.offValue : 0);
         } else if (controlTypeId === 'xypad') {
             // XY Pad control (Pan/Tilt) - extract pan and tilt values
             controls.push('pantilt');
