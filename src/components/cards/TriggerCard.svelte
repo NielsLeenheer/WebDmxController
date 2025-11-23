@@ -89,7 +89,7 @@
 				class="trigger-preview"
 			/>
 			<div class="trigger-text">
-				{Object.keys(trigger.values?.channelValues || {}).length} values
+				{Object.keys(trigger.values || {}).length} values
 			</div>
 		{/if}
 	</div>

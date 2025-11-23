@@ -116,9 +116,9 @@
         // Save changes to library when dialog closes
         if (selectedKeyframeIndex !== null) {
             animationLibrary.updateKeyframe(animation.id, selectedKeyframeIndex, {
-                values: [...localKeyframes[selectedKeyframeIndex].values]
+                values: localKeyframes[selectedKeyframeIndex].values
             });
-            
+
             if (onUpdate) onUpdate();
         }
 
@@ -330,7 +330,7 @@
     title="Keyframe at {(localKeyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%"
 >
     <Controls
-        {...getControlsForRendering(animation)}
+        controls={getControlsForRendering(animation)}
         bind:values={localKeyframes[selectedKeyframeIndex].values}
     />
 

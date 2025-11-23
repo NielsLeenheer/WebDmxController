@@ -1,51 +1,51 @@
 import { DeviceType } from './DeviceType.js';
+import { CONTROL_TYPES } from '../controls/index.js';
 
 /**
  * Moving Head Device Type (Basic 7-channel)
  * Pan, Tilt, Dimmer, RGBW
+ *
+ * Channels:
+ * 0: Pan
+ * 1: Tilt
+ * 2: Dimmer
+ * 3: Red
+ * 4: Green
+ * 5: Blue
+ * 6: White
  */
 export class MovingHeadDeviceType extends DeviceType {
     constructor() {
-        const defaultValues = [0, 0, 255, 0, 0, 0, 0]; // Dimmer at full brightness
-        
-        super(
-            'Moving Head (Basic)',
-            7,
-            [
-                { name: 'Pan', channel: 0 },
-                { name: 'Tilt', channel: 1 },
-                { name: 'Dimmer', channel: 2 },
-                { name: 'Red', channel: 3 },
-                { name: 'Green', channel: 4 },
-                { name: 'Blue', channel: 5 },
-                { name: 'White', channel: 6 }
-            ],
-            [
+        super({
+            id: 'MOVING_HEAD',
+            name: 'Moving Head (Basic)',
+            channels: 7,
+            defaultValues: [0, 0, 255, 0, 0, 0, 0],  // Dimmer at full brightness
+            controls: [
                 {
                     name: 'Pan/Tilt',
-                    type: 'xypad',
-                    components: { x: 0, y: 1 }
+                    type: CONTROL_TYPES.PanTilt,
+                    startChannel: 0
                 },
                 {
                     name: 'Dimmer',
-                    type: 'slider',
-                    color: '#888888',
-                    components: { value: 2 }
+                    type: CONTROL_TYPES.Dimmer,
+                    startChannel: 2,
+                    color: '#888888'
                 },
                 {
                     name: 'Color',
-                    type: 'rgb',
-                    components: { r: 3, g: 4, b: 5 }
+                    type: CONTROL_TYPES.RGB,
+                    startChannel: 3
                 },
                 {
                     name: 'White',
-                    type: 'slider',
-                    color: '#808080',
-                    components: { value: 6 }
+                    type: CONTROL_TYPES.White,
+                    startChannel: 6,
+                    color: '#808080'
                 }
-            ],
-            defaultValues
-        );
+            ]
+        });
     }
 }
 

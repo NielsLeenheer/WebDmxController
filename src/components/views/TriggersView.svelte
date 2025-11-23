@@ -56,10 +56,7 @@
                 iterations: result.looping ? 'infinite' : 1
             } : null,
             // Values action properties
-            values: result.actionType === 'values' ? {
-                channelValues: result.channelValues,
-                enabledControls: result.enabledControls
-            } : null
+            values: result.actionType === 'values' ? result.values : null
         });
     }
 
@@ -148,11 +145,7 @@
                 updates.values = null;
             } else {
                 updates.animation = null;
-                updates.values = {
-                    channelValues: result.channelValues,
-                    enabledControls: result.enabledControls
-                };
-                updates.animationName = null;
+                updates.values = result.values;
             }
 
             // Update using library method

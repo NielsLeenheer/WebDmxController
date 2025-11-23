@@ -1,34 +1,35 @@
 import { DeviceType } from './DeviceType.js';
+import { CONTROL_TYPES } from '../controls/index.js';
 
 /**
  * Flamethrower Device Type
  * Safety channel + Fuel control
+ *
+ * Channels:
+ * 0: Safety
+ * 1: Fuel
  */
 export class FlamethrowerDeviceType extends DeviceType {
     constructor() {
-        super(
-            'Flamethrower',
-            2,
-            [
-                { name: 'Safety', channel: 0 },
-                { name: 'Fuel', channel: 1 }
-            ],
-            [
+        super({
+            id: 'FLAMETHROWER',
+            name: 'Flamethrower',
+            channels: 2,
+            defaultValues: [0, 0],
+            controls: [
                 {
                     name: 'Safety',
-                    type: 'toggle',
-                    offValue: 0,
-                    onValue: 255,
-                    components: { value: 0 }
+                    type: CONTROL_TYPES.Safety,
+                    startChannel: 0
                 },
                 {
                     name: 'Fuel',
-                    type: 'slider',
-                    color: '#ff5722',
-                    components: { value: 1 }
+                    type: CONTROL_TYPES.Flame,
+                    startChannel: 1,
+                    color: '#ff5722'
                 }
             ]
-        );
+        });
     }
 }
 

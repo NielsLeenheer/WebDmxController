@@ -1,58 +1,61 @@
 /**
  * CSS Generation for Device Outputs
  *
- * Functions for converting DMX channel values to CSS properties
+ * Functions for converting control values to CSS properties
+ * NEW ARCHITECTURE: Works with control-based values instead of DMX arrays
  */
 
-import { getDeviceColor, DEVICE_TYPES } from './devices.js';
+import { DEVICE_TYPES } from './devices.js';
 import { CONTROL_CSS_MAPPING } from '../css/mapping/controlToCssMapping.js';
 
 /**
- * Get CSS properties from DMX values for a set of controls
+ * Get CSS properties from control values
  *
- * @param {Array} controls - Array of control definitions
- * @param {Array} components - Array of component definitions
- * @param {Array} values - DMX values (0-255)
- * @param {string} deviceType - Device type (for color generation)
+ * NEW: Accepts control values object instead of DMX array
+ *
+ * @param {Object} controlValues - Control values object { "Color": { r, g, b }, "Dimmer": 255, ... }
+ * @param {Array} controls - Array of control definitions from device type
  * @returns {Object} CSS properties object
  */
-export function getProperties(controls, components, values, deviceType) {
+export function getProperties(controlValues, controls) {
 	const properties = {};
 
 	for (const control of controls) {
-		const mapping = CONTROL_CSS_MAPPING[control.type];
+		const controlValue = controlValues[control.name];
+		if (controlValue === undefined) continue;
+
+		const mapping = CONTROL_CSS_MAPPING[control.type.type];
 		if (!mapping) continue;
 
-		if (control.type === 'xypad') {
+		if (control.type.type === 'xypad') {
 			// XY Pad control (e.g., Pan/Tilt)
-			const xChannel = components[control.components.x].channel;
-			const yChannel = components[control.components.y].channel;
-			const xValue = values[xChannel] || 0;
-			const yValue = values[yChannel] || 0;
+			const xValue = controlValue.x ?? 128;
+			const yValue = controlValue.y ?? 128;
 
 			properties[mapping.properties.x.name] = mapping.properties.x.convert(xValue);
 			properties[mapping.properties.y.name] = mapping.properties.y.convert(yValue);
 
-		} else if (control.type === 'rgb') {
-			// RGB Color control - uses getDeviceColor
-			properties.color = getDeviceColor(deviceType, values);
+		} else if (control.type.type === 'rgb') {
+			// RGB/RGBA Color control
+			const r = controlValue.r ?? 0;
+			const g = controlValue.g ?? 0;
+			const b = controlValue.b ?? 0;
+			properties.color = `rgb(${r}, ${g}, ${b})`;
 
-		} else if (control.type === 'slider') {
-			// Slider control (Dimmer, Intensity, White, Amber, etc.)
-			const channel = components[control.components.value].channel;
-			const value = values[channel] || 0;
-
-			const propName = mapping.properties.value.getName(control.name);
-			const propValue = mapping.properties.value.convert(value, control.name);
-			properties[propName] = propValue;
-
-		} else if (control.type === 'toggle') {
-			// Toggle control (Safety, etc.)
-			const channel = components[control.components.value].channel;
-			const value = values[channel] || 0;
+		} else if (control.type.type === 'toggle') {
+			// Toggle control
+			const value = controlValue ?? control.type.offValue;
 
 			const propName = mapping.properties.value.getName(control.name);
 			const propValue = mapping.properties.value.convert(value, control.name, control);
+			properties[propName] = propValue;
+
+		} else if (control.type.type === 'slider') {
+			// Slider control (Dimmer, Intensity, White, Amber, etc.)
+			const value = controlValue ?? 0;
+
+			const propName = mapping.properties.value.getName(control.name);
+			const propValue = mapping.properties.value.convert(value, control.name);
 			properties[propName] = propValue;
 		}
 	}
@@ -63,7 +66,9 @@ export function getProperties(controls, components, values, deviceType) {
 /**
  * Generate CSS block for a single device's default values
  *
- * @param {Object} device - Device object with type, defaultValues, cssId, linkedTo
+ * NEW: Works with control-based values
+ *
+ * @param {Object} device - Device object with type, defaultValues (control values), cssId, linkedTo
  * @returns {string|null} CSS block string or null if no CSS should be generated
  */
 export function generateCSSBlock(device) {
@@ -73,16 +78,11 @@ export function generateCSSBlock(device) {
 	// Skip default values for linked devices
 	if (device.linkedTo !== null) return null;
 
-	// Get default values from device
-	const defaultValues = device.defaultValues || [];
+	// Get control values from device (NEW: control values object, not DMX array)
+	const controlValues = device.defaultValues || {};
 
-	// Generate CSS properties from DMX values
-	const properties = getProperties(
-		deviceType.controls,
-		deviceType.components,
-		defaultValues,
-		device.type
-	);
+	// Generate CSS properties from control values
+	const properties = getProperties(controlValues, deviceType.controls);
 
 	if (Object.keys(properties).length === 0) return null;
 

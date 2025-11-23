@@ -6,11 +6,12 @@
  * - UUID-based device IDs
  * - Automatic linked device propagation
  * - CSS flexbox order for visual sorting
+ * - Control-based value storage (NEW ARCHITECTURE)
  */
 
 import { Library } from './Library.svelte.js';
 import { DEVICE_TYPES } from './outputs/devices.js';
-import { applyLinkedValues } from './outputs/sync.js';
+import { createDefaultControlValues, mergeControlValues, mirrorPanTilt } from './outputs/controls.js';
 import { toCSSIdentifier } from './css/utils.js';
 import { generateCSSBlock } from './outputs/css.js';
 
@@ -29,19 +30,21 @@ export class DeviceLibrary extends Library {
 	 * @param {string} name - Device name
 	 * @param {string|null} linkedTo - ID of device to link to
 	 * @param {string|null} cssId - CSS-safe ID
-	 * @param {Array|null} syncedControls - Controls to sync when linked
+	 * @param {Array<string>|null} syncedControls - Control names to sync when linked
 	 * @param {boolean} mirrorPan - Mirror pan values for linked devices
 	 * @returns {Object} The created device
 	 */
 	create(type, startChannel, name = '', linkedTo = null, cssId = null, syncedControls = null, mirrorPan = false) {
-		const deviceName = name || `${DEVICE_TYPES[type].name} ${this.items.length + 1}`;
+		const deviceType = DEVICE_TYPES[type];
+		const deviceName = name || `${deviceType.name} ${this.items.length + 1}`;
 
 		const device = {
 			// id and order will be auto-set by base class
 			type,
 			startChannel,
 			name: deviceName,
-			defaultValues: [...DEVICE_TYPES[type].getDefaultValues()],
+			// NEW: Control-based values instead of DMX arrays
+			defaultValues: createDefaultControlValues(deviceType),
 			linkedTo,
 			syncedControls,
 			mirrorPan,
@@ -52,17 +55,22 @@ export class DeviceLibrary extends Library {
 	}
 
 	/**
-	 * Update device value and propagate to linked devices
+	 * Update device control value and propagate to linked devices
 	 * @param {string} deviceId - Device ID
-	 * @param {number} channelIndex - Channel index to update
-	 * @param {number} value - New value
+	 * @param {string} controlName - Control name (e.g., 'Color', 'Dimmer', 'Pan/Tilt')
+	 * @param {*} value - New control value (object, number, etc.)
 	 */
-	updateValue(deviceId, channelIndex, value) {
+	updateValue(deviceId, controlName, value) {
 		const device = this.get(deviceId);
 		if (!device) return;
 
-		// Update value (reactivity handled by $state)
-		device.defaultValues[channelIndex] = value;
+		// Update control value (reactivity handled by $state)
+		// Deep copy if object to avoid reference sharing
+		if (typeof value === 'object' && value !== null) {
+			device.defaultValues[controlName] = { ...value };
+		} else {
+			device.defaultValues[controlName] = value;
+		}
 
 		// Propagate to linked devices
 		this.propagateToLinkedDevices(device);
@@ -109,20 +117,30 @@ export class DeviceLibrary extends Library {
 		// Find all devices linked to this source device
 		for (const device of this.items) {
 			if (device.linkedTo === sourceDevice.id) {
-				// Apply linked values with selective syncing and pan mirroring
-				const newValues = applyLinkedValues(
-					sourceDevice.type,
-					device.type,
-					sourceDevice.defaultValues,
-					device.defaultValues,
-					device.syncedControls,
-					device.mirrorPan
-				);
+				// Determine which controls to sync
+				// If syncedControls is specified, use that list
+				// Otherwise, sync all common controls
+				const controlsToSync = device.syncedControls ||
+					Object.keys(sourceDevice.defaultValues).filter(
+						name => name in device.defaultValues
+					);
 
-				// Update values (reactivity handled by $state)
-				newValues.forEach((value, index) => {
-					device.defaultValues[index] = value;
-				});
+				// Merge control values from source to target
+				for (const controlName of controlsToSync) {
+					let value = sourceDevice.defaultValues[controlName];
+
+					// Apply pan mirroring if enabled and this is a Pan/Tilt control
+					if (device.mirrorPan && controlName === 'Pan/Tilt') {
+						value = mirrorPanTilt(value);
+					}
+
+					// Update control value (reactivity handled by $state)
+					if (typeof value === 'object' && value !== null) {
+						device.defaultValues[controlName] = { ...value };
+					} else {
+						device.defaultValues[controlName] = value;
+					}
+				}
 			}
 		}
 	}
@@ -132,11 +150,11 @@ export class DeviceLibrary extends Library {
 	 */
 	clearAllValues() {
 		for (const device of this.items) {
-			const defaultValues = DEVICE_TYPES[device.type].getDefaultValues();
-			defaultValues.forEach((value, index) => {
-				device.defaultValues[index] = value;
-			});
+			const deviceType = DEVICE_TYPES[device.type];
+			// Reset to default control values
+			device.defaultValues = createDefaultControlValues(deviceType);
 		}
+		this.save();
 	}
 
 	/**
@@ -158,12 +176,32 @@ export class DeviceLibrary extends Library {
 	 * @returns {Object} Deserialized device
 	 */
 	deserializeItem(deviceData, index) {
+		// Check if defaultValues is an array (old format) or object (new format)
+		let defaultValues;
+		if (Array.isArray(deviceData.defaultValues)) {
+			// OLD FORMAT: DMX array - convert to control values
+			// For now, just reset to defaults (no users to migrate)
+			const deviceType = DEVICE_TYPES[deviceData.type];
+			defaultValues = createDefaultControlValues(deviceType);
+			console.log(`Migrated device "${deviceData.name}" from DMX array to control values`);
+		} else {
+			// NEW FORMAT: Control-based values - deep copy
+			defaultValues = {};
+			for (const [key, value] of Object.entries(deviceData.defaultValues)) {
+				if (typeof value === 'object' && value !== null) {
+					defaultValues[key] = { ...value };
+				} else {
+					defaultValues[key] = value;
+				}
+			}
+		}
+
 		return {
 			id: deviceData.id,
 			type: deviceData.type,
 			startChannel: deviceData.startChannel,
 			name: deviceData.name,
-			defaultValues: [...deviceData.defaultValues],
+			defaultValues,
 			linkedTo: deviceData.linkedTo || null,
 			syncedControls: deviceData.syncedControls || null,
 			mirrorPan: deviceData.mirrorPan || false,

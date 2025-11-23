@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
-    import { convertChannelsToArray, getDevicePreviewData } from '../../lib/outputs/devices.js';
+    import { getDevicePreviewData } from '../../lib/outputs/devices.js';
+    import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from '../../stores.svelte.js';
     import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
     import Preview from '../common/Preview.svelte';
@@ -72,17 +73,53 @@
         return unsubscribe;
     });
 
+    /**
+     * Convert component values from CSS sampler to control values
+     * The CSS sampler returns component values like { Red: 255, Green: 0, Blue: 0 }
+     * We need to convert to control values like { "Color": { r: 255, g: 0, b: 0 } }
+     */
+    function convertComponentsToControlValues(deviceType, componentValues) {
+        const controlValues = {};
+        const deviceTypeDef = DEVICE_TYPES[deviceType];
+        if (!deviceTypeDef) return controlValues;
+
+        // Map components back to controls
+        for (const control of deviceTypeDef.controls) {
+            if (control.type.type === 'rgb' || control.type.type === 'rgba') {
+                // RGB control - gather r, g, b from component values
+                controlValues[control.name] = {
+                    r: componentValues.Red ?? 0,
+                    g: componentValues.Green ?? 0,
+                    b: componentValues.Blue ?? 0
+                };
+            } else if (control.type.type === 'xypad' || control.type.type === 'xypad16') {
+                // XY Pad control
+                controlValues[control.name] = {
+                    x: componentValues.Pan ?? 128,
+                    y: componentValues.Tilt ?? 128
+                };
+            } else if (control.type.type === 'slider' || control.type.type === 'toggle') {
+                // Slider/Toggle control - direct mapping by control name
+                if (componentValues[control.name] !== undefined) {
+                    controlValues[control.name] = componentValues[control.name];
+                }
+            }
+        }
+
+        return controlValues;
+    }
+
     // Get preview data for a device
     function getPreviewData(device) {
-        const channels = sampledDeviceData.get(device.id);
-        if (!channels) {
+        const componentValues = sampledDeviceData.get(device.id);
+        if (!componentValues) {
             // Use default values if no sampled data
             return getDevicePreviewData(device.type, device.defaultValues);
         }
 
-        // Convert channels object to array, then get preview data
-        const values = convertChannelsToArray(device.type, channels);
-        return getDevicePreviewData(device.type, values);
+        // Convert component values to control values for preview
+        const controlValues = convertComponentsToControlValues(device.type, componentValues);
+        return getDevicePreviewData(device.type, controlValues);
     }
 </script>
 

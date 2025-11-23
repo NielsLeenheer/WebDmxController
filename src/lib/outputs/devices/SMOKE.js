@@ -1,26 +1,29 @@
 import { DeviceType } from './DeviceType.js';
+import { SliderControl } from '../controls/index.js';
 
 /**
  * Smoke Machine Device Type
  * Single channel output control
+ *
+ * Channels:
+ * 0: Output
  */
 export class SmokeDeviceType extends DeviceType {
     constructor() {
-        super(
-            'Smoke Machine',
-            1,
-            [
-                { name: 'Output', channel: 0 }
-            ],
-            [
+        super({
+            id: 'SMOKE',
+            name: 'Smoke Machine',
+            channels: 1,
+            defaultValues: [0],
+            controls: [
                 {
                     name: 'Output',
-                    type: 'slider',
-                    color: '#666666',
-                    components: { value: 0 }
+                    type: new SliderControl('output', 'Output'),
+                    startChannel: 0,
+                    color: '#666666'
                 }
             ]
-        );
+        });
     }
 }
 

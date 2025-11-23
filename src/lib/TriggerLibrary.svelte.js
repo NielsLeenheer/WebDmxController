@@ -3,10 +3,13 @@
  *
  * Extends Library base class with trigger-specific functionality.
  * Stores triggers as plain objects (not class instances) for proper reactivity.
+ * Trigger values are stored as control-based objects (NEW ARCHITECTURE).
  */
 
 import { Library } from './Library.svelte.js';
 import { generateCSSTriggers } from './triggers/css.js';
+import { createDefaultControlValues } from './outputs/controls.js';
+import { DEVICE_TYPES } from './outputs/devices.js';
 
 export class TriggerLibrary extends Library {
 	constructor() {
@@ -36,10 +39,9 @@ export class TriggerLibrary extends Library {
 				iterations: config.animation?.iterations || 1
 			} : null,
 			// Values properties (null for animation triggers)
-			values: actionType === 'values' ? {
-				channelValues: config.values?.channelValues || {},
-				enabledControls: config.values?.enabledControls || []
-			} : null,
+			// NEW: Control-based values object { "Color": { r, g, b }, "Dimmer": 255, ... }
+			// Presence of a control in the object indicates it's enabled
+			values: actionType === 'values' ? (config.values || {}) : null,
 			order: this.items.length
 		};
 
@@ -78,7 +80,39 @@ export class TriggerLibrary extends Library {
 	 */
 	deserializeItem(triggerData, index) {
 		const actionType = triggerData.actionType || 'animation';
-		
+
+		// Handle values deserialization
+		let values = null;
+		if (actionType === 'values') {
+			// Check if old format (with channelValues and enabledControls)
+			if (triggerData.values?.channelValues || triggerData.channelValues) {
+				// OLD FORMAT: Convert from channelValues to control values
+				// For now, just reset to defaults (no users to migrate)
+				if (triggerData.deviceId) {
+					const device = DEVICE_TYPES[triggerData.deviceType];
+					if (device) {
+						values = createDefaultControlValues(device);
+						console.log(`Migrated trigger values from old format to control values`);
+					} else {
+						values = {};
+					}
+				} else {
+					values = {};
+				}
+			} else {
+				// NEW FORMAT: Control-based values - deep copy
+				values = {};
+				const sourceValues = triggerData.values || {};
+				for (const [key, value] of Object.entries(sourceValues)) {
+					if (typeof value === 'object' && value !== null) {
+						values[key] = { ...value };
+					} else {
+						values[key] = value;
+					}
+				}
+			}
+		}
+
 		return {
 			id: triggerData.id || crypto.randomUUID(),
 			triggerType: triggerData.triggerType,
@@ -93,10 +127,7 @@ export class TriggerLibrary extends Library {
 				iterations: triggerData.animation?.iterations || triggerData.iterations || 1
 			} : null,
 			// Values properties (null for animation triggers)
-			values: actionType === 'values' ? {
-				channelValues: triggerData.values?.channelValues || triggerData.channelValues || {},
-				enabledControls: triggerData.values?.enabledControls || triggerData.enabledControls || []
-			} : null,
+			values,
 			order: triggerData.order !== undefined ? triggerData.order : index
 		};
 	}
