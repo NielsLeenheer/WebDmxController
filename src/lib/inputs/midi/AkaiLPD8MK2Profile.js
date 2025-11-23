@@ -24,15 +24,15 @@ export class AkaiLPD8MK2Profile extends MIDIDeviceProfile {
 			{ controlId: 'note-42', type: 'pad', supportsColor: true, friendlyName: 'Pad 7' },
 			{ controlId: 'note-43', type: 'pad', supportsColor: true, friendlyName: 'Pad 8' },
 
-			// Knobs (no color support)
-			{ controlId: 'cc-1', type: 'knob', supportsColor: false, friendlyName: 'K1' },
-			{ controlId: 'cc-2', type: 'knob', supportsColor: false, friendlyName: 'K2' },
-			{ controlId: 'cc-3', type: 'knob', supportsColor: false, friendlyName: 'K3' },
-			{ controlId: 'cc-4', type: 'knob', supportsColor: false, friendlyName: 'K4' },
-			{ controlId: 'cc-5', type: 'knob', supportsColor: false, friendlyName: 'K5' },
-			{ controlId: 'cc-6', type: 'knob', supportsColor: false, friendlyName: 'K6' },
-			{ controlId: 'cc-7', type: 'knob', supportsColor: false, friendlyName: 'K7' },
-			{ controlId: 'cc-8', type: 'knob', supportsColor: false, friendlyName: 'K8' }
+			// Knobs (no color support) - CC 70-77
+			{ controlId: 'cc-70', type: 'knob', supportsColor: false, friendlyName: 'K1' },
+			{ controlId: 'cc-71', type: 'knob', supportsColor: false, friendlyName: 'K2' },
+			{ controlId: 'cc-72', type: 'knob', supportsColor: false, friendlyName: 'K3' },
+			{ controlId: 'cc-73', type: 'knob', supportsColor: false, friendlyName: 'K4' },
+			{ controlId: 'cc-74', type: 'knob', supportsColor: false, friendlyName: 'K5' },
+			{ controlId: 'cc-75', type: 'knob', supportsColor: false, friendlyName: 'K6' },
+			{ controlId: 'cc-76', type: 'knob', supportsColor: false, friendlyName: 'K7' },
+			{ controlId: 'cc-77', type: 'knob', supportsColor: false, friendlyName: 'K8' }
 		];
 
 		// Track current color state for all pads
