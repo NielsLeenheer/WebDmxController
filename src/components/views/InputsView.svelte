@@ -381,8 +381,8 @@
             // Only apply to devices that support colors
             if (!deviceSupportsColors(device)) continue;
 
-            // For MIDI devices with profiles, get all pads and set colors
-            if (device.type === 'midi' && device.profile && device.profile.padNotes) {
+            // For MIDI devices with profiles, clear all color-capable controls
+            if (device.type === 'midi' && device.profile) {
                 // Build a map of assigned controls for this device
                 const assignedControls = new Map();
                 for (const input of inputs) {
@@ -391,11 +391,16 @@
                     }
                 }
 
+                // Get all color-capable controls from the profile
+                const colorCapableControls = device.profile.controls?.filter(
+                    ctrl => ctrl.colorSupport && ctrl.colorSupport !== 'none'
+                ) || [];
+
                 // Check if device supports batch color updates (Akai LPD8 MK2, etc.)
                 const supportsBatchUpdate = typeof device.profile.setPadColor === 'function' &&
                                            typeof device.profile.flushColors === 'function';
 
-                if (supportsBatchUpdate) {
+                if (supportsBatchUpdate && device.profile.padNotes) {
                     // Batch mode: update all pad states first, then send ONE message
                     for (const note of device.profile.padNotes) {
                         const controlId = `note-${note}`;
@@ -424,10 +429,9 @@
                         device.midiOutput.send(command.value);
                     }
                 } else {
-                    // Non-batch mode: send individual updates
-                    for (const note of device.profile.padNotes) {
-                        const controlId = `note-${note}`;
-                        const input = assignedControls.get(controlId);
+                    // Non-batch mode: send individual updates for all color-capable controls
+                    for (const control of colorCapableControls) {
+                        const input = assignedControls.get(control.controlId);
 
                         if (input) {
                             // Set assigned color
@@ -439,10 +443,10 @@
                                 color = (state?.state === 'on') ? input.color : 'black';
                             }
 
-                            await device.setColor(controlId, color);
+                            await device.setColor(control.controlId, color);
                         } else {
-                            // Set unassigned buttons to black
-                            await device.setColor(controlId, 'black');
+                            // Set unassigned controls to black/off
+                            await device.setColor(control.controlId, 'black');
                         }
                     }
                 }
