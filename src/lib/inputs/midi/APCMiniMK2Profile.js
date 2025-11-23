@@ -102,7 +102,26 @@ export class APCMiniMK2Profile extends MIDIDeviceProfile {
 			{ controlId: 'cc-53', type: 'slider', supportsColor: false, friendlyName: 'Fader 6' },
 			{ controlId: 'cc-54', type: 'slider', supportsColor: false, friendlyName: 'Fader 7' },
 			{ controlId: 'cc-55', type: 'slider', supportsColor: false, friendlyName: 'Fader 8' },
-			{ controlId: 'cc-56', type: 'slider', supportsColor: false, friendlyName: 'Fader 9' }
+			{ controlId: 'cc-56', type: 'slider', supportsColor: false, friendlyName: 'Fader 9' },
+
+			// Control buttons - support color
+			{ controlId: 'cc-100', type: 'button', supportsColor: true, friendlyName: 'Volume' },
+			{ controlId: 'cc-101', type: 'button', supportsColor: true, friendlyName: 'Pan' },
+			{ controlId: 'cc-102', type: 'button', supportsColor: true, friendlyName: 'Send' },
+			{ controlId: 'cc-103', type: 'button', supportsColor: true, friendlyName: 'Device' },
+			{ controlId: 'cc-104', type: 'button', supportsColor: true, friendlyName: 'Up' },
+			{ controlId: 'cc-105', type: 'button', supportsColor: true, friendlyName: 'Down' },
+			{ controlId: 'cc-106', type: 'button', supportsColor: true, friendlyName: 'Left' },
+			{ controlId: 'cc-107', type: 'button', supportsColor: true, friendlyName: 'Right' },
+			{ controlId: 'cc-112', type: 'button', supportsColor: true, friendlyName: 'Clip Stop' },
+			{ controlId: 'cc-113', type: 'button', supportsColor: true, friendlyName: 'Solo' },
+			{ controlId: 'cc-114', type: 'button', supportsColor: true, friendlyName: 'Mute' },
+			{ controlId: 'cc-115', type: 'button', supportsColor: true, friendlyName: 'Rec Arm' },
+			{ controlId: 'cc-116', type: 'button', supportsColor: true, friendlyName: 'Select' },
+			{ controlId: 'cc-117', type: 'button', supportsColor: true, friendlyName: 'Drum' },
+			{ controlId: 'cc-118', type: 'button', supportsColor: true, friendlyName: 'Note' },
+			{ controlId: 'cc-119', type: 'button', supportsColor: true, friendlyName: 'Stop All Clips' },
+			{ controlId: 'cc-122', type: 'button', supportsColor: true, friendlyName: 'Shift' }
 		];
 	}
 
