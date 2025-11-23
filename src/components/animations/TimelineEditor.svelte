@@ -116,9 +116,9 @@
         // Save changes to library when dialog closes
         if (selectedKeyframeIndex !== null) {
             animationLibrary.updateKeyframe(animation.id, selectedKeyframeIndex, {
-                values: [...localKeyframes[selectedKeyframeIndex].values]
+                values: localKeyframes[selectedKeyframeIndex].values
             });
-            
+
             if (onUpdate) onUpdate();
         }
 
