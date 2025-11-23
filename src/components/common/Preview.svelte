@@ -229,11 +229,11 @@
                 ></div>
 
             {:else if control === 'amber'}
-                {@const amberOpacity = ((effectiveData().amber ?? 0) / 255)}
+                {@const amberOpacity = ((effectiveData().amber ?? 0) / 255) * 0.5}
                 <div class="control-layer control-amber" style="background-color: rgba(255, 191, 0, {amberOpacity})"></div>
 
             {:else if control === 'white'}
-                {@const whiteOpacity = ((effectiveData().white ?? 0) / 255)}
+                {@const whiteOpacity = ((effectiveData().white ?? 0) / 255) * 0.5}
                 <div class="control-layer control-white" style="background-color: rgba(255, 255, 255, {whiteOpacity})"></div>
 
             {:else if control === 'intensity'}
