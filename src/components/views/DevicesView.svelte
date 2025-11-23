@@ -1,6 +1,6 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-    import { controlValuesToDMX } from '../../lib/outputs/converter.js';
+    import { controlValuesToDMX } from '../../lib/outputs/controls.js';
     import { deviceLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import DeviceCard from '../cards/DeviceCard.svelte';
