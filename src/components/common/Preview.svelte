@@ -93,16 +93,25 @@
             // Extract controls based on device type
             const deviceType = DEVICE_TYPES[device.type];
             if (!deviceType) return [];
-            
-            if (device.type === 'FLAMETHROWER') {
-                return ['fuel', 'safety'];
-            } else if (device.type === 'SMOKE') {
-                return ['output'];
-            } else if (deviceType.controls.some(c => c.name === 'Pan/Tilt')) {
-                return ['color', 'pantilt'];
-            } else {
-                return ['color'];
+
+            // Dynamically build controls array based on device controls
+            const controlsList = [];
+
+            for (const control of deviceType.controls) {
+                const controlTypeId = control.type.type;
+
+                if (controlTypeId === 'rgb') {
+                    controlsList.push('color');
+                } else if (controlTypeId === 'xypad' || controlTypeId === 'xypad16') {
+                    controlsList.push('pantilt');
+                } else if (controlTypeId === 'slider' || controlTypeId === 'toggle') {
+                    // Add slider/toggle controls by their lowercase name
+                    const controlKey = control.name.toLowerCase();
+                    controlsList.push(controlKey);
+                }
             }
+
+            return controlsList;
         }
         return controls;
     });
@@ -115,30 +124,29 @@
 
             // Get control values (NEW: object instead of array)
             const controlValues = device.defaultValues || device.currentValues || {};
+            const result = {};
 
-            if (device.type === 'FLAMETHROWER') {
-                return {
-                    fuel: controlValues.Fuel || 0,
-                    safety: controlValues.Safety || 0
-                };
-            } else if (device.type === 'SMOKE') {
-                return {
-                    output: controlValues.Output || 0
-                };
-            } else if (deviceType.controls.some(c => c.name === 'Pan/Tilt')) {
-                // Extract Pan/Tilt values
-                const panTilt = controlValues['Pan/Tilt'] || { x: 128, y: 128 };
+            // Dynamically extract data based on device controls
+            for (const control of deviceType.controls) {
+                const controlTypeId = control.type.type;
+                const value = controlValues[control.name];
 
-                return {
-                    color: getDeviceColor(device.type, controlValues),
-                    pan: panTilt.x || 128,
-                    tilt: panTilt.y || 128
-                };
-            } else {
-                return {
-                    color: getDeviceColor(device.type, controlValues)
-                };
+                if (controlTypeId === 'rgb') {
+                    // RGB control - get color
+                    result.color = getDeviceColor(device.type, controlValues);
+                } else if (controlTypeId === 'xypad' || controlTypeId === 'xypad16') {
+                    // Pan/Tilt control
+                    const panTilt = value || { x: 128, y: 128 };
+                    result.pan = panTilt.x ?? 128;
+                    result.tilt = panTilt.y ?? 128;
+                } else if (controlTypeId === 'slider' || controlTypeId === 'toggle') {
+                    // Slider/toggle controls - add by lowercase name
+                    const controlKey = control.name.toLowerCase();
+                    result[controlKey] = value ?? (controlTypeId === 'toggle' ? control.type.offValue : 0);
+                }
             }
+
+            return result;
         }
         return data;
     });
