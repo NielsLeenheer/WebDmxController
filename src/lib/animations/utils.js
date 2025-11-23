@@ -43,21 +43,47 @@ export function getControlsForRendering(animation) {
 /**
  * Get color for a keyframe (for visualization)
  *
- * NEW: Works with control values
+ * NEW: Works with control values, including Amber and White
  *
  * @param {Object} keyframe - Keyframe object with control values
  * @returns {string} RGB color string
  */
 export function getKeyframeColor(keyframe) {
-	// Extract color from control values
-	const colorValue = keyframe.values?.Color;
+	const values = keyframe.values || {};
+
+	// Get Color control value
+	let r = 0, g = 0, b = 0;
+	const colorValue = values.Color;
 	if (colorValue && typeof colorValue === 'object') {
-		const r = colorValue.r ?? 0;
-		const g = colorValue.g ?? 0;
-		const b = colorValue.b ?? 0;
-		return `rgb(${r}, ${g}, ${b})`;
+		r = colorValue.r || 0;
+		g = colorValue.g || 0;
+		b = colorValue.b || 0;
 	}
-	return 'transparent';
+
+	// Add Amber if present
+	const amber = values.Amber;
+	if (amber !== undefined) {
+		// Amber is #FFBF00 - adds to red and green
+		r = Math.min(255, r + (255 * amber / 255));
+		g = Math.min(255, g + (191 * amber / 255));
+	}
+
+	// Add White if present
+	const white = values.White;
+	if (white !== undefined) {
+		// White adds equally to all channels
+		r = Math.min(255, r + white);
+		g = Math.min(255, g + white);
+		b = Math.min(255, b + white);
+	}
+
+	// If we have any color data, return RGB color
+	if (colorValue || amber !== undefined || white !== undefined) {
+		return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+	}
+
+	// Return gray for non-color keyframes
+	return '#888';
 }
 
 /**

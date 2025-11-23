@@ -1,7 +1,7 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import { getDeviceColor } from '../../lib/outputs/devices.js';
-    import { getControlsForRendering } from '../../lib/animations/utils.js';
+    import { getControlsForRendering, getKeyframeColor } from '../../lib/animations/utils.js';
     import { paletteColorToHex } from '../../lib/inputs/colors.js';
 
     /**
@@ -111,38 +111,8 @@
             return '#888';
         }
 
-        // Extract colors from each keyframe (NEW: control values)
-        const colors = animation.keyframes.map(keyframe => {
-            const values = keyframe.values || {};
-
-            // Get Color control value
-            let r = 0, g = 0, b = 0;
-            const colorValue = values.Color;
-            if (colorValue && typeof colorValue === 'object') {
-                r = colorValue.r || 0;
-                g = colorValue.g || 0;
-                b = colorValue.b || 0;
-            }
-
-            // Add Amber if present
-            const amber = values.Amber;
-            if (amber !== undefined) {
-                // Amber is #FFBF00 - adds to red and green
-                r = Math.min(255, r + (255 * amber / 255));
-                g = Math.min(255, g + (191 * amber / 255));
-            }
-
-            // Add White if present
-            const white = values.White;
-            if (white !== undefined) {
-                // White adds equally to all channels
-                r = Math.min(255, r + white);
-                g = Math.min(255, g + white);
-                b = Math.min(255, b + white);
-            }
-
-            return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
-        });
+        // Extract colors from each keyframe using getKeyframeColor
+        const colors = animation.keyframes.map(keyframe => getKeyframeColor(keyframe));
 
         // Create stepped gradient with equal steps
         const numSteps = colors.length;
