@@ -141,7 +141,9 @@
                 handleRawInput({
                     deviceId: device.id,
                     controlId: eventData.controlId,
-                    type: eventData.velocity !== undefined ? 'trigger' : 'change',
+                    type: eventData.type, // Pass type from device event
+                    supportsColor: eventData.supportsColor, // Pass supportsColor from device event
+                    friendlyName: eventData.friendlyName, // Pass friendlyName from device event
                     device
                 });
             };
