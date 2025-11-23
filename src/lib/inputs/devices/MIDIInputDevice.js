@@ -89,7 +89,8 @@ export class MIDIInputDevice extends InputDevice {
 			velocity,
 			type: definition.type || 'button',
 			supportsColor: definition.supportsColor !== undefined ? definition.supportsColor : false,
-			friendlyName: definition.friendlyName || null
+			friendlyName: definition.friendlyName || null,
+			orientation: definition.orientation || null
 		});
 	}
 
@@ -113,7 +114,8 @@ export class MIDIInputDevice extends InputDevice {
 			control,
 			type: definition.type || 'knob',
 			supportsColor: definition.supportsColor !== undefined ? definition.supportsColor : false,
-			friendlyName: definition.friendlyName || null
+			friendlyName: definition.friendlyName || null,
+			orientation: definition.orientation || null
 		});
 	}
 

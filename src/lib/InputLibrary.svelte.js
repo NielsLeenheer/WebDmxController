@@ -55,6 +55,7 @@ export class InputLibrary extends Library {
 			type: config.type || (isButton ? 'button' : 'knob'), // NEW: explicit type
 			supportsColor: config.supportsColor !== undefined ? config.supportsColor : false, // NEW: color support flag
 			friendlyName: config.friendlyName || null, // NEW: friendly name for known controls
+			orientation: config.orientation || null, // NEW: orientation for faders/knobs (horizontal/vertical)
 			buttonMode,
 			cssClassOn,
 			cssClassOff,

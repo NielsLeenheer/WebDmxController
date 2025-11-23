@@ -20,7 +20,7 @@ export class MIDIDeviceProfile {
 	/**
 	 * Get control definition for a given control ID
 	 * @param {string} controlId - Control ID (e.g., 'note-36', 'cc-1')
-	 * @returns {{ type: string, supportsColor: boolean, friendlyName?: string }}
+	 * @returns {{ type: string, supportsColor: boolean, friendlyName?: string, orientation?: string }}
 	 */
 	getControlDefinition(controlId) {
 		// Look up in controls array first
@@ -29,7 +29,8 @@ export class MIDIDeviceProfile {
 			return {
 				type: definition.type,
 				supportsColor: definition.supportsColor,
-				friendlyName: definition.friendlyName
+				friendlyName: definition.friendlyName,
+				orientation: definition.orientation
 			};
 		}
 

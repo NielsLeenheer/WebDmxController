@@ -93,16 +93,16 @@ export class APCMiniMK2Profile extends MIDIDeviceProfile {
 			{ controlId: 'note-88', type: 'button', supportsColor: true, friendlyName: 'Scene 7' },
 			{ controlId: 'note-89', type: 'button', supportsColor: true, friendlyName: 'Scene 8' },
 
-			// Faders (CC 48-56) - no color support
-			{ controlId: 'cc-48', type: 'slider', supportsColor: false, friendlyName: 'Fader 1' },
-			{ controlId: 'cc-49', type: 'slider', supportsColor: false, friendlyName: 'Fader 2' },
-			{ controlId: 'cc-50', type: 'slider', supportsColor: false, friendlyName: 'Fader 3' },
-			{ controlId: 'cc-51', type: 'slider', supportsColor: false, friendlyName: 'Fader 4' },
-			{ controlId: 'cc-52', type: 'slider', supportsColor: false, friendlyName: 'Fader 5' },
-			{ controlId: 'cc-53', type: 'slider', supportsColor: false, friendlyName: 'Fader 6' },
-			{ controlId: 'cc-54', type: 'slider', supportsColor: false, friendlyName: 'Fader 7' },
-			{ controlId: 'cc-55', type: 'slider', supportsColor: false, friendlyName: 'Fader 8' },
-			{ controlId: 'cc-56', type: 'slider', supportsColor: false, friendlyName: 'Fader 9' },
+			// Faders (CC 48-56) - no color support, vertical orientation
+			{ controlId: 'cc-48', type: 'slider', supportsColor: false, friendlyName: 'Fader 1', orientation: 'vertical' },
+			{ controlId: 'cc-49', type: 'slider', supportsColor: false, friendlyName: 'Fader 2', orientation: 'vertical' },
+			{ controlId: 'cc-50', type: 'slider', supportsColor: false, friendlyName: 'Fader 3', orientation: 'vertical' },
+			{ controlId: 'cc-51', type: 'slider', supportsColor: false, friendlyName: 'Fader 4', orientation: 'vertical' },
+			{ controlId: 'cc-52', type: 'slider', supportsColor: false, friendlyName: 'Fader 5', orientation: 'vertical' },
+			{ controlId: 'cc-53', type: 'slider', supportsColor: false, friendlyName: 'Fader 6', orientation: 'vertical' },
+			{ controlId: 'cc-54', type: 'slider', supportsColor: false, friendlyName: 'Fader 7', orientation: 'vertical' },
+			{ controlId: 'cc-55', type: 'slider', supportsColor: false, friendlyName: 'Fader 8', orientation: 'vertical' },
+			{ controlId: 'cc-56', type: 'slider', supportsColor: false, friendlyName: 'Fader 9', orientation: 'vertical' },
 
 			// Control buttons - support color
 			{ controlId: 'cc-100', type: 'button', supportsColor: true, friendlyName: 'Volume' },

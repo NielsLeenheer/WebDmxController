@@ -144,6 +144,7 @@
                     type: eventData.type, // Pass type from device event
                     supportsColor: eventData.supportsColor, // Pass supportsColor from device event
                     friendlyName: eventData.friendlyName, // Pass friendlyName from device event
+                    orientation: eventData.orientation, // Pass orientation from device event
                     device
                 });
             };
@@ -161,7 +162,7 @@
     function handleRawInput(event) {
         if (!isListening) return;
 
-        const { deviceId, controlId, device, type, supportsColor, friendlyName } = event;
+        const { deviceId, controlId, device, type, supportsColor, friendlyName, orientation } = event;
 
         // Check if this input already exists
         const existing = inputs.find(
@@ -180,6 +181,7 @@
                 type: type || 'button', // Use type from device
                 supportsColor: supportsColor !== undefined ? supportsColor : false, // Use supportsColor from device
                 friendlyName: friendlyName || null, // Use friendlyName from device
+                orientation: orientation || null, // Use orientation from device
                 color: supportsColor ? getNextAvailableColor(deviceId) : null
             });
 
@@ -209,6 +211,7 @@
                 type: eventData.type, // Pass type from device event
                 supportsColor: eventData.supportsColor, // Pass supportsColor from device event
                 friendlyName: eventData.friendlyName, // Pass friendlyName from device event
+                orientation: eventData.orientation, // Pass orientation from device event
                 device
             });
         };
