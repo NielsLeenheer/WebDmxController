@@ -195,22 +195,10 @@
     // Determine the CSS class based on size
     const sizeClass = $derived(`preview-${size}`);
 
-    // Reorder controls for proper visual stacking
-    // Flamethrower: flame layer must render before safety layer so safety appears on top
-    const orderedControls = $derived.by(() => {
+    // Helper to check if a control is present
+    const hasControl = $derived.by(() => {
         const ctls = effectiveControls();
-        const safetyIndex = ctls.indexOf('safety');
-        const fuelIndex = ctls.indexOf('fuel');
-
-        // If both safety and fuel exist, and safety comes first, swap them
-        if (safetyIndex !== -1 && fuelIndex !== -1 && safetyIndex < fuelIndex) {
-            const reordered = [...ctls];
-            reordered[safetyIndex] = 'fuel';
-            reordered[fuelIndex] = 'safety';
-            return reordered;
-        }
-
-        return ctls;
+        return (controlName) => ctls.includes(controlName);
     });
 
     // Calculate 3D transform from Euler angles
@@ -263,59 +251,87 @@
     {/if}
 
     {#if type === 'device' || type === 'controls'}
-        <!-- Stack device controls in order -->
-        {#each orderedControls as control}
-            {#if control === 'color'}
-                <div 
-                    class="control-layer control-color" 
-                    style="background-color: {effectiveData().color || '#888'}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
-                ></div>
+        <!-- Fixed layer order from bottom to top -->
+        
+        <!-- Base color layer -->
+        {#if hasControl('color')}
+            <div 
+                class="control-layer control-color" 
+                style="background-color: {effectiveData().color || '#888'}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
+            ></div>
+        {/if}
 
-            {:else if control === 'amber'}
-                {@const amberOpacity = ((effectiveData().amber ?? 0) / 255) * 0.5}
-                <div class="control-layer control-amber" style="background-color: rgba(255, 191, 0, {amberOpacity})"></div>
+        <!-- Amber layer -->
+        {#if hasControl('amber')}
+            {@const amberOpacity = ((effectiveData().amber ?? 0) / 255) * 0.5}
+            <div class="control-layer control-amber" style="background-color: rgba(255, 191, 0, {amberOpacity})"></div>
+        {/if}
 
-            {:else if control === 'white'}
-                {@const whiteOpacity = ((effectiveData().white ?? 0) / 255) * 0.5}
-                <div class="control-layer control-white" style="background-color: rgba(255, 255, 255, {whiteOpacity})"></div>
+        <!-- White layer -->
+        {#if hasControl('white')}
+            {@const whiteOpacity = ((effectiveData().white ?? 0) / 255) * 0.5}
+            <div class="control-layer control-white" style="background-color: rgba(255, 255, 255, {whiteOpacity})"></div>
+        {/if}
 
-            {:else if control === 'intensity'}
-                {@const intensityOpacity = ((effectiveData().intensity ?? 0) / 255)}
-                <div class="control-layer control-intensity" style="background-color: rgba(0, 0, 0, {1 - intensityOpacity})"></div>
+        <!-- Intensity layer (deprecated) -->
+        {#if hasControl('intensity')}
+            {@const intensityOpacity = ((effectiveData().intensity ?? 0) / 255)}
+            <div class="control-layer control-intensity" style="background-color: rgba(0, 0, 0, {1 - intensityOpacity})"></div>
+        {/if}
 
-            {:else if control === 'flame'}
-                {@const flamePercent = ((effectiveData().flame ?? 0) / 255) * 100}
-                <div
-                    class="control-layer control-flame"
-                    style="background: linear-gradient(to top, #ff5722 0%, #ff9800 {flamePercent/2}%, #ffc107 {flamePercent}%, #1a1a1a {flamePercent}%, #1a1a1a 100%)"
-                ></div>
+        <!-- Dimmer layer (on top of all color layers) -->
+        {#if hasControl('dimmer')}
+            {@const dimmerValue = effectiveData().dimmer ?? 0}
+            {@const blackOpacity = dimmerValue / 255}
+            <div class="control-layer control-dimmer" style="background-color: rgba(0, 0, 0, {blackOpacity})"></div>
+        {/if}
 
-            {:else if control === 'safety'}
-                {@const safetyOn = (effectiveData().safety ?? 0) >= 125}
-                <div class="control-layer control-safety" style="background: {safetyOn ? 'transparent' : '#222222'}">
-                    {#if safetyOn}
-                        <div class="safety-checkmark"></div>
-                    {:else}
-                        <div class="safety-cross"></div>
-                    {/if}
-                </div>
+        <!-- Strobe layer (on top of all color layers) -->
+        {#if hasControl('strobe')}
+            {@const strobeValue = effectiveData().strobe ?? 0}
+            {@const strobeSpeed = strobeValue > 0 ? Math.max(0.1, (255 - strobeValue) / 255 * 2) : 0}
+            <div class="control-layer control-strobe" class:strobe-active={strobeValue > 0} style="--strobe-duration: {strobeSpeed}s"></div>
+        {/if}
 
-            {:else if control === 'smoke'}
-                {@const smokePercent = ((effectiveData().smoke ?? 0) / 255) * 100}
-                <div class="control-layer control-smoke">
-                    <div class="smoke-effect" style="opacity: {smokePercent / 100}"></div>
-                </div>
+        <!-- Smoke layer -->
+        {#if hasControl('smoke')}
+            {@const smokePercent = ((effectiveData().smoke ?? 0) / 255) * 100}
+            <div class="control-layer control-smoke">
+                <div class="smoke-effect" style="opacity: {smokePercent / 100}"></div>
+            </div>
+        {/if}
 
-            {:else if control === 'pantilt'}
-                {@const rawX = (effectiveData().pan ?? 0) / 255}
-                {@const rawY = (effectiveData().tilt ?? 0) / 255}
-                {@const dotX = 15 + (rawX * 70)}
-                {@const dotY = 15 + ((1 - rawY) * 70)}
-                <div class="control-layer control-pantilt">
-                    <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
-                </div>
-            {/if}
-        {/each}
+        <!-- Flame layer -->
+        {#if hasControl('flame')}
+            {@const flamePercent = ((effectiveData().flame ?? 0) / 255) * 100}
+            <div
+                class="control-layer control-flame"
+                style="background: linear-gradient(to top, #ff5722 0%, #ff9800 {flamePercent/2}%, #ffc107 {flamePercent}%, #1a1a1a {flamePercent}%, #1a1a1a 100%)"
+            ></div>
+        {/if}
+
+        <!-- Safety layer (on top of flame) -->
+        {#if hasControl('safety')}
+            {@const safetyOn = (effectiveData().safety ?? 0) >= 125}
+            <div class="control-layer control-safety" style="background: {safetyOn ? 'transparent' : '#222222'}">
+                {#if safetyOn}
+                    <div class="safety-checkmark"></div>
+                {:else}
+                    <div class="safety-cross"></div>
+                {/if}
+            </div>
+        {/if}
+
+        <!-- Pan/Tilt layer -->
+        {#if hasControl('pantilt')}
+            {@const rawX = (effectiveData().pan ?? 0) / 255}
+            {@const rawY = (effectiveData().tilt ?? 0) / 255}
+            {@const dotX = 15 + (rawX * 70)}
+            {@const dotY = 15 + ((1 - rawY) * 70)}
+            <div class="control-layer control-pantilt">
+                <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
+            </div>
+        {/if}
 
     {:else if type === 'animation'}
         <!-- Animation preview with gradient -->
@@ -649,6 +665,34 @@
         box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
         pointer-events: none;
         transition: opacity 0.2s ease-out;
+    }
+
+    /* Dimmer layer (black overlay) */
+    .control-dimmer {
+        pointer-events: none;
+    }
+
+    /* Strobe layer (black overlay with animation) */
+    .control-strobe {
+        background-color: #000;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .control-strobe.strobe-active {
+        animation: strobe var(--strobe-duration, 1s) linear infinite;
+    }
+
+    @keyframes strobe {
+        0%, 45% {
+            opacity: 0;
+        }
+        50%, 95% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+        }
     }
 
     /* Pan/Tilt indicator */
