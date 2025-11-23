@@ -82,8 +82,8 @@ export class CSSSampler {
 
 		const computed = window.getComputedStyle(element);
 
-		// Sample CSS properties based on device controls
-		const channels = this.sampleCSSProperties(computed, deviceType.controls, deviceType.components);
+		// Sample CSS properties based on device controls (NEW: no components)
+		const channels = this.sampleCSSProperties(computed, deviceType.controls);
 
 		// Store current values for next comparison
 		this.previousValues.set(device.id, { ...channels });
@@ -92,28 +92,29 @@ export class CSSSampler {
 	}
 
 	/**
-	 * Sample CSS properties based on device controls and convert to DMX component values
-	 * This is the inverse of generateCSSProperties - it reads CSS and produces DMX values
+	 * Sample CSS properties based on device controls and convert to component values
+	 * This is the inverse of generateCSSProperties - it reads CSS and produces component values
+	 *
+	 * NEW: Works with control-based architecture (no components layer)
 	 *
 	 * @param {CSSStyleDeclaration} computed - Computed style from getComputedStyle()
 	 * @param {Array} controls - Array of control definitions from device type
-	 * @param {Array} components - Array of component definitions (with name and channel)
 	 * @returns {Object} Map of component names to DMX values (e.g., {Red: 255, Green: 128, Blue: 0})
 	 */
-	sampleCSSProperties(computed, controls, components) {
+	sampleCSSProperties(computed, controls) {
 		const result = {};
 
 		// Process each control
 		for (const control of controls) {
-			const controlType = control.type.type; // Get string type from ControlType instance
+			// Check if this is a toggle-style control (slider with controlType='toggle')
+			const isToggle = control.controlType === 'toggle' || control.type.type === 'toggle';
+			const controlType = isToggle ? 'toggle' : control.type.type;
+
 			const mapping = CONTROL_CSS_MAPPING[controlType];
 			if (!mapping) continue;
 
-			if (controlType === 'xypad' || controlType === 'xypad16') {
+			if (control.type.type === 'xypad' || control.type.type === 'xypad16') {
 				// XY Pad control (e.g., Pan/Tilt)
-				const xComponent = components[control.components.x];
-				const yComponent = components[control.components.y];
-
 				// Sample X property (pan)
 				const xValue = computed.getPropertyValue(mapping.properties.x.name);
 				if (xValue) {
@@ -134,7 +135,7 @@ export class CSSSampler {
 					}
 				}
 
-			} else if (controlType === 'rgb' || controlType === 'rgba') {
+			} else if (control.type.type === 'rgb' || control.type.type === 'rgba') {
 				// RGB Color control - sample the color property
 				const colorValue = computed.color;
 				if (colorValue) {
@@ -143,9 +144,21 @@ export class CSSSampler {
 					Object.assign(result, sampledColor);
 				}
 
-			} else if (controlType === 'slider') {
+			} else if (isToggle) {
+				// Toggle control (including slider with controlType='toggle')
+				const propName = mapping.properties.value.getName(control.name);
+				const cssValue = computed.getPropertyValue(propName);
+
+				if (cssValue) {
+					const cssMapping = CSS_TO_DMX_MAPPING[propName];
+					if (cssMapping) {
+						const sampledValue = cssMapping.sample(cssValue);
+						Object.assign(result, sampledValue);
+					}
+				}
+
+			} else if (control.type.type === 'slider') {
 				// Slider control (Dimmer, Intensity, White, Amber, etc.)
-				const component = components[control.components.value];
 				const propName = mapping.properties.value.getName(control.name);
 
 				let cssValue = computed.getPropertyValue(propName);
@@ -156,27 +169,16 @@ export class CSSSampler {
 					if (cssValue) {
 						const opacityMapping = CSS_TO_DMX_MAPPING['opacity'];
 						const sampledOpacity = opacityMapping.sample(cssValue);
-						result[component.name] = sampledOpacity.Intensity || sampledOpacity.Dimmer;
+						// Use the control name to determine which key to use
+						result[control.name] = sampledOpacity.Intensity || sampledOpacity.Dimmer;
 					}
 				} else if (cssValue) {
 					const cssMapping = CSS_TO_DMX_MAPPING[propName];
 					if (cssMapping) {
 						const sampledValue = cssMapping.sample(cssValue);
-						// Map to the actual component name
-						Object.assign(result, sampledValue);
-					}
-				}
-
-			} else if (controlType === 'toggle') {
-				// Toggle control (Safety, etc.)
-				const component = components[control.components.value];
-				const propName = mapping.properties.value.getName(control.name);
-				const cssValue = computed.getPropertyValue(propName);
-
-				if (cssValue) {
-					const cssMapping = CSS_TO_DMX_MAPPING[propName];
-					if (cssMapping) {
-						const sampledValue = cssMapping.sample(cssValue);
+						// The mapping returns component name -> value
+						// For control-based arch, we need to map to the control's component name
+						// For simple sliders, the component name matches the control name
 						Object.assign(result, sampledValue);
 					}
 				}
