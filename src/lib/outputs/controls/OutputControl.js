@@ -1,16 +1,16 @@
 import { SliderControlType } from './types/SliderControlType.js';
 
 /**
- * Output Control
- * Controls output level (smoke, haze, fog, etc.)
+ * Smoke Control
+ * Controls smoke/haze/fog output level
  */
-export class OutputControl extends SliderControlType {
+export class SmokeControl extends SliderControlType {
 	constructor() {
-		super('output', 'Output');
+		super('smoke', 'Smoke');
 	}
 
 	/**
-	 * Get gradient for output slider
+	 * Get gradient for smoke slider
 	 * @returns {string} CSS gradient string
 	 */
 	getGradient() {
@@ -18,8 +18,8 @@ export class OutputControl extends SliderControlType {
 	}
 
 	/**
-	 * Get color for output control thumb
-	 * @param {number} value - Output value (0-255)
+	 * Get color for smoke control thumb
+	 * @param {number} value - Smoke value (0-255)
 	 * @returns {string} CSS color string
 	 */
 	getColor(value) {

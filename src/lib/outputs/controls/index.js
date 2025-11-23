@@ -23,7 +23,7 @@ import { SpeedControl } from './SpeedControl.js';
 import { WhiteControl } from './WhiteControl.js';
 import { AmberControl } from './AmberControl.js';
 import { VolumeControl } from './VolumeControl.js';
-import { OutputControl } from './OutputControl.js';
+import { SmokeControl } from './OutputControl.js';
 import { FanControl } from './FanControl.js';
 import { FlameControl } from './FlameControl.js';
 import { SafetyControl } from './SafetyControl.js';
@@ -46,7 +46,7 @@ export const CONTROL_TYPES = {
 	White: new WhiteControl(),
 	Amber: new AmberControl(),
 	Volume: new VolumeControl(),
-	Output: new OutputControl(),
+	Smoke: new SmokeControl(),
 	Fan: new FanControl(),
 	Flame: new FlameControl(),
 

@@ -7,6 +7,7 @@
  */
 
 import { DEVICE_TYPES } from '../outputs/devices.js';
+import { CONTROL_TYPES } from '../outputs/controls/index.js';
 
 /**
  * Get controls array for rendering
@@ -43,45 +44,47 @@ export function getControlsForRendering(animation) {
 /**
  * Get color for a keyframe (for visualization)
  *
- * NEW: Works with control values, including Amber and White
+ * Uses each control's getColor() method and mixes the results
  *
  * @param {Object} keyframe - Keyframe object with control values
  * @returns {string} RGB color string
  */
 export function getKeyframeColor(keyframe) {
 	const values = keyframe.values || {};
-
-	// Get Color control value
-	let r = 0, g = 0, b = 0;
-	const colorValue = values.Color;
-	if (colorValue && typeof colorValue === 'object') {
-		r = colorValue.r || 0;
-		g = colorValue.g || 0;
-		b = colorValue.b || 0;
+	
+	// Accumulate RGB values from all controls
+	let totalR = 0, totalG = 0, totalB = 0;
+	let hasColor = false;
+	
+	for (const [controlName, value] of Object.entries(values)) {
+		// Find the control definition from device types
+		let controlDef = null;
+		for (const deviceType of Object.values(DEVICE_TYPES)) {
+			controlDef = deviceType.controls.find(c => c.name === controlName);
+			if (controlDef) break;
+		}
+		
+		if (!controlDef) continue;
+		
+		// Get color from the control type
+		const colorStr = controlDef.type.getColor?.(value);
+		if (!colorStr) continue;
+		
+		// Parse RGB color string (e.g., "rgb(255, 0, 0)")
+		const match = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+		if (match) {
+			totalR = Math.min(255, totalR + parseInt(match[1]));
+			totalG = Math.min(255, totalG + parseInt(match[2]));
+			totalB = Math.min(255, totalB + parseInt(match[3]));
+			hasColor = true;
+		}
 	}
-
-	// Add Amber if present
-	const amber = values.Amber;
-	if (amber !== undefined) {
-		// Amber is #FFBF00 - adds to red and green
-		r = Math.min(255, r + (255 * amber / 255));
-		g = Math.min(255, g + (191 * amber / 255));
+	
+	// If we have any color data, return mixed RGB color
+	if (hasColor) {
+		return `rgb(${Math.round(totalR)}, ${Math.round(totalG)}, ${Math.round(totalB)})`;
 	}
-
-	// Add White if present
-	const white = values.White;
-	if (white !== undefined) {
-		// White adds equally to all channels
-		r = Math.min(255, r + white);
-		g = Math.min(255, g + white);
-		b = Math.min(255, b + white);
-	}
-
-	// If we have any color data, return RGB color
-	if (colorValue || amber !== undefined || white !== undefined) {
-		return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
-	}
-
+	
 	// Return gray for non-color keyframes
 	return '#888';
 }

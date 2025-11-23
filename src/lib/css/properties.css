@@ -10,7 +10,7 @@
   initial-value: none;
 }
 
-@property --fuel {
+@property --flame {
   syntax: "<percentage>";
   inherits: false;
   initial-value: 0%;

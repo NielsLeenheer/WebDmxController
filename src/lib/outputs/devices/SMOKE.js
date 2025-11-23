@@ -3,10 +3,10 @@ import { CONTROL_TYPES } from '../controls/index.js';
 
 /**
  * Smoke Machine Device Type
- * Single channel output control
+ * Single channel smoke control
  *
  * Channels:
- * 0: Output
+ * 0: Smoke
  */
 export class SmokeDeviceType extends DeviceType {
     constructor() {
@@ -17,8 +17,8 @@ export class SmokeDeviceType extends DeviceType {
             defaultValues: [0],
             controls: [
                 {
-                    name: 'Output',
-                    type: CONTROL_TYPES.Output,
+                    name: 'Smoke',
+                    type: CONTROL_TYPES.Smoke,
                     startChannel: 0
                 }
             ]

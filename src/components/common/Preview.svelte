@@ -196,7 +196,7 @@
     const sizeClass = $derived(`preview-${size}`);
 
     // Reorder controls for proper visual stacking
-    // Flamethrower: fuel layer must render before safety layer so safety appears on top
+    // Flamethrower: flame layer must render before safety layer so safety appears on top
     const orderedControls = $derived.by(() => {
         const ctls = effectiveControls();
         const safetyIndex = ctls.indexOf('safety');
@@ -283,11 +283,11 @@
                 {@const intensityOpacity = ((effectiveData().intensity ?? 0) / 255)}
                 <div class="control-layer control-intensity" style="background-color: rgba(0, 0, 0, {1 - intensityOpacity})"></div>
 
-            {:else if control === 'fuel'}
-                {@const fuelPercent = ((effectiveData().fuel ?? 0) / 255) * 100}
+            {:else if control === 'flame'}
+                {@const flamePercent = ((effectiveData().flame ?? 0) / 255) * 100}
                 <div
-                    class="control-layer control-fuel"
-                    style="background: linear-gradient(to top, #ff5722 0%, #ff9800 {fuelPercent/2}%, #ffc107 {fuelPercent}%, #1a1a1a {fuelPercent}%, #1a1a1a 100%)"
+                    class="control-layer control-flame"
+                    style="background: linear-gradient(to top, #ff5722 0%, #ff9800 {flamePercent/2}%, #ffc107 {flamePercent}%, #1a1a1a {flamePercent}%, #1a1a1a 100%)"
                 ></div>
 
             {:else if control === 'safety'}
@@ -300,10 +300,10 @@
                     {/if}
                 </div>
 
-            {:else if control === 'output'}
-                {@const outputPercent = ((effectiveData().output ?? 0) / 255) * 100}
-                <div class="control-layer control-output">
-                    <div class="smoke-effect" style="opacity: {outputPercent / 100}"></div>
+            {:else if control === 'smoke'}
+                {@const smokePercent = ((effectiveData().smoke ?? 0) / 255) * 100}
+                <div class="control-layer control-smoke">
+                    <div class="smoke-effect" style="opacity: {smokePercent / 100}"></div>
                 </div>
 
             {:else if control === 'pantilt'}
