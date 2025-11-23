@@ -95,7 +95,9 @@ export function getDevicePreviewData(deviceType, controlValues) {
  * but should not be used in new code.
  */
 export function convertChannelsToArray(deviceType, channels) {
-    console.warn('convertChannelsToArray() is deprecated. Use controlValuesToDMX() from converter.js instead.');
+    // NOTE: This function returns default values as a fallback
+    // CSS sampling path (App.svelte) still uses channel-based approach
+    // Full conversion to control values deferred (see IMPLEMENTATION_STATUS.md)
 
     const deviceTypeDef = DEVICE_TYPES[deviceType];
     if (!deviceTypeDef) {

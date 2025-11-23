@@ -330,7 +330,7 @@
     title="Keyframe at {(localKeyframes[selectedKeyframeIndex].time * 100).toFixed(0)}%"
 >
     <Controls
-        {...getControlsForRendering(animation)}
+        controls={getControlsForRendering(animation)}
         bind:values={localKeyframes[selectedKeyframeIndex].values}
     />
 
