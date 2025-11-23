@@ -24,11 +24,7 @@ export function getProperties(controlValues, controls) {
 		const controlValue = controlValues[control.name];
 		if (controlValue === undefined) continue;
 
-		// Check if this is a toggle-style control (slider with controlType='toggle')
-		const isToggle = control.controlType === 'toggle' || control.type.type === 'toggle';
-		const controlTypeKey = isToggle ? 'toggle' : control.type.type;
-
-		const mapping = CONTROL_CSS_MAPPING[controlTypeKey];
+		const mapping = CONTROL_CSS_MAPPING[control.type.type];
 		if (!mapping) continue;
 
 		if (control.type.type === 'xypad') {
@@ -46,9 +42,9 @@ export function getProperties(controlValues, controls) {
 			const b = controlValue.b ?? 0;
 			properties.color = `rgb(${r}, ${g}, ${b})`;
 
-		} else if (isToggle) {
-			// Toggle control (including slider with controlType='toggle')
-			const value = controlValue ?? 0;
+		} else if (control.type.type === 'toggle') {
+			// Toggle control
+			const value = controlValue ?? control.type.offValue;
 
 			const propName = mapping.properties.value.getName(control.name);
 			const propValue = mapping.properties.value.convert(value, control.name, control);

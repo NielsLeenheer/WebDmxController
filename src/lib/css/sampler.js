@@ -106,11 +106,7 @@ export class CSSSampler {
 
 		// Process each control
 		for (const control of controls) {
-			// Check if this is a toggle-style control (slider with controlType='toggle')
-			const isToggle = control.controlType === 'toggle' || control.type.type === 'toggle';
-			const controlType = isToggle ? 'toggle' : control.type.type;
-
-			const mapping = CONTROL_CSS_MAPPING[controlType];
+			const mapping = CONTROL_CSS_MAPPING[control.type.type];
 			if (!mapping) continue;
 
 			if (control.type.type === 'xypad' || control.type.type === 'xypad16') {
@@ -144,8 +140,8 @@ export class CSSSampler {
 					Object.assign(result, sampledColor);
 				}
 
-			} else if (isToggle) {
-				// Toggle control (including slider with controlType='toggle')
+			} else if (control.type.type === 'toggle') {
+				// Toggle control
 				const propName = mapping.properties.value.getName(control.name);
 				const cssValue = computed.getPropertyValue(propName);
 

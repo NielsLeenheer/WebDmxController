@@ -13,12 +13,14 @@ export { ControlType } from './ControlType.js';
 export { RGBControl } from './RGBControl.js';
 export { RGBAControl } from './RGBAControl.js';
 export { SliderControl } from './SliderControl.js';
+export { ToggleControl } from './ToggleControl.js';
 export { XYPadControl } from './XYPadControl.js';
 export { XYPad16Control } from './XYPad16Control.js';
 
 import { RGBControl } from './RGBControl.js';
 import { RGBAControl } from './RGBAControl.js';
 import { SliderControl } from './SliderControl.js';
+import { ToggleControl } from './ToggleControl.js';
 import { XYPadControl } from './XYPadControl.js';
 import { XYPad16Control } from './XYPad16Control.js';
 

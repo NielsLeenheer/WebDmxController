@@ -59,8 +59,8 @@
     function handleToggleChange(controlName, control) {
         // Toggle between off and on values
         const currentValue = values[controlName];
-        const onValue = control.onValue ?? 255;
-        const offValue = control.offValue ?? 0;
+        const onValue = control.type.onValue;
+        const offValue = control.type.offValue;
         const newValue = currentValue === onValue ? offValue : onValue;
         handleControlChange(controlName, newValue);
     }
@@ -258,10 +258,10 @@
                     onchange={(e) => !controlDisabled && handleTextInputChange(control.name, e.target.value, e, 'b')}
                     class="value-input" disabled={controlDisabled} maxlength="3" />
             </div>
-        {:else if control.type.type === 'toggle' || (control.type.type === 'slider' && control.controlType === 'toggle')}
-            {@const controlValue = values[control.name] ?? (control.offValue ?? 0)}
+        {:else if control.type.type === 'toggle'}
+            {@const controlValue = values[control.name] ?? control.type.offValue}
             {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
-            {@const isOn = controlValue === (control.onValue ?? 255)}
+            {@const isOn = controlValue === control.type.onValue}
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
                     <input

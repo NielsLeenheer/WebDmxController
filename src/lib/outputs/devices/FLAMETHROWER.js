@@ -1,5 +1,5 @@
 import { DeviceType } from './DeviceType.js';
-import { SliderControl } from '../controls/index.js';
+import { SliderControl, ToggleControl } from '../controls/index.js';
 
 /**
  * Flamethrower Device Type
@@ -19,11 +19,8 @@ export class FlamethrowerDeviceType extends DeviceType {
             controls: [
                 {
                     name: 'Safety',
-                    type: new SliderControl('safety', 'Safety'),
-                    startChannel: 0,
-                    controlType: 'toggle',  // UI hint for toggle behavior
-                    offValue: 0,
-                    onValue: 255
+                    type: new ToggleControl('safety', 'Safety', 0, 255),
+                    startChannel: 0
                 },
                 {
                     name: 'Fuel',
