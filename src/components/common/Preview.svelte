@@ -65,6 +65,37 @@
         return null;
     }
 
+    // Extract pan/tilt positions from animation keyframes
+    function extractPanTiltKeyframes(animation) {
+        if (!animation || !animation.keyframes || animation.keyframes.length === 0) {
+            return [];
+        }
+
+        // Check if animation has pan/tilt controls
+        const hasPanTilt = animation.controls && animation.controls.includes('Pan/Tilt');
+        if (!hasPanTilt) return [];
+
+        // Extract pan/tilt values from each keyframe
+        return animation.keyframes
+            .map(keyframe => {
+                const values = keyframe.values || {};
+                const panTilt = values['Pan/Tilt'];
+                
+                if (panTilt && typeof panTilt === 'object') {
+                    // Convert 0-255 to percentage, accounting for dot size (10px on 32px = ~31%)
+                    // Constrain to 15% - 85% to keep dot edges within bounds
+                    const rawX = (panTilt.x ?? 128) / 255;
+                    const rawY = (panTilt.y ?? 128) / 255;
+                    return {
+                        x: 15 + (rawX * 70),
+                        y: 15 + ((1 - rawY) * 70)
+                    };
+                }
+                return null;
+            })
+            .filter(pos => pos !== null);
+    }
+
     // Generate animation preview gradient
     function generateAnimationPreview(animation) {
         if (!animation) return '#888';
@@ -306,8 +337,10 @@
                 </div>
 
             {:else if control === 'pantilt'}
-                {@const dotX = ((effectiveData().pan ?? 0) / 255) * 100}
-                {@const dotY = (1 - (effectiveData().tilt ?? 0) / 255) * 100}
+                {@const rawX = (effectiveData().pan ?? 0) / 255}
+                {@const rawY = (effectiveData().tilt ?? 0) / 255}
+                {@const dotX = 15 + (rawX * 70)}
+                {@const dotY = 15 + ((1 - rawY) * 70)}
                 <div class="control-layer control-pantilt">
                     <div class="pan-tilt-indicator" style="left: {dotX}%; top: {dotY}%"></div>
                 </div>
@@ -317,10 +350,16 @@
     {:else if type === 'animation'}
         <!-- Animation preview with gradient -->
         {@const animationPreview = generateAnimationPreview(data)}
+        {@const panTiltPositions = extractPanTiltKeyframes(data)}
         <div 
             class="preview-animation" 
             style="background: {animationPreview}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
-        ></div>
+        >
+            <!-- Show pan/tilt keyframe positions -->
+            {#each panTiltPositions as position}
+                <div class="pan-tilt-keyframe" style="left: {position.x}%; top: {position.y}%"></div>
+            {/each}
+        </div>
 
     {:else if type === 'input'}
         <!-- Input preview based on type -->
@@ -647,11 +686,37 @@
         position: absolute;
         width: 10px;
         height: 10px;
-        background: #888;
+        background: rgba(0, 0, 0, 0.4);
         border-radius: 50%;
         transform: translate(-50%, -50%);
         pointer-events: none;
         z-index: 10;
+    }
+
+    /* Smaller dots for small and medium previews */
+    .preview-small .pan-tilt-indicator,
+    .preview-medium .pan-tilt-indicator {
+        width: 6px;
+        height: 6px;
+    }
+
+    /* Pan/Tilt keyframe positions for animation preview */
+    .pan-tilt-keyframe {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    /* Smaller dots for small and medium previews */
+    .preview-small .pan-tilt-keyframe,
+    .preview-medium .pan-tilt-keyframe {
+        width: 6px;
+        height: 6px;
     }
 
     /* Orientation indicator (Thingy:52 hole marker) */
