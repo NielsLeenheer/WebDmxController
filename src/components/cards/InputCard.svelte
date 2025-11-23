@@ -13,20 +13,17 @@
 		onEdit           // Callback when edit button clicked
 	} = $props();
 
-	// Check if this input should show a color preview
-	let showColorPreview = $derived(input.color && input.colorSupport && input.colorSupport !== 'none');
 </script>
 
 <DraggableCard {dnd} item={input} class="input-card">
-	{#if showColorPreview}
-		<Preview
-			type="input"
-			size="medium"
-			data={input}
-			euler={input.inputControlId === 'button' && eulerAngles ? eulerAngles : null}
-			class="input-color-badge"
-		/>
-	{/if}
+	<Preview
+		type="input"
+		size="medium"
+		data={input}
+		stateValue={stateDisplay}
+		euler={input.inputControlId === 'button' && eulerAngles ? eulerAngles : null}
+		class="input-preview"
+	/>
 	<div class="input-header">
 		<div class="input-name">{input.name}</div>
 		<div class="input-device-name">
@@ -58,17 +55,17 @@
 		gap: 10px;
 	}
 
-	:global(.input-card) .input-color-badge {
-		position: absolute;
-		top: 15px;
-		right: 15px;
-	}
-
 	:global(.input-card) .input-header {
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
-		padding-right: 40px; /* Space for color badge */
+		padding-right: 40px; /* Space for preview */
+	}
+
+	:global(.input-card) :global(.input-preview) {
+		position: absolute;
+		top: 15px;
+		right: 15px;
 	}
 
 	:global(.input-card) .input-name {

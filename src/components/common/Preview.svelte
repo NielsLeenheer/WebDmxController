@@ -22,8 +22,48 @@
         controls = [],
         data = {},
         euler = null,
+        stateValue = '',  // For input state values (e.g., "50%" for knob/slider)
         class: className = '',
     } = $props();
+
+    // Extract displayable character from keyboard key control ID
+    function extractKeyChar(controlId) {
+        if (!controlId || !controlId.startsWith('key-')) return null;
+        
+        const keyCode = controlId.replace('key-', '');
+        
+        // Handle digit keys (Digit0-Digit9)
+        if (keyCode.startsWith('Digit')) {
+            return keyCode.replace('Digit', '');
+        }
+        
+        // Handle letter keys (KeyA-KeyZ)
+        if (keyCode.startsWith('Key') && keyCode.length === 4) {
+            return keyCode.replace('Key', '');
+        }
+        
+        // Handle special keys with displayable characters
+        const specialKeys = {
+            'Space': '␣',
+            'Minus': '-',
+            'Equal': '=',
+            'BracketLeft': '[',
+            'BracketRight': ']',
+            'Backslash': '\\',
+            'Semicolon': ';',
+            'Quote': "'",
+            'Comma': ',',
+            'Period': '.',
+            'Slash': '/',
+            'Backquote': '`'
+        };
+        
+        if (specialKeys[keyCode]) {
+            return specialKeys[keyCode];
+        }
+        
+        return null;
+    }
 
     // Generate animation preview gradient
     function generateAnimationPreview(animation) {
@@ -216,8 +256,10 @@
 </script>
 
 <div class="preview {sizeClass} {className}" class:with-3d={euler !== null} style="transform: {transform3D()}">
-    <!-- Dark gray background (always present for devices) -->
-    <div class="preview-base"></div>
+    <!-- Dark gray background (for devices/controls, and buttons/pads - not for knobs/sliders) -->
+    {#if type !== 'input' || (type === 'input' && (data.type === 'button' || data.type === 'pad' || !data.type))}
+        <div class="preview-base"></div>
+    {/if}
 
     {#if type === 'device' || type === 'controls'}
         <!-- Stack device controls in order -->
@@ -281,17 +323,62 @@
         ></div>
 
     {:else if type === 'input'}
-        <!-- Input color preview -->
-        {@const inputColor = data.color ? paletteColorToHex(data.color) : '#888'}
-        <div 
-            class="preview-input" 
-            style="background: {inputColor}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
-        ></div>
+        <!-- Input preview based on type -->
+        {@const inputType = data.type || 'button'}
+        {@const inputColor = (data.color && data.colorSupport && data.colorSupport !== 'none') ? paletteColorToHex(data.color) : '#888'}
+        {@const orientation = data.orientation || 'vertical'}
+        {@const value = stateValue ? parseFloat(stateValue) : 0}
+        {@const knobAngle = -135 + (value * 2.7)} <!-- 7 o'clock to 5 o'clock = -135deg to +135deg = 270 degrees total -->
+        {@const sliderPosition = value * 0.7} <!-- Adjust for 30% handle size: 0% -> 0%, 100% -> 70% -->
+        {@const keyChar = data.inputControlId?.startsWith('key-') ? extractKeyChar(data.inputControlId) : null}
         
-        <!-- Orientation indicator dot for Thingy:52 (represents the hole) -->
-        {#if euler}
-            <div class="orientation-indicator"></div>
+        {#if inputType === 'button' || inputType === 'pad'}
+            <!-- Button/Pad: colored or gray square -->
+            <div 
+                class="preview-input button-preview" 
+                style="background: {inputColor}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
+            >
+                <!-- Show keyboard key character if available -->
+                {#if keyChar}
+                    <div class="key-char">{keyChar}</div>
+                {/if}
+            </div>
+            
+            <!-- Orientation indicator dot for Thingy:52 (represents the hole) -->
+            {#if euler}
+                <div class="orientation-indicator"></div>
+            {/if}
+            
+        {:else if inputType === 'knob'}
+            <!-- Knob: circle with rotating dot -->
+            <div class="preview-input knob-preview" style="background: {inputColor};">
+                <div class="knob-dot" style="transform: rotate({knobAngle}deg) translateY(100%);"></div>
+            </div>
+            
+        {:else if inputType === 'slider'}
+            <!-- Slider: track with handle -->
+            {#if orientation === 'horizontal'}
+                <div class="preview-input slider-preview horizontal">
+                    <div class="slider-track"></div>
+                    <div class="slider-handle" style="background: {inputColor}; left: {sliderPosition}%;"></div>
+                </div>
+            {:else}
+                <div class="preview-input slider-preview vertical">
+                    <div class="slider-track"></div>
+                    <div class="slider-handle" style="background: {inputColor}; bottom: {sliderPosition}%;"></div>
+                </div>
+            {/if}
         {/if}
+    {/if}
+
+    <!-- Top inset shadow layer (hidden for knobs, sliders, and Thingy with euler angles) -->
+    {#if type === 'input'}
+        {@const inputType = data.type || 'button'}
+        {#if inputType !== 'knob' && inputType !== 'slider' && !euler}
+            <div class="preview-inset-shadow"></div>
+        {/if}
+    {:else if !euler}
+        <div class="preview-inset-shadow"></div>
     {/if}
 </div>
 
@@ -349,9 +436,9 @@
         border-radius: inherit;
     }
 
-    /* Color layer has shadow */
+    /* Color layer has outer shadow only */
     .control-color {
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     /* Animation and input previews */
@@ -363,7 +450,107 @@
         width: 100%;
         height: 100%;
         border-radius: inherit;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Top inset shadow layer */
+    .preview-inset-shadow {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        pointer-events: none;
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2);
+        z-index: 100;
+    }
+
+    /* Button preview - square */
+    .button-preview {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Keyboard key character */
+    .key-char {
+        font-size: 18px;
+        font-weight: 600;
+        color: rgba(255,255,255,0.5);
+        user-select: none;
+        margin-top: -3px;
+    }
+
+    /* Knob preview - circle with rotating dot */
+    .knob-preview {
+        border-radius: 50%;
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .knob-dot {
+        position: absolute;
+        width: 20%;
+        height: 20%;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
+        transform-origin: center center;
+    }
+
+    /* Slider preview - track with handle */
+    .slider-preview {
+        position: relative;
+    }
+
+    .slider-preview.horizontal {
+        padding: 6px 0;
+    }
+
+    .slider-preview.vertical {
+        padding: 0 6px;
+    }
+
+    .slider-track {
+        position: absolute;
+        background: #c0c0c0;
+        border-radius: 2px;
+    }
+
+    .slider-preview.horizontal .slider-track {
+        left: 0;
+        right: 0;
+        top: 50%;
+        height: 3px;
+        transform: translateY(-50%);
+    }
+
+    .slider-preview.vertical .slider-track {
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 3px;
+        transform: translateX(-50%);
+    }
+
+    .slider-handle {
+        position: absolute;
+        border-radius: 6px;
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2);
+        transition: left 0.1s, bottom 0.1s;
+    }
+
+    .slider-preview.horizontal .slider-handle {
+        width: 30%;
+        height: 100%;
+        top: 0;
+    }
+
+    .slider-preview.vertical .slider-handle {
+        width: 100%;
+        height: 30%;
+        left: 0;
     }
 
     /* Safety checkmark */
