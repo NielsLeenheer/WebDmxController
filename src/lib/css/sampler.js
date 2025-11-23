@@ -105,10 +105,11 @@ export class CSSSampler {
 
 		// Process each control
 		for (const control of controls) {
-			const mapping = CONTROL_CSS_MAPPING[control.type];
+			const controlType = control.type.type; // Get string type from ControlType instance
+			const mapping = CONTROL_CSS_MAPPING[controlType];
 			if (!mapping) continue;
 
-			if (control.type === 'xypad') {
+			if (controlType === 'xypad' || controlType === 'xypad16') {
 				// XY Pad control (e.g., Pan/Tilt)
 				const xComponent = components[control.components.x];
 				const yComponent = components[control.components.y];
@@ -133,7 +134,7 @@ export class CSSSampler {
 					}
 				}
 
-			} else if (control.type === 'rgb') {
+			} else if (controlType === 'rgb' || controlType === 'rgba') {
 				// RGB Color control - sample the color property
 				const colorValue = computed.color;
 				if (colorValue) {
@@ -142,7 +143,7 @@ export class CSSSampler {
 					Object.assign(result, sampledColor);
 				}
 
-			} else if (control.type === 'slider') {
+			} else if (controlType === 'slider') {
 				// Slider control (Dimmer, Intensity, White, Amber, etc.)
 				const component = components[control.components.value];
 				const propName = mapping.properties.value.getName(control.name);
@@ -166,7 +167,7 @@ export class CSSSampler {
 					}
 				}
 
-			} else if (control.type === 'toggle') {
+			} else if (controlType === 'toggle') {
 				// Toggle control (Safety, etc.)
 				const component = components[control.components.value];
 				const propName = mapping.properties.value.getName(control.name);
