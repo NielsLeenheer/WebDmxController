@@ -30,8 +30,7 @@ export class MovingHeadDeviceType extends DeviceType {
                 {
                     name: 'Dimmer',
                     type: CONTROL_TYPES.Dimmer,
-                    startChannel: 2,
-                    color: '#888888'
+                    startChannel: 2
                 },
                 {
                     name: 'Color',
@@ -41,8 +40,7 @@ export class MovingHeadDeviceType extends DeviceType {
                 {
                     name: 'White',
                     type: CONTROL_TYPES.White,
-                    startChannel: 6,
-                    color: '#808080'
+                    startChannel: 6
                 }
             ]
         });

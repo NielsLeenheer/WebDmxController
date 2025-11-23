@@ -34,20 +34,17 @@ export class MovingHead11CHDeviceType extends DeviceType {
                 {
                     name: 'Speed',
                     type: CONTROL_TYPES.Speed,
-                    startChannel: 4,
-                    color: '#666666'
+                    startChannel: 4
                 },
                 {
                     name: 'Dimmer',
                     type: CONTROL_TYPES.Dimmer,
-                    startChannel: 5,
-                    color: '#888888'
+                    startChannel: 5
                 },
                 {
                     name: 'Strobe',
                     type: CONTROL_TYPES.Strobe,
-                    startChannel: 6,
-                    color: '#888888'
+                    startChannel: 6
                 },
                 {
                     name: 'Color',
@@ -57,8 +54,7 @@ export class MovingHead11CHDeviceType extends DeviceType {
                 {
                     name: 'White',
                     type: CONTROL_TYPES.White,
-                    startChannel: 10,
-                    color: '#808080'
+                    startChannel: 10
                 }
             ]
         });

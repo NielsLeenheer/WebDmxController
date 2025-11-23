@@ -1,5 +1,5 @@
 import { DeviceType } from './DeviceType.js';
-import { SliderControl } from '../controls/index.js';
+import { CONTROL_TYPES } from '../controls/index.js';
 
 /**
  * Smoke Machine Device Type
@@ -18,9 +18,8 @@ export class SmokeDeviceType extends DeviceType {
             controls: [
                 {
                     name: 'Output',
-                    type: new SliderControl('output', 'Output'),
-                    startChannel: 0,
-                    color: '#666666'
+                    type: CONTROL_TYPES.Output,
+                    startChannel: 0
                 }
             ]
         });

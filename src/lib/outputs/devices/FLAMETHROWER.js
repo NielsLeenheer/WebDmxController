@@ -25,8 +25,7 @@ export class FlamethrowerDeviceType extends DeviceType {
                 {
                     name: 'Fuel',
                     type: CONTROL_TYPES.Flame,
-                    startChannel: 1,
-                    color: '#ff5722'
+                    startChannel: 1
                 }
             ]
         });

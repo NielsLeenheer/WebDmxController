@@ -7,7 +7,7 @@ import { ControlType } from './ControlType.js';
  * Differs from SliderControl in that it has discrete on/off values
  * rather than a continuous range.
  */
-export class ToggleControl extends ControlType {
+export class ToggleControlType extends ControlType {
 	constructor(id, name = 'Toggle', offValue = 0, onValue = 255) {
 		super(id, name, 'toggle', offValue);
 		this.offValue = offValue;

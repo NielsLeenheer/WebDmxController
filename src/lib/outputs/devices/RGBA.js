@@ -27,8 +27,7 @@ export class RGBADeviceType extends DeviceType {
                 {
                     name: 'Amber',
                     type: CONTROL_TYPES.Amber,
-                    startChannel: 3,
-                    color: '#ffbf00'
+                    startChannel: 3
                 }
             ]
         });
