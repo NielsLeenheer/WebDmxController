@@ -10,12 +10,11 @@
 		dnd,             // Drag-and-drop helper
 		stateDisplay,    // Computed state display string
 		eulerAngles,     // Euler angles for Thingy:52 (optional)
-		isColorCapable,  // Function to check if control is color-capable
 		onEdit           // Callback when edit button clicked
 	} = $props();
 
 	// Check if this input should show a color preview
-	let showColorPreview = $derived(input.color && isColorCapable(input.inputControlId));
+	let showColorPreview = $derived(input.color && input.supportsColor);
 </script>
 
 <DraggableCard {dnd} item={input} class="input-card">

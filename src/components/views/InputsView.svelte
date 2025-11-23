@@ -159,7 +159,7 @@
     function handleRawInput(event) {
         if (!isListening) return;
 
-        const { deviceId, controlId, device } = event;
+        const { deviceId, controlId, device, type, supportsColor, friendlyName } = event;
 
         // Check if this input already exists
         const existing = inputs.find(
@@ -168,17 +168,17 @@
 
         if (!existing) {
             // Auto-save new input
-            const name = formatInputName(device?.name || deviceId, controlId);
-
-            // Stream Deck (HID, not keyboard) and MIDI devices support colors
-            const supportsColor = shouldAssignColor(device, controlId);
+            const name = friendlyName || formatInputName(device?.name || deviceId, controlId);
 
             const input = inputLibrary.create({
                 name,
                 inputDeviceId: deviceId,
                 inputControlId: controlId,
-                inputDeviceName: device?.name || deviceId, // Store device name for display
-                color: supportsColor ? getNextAvailableColor(deviceId) : null  // unique random color if supported
+                inputDeviceName: device?.name || deviceId,
+                type: type || 'button', // Use type from device
+                supportsColor: supportsColor !== undefined ? supportsColor : false, // Use supportsColor from device
+                friendlyName: friendlyName || null, // Use friendlyName from device
+                color: supportsColor ? getNextAvailableColor(deviceId) : null
             });
 
             // Initialize pressure property for button inputs
@@ -204,7 +204,9 @@
             handleRawInput({
                 deviceId: device.id,
                 controlId: eventData.controlId,
-                type: eventData.velocity !== undefined ? 'trigger' : 'change',
+                type: eventData.type, // Pass type from device event
+                supportsColor: eventData.supportsColor, // Pass supportsColor from device event
+                friendlyName: eventData.friendlyName, // Pass friendlyName from device event
                 device
             });
         };
@@ -276,8 +278,8 @@
                 updates.buttonMode = result.buttonMode;
             }
 
-            // Update color if it changed and control is color-capable
-            if (result.color !== oldColor && isColorCapableControl(existingInput.inputControlId)) {
+            // Update color if it changed and control supports color
+            if (result.color !== oldColor && existingInput.supportsColor) {
                 // Release old color usage
                 if (oldColor) {
                     releaseColorUsage(existingInput.inputDeviceId, existingInput.inputControlId, oldColor);
@@ -427,7 +429,7 @@
                 // For other devices (HID, Bluetooth), apply colors only to saved inputs
                 for (const input of inputs) {
                     if (input.inputDeviceId !== device.id) continue;
-                    if (!input.color || !isColorCapableControl(input.inputControlId)) continue;
+                    if (!input.color || !input.supportsColor) continue;
 
                     // For toggle buttons, respect the current toggle state
                     let color = input.color;
@@ -445,7 +447,7 @@
     async function updateButtonColorForToggleState(input, isOn) {
         // Update button color based on toggle state (on = full color, off = black)
         const inputDevice = inputController.getInputDevice(input.inputDeviceId);
-        if (!inputDevice || !input.color || !isColorCapableControl(input.inputControlId)) return;
+        if (!inputDevice || !input.color || !input.supportsColor) return;
 
         const color = isOn ? input.color : 'black';
 
@@ -473,8 +475,8 @@
 
                 if (!existing) {
                     const name = formatInputName(device.name || device.id, controlId);
-                    const supportsColor = shouldAssignColor(device, controlId);
-                    
+                    // Thingy:52 button supports color
+                    const supportsColor = true;
                     const color = supportsColor ? getNextAvailableColor(device.id) : null;
 
                     const input = inputLibrary.create({
@@ -482,6 +484,9 @@
                         inputDeviceId: device.id,
                         inputControlId: controlId,
                         inputDeviceName: device.name || device.id,
+                        type: 'button',
+                        supportsColor: true,
+                        friendlyName: null,
                         color: color
                     });
 
@@ -528,13 +533,17 @@
 
                 if (!existing) {
                     const name = formatInputName(device.name || device.id, controlId);
-                    const supportsColor = shouldAssignColor(device, controlId);
+                    // Thingy:52 button supports color
+                    const supportsColor = true;
 
                     const input = inputLibrary.create({
                         name,
                         inputDeviceId: device.id,
                         inputControlId: controlId,
                         inputDeviceName: device.name || device.id,
+                        type: 'button',
+                        supportsColor: true,
+                        friendlyName: null,
                         color: supportsColor ? getNextAvailableColor(device.id) : null
                     });
 
@@ -632,7 +641,6 @@
                     {dnd}
                     stateDisplay={getInputStateDisplay(input)}
                     eulerAngles={thingyEulerAngles[input.inputDeviceId]}
-                    isColorCapable={isColorCapableControl}
                     onEdit={startEditing}
                 />
             {/each}

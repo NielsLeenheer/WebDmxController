@@ -13,6 +13,19 @@ export class HIDInputDevice extends InputDevice {
 		this.hidDevice.oninputreport = this._handleInputReport.bind(this);
 	}
 
+	/**
+	 * Override _trigger to include HID-specific metadata
+	 */
+	_trigger(controlId, velocity = 1) {
+		this._emit('trigger', {
+			controlId,
+			velocity,
+			type: 'button',
+			supportsColor: false,
+			friendlyName: null
+		});
+	}
+
 	_handleInputReport(event) {
 		const { data, reportId } = event;
 		const bytes = new Uint8Array(data.buffer);

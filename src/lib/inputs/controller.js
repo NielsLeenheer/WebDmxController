@@ -169,6 +169,9 @@ export class InputController {
 				inputDeviceId: device.id,
 				inputControlId: 'button',
 				inputDeviceName: device.name,
+				type: 'button',
+				supportsColor: true,
+				friendlyName: null,
 				buttonMode: 'momentary', // Default to momentary, user can change to toggle
 				color: null // Color can be set to control the Thingy LED
 			});

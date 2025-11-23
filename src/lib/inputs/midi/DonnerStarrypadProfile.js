@@ -19,6 +19,34 @@ export class DonnerStarrypadProfile extends MIDIDeviceProfile {
 			36, 37, 38, 39   // Row 4 (bottom)
 		];
 		this.noteToPadIndex = new Map(this.padNotes.map((note, index) => [note, index]));
+
+		// Define all controls (4x4 grid of pads)
+		// Note: Color protocol not reverse-engineered, so supportsColor = false
+		this.controls = [
+			// Row 1 (top)
+			{ controlId: 'note-48', type: 'pad', supportsColor: false, friendlyName: '1-1' },
+			{ controlId: 'note-49', type: 'pad', supportsColor: false, friendlyName: '1-2' },
+			{ controlId: 'note-50', type: 'pad', supportsColor: false, friendlyName: '1-3' },
+			{ controlId: 'note-51', type: 'pad', supportsColor: false, friendlyName: '1-4' },
+
+			// Row 2
+			{ controlId: 'note-44', type: 'pad', supportsColor: false, friendlyName: '2-1' },
+			{ controlId: 'note-45', type: 'pad', supportsColor: false, friendlyName: '2-2' },
+			{ controlId: 'note-46', type: 'pad', supportsColor: false, friendlyName: '2-3' },
+			{ controlId: 'note-47', type: 'pad', supportsColor: false, friendlyName: '2-4' },
+
+			// Row 3
+			{ controlId: 'note-40', type: 'pad', supportsColor: false, friendlyName: '3-1' },
+			{ controlId: 'note-41', type: 'pad', supportsColor: false, friendlyName: '3-2' },
+			{ controlId: 'note-42', type: 'pad', supportsColor: false, friendlyName: '3-3' },
+			{ controlId: 'note-43', type: 'pad', supportsColor: false, friendlyName: '3-4' },
+
+			// Row 4 (bottom)
+			{ controlId: 'note-36', type: 'pad', supportsColor: false, friendlyName: '4-1' },
+			{ controlId: 'note-37', type: 'pad', supportsColor: false, friendlyName: '4-2' },
+			{ controlId: 'note-38', type: 'pad', supportsColor: false, friendlyName: '4-3' },
+			{ controlId: 'note-39', type: 'pad', supportsColor: false, friendlyName: '4-4' }
+		];
 	}
 
 	_getColorMap() {

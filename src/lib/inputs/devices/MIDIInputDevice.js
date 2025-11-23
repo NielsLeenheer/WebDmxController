@@ -79,6 +79,44 @@ export class MIDIInputDevice extends InputDevice {
 
     */
 
+	/**
+	 * Override _trigger to include control definition from profile
+	 */
+	_trigger(controlId, velocity = 1) {
+		const definition = this.profile ? this.profile.getControlDefinition(controlId) : {};
+		this._emit('trigger', {
+			controlId,
+			velocity,
+			type: definition.type || 'button',
+			supportsColor: definition.supportsColor !== undefined ? definition.supportsColor : false,
+			friendlyName: definition.friendlyName || null
+		});
+	}
+
+	/**
+	 * Override _setValue to include control definition from profile
+	 */
+	_setValue(controlId, value, min = 0, max = 1) {
+		if (!this.controls.has(controlId)) {
+			this.controls.set(controlId, { type: 'value', value: 0, min, max });
+		}
+
+		const control = this.controls.get(controlId);
+		control.value = value;
+		control.min = min;
+		control.max = max;
+
+		const definition = this.profile ? this.profile.getControlDefinition(controlId) : {};
+		this._emit('change', {
+			controlId,
+			value,
+			control,
+			type: definition.type || 'knob',
+			supportsColor: definition.supportsColor !== undefined ? definition.supportsColor : false,
+			friendlyName: definition.friendlyName || null
+		});
+	}
+
 	_handleMIDIMessage(event) {
 		const [status, data1, data2] = event.data;
 		const command = status & 0xf0;

@@ -51,8 +51,8 @@
 			editingColor = input.color;
 
 			// Compute whether to show color picker
-			// Check based on control ID, not device presence (device might be disconnected)
-			showColorPicker = isColorCapableControl(input.inputControlId);
+			// Use the supportsColor field from the input
+			showColorPicker = input.supportsColor;
 
 			requestAnimationFrame(() => {
 				dialogRef?.showModal();

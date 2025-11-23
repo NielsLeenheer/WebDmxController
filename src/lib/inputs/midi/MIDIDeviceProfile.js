@@ -5,6 +5,7 @@ export class MIDIDeviceProfile {
 	constructor(name, patterns = []) {
 		this.name = name;
 		this.patterns = patterns; // Array of regex patterns to match device names
+		this.controls = []; // Array of control definitions (override in subclasses)
 		this.colorMap = this._getColorMap();
 	}
 
@@ -14,6 +15,46 @@ export class MIDIDeviceProfile {
 	matches(deviceName) {
 		const lowerName = deviceName.toLowerCase();
 		return this.patterns.some(pattern => pattern.test(lowerName));
+	}
+
+	/**
+	 * Get control definition for a given control ID
+	 * @param {string} controlId - Control ID (e.g., 'note-36', 'cc-1')
+	 * @returns {{ type: string, supportsColor: boolean, friendlyName?: string }}
+	 */
+	getControlDefinition(controlId) {
+		// Look up in controls array first
+		const definition = this.controls.find(c => c.controlId === controlId);
+		if (definition) {
+			return {
+				type: definition.type,
+				supportsColor: definition.supportsColor,
+				friendlyName: definition.friendlyName
+			};
+		}
+
+		// Fallback to programmatic detection for generic/unknown controls
+		return this._getDefaultDefinition(controlId);
+	}
+
+	/**
+	 * Get default control definition based on control ID pattern
+	 * Used for unknown controls not defined in the controls array
+	 * @param {string} controlId - Control ID
+	 * @returns {{ type: string, supportsColor: boolean }}
+	 */
+	_getDefaultDefinition(controlId) {
+		// Generic fallback - NO color support for unknown MIDI devices
+		if (controlId.startsWith('note-')) {
+			return { type: 'button', supportsColor: false };
+		}
+		if (controlId.startsWith('cc-')) {
+			return { type: 'knob', supportsColor: false };
+		}
+		if (controlId === 'pitchbend') {
+			return { type: 'slider', supportsColor: false };
+		}
+		return { type: 'button', supportsColor: false };
 	}
 
 	/**
