@@ -8,7 +8,7 @@
 
 import { Library } from './Library.svelte.js';
 import { generateCSSTriggers } from './triggers/css.js';
-import { createDefaultControlValues } from './controls/converter.js';
+import { createDefaultControlValues } from './outputs/converter.js';
 import { DEVICE_TYPES } from './outputs/devices.js';
 
 export class TriggerLibrary extends Library {

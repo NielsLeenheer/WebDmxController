@@ -11,7 +11,7 @@
 
 import { Library } from './Library.svelte.js';
 import { DEVICE_TYPES } from './outputs/devices.js';
-import { createDefaultControlValues, mergeControlValues, mirrorPanTilt } from './controls/converter.js';
+import { createDefaultControlValues, mergeControlValues, mirrorPanTilt } from './outputs/converter.js';
 import { toCSSIdentifier } from './css/utils.js';
 import { generateCSSBlock } from './outputs/css.js';
 

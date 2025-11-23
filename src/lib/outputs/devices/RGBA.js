@@ -1,6 +1,6 @@
 import { DeviceType } from './DeviceType.js';
-import { CONTROL_TYPES } from '../../controls/definitions.js';
-import { SliderControl } from '../../controls/definitions.js';
+import { CONTROL_TYPES } from '../controls/index.js';
+import { SliderControl } from '../controls/index.js';
 
 /**
  * RGBA Light Device Type

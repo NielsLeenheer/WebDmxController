@@ -1,5 +1,5 @@
 import { DeviceType } from './DeviceType.js';
-import { CONTROL_TYPES } from '../../controls/definitions.js';
+import { CONTROL_TYPES } from '../controls/index.js';
 
 /**
  * Moving Head Device Type (Basic 7-channel)

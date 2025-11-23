@@ -1,5 +1,5 @@
 import { DeviceType } from './DeviceType.js';
-import { SliderControl } from '../../controls/definitions.js';
+import { SliderControl } from '../controls/index.js';
 
 /**
  * Smoke Machine Device Type

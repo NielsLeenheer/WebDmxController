@@ -9,7 +9,7 @@
 import { Library } from './Library.svelte.js';
 import { generateCSSAnimation } from './animations/css.js';
 import { toCSSIdentifier } from './css/utils.js';
-import { createDefaultControlValues } from './controls/converter.js';
+import { createDefaultControlValues } from './outputs/converter.js';
 import { DEVICE_TYPES } from './outputs/devices.js';
 
 export class AnimationLibrary extends Library {
