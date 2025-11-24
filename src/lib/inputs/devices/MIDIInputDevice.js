@@ -108,6 +108,18 @@ export class MIDIInputDevice extends InputDevice {
 		control.max = max;
 
 		const definition = this.profile ? this.profile.getControlDefinition(controlId) : {};
+
+		// DEBUG: Log what we're getting for CC buttons
+		if (controlId.startsWith('cc-') && parseInt(controlId.replace('cc-', '')) >= 100) {
+			console.log('[MIDIInputDevice._setValue] DEBUG:', {
+				deviceName: this.name,
+				controlId,
+				hasProfile: !!this.profile,
+				profileName: this.profile?.name,
+				definition
+			});
+		}
+
 		this._emit('change', {
 			controlId,
 			value,
