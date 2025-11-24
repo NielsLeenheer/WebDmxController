@@ -170,16 +170,18 @@
 		{#if showColorPicker}
 			<div class="dialog-input-group">
 				<label for="input-color">Color:</label>
-				<select id="input-color" bind:value={editingColor}>
-					{#each getPalette() as color}
-						<option value={color}>{color.charAt(0).toUpperCase() + color.slice(1)}</option>
-					{/each}
-				</select>
-				<div class="color-preview-wrapper">
-					<div
-						class="color-preview-large"
-						style="background-color: {paletteColorToHex(editingColor)}"
-					></div>
+				<div class="color-input-wrapper">
+					<div class="color-preview-wrapper">
+						<div
+							class="color-preview-large"
+							style="background-color: {paletteColorToHex(editingColor)}"
+						></div>
+					</div>
+					<select id="input-color" bind:value={editingColor}>
+						{#each getPalette() as color}
+							<option value={color}>{color.charAt(0).toUpperCase() + color.slice(1)}</option>
+						{/each}
+					</select>
 				</div>
 			</div>
 		{/if}
@@ -200,13 +202,14 @@
 {/if}
 
 <style>
-	.color-preview-wrapper {
-		margin-top: 8px;
+	.color-input-wrapper {
+		display: flex;
+		gap: 8px;
 	}
 
 	.color-preview-large {
-		width: 64px;
-		height: 32px;
+		width: 48px;
+		height: 100%;
 		border-radius: 4px;
 		box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
 	}
