@@ -161,8 +161,8 @@
 					</div>
 
 					<div class="dialog-input-group">
-						<label for="edit-trigger-easing">Easing:</label>
-						<select id="edit-trigger-easing" bind:value={easing} disabled={!selectedAnimation}>
+						<label for="animation-easing">Easing:</label>
+						<select id="animation-easing" bind:value={easing} disabled={!selectedAnimation}>
 							{#each EASING_FUNCTIONS as easingFn}
 								<option value={easingFn}>{easingFn}</option>
 							{/each}
@@ -190,9 +190,8 @@
 <style>
 	.trigger-columns {
 		display: grid;
-		grid-template-columns: repeat(2, 1fr);
+		grid-template-columns: 180px 350px;
 		gap: 20px;
-		min-width: 600px;
 	}
 
 	.trigger-column {
@@ -205,6 +204,26 @@
 		background: #f6f6f6;
 		padding: 15px;
 		border-radius: 6px;
+		min-height: 200px;
+
+		display: flex;
+		flex-direction: column;
+		align-items: start;
+	}
+
+	.trigger-card .dialog-input-group {
+		display: flex;
+	    align-items: baseline;
+		margin-bottom: 0;
+	}
+
+	.trigger-card .dialog-input-group :global(> label) {
+		width: 120px;
+	}
+
+	#trigger-animation {
+		min-width: 120px;
+		max-width: 200px;
 	}
 
 	.duration-with-loop {
@@ -215,6 +234,11 @@
 
 	.duration-with-loop input[type="number"] {
 		flex: 1;
+		max-width: 120px;
+	}
+
+	#animation-easing {
+		max-width: 160px;
 	}
 
 	.checkbox-field label {
