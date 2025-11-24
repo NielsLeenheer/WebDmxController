@@ -214,41 +214,33 @@
         const screenRoll = -euler.pitch * Math.sin(yawRad) + euler.roll * Math.cos(yawRad);
         
         // Apply rotations: X (pitch), Y (roll), Z (yaw)
-        // Negate for more intuitive rotation
-        return `rotateX(${-screenPitch}deg) rotateY(${-screenRoll}deg) rotateZ(${euler.yaw}deg)`;
-    });
-
-    // Calculate dynamic box shadow based on orientation to keep shadow from bottom
-    const dynamicShadow = $derived(() => {
-        if (!euler) return '';
-        
-        // Convert angles to radians
-        const pitchRad = (euler.pitch * Math.PI) / 180;
-        const rollRad = (euler.roll * Math.PI) / 180;
-        const yawRad = (euler.yaw * Math.PI) / 180;
-        
-        // Calculate shadow offset and size based on device orientation
-        // Shadow should appear to come from below and grow when tilted (showing thickness)
-        // Base shadow offset - grows with tilt to show device thickness
-        const tiltAmount = Math.abs(Math.sin(pitchRad)) + Math.abs(Math.sin(rollRad));
-        const shadowSize = 3 + (tiltAmount * 5); // Grow from 3px to 8px based on tilt
-        
-        // Shadow direction based on which physical edge is lifted:
-        // Pitch: positive pitch = front/top up = shadow appears on top (negative Y in CSS)
-        // Roll: positive roll = left side up = shadow appears on left (negative X in CSS)
-        // Note: Transform uses -pitch and -roll, so shadow needs positive values
-        const shadowX = Math.sin(rollRad) * shadowSize;
-        const shadowY = Math.sin(pitchRad) * shadowSize;
-        
-        return `inset ${shadowX}px ${shadowY}px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1)`;
+        // Negate pitch for correct tilt direction, add 8 degrees to show bottom edge at rest
+        return `rotateX(${-screenPitch + 20}deg) rotateY(${screenRoll}deg) rotateZ(${euler.yaw}deg)`;
     });
 </script>
 
-<div class="preview {sizeClass} {className}" class:with-3d={euler !== null} style="transform: {transform3D()}">
-    <!-- Dark gray background (for devices/controls, and buttons/pads - not for knobs/sliders) -->
-    {#if type !== 'input' || (type === 'input' && (data.type === 'button' || data.type === 'pad' || !data.type))}
-        <div class="preview-base"></div>
-    {/if}
+<div class="preview {sizeClass} {className}" class:with-3d={euler !== null} style="{euler ? `transform: ${transform3D()};` : ''}">
+    {#if euler}
+        <!-- 3D layered Thingy:52 -->
+        {@const inputColor = (data.color && data.colorSupport && data.colorSupport !== 'none') ? paletteColorToHex(data.color) : '#888'}
+        
+        <!-- Multiple layers with translateZ for depth -->
+        {#each Array(12) as _, i}
+            {@const zOffset = i * 1}
+            {@const brightness = i === 11 ? 1 : (0.5 + ((i / 10) * 0.2))}
+            <div class="layer-3d" style="transform: translateZ({zOffset}px); background: {inputColor}; filter: brightness({brightness});">
+                {#if i === 11}
+                    <!-- Top layer - add orientation indicator -->
+                    <div class="orientation-indicator"></div>
+                {/if}
+            </div>
+        {/each}
+    {:else}
+        <!-- Non-3D rendering (original code) -->
+        <!-- Dark gray background (for devices/controls, and buttons/pads - not for knobs/sliders) -->
+        {#if type !== 'input' || (type === 'input' && (data.type === 'button' || data.type === 'pad' || !data.type))}
+            <div class="preview-base"></div>
+        {/if}
 
     {#if type === 'device' || type === 'controls'}
         <!-- Fixed layer order from bottom to top -->
@@ -358,20 +350,18 @@
         {@const keyChar = data.inputControlId?.startsWith('key-') ? extractKeyChar(data.inputControlId) : null}
         
         {#if inputType === 'button' || inputType === 'pad'}
-            <!-- Button/Pad: colored or gray square -->
-            <div 
-                class="preview-input button-preview" 
-                style="background: {inputColor}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
-            >
-                <!-- Show keyboard key character if available -->
-                {#if keyChar}
-                    <div class="key-char">{keyChar}</div>
+            {#if !euler}
+                <!-- Non-3D Button/Pad: colored or gray square -->
+                <div class="preview-input button-preview" style="background: {inputColor};">
+                    {#if keyChar}
+                        <div class="key-char">{keyChar}</div>
+                    {/if}
+                </div>
+                
+                <!-- Orientation indicator for Thingy:52 button (when not in 3D mode) -->
+                {#if data.inputControlId === 'button'}
+                    <div class="orientation-indicator"></div>
                 {/if}
-            </div>
-            
-            <!-- Orientation indicator dot for Thingy:52 (represents the hole) -->
-            {#if euler}
-                <div class="orientation-indicator"></div>
             {/if}
             
         {:else if inputType === 'knob'}
@@ -405,6 +395,7 @@
     {:else if !euler}
         <div class="preview-inset-shadow"></div>
     {/if}
+    {/if}
 </div>
 
 <style>
@@ -419,6 +410,18 @@
     /* Enable 3D perspective for rotating previews */
     .preview.with-3d {
         perspective: 200px;
+        overflow: visible;
+    }
+
+    /* Individual 3D layers */
+    .layer-3d {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        transform-style: preserve-3d;
+        border-radius: inherit;
     }
 
     /* Size variants */
