@@ -353,7 +353,7 @@
         {@const inputColor = (data.color && data.colorSupport && data.colorSupport !== 'none') ? paletteColorToHex(data.color) : '#888'}
         {@const orientation = data.orientation || 'vertical'}
         {@const value = stateValue ? parseFloat(stateValue) : 0}
-        {@const knobAngle = -135 + (value * 2.7)} <!-- 7 o'clock to 5 o'clock = -135deg to +135deg = 270 degrees total -->
+        {@const knobAngle = 30 + (value * 2.7)} <!-- 7 o'clock to 5 o'clock = 30deg to 300deg = 270 degrees total (0deg = 6 o'clock, clockwise) -->
         {@const sliderPosition = value * 0.7} <!-- Adjust for 30% handle size: 0% -> 0%, 100% -> 70% -->
         {@const keyChar = data.inputControlId?.startsWith('key-') ? extractKeyChar(data.inputControlId) : null}
         
