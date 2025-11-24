@@ -588,7 +588,7 @@
         left: 50%;
         width: 70%;
         height: 70%;
-        transform: translate(-50%, -50%) rotate(-90deg);
+        transform: translate(-60%, -55%) rotate(-90deg);
         pointer-events: none;
     }
 
