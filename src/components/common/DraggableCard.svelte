@@ -52,7 +52,7 @@
 <style>
 	/* Base drag state */
 	div.dragging {
-		opacity: 0.4;
+		opacity: 0.5;
 	}
 
 	/* Drag indicator positioning - shared */
@@ -68,17 +68,21 @@
 		background: #2196F3;
 		border-radius: 2px;
 	}
+	div:not(.dragging).drag-over::before,
+	div:not(.dragging).drag-after::before {
+		opacity: 0.5;
+	}
 
 	/* Horizontal orientation (left/right indicators) */
 	div.horizontal.drag-over::before {
-		left: -8px;
+		left: -9.5px;
 		top: 0;
 		bottom: 0;
 		width: 4px;
 	}
 
 	div.horizontal.drag-after::before {
-		right: -8px;
+		right: -9.5px;
 		top: 0;
 		bottom: 0;
 		width: 4px;
@@ -86,14 +90,14 @@
 
 	/* Vertical orientation (top/bottom indicators) */
 	div.vertical.drag-over::before {
-		top: -8px;
+		top: -9.5px;
 		left: 0;
 		right: 0;
 		height: 4px;
 	}
 
 	div.vertical.drag-after::before {
-		bottom: -8px;
+		bottom: -9.5px;
 		left: 0;
 		right: 0;
 		height: 4px;
