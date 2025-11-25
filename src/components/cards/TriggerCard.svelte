@@ -65,6 +65,37 @@
 		}
 		return trigger.controlName;
 	});
+
+	// For value triggers: get control preview data
+	let controlPreview = $derived.by(() => {
+		if (!isValue || !device || !trigger.controlName) return null;
+		const deviceType = DEVICE_TYPES[device.type];
+		if (!deviceType) return null;
+
+		const controlDef = deviceType.controls.find(c => c.name === trigger.controlName);
+		if (!controlDef) return null;
+
+		const controlTypeId = controlDef.type.type;
+		const controls = [];
+		const data = {};
+
+		if (controlTypeId === 'rgb') {
+			controls.push('color');
+			// Show a neutral gray for RGB preview
+			data.color = 'rgb(128, 128, 128)';
+		} else if (controlTypeId === 'slider' || controlTypeId === 'toggle') {
+			const controlKey = controlDef.name.toLowerCase();
+			controls.push(controlKey);
+			// Show midpoint value for slider preview
+			data[controlKey] = 128;
+		} else if (controlTypeId === 'xypad') {
+			controls.push('pantilt');
+			data.pan = 128;
+			data.tilt = 128;
+		}
+
+		return controls.length > 0 ? { controls, data } : null;
+	});
 </script>
 
 <DraggableCard {dnd} item={trigger} class="trigger-card">
@@ -80,7 +111,7 @@
 				class="trigger-preview"
 			/>
 			<div class="trigger-text">
-				{input?.name || 'Unknown Input'}{#if !isValue} → {inputTypeLabel}{/if}
+				{input?.name || 'Unknown Input'} → {#if isValue}{inputValueLabel}{:else}{inputTypeLabel}{/if}
 			</div>
 		{/if}
 	</div>
@@ -102,16 +133,17 @@
 
 	<!-- Column 3: Action / Mapping -->
 	<div class="trigger-column trigger-action-column">
-		{#if isValue}
-			<!-- Value trigger: show input value → control mapping -->
-			<div class="mapping-text">
-				{inputValueLabel}
-				{#if trigger.invert}
-					<span class="invert-indicator" title="Inverted">⇄</span>
-				{:else}
-					→
-				{/if}
-				{controlLabel}
+		{#if isValue && controlPreview}
+			<!-- Value trigger: show control preview -->
+			<Preview
+				type="controls"
+				size="medium"
+				controls={controlPreview.controls}
+				data={controlPreview.data}
+				class="trigger-preview"
+			/>
+			<div class="trigger-text">
+				{controlLabel}{#if trigger.invert} <span class="invert-indicator" title="Inverted">⇄</span>{/if}
 			</div>
 		{:else if trigger.actionType === 'animation'}
 			<Preview
@@ -178,14 +210,6 @@
 	}
 
 	.trigger-text {
-		font-size: 9pt;
-		color: #666;
-		text-align: center;
-		word-wrap: break-word;
-		width: 100%;
-	}
-
-	.mapping-text {
 		font-size: 9pt;
 		color: #666;
 		text-align: center;
