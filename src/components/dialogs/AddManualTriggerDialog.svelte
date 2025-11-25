@@ -115,7 +115,7 @@
 	 * @param {Array} inputs - Available input mappings
 	 * @param {Array} animations - Available animations
 	 * @param {Array} devs - Available devices
-	 * @returns {Promise<{input, triggerType, actionType, device, animation, duration, looping, easing, channelValues, enabledControls}|null>}
+	 * @returns {Promise<{input, triggerType, actionType, device, animation, duration, looping, easing, values}|null>}
 	 */
 	export function open(inputs, animations, devs) {
 		return new Promise((resolve) => {

@@ -1,5 +1,5 @@
 <script>
-    import { onMount, onDestroy } from 'svelte';
+    import { onMount } from 'svelte';
     import { DMXController } from './lib/outputs/dmx.js';
     import { DEVICE_TYPES } from './lib/outputs/devices.js';
     import { controlValuesToDMX } from './lib/outputs/controls.js';

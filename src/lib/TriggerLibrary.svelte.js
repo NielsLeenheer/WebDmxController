@@ -8,8 +8,6 @@
 
 import { Library } from './Library.svelte.js';
 import { generateCSSTriggers } from './triggers/css.js';
-import { createDefaultControlValues } from './outputs/controls.js';
-import { DEVICE_TYPES } from './outputs/devices.js';
 
 export class TriggerLibrary extends Library {
 	constructor() {
@@ -81,34 +79,16 @@ export class TriggerLibrary extends Library {
 	deserializeItem(triggerData, index) {
 		const actionType = triggerData.actionType || 'animation';
 
-		// Handle values deserialization
+		// Handle values deserialization with deep copy
 		let values = null;
 		if (actionType === 'values') {
-			// Check if old format (with channelValues and enabledControls)
-			if (triggerData.values?.channelValues || triggerData.channelValues) {
-				// OLD FORMAT: Convert from channelValues to control values
-				// For now, just reset to defaults (no users to migrate)
-				if (triggerData.deviceId) {
-					const device = DEVICE_TYPES[triggerData.deviceType];
-					if (device) {
-						values = createDefaultControlValues(device);
-						console.log(`Migrated trigger values from old format to control values`);
-					} else {
-						values = {};
-					}
+			values = {};
+			const sourceValues = triggerData.values || {};
+			for (const [key, value] of Object.entries(sourceValues)) {
+				if (typeof value === 'object' && value !== null) {
+					values[key] = { ...value };
 				} else {
-					values = {};
-				}
-			} else {
-				// NEW FORMAT: Control-based values - deep copy
-				values = {};
-				const sourceValues = triggerData.values || {};
-				for (const [key, value] of Object.entries(sourceValues)) {
-					if (typeof value === 'object' && value !== null) {
-						values[key] = { ...value };
-					} else {
-						values[key] = value;
-					}
+					values[key] = value;
 				}
 			}
 		}
