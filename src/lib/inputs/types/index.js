@@ -52,42 +52,31 @@ export function getInputType(typeId) {
 }
 
 /**
- * Get input type for an input based on its properties
- * Determines the correct type based on input device and control ID
+ * Get input type for an input based on its type field
+ * The type field is set when the input is created and determines its behavior
  * @param {Object} input - Input object from InputLibrary
  * @returns {InputType} Input type instance
  */
 export function getInputTypeForInput(input) {
-	// If input has explicit type, use it
+	// Use the explicit type field - this is the primary source of truth
 	if (input.type && INPUT_TYPES[input.type]) {
 		return INPUT_TYPES[input.type];
 	}
 
+	// Fallback for legacy inputs without type field - detect from controlId
 	const controlId = input.inputControlId || '';
-
-	// Thingy:52 sensors
-	if (controlId.startsWith('euler-') ||
-		controlId.startsWith('quat-') ||
-		controlId.startsWith('accel-') ||
-		controlId.startsWith('gyro-') ||
-		controlId.startsWith('compass-') ||
-		controlId === 'pan' ||
-		controlId === 'tilt') {
-		return thingyType;
-	}
 
 	// Keyboard keys
 	if (controlId.startsWith('key-')) {
 		return keyType;
 	}
 
-	// MIDI notes and buttons
+	// Default to button for note/button controls, knob for others
 	if (controlId.startsWith('note-') ||
 		controlId.startsWith('button-') ||
 		controlId === 'button') {
 		return buttonType;
 	}
 
-	// Default to knob for continuous controllers
 	return knobType;
 }

@@ -6,7 +6,7 @@
  */
 
 import { Library } from './Library.svelte.js';
-import { isButtonInput } from './inputs/utils.js';
+import { isButtonInput, isContinuousInput } from './inputs/utils.js';
 import { toCSSIdentifier } from './css/utils.js';
 import { getInputExportedValues } from './inputs/valueTypes.js';
 
@@ -22,10 +22,13 @@ export class InputLibrary extends Library {
 	 */
 	create(config = {}) {
 		const name = config.name || 'Untitled Input';
-
-		// Determine if this is a button input
-		const isButton = isButtonInput({ inputControlId: config.inputControlId });
 		const buttonMode = config.buttonMode || 'momentary';
+
+		// Use type field to determine input capabilities
+		// Some inputs (like thingy) have both button AND continuous functionality
+		const tempInput = { type: config.type, inputControlId: config.inputControlId };
+		const hasButton = isButtonInput(tempInput);
+		const hasContinuous = isContinuousInput(tempInput);
 
 		// Generate CSS identifiers
 		let cssClassOn = null;
@@ -34,7 +37,8 @@ export class InputLibrary extends Library {
 		let cssClassUp = null;
 		let cssProperty = null;
 
-		if (isButton) {
+		// Button CSS classes (if input has button functionality)
+		if (hasButton) {
 			if (buttonMode === 'toggle') {
 				cssClassOn = config.cssClassOn || `${toCSSIdentifier(name)}-on`;
 				cssClassOff = config.cssClassOff || `${toCSSIdentifier(name)}-off`;
@@ -42,7 +46,10 @@ export class InputLibrary extends Library {
 				cssClassDown = config.cssClassDown || `${toCSSIdentifier(name)}-down`;
 				cssClassUp = config.cssClassUp || `${toCSSIdentifier(name)}-up`;
 			}
-		} else {
+		}
+
+		// CSS property base (if input has continuous values)
+		if (hasContinuous) {
 			cssProperty = config.cssProperty || `--${toCSSIdentifier(name)}`;
 		}
 
@@ -53,10 +60,10 @@ export class InputLibrary extends Library {
 			inputControlId: config.inputControlId || null,
 			inputDeviceName: config.inputDeviceName || null,
 			color: config.color || null,
-			type: config.type || (isButton ? 'button' : 'knob'), // NEW: explicit type
-			colorSupport: config.colorSupport || 'none', // NEW: color support type (none/rgb/red/green)
-			friendlyName: config.friendlyName || null, // NEW: friendly name for known controls
-			orientation: config.orientation || null, // NEW: orientation for faders/knobs (horizontal/vertical)
+			type: config.type || (hasButton ? 'button' : 'knob'),
+			colorSupport: config.colorSupport || 'none',
+			friendlyName: config.friendlyName || null,
+			orientation: config.orientation || null,
 			buttonMode,
 			cssClassOn,
 			cssClassOff,
@@ -105,9 +112,11 @@ export class InputLibrary extends Library {
 	 * @param {Object} input - Input object
 	 */
 	updateCSSIdentifiers(input) {
-		const isButton = isButtonInput(input);
+		const hasButton = isButtonInput(input);
+		const hasContinuous = isContinuousInput(input);
 
-		if (isButton) {
+		// Update button CSS classes
+		if (hasButton) {
 			if (input.buttonMode === 'toggle') {
 				input.cssClassOn = `${toCSSIdentifier(input.name)}-on`;
 				input.cssClassOff = `${toCSSIdentifier(input.name)}-off`;
@@ -119,14 +128,18 @@ export class InputLibrary extends Library {
 				input.cssClassOn = null;
 				input.cssClassOff = null;
 			}
-			input.cssProperty = null;
 		} else {
-			// Slider/knob inputs
-			input.cssProperty = `--${toCSSIdentifier(input.name)}`;
 			input.cssClassDown = null;
 			input.cssClassUp = null;
 			input.cssClassOn = null;
 			input.cssClassOff = null;
+		}
+
+		// Update CSS property base (for continuous values)
+		if (hasContinuous) {
+			input.cssProperty = `--${toCSSIdentifier(input.name)}`;
+		} else {
+			input.cssProperty = null;
 		}
 
 		this.save();
@@ -151,16 +164,8 @@ export class InputLibrary extends Library {
 	 */
 	getValueInputs() {
 		return this.items.filter(input => {
-			// Include sliders/knobs
-			if (['knob', 'slider', 'sensor'].includes(input.type)) {
-				return true;
-			}
-			// Include buttons/pads for pressure mapping
-			if (['button', 'pad'].includes(input.type)) {
-				return true;
-			}
-			// Exclude toggle buttons or other non-continuous inputs
-			return false;
+			// Use InputType to check for continuous values
+			return isContinuousInput(input);
 		});
 	}
 

@@ -7,6 +7,7 @@
 import { InputDeviceManager } from './manager.js';
 import { isButtonInput } from './utils.js';
 import { toCSSIdentifier } from '../css/utils.js';
+import { getInputType } from './types/index.js';
 
 export class InputController {
 	constructor(inputLibrary, customPropertyManager, triggerManager) {
@@ -86,102 +87,89 @@ export class InputController {
 
 	/**
 	 * Setup listeners for Thingy:52 devices
-	 * These expose multiple CSS properties and button as inputs
+	 * A Thingy is a single input that exposes button functionality plus all sensor CSS properties
 	 */
 	_setupThingyListeners(device) {
-		// Handle button triggers (just like other buttons)
+		// Auto-create a single Thingy input for this device
+		// Check if input already exists (use 'thingy' as controlId to represent the whole device)
+		let thingyInput = this.inputLibrary.findByDeviceControl(device.id, 'thingy');
+
+		if (!thingyInput) {
+			// Create thingy input - a single input with button + all sensors
+			thingyInput = this.inputLibrary.create({
+				name: device.name,
+				inputDeviceId: device.id,
+				inputControlId: 'thingy',
+				inputDeviceName: device.name,
+				type: 'thingy',
+				colorSupport: 'rgb',
+				friendlyName: null,
+				buttonMode: 'momentary'
+			});
+		} else {
+			// If input exists with a color, set the LED
+			if (thingyInput.color) {
+				device.thingyDevice.setDeviceColor(thingyInput.color);
+			}
+		}
+
+		// Get the InputType for value conversion metadata
+		const thingyType = getInputType('thingy');
+		const exportedValues = thingyType.getExportedValues(thingyInput);
+
+		// Build a lookup map from sensor key to value metadata
+		const sensorMetadata = new Map();
+		for (const valueDef of exportedValues) {
+			sensorMetadata.set(valueDef.key, valueDef);
+		}
+
+		// Handle button triggers - the Thingy input has button functionality
 		device.on('trigger', ({ controlId, velocity }) => {
-			this._handleTrigger(device.id, controlId, velocity);
+			if (controlId === 'button') {
+				// Route to the thingy input (use 'thingy' controlId for lookup)
+				this._handleTrigger(device.id, 'thingy', velocity);
+			}
 		});
 
 		// Handle button releases
 		device.on('release', ({ controlId }) => {
-			this._handleRelease(device.id, controlId);
+			if (controlId === 'button') {
+				this._handleRelease(device.id, 'thingy');
+			}
 		});
 
 		// Handle all sensor value changes and expose as CSS properties
-		device.on('change', ({ controlId, value, control }) => {
-			// Convert sensor control ID to CSS property name
-			// e.g., "euler-roll" -> "--thingy-euler-roll"
-			const propertyName = `thingy-${controlId}`;
+		device.on('change', ({ controlId, value }) => {
+			// Look up metadata for this sensor
+			const metadata = sensorMetadata.get(controlId);
+			if (!metadata || !metadata.cssProperty) return;
 
-			// Convert normalized value (0-1) to percentage or degrees based on sensor type
+			// Convert normalized value (0-1) back to real value using metadata
+			const { min, max, unit } = metadata;
+			const realValue = min + (value * (max - min));
+
+			// Format the CSS property value with appropriate precision and unit
 			let propertyValue;
-
-			// Pan and Tilt (gravity-compensated)
-			if (controlId === 'pan') {
-				// Pan: Convert 0-1 back to -180 to 180 degrees
-				const degrees = (value * 360) - 180;
-				propertyValue = `${degrees.toFixed(1)}deg`;
-			}
-			else if (controlId === 'tilt') {
-				// Tilt: Convert 0-1 back to -90 to 90 degrees
-				const degrees = (value * 180) - 90;
-				propertyValue = `${degrees.toFixed(1)}deg`;
-			}
-			// Euler angles are in degrees (-180 to 180)
-			else if (controlId.startsWith('euler-')) {
-				// Convert 0-1 back to -180 to 180 degrees
-				const degrees = (value * 360) - 180;
-				propertyValue = `${degrees.toFixed(1)}deg`;
-			}
-			// Quaternion components
-			else if (controlId.startsWith('quat-')) {
-				// Convert 0-1 back to -1 to 1
-				const qValue = (value * 2) - 1;
-				propertyValue = qValue.toFixed(3);
-			}
-			// Accelerometer (in g)
-			else if (controlId.startsWith('accel-')) {
-				// Convert 0-1 back to -4 to 4 g
-				const gValue = (value * 8) - 4;
-				propertyValue = `${gValue.toFixed(2)}g`;
-			}
-			// Gyroscope (in deg/s)
-			else if (controlId.startsWith('gyro-')) {
-				// Convert 0-1 back to -2000 to 2000 deg/s
-				const degPerSec = (value * 4000) - 2000;
-				propertyValue = `${degPerSec.toFixed(0)}deg`;
-			}
-			// Compass (in µT)
-			else if (controlId.startsWith('compass-')) {
-				// Convert 0-1 back to -100 to 100 µT
-				const microTesla = (value * 200) - 100;
-				propertyValue = `${microTesla.toFixed(1)}`;
-			}
-			// Default: use percentage
-			else {
-				const percentage = Math.round(value * 100);
-				propertyValue = `${percentage}%`;
+			if (unit === 'deg' || unit === 'deg/s') {
+				propertyValue = `${realValue.toFixed(1)}deg`;
+			} else if (unit === 'g') {
+				propertyValue = `${realValue.toFixed(2)}g`;
+			} else if (unit === 'µT') {
+				propertyValue = realValue.toFixed(1);
+			} else if (unit === '') {
+				// Quaternion - no unit
+				propertyValue = realValue.toFixed(3);
+			} else {
+				propertyValue = `${realValue.toFixed(1)}${unit}`;
 			}
 
+			// Extract property name from cssProperty (remove leading --)
+			const propertyName = metadata.cssProperty.replace(/^--/, '');
 			this.customPropertyManager.setProperty(propertyName, propertyValue);
 		});
+	}
 
-		// Auto-create a button Input for the Thingy
-		// Check if input already exists
-		const existingInput = this.inputLibrary.findByDeviceControl(device.id, 'button');
-
-		if (!existingInput) {
-			// Create button input
-			this.inputLibrary.create({
-				name: `${device.name} Button`,
-				inputDeviceId: device.id,
-				inputControlId: 'button',
-				inputDeviceName: device.name,
-				type: 'button',
-				colorSupport: 'rgb',
-				friendlyName: null,
-				buttonMode: 'momentary', // Default to momentary, user can change to toggle
-				color: null // Color can be set to control the Thingy LED
-			});
-		} else {
-			// If input exists with a color, set the LED
-			if (existingInput.color) {
-				device.thingyDevice.setDeviceColor(existingInput.color);
-			}
-		}
-	}	/**
+	/**
 	 * Generate CSS class name from control ID
 	 */
 	_generateClassName(controlId, suffix) {
