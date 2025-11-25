@@ -174,18 +174,23 @@ export class InputLibrary extends Library {
 	deserializeItem(inputData, index) {
 		// Handle backward compatibility - just ensure all properties are present
 		// For old inputs without type/supportsColor, detect from inputControlId
-		const inputIsButton = inputData.type ?
-			['button', 'pad'].includes(inputData.type) :
-			isButton({ inputControlId: inputData.inputControlId });
+		const inputType = inputData.type || (isButton({ inputControlId: inputData.inputControlId }) ? 'button' : 'knob');
+		const tempInput = { type: inputType, inputControlId: inputData.inputControlId };
+		const inputHasValues = hasValues(tempInput);
+
+		// Generate cssProperty if input has values but doesn't have one stored
+		const name = inputData.name || 'Untitled Input';
+		const cssProperty = inputData.cssProperty ||
+			(inputHasValues ? `--${toCSSIdentifier(name)}` : null);
 
 		return {
 			id: inputData.id || crypto.randomUUID(), // Generate UUID if not present
-			name: inputData.name || 'Untitled Input',
+			name: name,
 			inputDeviceId: inputData.inputDeviceId || null,
 			inputControlId: inputData.inputControlId || null,
 			inputDeviceName: inputData.inputDeviceName || null,
 			color: inputData.color || null,
-			type: inputData.type || (inputIsButton ? 'button' : 'knob'), // backward compat
+			type: inputType,
 			colorSupport: inputData.colorSupport || (inputData.supportsColor ? 'rgb' : 'none'), // NEW: migrate from supportsColor
 			friendlyName: inputData.friendlyName || null, // NEW
 			buttonMode: inputData.buttonMode || 'momentary',
@@ -193,7 +198,7 @@ export class InputLibrary extends Library {
 			cssClassOff: inputData.cssClassOff || null,
 			cssClassDown: inputData.cssClassDown || null,
 			cssClassUp: inputData.cssClassUp || null,
-			cssProperty: inputData.cssProperty || null,
+			cssProperty: cssProperty,
 			order: inputData.order !== undefined ? inputData.order : index
 		};
 	}
