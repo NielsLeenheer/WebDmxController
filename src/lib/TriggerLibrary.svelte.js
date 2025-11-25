@@ -4,10 +4,14 @@
  * Extends Library base class with trigger-specific functionality.
  * Stores triggers as plain objects (not class instances) for proper reactivity.
  * Trigger values are stored as control-based objects (NEW ARCHITECTURE).
+ *
+ * Trigger Types:
+ * - 'pressed' / 'not-pressed' / 'always': Traditional triggers (animation or static values)
+ * - 'value': Value-based triggers that map input values to control values continuously
  */
 
 import { Library } from './Library.svelte.js';
-import { generateCSSTriggers } from './triggers/css.js';
+import { generateCSSTriggers, generateValueTriggerCSS } from './triggers/css.js';
 
 export class TriggerLibrary extends Library {
 	constructor() {
@@ -21,6 +25,12 @@ export class TriggerLibrary extends Library {
 	 */
 	create(config = {}) {
 		const triggerType = config.triggerType || 'pressed';
+
+		// Value triggers have their own structure
+		if (triggerType === 'value') {
+			return this._createValueTrigger(config);
+		}
+
 		const actionType = config.actionType || 'animation';
 
 		const trigger = {
@@ -46,6 +56,32 @@ export class TriggerLibrary extends Library {
 		return this.add(trigger);
 	}
 
+	/**
+	 * Create a value-based trigger
+	 * @private
+	 */
+	_createValueTrigger(config) {
+		const trigger = {
+			triggerType: 'value',
+			// Input source
+			inputId: config.inputId || null,
+			inputValueKey: config.inputValueKey || 'value', // Which value from input (value, pressure, etc.)
+			// Output target
+			deviceId: config.deviceId || null,
+			controlName: config.controlName || null, // Target control (e.g., 'Pan/Tilt', 'Dimmer')
+			controlChannel: config.controlChannel || null, // For multi-channel controls: 'pan', 'tilt', 'r', 'g', 'b'
+			// Optional range overrides
+			inputMin: config.inputMin ?? null,
+			inputMax: config.inputMax ?? null,
+			outputMin: config.outputMin ?? null,
+			outputMax: config.outputMax ?? null,
+			invert: config.invert || false,
+			order: this.items.length
+		};
+
+		return this.add(trigger);
+	}
+
 
 	/**
 	 * Generate CSS for all triggers
@@ -56,27 +92,61 @@ export class TriggerLibrary extends Library {
 	 */
 	toCSS(devices = [], animationLibrary = null, inputLibrary = null) {
 		const allTriggers = this.getAll();
-		
-		// Get unique device IDs that are used in triggers
-		const deviceIds = new Set(allTriggers.map(t => t.deviceId).filter(id => id));
-		
-		// Generate CSS for each device
+
+		// Separate value triggers from other triggers
+		const valueTriggers = allTriggers.filter(t => t.triggerType === 'value');
+		const otherTriggers = allTriggers.filter(t => t.triggerType !== 'value');
+
+		// Get unique device IDs that are used in non-value triggers
+		const deviceIds = new Set(otherTriggers.map(t => t.deviceId).filter(id => id));
+
+		// Generate CSS for each device (traditional triggers)
 		const cssRules = [];
 		for (const deviceId of deviceIds) {
 			const device = devices.find(d => d.id === deviceId);
 			if (!device) continue;
-			
-			const css = generateCSSTriggers(device, allTriggers, animationLibrary, inputLibrary);
+
+			const css = generateCSSTriggers(device, otherTriggers, animationLibrary, inputLibrary);
 			if (css) cssRules.push(css);
 		}
-		
+
+		// Generate CSS for value-based triggers
+		for (const trigger of valueTriggers) {
+			const device = devices.find(d => d.id === trigger.deviceId);
+			if (!device) continue;
+
+			const css = generateValueTriggerCSS(trigger, device, inputLibrary);
+			if (css) cssRules.push(css);
+		}
+
 		return cssRules.join('\n\n');
-	}	/**
+	}
+
+	/**
 	 * Deserialize trigger data from storage
 	 * @param {Object} triggerData - Serialized trigger data
 	 * @param {number} index - Array index for order
 	 */
 	deserializeItem(triggerData, index) {
+		// Handle value-based triggers
+		if (triggerData.triggerType === 'value') {
+			return {
+				id: triggerData.id || crypto.randomUUID(),
+				triggerType: 'value',
+				inputId: triggerData.inputId || null,
+				inputValueKey: triggerData.inputValueKey || 'value',
+				deviceId: triggerData.deviceId || null,
+				controlName: triggerData.controlName || null,
+				controlChannel: triggerData.controlChannel || null,
+				inputMin: triggerData.inputMin ?? null,
+				inputMax: triggerData.inputMax ?? null,
+				outputMin: triggerData.outputMin ?? null,
+				outputMax: triggerData.outputMax ?? null,
+				invert: triggerData.invert || false,
+				order: triggerData.order !== undefined ? triggerData.order : index
+			};
+		}
+
 		const actionType = triggerData.actionType || 'animation';
 
 		// Handle values deserialization with deep copy

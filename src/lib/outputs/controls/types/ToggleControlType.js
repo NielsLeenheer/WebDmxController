@@ -1,4 +1,5 @@
 import { ControlType } from './ControlType.js';
+import { CONTROL_VALUE_TYPES } from '../valueTypes.js';
 
 /**
  * Toggle Control Type (1 channel: on/off values)
@@ -35,5 +36,31 @@ export class ToggleControlType extends ControlType {
 	 */
 	getDefaultValue() {
 		return this.offValue;
+	}
+
+	/**
+	 * Get value metadata for this toggle control
+	 * @param {string} controlName - Name of the control instance
+	 * @param {string|null} channel - Not used for single-channel controls
+	 * @returns {Object} Value metadata
+	 */
+	getValueMetadata(controlName, channel = null) {
+		const nameLower = controlName.toLowerCase();
+
+		if (nameLower === 'safety') {
+			return { ...CONTROL_VALUE_TYPES.safety };
+		}
+
+		// Generic toggle - derive CSS property from control name
+		return {
+			cssProperty: `--${nameLower.replace(/\s+/g, '-')}`,
+			min: 0,
+			max: 255,
+			unit: '',
+			dmxMin: this.offValue,
+			dmxMax: this.onValue,
+			isToggle: true,
+			description: `${controlName} (on/off)`
+		};
 	}
 }

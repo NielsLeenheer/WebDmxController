@@ -7,6 +7,7 @@
 import { getProperties } from '../outputs/css.js';
 import { DEVICE_TYPES } from '../outputs/devices.js';
 import { getCSSClassName } from './utils.js';
+import { getInputExportedValues, INPUT_VALUE_TYPES } from '../inputs/valueTypes.js';
 
 /**
  * Generate CSS for all triggers targeting a specific device
@@ -166,4 +167,194 @@ function _generateManualValuesCSS(device, trigger, inputLibrary) {
 	return `${selector} {
 ${props}
 }`;
+}
+
+/**
+ * Generate CSS for a value-based trigger
+ * Maps an input value to a device control continuously
+ *
+ * @param {Object} trigger - Value trigger object
+ * @param {Object} device - Target device object
+ * @param {Object} inputLibrary - InputLibrary instance
+ * @returns {string} CSS rule for the value mapping
+ */
+export function generateValueTriggerCSS(trigger, device, inputLibrary) {
+	if (!trigger || !device || !inputLibrary) return '';
+	if (trigger.triggerType !== 'value') return '';
+
+	// Get input and its exported values
+	const input = inputLibrary.get(trigger.inputId);
+	if (!input) return '';
+
+	const exportedValues = getInputExportedValues(input);
+	const inputValue = exportedValues.find(v => v.key === trigger.inputValueKey);
+	if (!inputValue || !inputValue.cssProperty) return '';
+
+	// Get device type and control
+	const deviceType = DEVICE_TYPES[device.type];
+	if (!deviceType) return '';
+
+	const controlDef = deviceType.controls.find(c => c.name === trigger.controlName);
+	if (!controlDef) return '';
+
+	// Get control metadata for the specific channel (or single-channel control)
+	const controlMeta = controlDef.type.getValueMetadata(
+		trigger.controlName,
+		trigger.controlChannel
+	);
+	if (!controlMeta) return '';
+
+	// Get input value type metadata
+	const inputTypeMeta = INPUT_VALUE_TYPES[inputValue.valueType];
+	if (!inputTypeMeta) return '';
+
+	// Build the CSS property and value
+	const inputCssProperty = inputValue.cssProperty;
+	const outputCssProperty = controlMeta.cssProperty;
+
+	if (!outputCssProperty) {
+		// Control doesn't have a direct CSS property (e.g., individual RGB channels)
+		// Skip for now - could be extended to support rgb() building
+		return '';
+	}
+
+	// Determine input and output ranges (use overrides if provided)
+	const inputMin = trigger.inputMin ?? inputTypeMeta.min;
+	const inputMax = trigger.inputMax ?? inputTypeMeta.max;
+	const outputMin = trigger.outputMin ?? controlMeta.min;
+	const outputMax = trigger.outputMax ?? controlMeta.max;
+	const inputUnit = inputTypeMeta.unit || '';
+	const outputUnit = controlMeta.unit || '';
+
+	// Handle inversion
+	const effectiveOutputMin = trigger.invert ? outputMax : outputMin;
+	const effectiveOutputMax = trigger.invert ? outputMin : outputMax;
+
+	// Generate the CSS calc() expression
+	const cssValue = _generateCalcExpression(
+		inputCssProperty,
+		inputMin,
+		inputMax,
+		inputUnit,
+		effectiveOutputMin,
+		effectiveOutputMax,
+		outputUnit
+	);
+
+	// Build the selector - value triggers are always active
+	const selector = `#${device.cssId}`;
+
+	return `/* Value trigger: ${input.name} → ${device.name || device.cssId} ${trigger.controlName}${trigger.controlChannel ? ` (${trigger.controlChannel})` : ''} */
+${selector} {
+  ${outputCssProperty}: ${cssValue};
+}`;
+}
+
+/**
+ * Generate a CSS calc() expression for value conversion
+ * @private
+ */
+function _generateCalcExpression(
+	inputProperty,
+	inputMin,
+	inputMax,
+	inputUnit,
+	outputMin,
+	outputMax,
+	outputUnit
+) {
+	const inputRange = inputMax - inputMin;
+	const outputRange = outputMax - outputMin;
+
+	// Special case: direct mapping when ranges and units match
+	if (inputMin === outputMin && inputMax === outputMax && inputUnit === outputUnit) {
+		return `var(${inputProperty})`;
+	}
+
+	// Special case: percentage input to different percentage output
+	if (inputUnit === '%' && outputUnit === '%' && inputMin === 0 && inputMax === 100) {
+		// Input is 0-100%
+		if (outputMin === 0 && outputMax === 100) {
+			// Direct mapping
+			return `var(${inputProperty})`;
+		}
+		if (outputMin === -50 && outputMax === 50) {
+			// 0-100% to -50% to 50%: subtract 50
+			return `calc(var(${inputProperty}) - 50%)`;
+		}
+		// General: scale and offset
+		const scale = outputRange / 100;
+		if (scale === 1) {
+			return `calc(var(${inputProperty}) + ${outputMin}${outputUnit})`;
+		}
+		return `calc(var(${inputProperty}) * ${scale} + ${outputMin}${outputUnit})`;
+	}
+
+	// Special case: degree input to percentage output
+	if (inputUnit === 'deg' && outputUnit === '%') {
+		// e.g., -180deg to 180deg → 0% to 100%
+		// Formula: (value - inputMin) / inputRange * outputRange + outputMin
+		// With CSS: calc((var(--input) - inputMin) / inputRange * outputRange + outputMin)
+		if (inputMin === -180 && inputMax === 180 && outputMin === 0 && outputMax === 100) {
+			// (val + 180deg) / 360deg * 100%
+			return `calc((var(${inputProperty}) + 180deg) / 360deg * 100%)`;
+		}
+		if (inputMin === -180 && inputMax === 180 && outputMin === -50 && outputMax === 50) {
+			// (val + 180deg) / 360deg * 100% - 50%
+			return `calc((var(${inputProperty}) + 180deg) / 360deg * 100% - 50%)`;
+		}
+		if (inputMin === -90 && inputMax === 90 && outputMin === 0 && outputMax === 100) {
+			// Tilt: (val + 90deg) / 180deg * 100%
+			return `calc((var(${inputProperty}) + 90deg) / 180deg * 100%)`;
+		}
+	}
+
+	// Special case: percentage input to unitless output (0-100% to 0-1)
+	if (inputUnit === '%' && outputUnit === '' && inputMin === 0 && inputMax === 100) {
+		if (outputMin === 0 && outputMax === 1) {
+			// 0-100% to 0-1: divide by 100
+			return `calc(var(${inputProperty}) / 100%)`;
+		}
+		if (outputMin === 0 && outputMax === 255) {
+			// 0-100% to 0-255
+			return `calc(var(${inputProperty}) / 100% * 255)`;
+		}
+	}
+
+	// General case: normalize input to 0-1, then scale to output
+	// CSS calc has limitations with mixed units, so we try to produce valid CSS
+
+	// If units are different, we need careful handling
+	if (inputUnit !== outputUnit) {
+		// This is complex - try a reasonable approximation
+		// Assume input comes as a numeric value with unit
+		if (inputUnit === '' && outputUnit === '%') {
+			// Unitless to percentage
+			const scale = outputRange / inputRange * 100;
+			const offset = outputMin - (inputMin / inputRange * outputRange);
+			return `calc(var(${inputProperty}) * ${scale / inputRange}% + ${offset}%)`;
+		}
+	}
+
+	// Same unit - straightforward linear transformation
+	// y = (x - inputMin) / inputRange * outputRange + outputMin
+	const scale = outputRange / inputRange;
+
+	if (inputMin === 0 && outputMin === 0) {
+		// Simple scaling
+		if (scale === 1) {
+			return `var(${inputProperty})`;
+		}
+		return `calc(var(${inputProperty}) * ${scale})`;
+	}
+
+	// Full transformation
+	const offset = outputMin - (inputMin * scale);
+	if (offset === 0) {
+		return `calc(var(${inputProperty}) * ${scale})`;
+	}
+	if (scale === 1) {
+		return `calc(var(${inputProperty}) + ${offset}${outputUnit})`;
+	}
+	return `calc(var(${inputProperty}) * ${scale} + ${offset}${outputUnit})`;
 }

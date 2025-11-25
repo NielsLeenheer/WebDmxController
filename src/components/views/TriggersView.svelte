@@ -1,12 +1,16 @@
 <script>
     import { triggerLibrary, inputLibrary, animationLibrary, deviceLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
+    import { isValueTrigger } from '../../lib/triggers/utils.js';
     import TriggerCard from '../cards/TriggerCard.svelte';
+    import ValueTriggerCard from '../cards/ValueTriggerCard.svelte';
     import Button from '../common/Button.svelte';
     import AddManualTriggerDialog from '../dialogs/AddManualTriggerDialog.svelte';
     import AddAutomaticTriggerDialog from '../dialogs/AddAutomaticTriggerDialog.svelte';
+    import AddValueTriggerDialog from '../dialogs/AddValueTriggerDialog.svelte';
     import EditManualTriggerDialog from '../dialogs/EditManualTriggerDialog.svelte';
     import EditAutomaticTriggerDialog from '../dialogs/EditAutomaticTriggerDialog.svelte';
+    import EditValueTriggerDialog from '../dialogs/EditValueTriggerDialog.svelte';
 
     // Get devices reactively from library
     let devices = $derived(deviceLibrary.getAll());
@@ -16,11 +20,16 @@
     let availableAnimations = $derived(animationLibrary.getAll());
     let triggers = $derived(triggerLibrary.getAll());
 
+    // Get inputs that can be used for value triggers (those with continuous values)
+    let valueCapableInputs = $derived(inputLibrary.getValueInputs());
+
     // Dialog references
     let addManualTriggerDialog;
     let addAutomaticTriggerDialog;
+    let addValueTriggerDialog;
     let editManualTriggerDialog;
     let editAutomaticTriggerDialog;
+    let editValueTriggerDialog;
 
     // Drag and drop helper
     const dnd = createDragDrop({
@@ -80,8 +89,46 @@
         });
     }
 
+    async function openValueTriggerDialog() {
+        const result = await addValueTriggerDialog.open(valueCapableInputs, devices);
+
+        if (!result) return; // User cancelled
+
+        // Create value trigger using library method
+        triggerLibrary.create({
+            triggerType: 'value',
+            inputId: result.inputId,
+            inputValueKey: result.inputValueKey,
+            deviceId: result.deviceId,
+            controlName: result.controlName,
+            controlChannel: result.controlChannel,
+            invert: result.invert
+        });
+    }
+
     async function openEditDialog(trigger) {
-        if (trigger.triggerType === 'always') {
+        if (trigger.triggerType === 'value') {
+            // Value-based trigger
+            const result = await editValueTriggerDialog.open(trigger, valueCapableInputs, devices);
+
+            if (!result || result.action === 'cancel') return; // User cancelled
+
+            if (result.action === 'delete') {
+                // Handle delete
+                triggerLibrary.remove(trigger.id);
+                return;
+            }
+
+            // Handle save
+            triggerLibrary.update(trigger.id, {
+                inputId: result.data.inputId,
+                inputValueKey: result.data.inputValueKey,
+                deviceId: result.data.deviceId,
+                controlName: result.data.controlName,
+                controlChannel: result.data.controlChannel,
+                invert: result.data.invert
+            });
+        } else if (trigger.triggerType === 'always') {
             // Automatic trigger
             const result = await editAutomaticTriggerDialog.open(trigger, availableAnimations, devices);
 
@@ -171,6 +218,13 @@
         >
             Add Automatic Trigger
         </Button>
+        <Button
+            onclick={openValueTriggerDialog}
+            variant="secondary"
+            disabled={valueCapableInputs.length === 0 || devices.length === 0}
+        >
+            Add Value Trigger
+        </Button>
     </div>
 
     <div class="triggers-list">
@@ -189,11 +243,19 @@
             </div>
         {:else}
             {#each triggers as trigger (trigger.id)}
-                <TriggerCard
-                    {trigger}
-                    {dnd}
-                    onEdit={openEditDialog}
-                />
+                {#if isValueTrigger(trigger)}
+                    <ValueTriggerCard
+                        {trigger}
+                        {dnd}
+                        onEdit={openEditDialog}
+                    />
+                {:else}
+                    <TriggerCard
+                        {trigger}
+                        {dnd}
+                        onEdit={openEditDialog}
+                    />
+                {/if}
             {/each}
         {/if}
     </div>
@@ -209,12 +271,20 @@
     bind:this={addAutomaticTriggerDialog}
 />
 
+<AddValueTriggerDialog
+    bind:this={addValueTriggerDialog}
+/>
+
 <EditManualTriggerDialog
     bind:this={editManualTriggerDialog}
 />
 
 <EditAutomaticTriggerDialog
     bind:this={editAutomaticTriggerDialog}
+/>
+
+<EditValueTriggerDialog
+    bind:this={editValueTriggerDialog}
 />
 
 <style>

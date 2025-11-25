@@ -1,4 +1,5 @@
 import { ControlType } from './ControlType.js';
+import { CONTROL_VALUE_TYPES } from '../valueTypes.js';
 
 /**
  * RGB Control Type (3 channels: red, green, blue)
@@ -30,5 +31,43 @@ export class RGBControlType extends ControlType {
 			g: dmxValues[1] ?? 0,
 			b: dmxValues[2] ?? 0
 		};
+	}
+
+	/**
+	 * Get value metadata for this RGB control
+	 * @param {string} controlName - Name of the control instance
+	 * @param {string|null} channel - 'r'/'red', 'g'/'green', or 'b'/'blue'
+	 * @returns {Object} Value metadata
+	 */
+	getValueMetadata(controlName, channel = null) {
+		if (channel === 'r' || channel === 'red') {
+			return { ...CONTROL_VALUE_TYPES.red, channel: 'r' };
+		}
+		if (channel === 'g' || channel === 'green') {
+			return { ...CONTROL_VALUE_TYPES.green, channel: 'g' };
+		}
+		if (channel === 'b' || channel === 'blue') {
+			return { ...CONTROL_VALUE_TYPES.blue, channel: 'b' };
+		}
+		// Return all channels if no specific channel requested
+		return {
+			channels: [
+				{ ...CONTROL_VALUE_TYPES.red, channel: 'r', key: 'red' },
+				{ ...CONTROL_VALUE_TYPES.green, channel: 'g', key: 'green' },
+				{ ...CONTROL_VALUE_TYPES.blue, channel: 'b', key: 'blue' }
+			]
+		};
+	}
+
+	/**
+	 * Get available channels for this control type
+	 * @returns {Array} Array of channel definitions
+	 */
+	getChannels() {
+		return [
+			{ key: 'red', label: 'Red', channel: 'r' },
+			{ key: 'green', label: 'Green', channel: 'g' },
+			{ key: 'blue', label: 'Blue', channel: 'b' }
+		];
 	}
 }

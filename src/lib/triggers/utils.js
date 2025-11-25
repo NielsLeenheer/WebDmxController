@@ -21,7 +21,16 @@ export function isAutomatic(trigger) {
  * @returns {boolean}
  */
 export function isManual(trigger) {
-	return !isAutomatic(trigger);
+	return !isAutomatic(trigger) && !isValueTrigger(trigger);
+}
+
+/**
+ * Check if trigger is a value-based trigger (continuous input-to-control mapping)
+ * @param {Object} trigger - Trigger object
+ * @returns {boolean}
+ */
+export function isValueTrigger(trigger) {
+	return trigger.triggerType === 'value';
 }
 
 /**

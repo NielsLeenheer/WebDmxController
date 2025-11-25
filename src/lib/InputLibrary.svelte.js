@@ -8,6 +8,7 @@
 import { Library } from './Library.svelte.js';
 import { isButtonInput } from './inputs/utils.js';
 import { toCSSIdentifier } from './css/utils.js';
+import { getInputExportedValues } from './inputs/valueTypes.js';
 
 export class InputLibrary extends Library {
 	constructor() {
@@ -129,6 +130,38 @@ export class InputLibrary extends Library {
 		}
 
 		this.save();
+	}
+
+	/**
+	 * Get exported values for an input
+	 * Returns array of value definitions that can be mapped to controls
+	 * @param {string} inputId - Input ID
+	 * @returns {Array} Array of exported value definitions
+	 */
+	getExportedValues(inputId) {
+		const input = this.get(inputId);
+		if (!input) return [];
+		return getInputExportedValues(input);
+	}
+
+	/**
+	 * Get all inputs that export continuous values (not just button states)
+	 * These are inputs suitable for value-based triggers
+	 * @returns {Array} Array of inputs with exportable values
+	 */
+	getValueInputs() {
+		return this.items.filter(input => {
+			// Include sliders/knobs
+			if (['knob', 'slider', 'sensor'].includes(input.type)) {
+				return true;
+			}
+			// Include buttons/pads for pressure mapping
+			if (['button', 'pad'].includes(input.type)) {
+				return true;
+			}
+			// Exclude toggle buttons or other non-continuous inputs
+			return false;
+		});
 	}
 
 	/**
