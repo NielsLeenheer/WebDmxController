@@ -1,8 +1,9 @@
 import { ControlType } from './ControlType.js';
-import { CONTROL_VALUE_TYPES } from '../valueTypes.js';
 
 /**
  * RGB Control Type (3 channels: red, green, blue)
+ *
+ * Value metadata is defined inline for each color channel.
  */
 export class RGBControlType extends ControlType {
 	constructor(id = 'rgb', name = 'RGB') {
@@ -40,21 +41,58 @@ export class RGBControlType extends ControlType {
 	 * @returns {Object} Value metadata
 	 */
 	getValueMetadata(controlName, channel = null) {
+		// Red channel: 0-255
+		const redMeta = {
+			cssProperty: null, // Part of color property, no individual CSS property
+			min: 0,
+			max: 255,
+			unit: '',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Red channel (0-255)',
+			channel: 'r'
+		};
+
+		// Green channel: 0-255
+		const greenMeta = {
+			cssProperty: null,
+			min: 0,
+			max: 255,
+			unit: '',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Green channel (0-255)',
+			channel: 'g'
+		};
+
+		// Blue channel: 0-255
+		const blueMeta = {
+			cssProperty: null,
+			min: 0,
+			max: 255,
+			unit: '',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Blue channel (0-255)',
+			channel: 'b'
+		};
+
 		if (channel === 'r' || channel === 'red') {
-			return { ...CONTROL_VALUE_TYPES.red, channel: 'r' };
+			return redMeta;
 		}
 		if (channel === 'g' || channel === 'green') {
-			return { ...CONTROL_VALUE_TYPES.green, channel: 'g' };
+			return greenMeta;
 		}
 		if (channel === 'b' || channel === 'blue') {
-			return { ...CONTROL_VALUE_TYPES.blue, channel: 'b' };
+			return blueMeta;
 		}
+
 		// Return all channels if no specific channel requested
 		return {
 			channels: [
-				{ ...CONTROL_VALUE_TYPES.red, channel: 'r', key: 'red' },
-				{ ...CONTROL_VALUE_TYPES.green, channel: 'g', key: 'green' },
-				{ ...CONTROL_VALUE_TYPES.blue, channel: 'b', key: 'blue' }
+				{ ...redMeta, key: 'red' },
+				{ ...greenMeta, key: 'green' },
+				{ ...blueMeta, key: 'blue' }
 			]
 		};
 	}

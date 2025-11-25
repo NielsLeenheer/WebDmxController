@@ -1,5 +1,4 @@
 import { ControlType } from './ControlType.js';
-import { CONTROL_VALUE_TYPES } from '../valueTypes.js';
 
 /**
  * Toggle Control Type (1 channel: on/off values)
@@ -7,6 +6,8 @@ import { CONTROL_VALUE_TYPES } from '../valueTypes.js';
  *
  * Differs from SliderControl in that it has discrete on/off values
  * rather than a continuous range.
+ *
+ * Value metadata is defined inline based on control name.
  */
 export class ToggleControlType extends ControlType {
 	constructor(id, name = 'Toggle', offValue = 0, onValue = 255) {
@@ -47,8 +48,18 @@ export class ToggleControlType extends ControlType {
 	getValueMetadata(controlName, channel = null) {
 		const nameLower = controlName.toLowerCase();
 
+		// Safety control (special CSS values: none/probably)
 		if (nameLower === 'safety') {
-			return { ...CONTROL_VALUE_TYPES.safety };
+			return {
+				cssProperty: '--safety',
+				min: 0,
+				max: 255,
+				unit: '',
+				dmxMin: 0,
+				dmxMax: 255,
+				isToggle: true,
+				description: 'Safety switch (on/off)'
+			};
 		}
 
 		// Generic toggle - derive CSS property from control name

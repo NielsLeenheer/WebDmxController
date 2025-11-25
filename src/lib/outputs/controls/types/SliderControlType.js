@@ -1,8 +1,9 @@
 import { ControlType } from './ControlType.js';
-import { CONTROL_VALUE_TYPES } from '../valueTypes.js';
 
 /**
  * Slider Control Type (1 channel: single value 0-255)
+ *
+ * Value metadata is defined inline based on the control name.
  */
 export class SliderControlType extends ControlType {
 	constructor(id, name = 'Slider') {
@@ -45,39 +46,107 @@ export class SliderControlType extends ControlType {
 
 	/**
 	 * Get value metadata for this slider control
+	 * Metadata is defined inline based on common control names.
+	 *
 	 * @param {string} controlName - Name of the control instance
 	 * @param {string|null} channel - Not used for single-channel controls
-	 * @returns {Object} Value metadata
+	 * @returns {Object} Value metadata including cssProperty, min, max, unit
 	 */
 	getValueMetadata(controlName, channel = null) {
 		const nameLower = controlName.toLowerCase();
 
+		// Dimmer/Intensity: 0-1 (opacity-like)
 		if (nameLower === 'dimmer' || nameLower === 'intensity') {
-			return { ...CONTROL_VALUE_TYPES.intensity };
-		}
-		if (nameLower === 'white') {
-			return { ...CONTROL_VALUE_TYPES.white };
-		}
-		if (nameLower === 'amber') {
-			return { ...CONTROL_VALUE_TYPES.amber };
-		}
-		if (nameLower === 'flame') {
-			return { ...CONTROL_VALUE_TYPES.flame };
-		}
-		if (nameLower === 'smoke') {
-			return { ...CONTROL_VALUE_TYPES.smoke };
-		}
-		if (nameLower === 'strobe') {
-			return { ...CONTROL_VALUE_TYPES.strobe };
-		}
-		if (nameLower === 'speed') {
-			return { ...CONTROL_VALUE_TYPES.speed };
+			return {
+				cssProperty: '--intensity',
+				min: 0,
+				max: 1,
+				unit: '',
+				dmxMin: 0,
+				dmxMax: 255,
+				description: 'Intensity/Dimmer (0 to 1)'
+			};
 		}
 
-		// Generic slider - derive CSS property from control name
+		// Percentage-based controls (0% to 100%)
+		if (nameLower === 'white') {
+			return {
+				cssProperty: '--white',
+				min: 0,
+				max: 100,
+				unit: '%',
+				dmxMin: 0,
+				dmxMax: 255,
+				description: 'White intensity (0% to 100%)'
+			};
+		}
+		if (nameLower === 'amber') {
+			return {
+				cssProperty: '--amber',
+				min: 0,
+				max: 100,
+				unit: '%',
+				dmxMin: 0,
+				dmxMax: 255,
+				description: 'Amber intensity (0% to 100%)'
+			};
+		}
+		if (nameLower === 'flame') {
+			return {
+				cssProperty: '--flame',
+				min: 0,
+				max: 100,
+				unit: '%',
+				dmxMin: 0,
+				dmxMax: 255,
+				description: 'Flame intensity (0% to 100%)'
+			};
+		}
+		if (nameLower === 'smoke') {
+			return {
+				cssProperty: '--smoke',
+				min: 0,
+				max: 100,
+				unit: '%',
+				dmxMin: 0,
+				dmxMax: 255,
+				description: 'Smoke output (0% to 100%)'
+			};
+		}
+
+		// Raw DMX value controls (0-255)
+		if (nameLower === 'strobe') {
+			return {
+				cssProperty: '--strobe',
+				min: 0,
+				max: 255,
+				unit: '',
+				dmxMin: 0,
+				dmxMax: 255,
+				description: 'Strobe speed (0-255)'
+			};
+		}
+		if (nameLower === 'speed') {
+			return {
+				cssProperty: '--speed',
+				min: 0,
+				max: 255,
+				unit: '',
+				dmxMin: 0,
+				dmxMax: 255,
+				description: 'Speed (0-255)'
+			};
+		}
+
+		// Generic slider - derive CSS property from control name, use percentage
 		return {
-			...CONTROL_VALUE_TYPES.percentageSlider,
-			cssProperty: `--${nameLower.replace(/\s+/g, '-')}`
+			cssProperty: `--${nameLower.replace(/\s+/g, '-')}`,
+			min: 0,
+			max: 100,
+			unit: '%',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: `${controlName} (0% to 100%)`
 		};
 	}
 }

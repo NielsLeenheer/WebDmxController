@@ -1,9 +1,10 @@
 import { ControlType } from './ControlType.js';
-import { CONTROL_VALUE_TYPES } from '../valueTypes.js';
 
 /**
  * XY Pad Control Type (2 channels: x, y)
  * Used for Pan/Tilt on 8-bit devices
+ *
+ * Value metadata is defined inline for pan and tilt channels.
  */
 export class XYPadControlType extends ControlType {
 	constructor(id, name = 'Pan/Tilt') {
@@ -39,17 +40,42 @@ export class XYPadControlType extends ControlType {
 	 * @returns {Object} Value metadata
 	 */
 	getValueMetadata(controlName, channel = null) {
+		// Pan: -50% to +50% centered at 0
+		const panMeta = {
+			cssProperty: '--pan',
+			min: -50,
+			max: 50,
+			unit: '%',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Pan position (-50% to +50%)',
+			channel: 'x'
+		};
+
+		// Tilt: 0% to 100%
+		const tiltMeta = {
+			cssProperty: '--tilt',
+			min: 0,
+			max: 100,
+			unit: '%',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Tilt position (0% to 100%)',
+			channel: 'y'
+		};
+
 		if (channel === 'pan' || channel === 'x') {
-			return { ...CONTROL_VALUE_TYPES.pan, channel: 'x' };
+			return panMeta;
 		}
 		if (channel === 'tilt' || channel === 'y') {
-			return { ...CONTROL_VALUE_TYPES.tilt, channel: 'y' };
+			return tiltMeta;
 		}
+
 		// Return both channels if no specific channel requested
 		return {
 			channels: [
-				{ ...CONTROL_VALUE_TYPES.pan, channel: 'x', key: 'pan' },
-				{ ...CONTROL_VALUE_TYPES.tilt, channel: 'y', key: 'tilt' }
+				{ ...panMeta, key: 'pan' },
+				{ ...tiltMeta, key: 'tilt' }
 			]
 		};
 	}

@@ -7,7 +7,7 @@
 import { getProperties } from '../outputs/css.js';
 import { DEVICE_TYPES } from '../outputs/devices.js';
 import { getCSSClassName } from './utils.js';
-import { getInputExportedValues, INPUT_VALUE_TYPES } from '../inputs/valueTypes.js';
+import { getInputExportedValues } from '../inputs/valueTypes.js';
 
 /**
  * Generate CSS for all triggers targeting a specific device
@@ -204,10 +204,6 @@ export function generateValueTriggerCSS(trigger, device, inputLibrary) {
 	);
 	if (!controlMeta) return '';
 
-	// Get input value type metadata
-	const inputTypeMeta = INPUT_VALUE_TYPES[inputValue.valueType];
-	if (!inputTypeMeta) return '';
-
 	// Build the CSS property and value
 	const inputCssProperty = inputValue.cssProperty;
 	const outputCssProperty = controlMeta.cssProperty;
@@ -219,11 +215,12 @@ export function generateValueTriggerCSS(trigger, device, inputLibrary) {
 	}
 
 	// Determine input and output ranges (use overrides if provided)
-	const inputMin = trigger.inputMin ?? inputTypeMeta.min;
-	const inputMax = trigger.inputMax ?? inputTypeMeta.max;
+	// inputValue now contains inline metadata (min, max, unit)
+	const inputMin = trigger.inputMin ?? inputValue.min;
+	const inputMax = trigger.inputMax ?? inputValue.max;
 	const outputMin = trigger.outputMin ?? controlMeta.min;
 	const outputMax = trigger.outputMax ?? controlMeta.max;
-	const inputUnit = inputTypeMeta.unit || '';
+	const inputUnit = inputValue.unit || '';
 	const outputUnit = controlMeta.unit || '';
 
 	// Handle inversion
