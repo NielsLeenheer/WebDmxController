@@ -130,10 +130,8 @@
 <Dialog bind:dialogRef={dialogRef} title="Edit Value Trigger" onclose={handleCancel}>
 	<form id="edit-value-trigger-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
 		<div class="trigger-columns">
-			<!-- Column 1: Input Source -->
+			<!-- Column 1: Input Configuration -->
 			<div class="trigger-column">
-				<h4>Input Source</h4>
-
 				<div class="dialog-input-group">
 					<label for="edit-value-trigger-input">Input:</label>
 					<select id="edit-value-trigger-input" bind:value={selectedInputId}>
@@ -153,21 +151,10 @@
 						</select>
 					</div>
 				{/if}
-
-				{#if getInputValueDescription()}
-					<p class="description">{getInputValueDescription()}</p>
-				{/if}
 			</div>
 
-			<!-- Arrow -->
-			<div class="arrow-column">
-				<span class="arrow">→</span>
-			</div>
-
-			<!-- Column 2: Output Target -->
-			<div class="trigger-column">
-				<h4>Output Target</h4>
-
+			<!-- Column 2: Device Configuration -->
+			<div class="trigger-column with-divider">
 				<div class="dialog-input-group">
 					<label for="edit-value-trigger-device">Device:</label>
 					<select id="edit-value-trigger-device" bind:value={selectedDeviceId}>
@@ -198,25 +185,21 @@
 						</select>
 					</div>
 				{/if}
-
-				{#if getControlDescription()}
-					<p class="description">{getControlDescription()}</p>
-				{/if}
 			</div>
 
 			<!-- Column 3: Options -->
-			<div class="trigger-column options-column">
-				<h4>Options</h4>
-
-				<div class="checkbox-field">
-					<label>
-						<input
-							type="checkbox"
-							bind:checked={invert}
-						/>
-						Invert
-					</label>
-					<p class="description">Reverse the mapping direction</p>
+			<div class="trigger-column">
+				<div class="trigger-card">
+					<div class="checkbox-field">
+						<label>
+							<input
+								type="checkbox"
+								bind:checked={invert}
+							/>
+							Invert mapping
+						</label>
+						<p class="description">Reverse the input-to-output direction</p>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -232,40 +215,27 @@
 
 <style>
 	.trigger-columns {
-		display: flex;
+		display: grid;
+		grid-template-columns: 180px 200px 350px;
 		gap: 20px;
-		align-items: flex-start;
 	}
 
 	.trigger-column {
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
-		min-width: 180px;
+		gap: 15px;
 	}
 
-	.trigger-column h4 {
-		margin: 0 0 5px 0;
-		font-size: 11pt;
-		color: #666;
-		font-weight: 500;
-	}
-
-	.arrow-column {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding-top: 40px;
-	}
-
-	.arrow {
-		font-size: 24px;
-		color: #888;
-	}
-
-	.options-column {
+	.trigger-column.with-divider {
 		border-left: 1px solid #ddd;
 		padding-left: 20px;
+	}
+
+	.trigger-card {
+		background: #f6f6f6;
+		padding: 15px;
+		border-radius: 6px;
+		min-height: 100px;
 	}
 
 	.description {
@@ -290,9 +260,5 @@
 
 	.spacer {
 		flex: 1;
-	}
-
-	select {
-		min-width: 150px;
 	}
 </style>
