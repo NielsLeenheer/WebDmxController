@@ -177,19 +177,6 @@
 
         const { deviceId, controlId, device, type, colorSupport, friendlyName, orientation } = event;
 
-        // DEBUG: Log what we're receiving for CC buttons
-        if (controlId?.startsWith('cc-') && parseInt(controlId.replace('cc-', '')) >= 100) {
-            console.log('[InputsView.handleRawInput] DEBUG:', {
-                deviceId,
-                controlId,
-                deviceName: device?.name,
-                type,
-                supportsColor,
-                friendlyName,
-                orientation
-            });
-        }
-
         // Check if this input already exists
         const existing = inputs.find(
             input => input.inputDeviceId === deviceId && input.inputControlId === controlId
