@@ -79,23 +79,51 @@ export class MIDIInputDevice extends InputDevice {
 
     */
 
+	/**
+	 * Override _trigger to include control definition from profile
+	 */
+	_trigger(controlId, velocity = 1) {
+		const definition = this.profile ? this.profile.getControlDefinition(controlId) : {};
+		this._emit('trigger', {
+			controlId,
+			velocity,
+			type: definition.type || 'button',
+			colorSupport: definition.colorSupport || 'none',
+			friendlyName: definition.friendlyName || null,
+			orientation: definition.orientation || null
+		});
+	}
+
+	/**
+	 * Override _setValue to include control definition from profile
+	 */
+	_setValue(controlId, value, min = 0, max = 1) {
+		if (!this.controls.has(controlId)) {
+			this.controls.set(controlId, { type: 'value', value: 0, min, max });
+		}
+
+		const control = this.controls.get(controlId);
+		control.value = value;
+		control.min = min;
+		control.max = max;
+
+		const definition = this.profile ? this.profile.getControlDefinition(controlId) : {};
+
+		this._emit('change', {
+			controlId,
+			value,
+			control,
+			type: definition.type || 'knob',
+			colorSupport: definition.colorSupport || 'none',
+			friendlyName: definition.friendlyName || null,
+			orientation: definition.orientation || null
+		});
+	}
+
 	_handleMIDIMessage(event) {
 		const [status, data1, data2] = event.data;
 		const command = status & 0xf0;
 		const channel = status & 0x0f;
-
-        /*
-		if (typeof window !== 'undefined' && window.DEBUG_MIDI_INPUT) {
-			console.log('[MIDI Input]', {
-				device: this.name,
-				status: `0x${status.toString(16).padStart(2, '0')}`,
-				command: `0x${command.toString(16).padStart(2, '0')}`,
-				channel,
-				data1,
-				data2
-			});
-		}
-        */
 
 		switch (command) {
 			case 0x90: // Note On
@@ -116,7 +144,19 @@ export class MIDIInputDevice extends InputDevice {
 
 			case 0xb0: // Control Change
 				const ccId = `cc-${data1}`;
-				this._setValue(ccId, data2 / 127, 0, 1);
+				// Check if this CC is a button (from profile)
+				const definition = this.profile ? this.profile.getControlDefinition(ccId) : null;
+				if (definition && definition.type === 'button') {
+					// Treat as button press/release
+					if (data2 > 0) {
+						this._trigger(ccId, data2 / 127);
+					} else {
+						this._emit('release', { controlId: ccId });
+					}
+				} else {
+					// Treat as continuous value (knob/slider)
+					this._setValue(ccId, data2 / 127, 0, 1);
+				}
 				break;
 
 			case 0xe0: // Pitch Bend

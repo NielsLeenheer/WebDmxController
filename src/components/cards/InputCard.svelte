@@ -10,28 +10,28 @@
 		dnd,             // Drag-and-drop helper
 		stateDisplay,    // Computed state display string
 		eulerAngles,     // Euler angles for Thingy:52 (optional)
-		isColorCapable,  // Function to check if control is color-capable
 		onEdit           // Callback when edit button clicked
 	} = $props();
 
-	// Check if this input should show a color preview
-	let showColorPreview = $derived(input.color && isColorCapable(input.inputControlId));
 </script>
 
 <DraggableCard {dnd} item={input} class="input-card">
-	{#if showColorPreview}
-		<Preview
-			type="input"
-			size="medium"
-			data={input}
-			euler={input.inputControlId === 'button' && eulerAngles ? eulerAngles : null}
-			class="input-color-badge"
-		/>
-	{/if}
+	<Preview
+		type="input"
+		size="medium"
+		data={input}
+		stateValue={stateDisplay}
+		euler={input.inputControlId === 'button' && eulerAngles ? eulerAngles : null}
+		class="input-preview"
+	/>
 	<div class="input-header">
 		<div class="input-name">{input.name}</div>
 		<div class="input-device-name">
 			{input.inputDeviceName || input.inputDeviceId}
+			{#if input.friendlyName}
+				<span class="separator">•</span>
+				{input.friendlyName}
+			{/if}
 		</div>
 	</div>
 	<div class="input-state">
@@ -55,17 +55,17 @@
 		gap: 10px;
 	}
 
-	:global(.input-card) .input-color-badge {
-		position: absolute;
-		top: 15px;
-		right: 15px;
-	}
-
 	:global(.input-card) .input-header {
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
-		padding-right: 40px; /* Space for color badge */
+		padding-right: 40px; /* Space for preview */
+	}
+
+	:global(.input-card) :global(.input-preview) {
+		position: absolute;
+		top: 15px;
+		right: 15px;
 	}
 
 	:global(.input-card) .input-name {
@@ -78,6 +78,11 @@
 	:global(.input-card) .input-device-name {
 		font-size: 9pt;
 		color: #666;
+	}
+
+	:global(.input-card) .input-device-name .separator {
+		margin: 0 4px;
+		opacity: 0.5;
 	}
 
 	:global(.input-card) .input-state {

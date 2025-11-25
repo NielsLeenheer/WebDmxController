@@ -7,7 +7,7 @@ import { ControlType } from './ControlType.js';
  * Note: The UI works with 8-bit values (0-255) for x and y,
  * but this control expands them to 16-bit for fine control
  */
-export class XYPad16Control extends ControlType {
+export class XYPad16ControlType extends ControlType {
 	constructor(id, name = 'Pan/Tilt') {
 		super(id, name, 'xypad', { x: 128, y: 128 });
 	}

@@ -45,7 +45,7 @@
     class:anchored
     class:show-arrow={showArrow && anchored}
     class:explicit-width={width !== null}
-    style="{anchored && anchorId ? `position-anchor: --${anchorId};` : ''}{width ? `width: ${width};` : ''}"
+    style="{anchored && anchorId ? `--dialog: --${anchorId}-dialog; --anchor: --${anchorId};` : ''}{width ? `width: ${width};` : ''}"
     onclick={handleClick}
 >
     {#if title}
@@ -93,15 +93,30 @@
 
     /* Anchored dialog styles */
     .dialog.anchored {
-        position: fixed;
-        position-anchor: var(--position-anchor);
+        --d: 12px; 
+        --s: 18px;
+
+        position: absolute;
+        position-anchor: var(--anchor);
+        position-try-fallbacks: --custom-top;
+
         top: anchor(bottom);
-        left: anchor(center);
-        translate: -50% 16px;
-        margin: 0;
+        top: calc(var(--d) + anchor(bottom));
+        justify-self: anchor-center;
+
+        margin: 0 var(--d);
         z-index: 100;
         overflow: visible;
+
+        anchor-name: var(--dialog);
     }
+
+    @position-try --custom-top {
+        top: auto;
+        bottom: calc(anchor(top) + var(--d));
+        margin: 0;
+    }
+
 
     /* Default sizing for implicitly sized anchored dialogs */
     .dialog.anchored:not(.explicit-width) {
@@ -116,16 +131,25 @@
     /* Arrow pointing up to anchor element */
     .dialog.show-arrow::before {
         content: '';
-        position: absolute;
-        top: -8px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 8px solid transparent;
-        border-right: 8px solid transparent;
-        border-bottom: 8px solid #fff;
-        filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
+        display: block;
+        position: fixed;
+        z-index: -1;
+        width: var(--s);
+        background: inherit;
+
+        position-anchor: var(--anchor);
+        position-try-fallbacks: --custom-tip-top;
+
+        top: calc(anchor(bottom));
+        bottom: anchor(var(--dialog) bottom);
+        justify-self: anchor-center;
+
+        clip-path: polygon(50% .2em,100% var(--d),100% calc(100% - var(--d)),50% calc(100% - .2em),0 calc(100% - var(--d)),0 var(--d));
+    }
+
+    @position-try --custom-tip-top {
+        top: anchor(var(--dialog) top);
+        bottom: calc(anchor(top));
     }
 
     .dialog-header {

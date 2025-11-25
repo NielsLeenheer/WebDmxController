@@ -27,8 +27,7 @@ export class RGBWDeviceType extends DeviceType {
                 {
                     name: 'White',
                     type: CONTROL_TYPES.White,
-                    startChannel: 3,
-                    color: '#808080'
+                    startChannel: 3
                 }
             ]
         });

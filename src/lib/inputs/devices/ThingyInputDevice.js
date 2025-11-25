@@ -21,6 +21,44 @@ export class ThingyInputDevice extends InputDevice {
 		this.thingyDevice.on('compass', this._handleCompass.bind(this));
 	}
 
+	/**
+	 * Override _trigger to include Thingy-specific metadata
+	 * Only the button supports color on Thingy:52
+	 */
+	_trigger(controlId, velocity = 1) {
+		this._emit('trigger', {
+			controlId,
+			velocity,
+			type: 'button',
+			colorSupport: controlId === 'button' ? 'rgb' : 'none', // Only the main button supports RGB color
+			friendlyName: null
+		});
+	}
+
+	/**
+	 * Override _setValue to include Thingy-specific metadata
+	 * Sensor values are continuous and don't support color
+	 */
+	_setValue(controlId, value, min = 0, max = 1) {
+		if (!this.controls.has(controlId)) {
+			this.controls.set(controlId, { type: 'value', value: 0, min, max });
+		}
+
+		const control = this.controls.get(controlId);
+		control.value = value;
+		control.min = min;
+		control.max = max;
+
+		this._emit('change', {
+			controlId,
+			value,
+			control,
+			type: 'sensor',
+			colorSupport: 'none',
+			friendlyName: null
+		});
+	}
+
 	_handleButtonPress() {
 		this._trigger('button', 127);
 	}

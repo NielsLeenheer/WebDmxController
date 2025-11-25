@@ -1,50 +1,59 @@
 /**
- * Control Type Definitions
+ * Control Definitions
  *
- * This module exports all control type classes and a registry of singleton instances.
+ * This module exports all control classes and a registry of singleton instances.
+ *
+ * Architecture:
+ * - Control Type Classes (in types/) define the base behavior for each control pattern
+ * - Control Classes (in this directory) extend the types and provide specific customization
+ * - CONTROL_TYPES registry contains singleton instances used throughout the app
  *
  * Control types provide:
  * - Reusable control patterns (RGB, Slider, XYPad, etc.)
  * - Conversion between control values and DMX arrays
  * - Default values for each control type
+ * - Room for future control-specific customization
  */
 
-export { ControlType } from './ControlType.js';
-export { RGBControl } from './RGBControl.js';
-export { SliderControl } from './SliderControl.js';
-export { ToggleControl } from './ToggleControl.js';
-export { XYPadControl } from './XYPadControl.js';
-export { XYPad16Control } from './XYPad16Control.js';
-
-import { RGBControl } from './RGBControl.js';
-import { SliderControl } from './SliderControl.js';
-import { ToggleControl } from './ToggleControl.js';
-import { XYPadControl } from './XYPadControl.js';
-import { XYPad16Control } from './XYPad16Control.js';
+// Import control classes for instantiation
+import { ColorControl } from './ColorControl.js';
+import { DimmerControl } from './DimmerControl.js';
+import { StrobeControl } from './StrobeControl.js';
+import { SpeedControl } from './SpeedControl.js';
+import { WhiteControl } from './WhiteControl.js';
+import { AmberControl } from './AmberControl.js';
+import { VolumeControl } from './VolumeControl.js';
+import { SmokeControl } from './OutputControl.js';
+import { FanControl } from './FanControl.js';
+import { FlameControl } from './FlameControl.js';
+import { SafetyControl } from './SafetyControl.js';
+import { PanTiltControl } from './PanTiltControl.js';
+import { PanTilt16Control } from './PanTilt16Control.js';
 
 /**
  * Control Type Registry
- * Singleton instances of all control types
+ * Singleton instances of all controls
  * These are the ONLY instances - used for lookups throughout the app
  */
 export const CONTROL_TYPES = {
-	// Color controls
-	RGB: new RGBControl(),
+	// Color control
+	RGB: new ColorControl(),
 
 	// Single-channel controls
-	Dimmer: new SliderControl('dimmer', 'Dimmer'),
-	Strobe: new SliderControl('strobe', 'Strobe'),
-	Speed: new SliderControl('speed', 'Speed'),
-	White: new SliderControl('white', 'White'),
-	Amber: new SliderControl('amber', 'Amber'),
-	Volume: new SliderControl('volume', 'Volume'),
-	Fan: new SliderControl('fan', 'Fan'),
-	Flame: new SliderControl('flame', 'Flame'),
+	Dimmer: new DimmerControl(),
+	Strobe: new StrobeControl(),
+	Speed: new SpeedControl(),
+	White: new WhiteControl(),
+	Amber: new AmberControl(),
+	Volume: new VolumeControl(),
+	Smoke: new SmokeControl(),
+	Fan: new FanControl(),
+	Flame: new FlameControl(),
 
 	// Toggle controls
-	Safety: new ToggleControl('safety', 'Safety', 0, 255),
+	Safety: new SafetyControl(),
 
 	// Position controls
-	PanTilt: new XYPadControl('pantilt', 'Pan/Tilt'),
-	PanTilt16: new XYPad16Control('pantilt16', 'Pan/Tilt')
+	PanTilt: new PanTiltControl(),
+	PanTilt16: new PanTilt16Control()
 };

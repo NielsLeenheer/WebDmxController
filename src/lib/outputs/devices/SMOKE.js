@@ -1,12 +1,12 @@
 import { DeviceType } from './DeviceType.js';
-import { SliderControl } from '../controls/index.js';
+import { CONTROL_TYPES } from '../controls/index.js';
 
 /**
  * Smoke Machine Device Type
- * Single channel output control
+ * Single channel smoke control
  *
  * Channels:
- * 0: Output
+ * 0: Smoke
  */
 export class SmokeDeviceType extends DeviceType {
     constructor() {
@@ -17,10 +17,9 @@ export class SmokeDeviceType extends DeviceType {
             defaultValues: [0],
             controls: [
                 {
-                    name: 'Output',
-                    type: new SliderControl('output', 'Output'),
-                    startChannel: 0,
-                    color: '#666666'
+                    name: 'Smoke',
+                    type: CONTROL_TYPES.Smoke,
+                    startChannel: 0
                 }
             ]
         });

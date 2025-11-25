@@ -220,7 +220,7 @@
 			</div>
 
 			<!-- Column 2: Device Configuration -->
-			<div class="trigger-column">
+			<div class="trigger-column with-divider">
 				<div class="dialog-input-group">
 					<label for="trigger-device">Device:</label>
 					<select id="trigger-device" bind:value={selectedDevice} onchange={handleDeviceChange}>
@@ -278,8 +278,8 @@
 						</div>
 
 						<div class="dialog-input-group">
-							<label for="trigger-easing">Easing:</label>
-							<select id="trigger-easing" bind:value={easing} disabled={!selectedAnimation}>
+							<label for="animation-easing">Easing:</label>
+							<select id="animation-easing" bind:value={easing} disabled={!selectedAnimation}>
 								{#each EASING_FUNCTIONS as easingFn}
 									<option value={easingFn}>{easingFn}</option>
 								{/each}
@@ -313,9 +313,8 @@
 <style>
 	.trigger-columns {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: 180px 200px 350px;
 		gap: 20px;
-		min-width: 900px;
 	}
 
 	.trigger-column {
@@ -324,10 +323,35 @@
 		gap: 15px;
 	}
 
+	.trigger-column.with-divider {
+		border-left: 1px solid #ddd;
+		padding-left: 20px;
+	}
+
 	.trigger-card {
 		background: #f6f6f6;
 		padding: 15px;
 		border-radius: 6px;
+		min-height: 200px;
+
+		display: flex;
+		flex-direction: column;
+		align-items: start;
+	}
+
+	.trigger-card .dialog-input-group {
+		display: flex;
+	    align-items: baseline;
+		margin-bottom: 0;
+	}
+
+	.trigger-card .dialog-input-group :global(> label) {
+		width: 120px;
+	}
+
+	#trigger-animation {
+		min-width: 120px;
+		max-width: 200px;
 	}
 
 	.duration-with-loop {
@@ -338,6 +362,11 @@
 
 	.duration-with-loop input[type="number"] {
 		flex: 1;
+		max-width: 120px;
+	}
+
+	#animation-easing {
+		max-width: 160px;
 	}
 
 	.checkbox-field label {
@@ -347,4 +376,14 @@
 		font-size: 10pt;
 		cursor: pointer;
 	}
+
+	.trigger-card .dialog-input-group :global(.controls) {
+		margin: 8px 8px 0;
+		grid-template-columns: 20px 5em 1fr 3em;
+	}
+
+	.trigger-card .dialog-input-group :global(.controls .control) {
+		margin-bottom: 8px;
+	}
+
 </style>

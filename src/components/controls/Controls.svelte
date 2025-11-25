@@ -97,67 +97,16 @@
         return disabledControls.includes(controlName);
     }
 
-    // Generate gradient background for slider based on control name
-    function getSliderGradient(controlName) {
-        switch (controlName) {
-            case 'Red':
-                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,0,0) 100%)';
-            case 'Green':
-                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(0,255,0) 100%)';
-            case 'Blue':
-                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(0,0,255) 100%)';
-            case 'Amber':
-                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,191,0) 100%)';
-            case 'White':
-                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,255,255) 100%)';
-            case 'Dimmer':
-            case 'Intensity':
-                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,255,255) 100%)';
-            case 'Output':
-                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(200,200,200) 100%)';
-            case 'Fuel':
-                return 'linear-gradient(to right, rgb(0,0,0) 0%, #ff5722 50%, #ff9800 75%, #ffc107 100%)';
-            default:
-                return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(128,128,128) 100%)';
-        }
+    // Generate gradient background for slider based on control
+    function getSliderGradient(control, component = null) {
+        return control.type.getGradient?.(component) 
+            || 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(128,128,128) 100%)';
     }
 
-    // Get thumb color based on control name and current value
-    function getThumbColor(controlName, value) {
-        switch (controlName) {
-            case 'Red':
-                return `rgb(${value}, 0, 0)`;
-            case 'Green':
-                return `rgb(0, ${value}, 0)`;
-            case 'Blue':
-                return `rgb(0, 0, ${value})`;
-            case 'Amber':
-                return `rgb(${value}, ${Math.round(value * 0.749)}, 0)`;
-            case 'White':
-                return `rgb(${value}, ${value}, ${value})`;
-            case 'Dimmer':
-            case 'Intensity':
-                return `rgb(${value}, ${value}, ${value})`;
-            case 'Output':
-                return `rgb(${Math.round(value * 0.784)}, ${Math.round(value * 0.784)}, ${Math.round(value * 0.784)})`;
-            case 'Fuel':
-                // Interpolate through flame gradient: black -> #ff5722 -> #ff9800 -> #ffc107
-                if (value <= 127) {
-                    // 0-127: black (0,0,0) to red-orange (255,87,34)
-                    const t = value / 127;
-                    return `rgb(${Math.round(255 * t)}, ${Math.round(87 * t)}, ${Math.round(34 * t)})`;
-                } else if (value <= 191) {
-                    // 128-191: red-orange (255,87,34) to orange (255,152,0)
-                    const t = (value - 127) / 64;
-                    return `rgb(255, ${Math.round(87 + (152 - 87) * t)}, ${Math.round(34 - 34 * t)})`;
-                } else {
-                    // 192-255: orange (255,152,0) to yellow-orange (255,193,7)
-                    const t = (value - 191) / 64;
-                    return `rgb(255, ${Math.round(152 + (193 - 152) * t)}, ${Math.round(7 * t)})`;
-                }
-            default:
-                return `rgb(${Math.round(value * 0.5)}, ${Math.round(value * 0.5)}, ${Math.round(value * 0.5)})`;
-        }
+    // Get thumb color based on control and current value
+    function getThumbColor(control, value, component = null) {
+        return control.type.getColor?.(value, component)
+            || `rgb(${Math.round(value * 0.5)}, ${Math.round(value * 0.5)}, ${Math.round(value * 0.5)})`;
     }
 </script>
 
@@ -225,7 +174,7 @@
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={colorValue.r}
                         oninput={(e) => !controlDisabled && handleRGBComponentChange(control.name, 'r', parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient('Red')}; --thumb-color: {getThumbColor('Red', colorValue.r)}"
+                        style="--slider-gradient: {getSliderGradient(control, 'Red')}; --thumb-color: {getThumbColor(control, colorValue.r, 'Red')}"
                         disabled={controlDisabled} class="color-slider" />
                 </div>
                 <input type="text" value={colorValue.r} oninput={handleTextInput}
@@ -238,7 +187,7 @@
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={colorValue.g}
                         oninput={(e) => !controlDisabled && handleRGBComponentChange(control.name, 'g', parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient('Green')}; --thumb-color: {getThumbColor('Green', colorValue.g)}"
+                        style="--slider-gradient: {getSliderGradient(control, 'Green')}; --thumb-color: {getThumbColor(control, colorValue.g, 'Green')}"
                         disabled={controlDisabled} class="color-slider" />
                 </div>
                 <input type="text" value={colorValue.g} oninput={handleTextInput}
@@ -251,7 +200,7 @@
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={colorValue.b}
                         oninput={(e) => !controlDisabled && handleRGBComponentChange(control.name, 'b', parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient('Blue')}; --thumb-color: {getThumbColor('Blue', colorValue.b)}"
+                        style="--slider-gradient: {getSliderGradient(control, 'Blue')}; --thumb-color: {getThumbColor(control, colorValue.b, 'Blue')}"
                         disabled={controlDisabled} class="color-slider" />
                 </div>
                 <input type="text" value={colorValue.b} oninput={handleTextInput}
@@ -310,7 +259,7 @@
                         max="255"
                         value={controlValue}
                         oninput={(e) => !controlDisabled && handleControlChange(control.name, parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient(control.name)}; --thumb-color: {getThumbColor(control.name, controlValue)}"
+                        style="--slider-gradient: {getSliderGradient(control)}; --thumb-color: {getThumbColor(control, controlValue)}"
                         disabled={controlDisabled}
                         class="color-slider"
                     />

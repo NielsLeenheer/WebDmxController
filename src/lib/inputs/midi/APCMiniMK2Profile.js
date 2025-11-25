@@ -7,6 +7,122 @@ import { MIDIDeviceProfile } from './MIDIDeviceProfile.js';
 export class APCMiniMK2Profile extends MIDIDeviceProfile {
 	constructor() {
 		super('APC mini MK2', [/apc\s*mini\s*mk2?/i, /apc\s*mini\s*2/i]);
+
+		// Define all controls
+		this.controls = [
+			// 8x8 grid of pads (notes 0-63) - RGB color support
+			{ controlId: 'note-0', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 1-1' },
+			{ controlId: 'note-1', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 1-2' },
+			{ controlId: 'note-2', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 1-3' },
+			{ controlId: 'note-3', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 1-4' },
+			{ controlId: 'note-4', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 1-5' },
+			{ controlId: 'note-5', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 1-6' },
+			{ controlId: 'note-6', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 1-7' },
+			{ controlId: 'note-7', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 1-8' },
+
+			{ controlId: 'note-8', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 2-1' },
+			{ controlId: 'note-9', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 2-2' },
+			{ controlId: 'note-10', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 2-3' },
+			{ controlId: 'note-11', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 2-4' },
+			{ controlId: 'note-12', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 2-5' },
+			{ controlId: 'note-13', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 2-6' },
+			{ controlId: 'note-14', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 2-7' },
+			{ controlId: 'note-15', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 2-8' },
+
+			{ controlId: 'note-16', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 3-1' },
+			{ controlId: 'note-17', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 3-2' },
+			{ controlId: 'note-18', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 3-3' },
+			{ controlId: 'note-19', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 3-4' },
+			{ controlId: 'note-20', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 3-5' },
+			{ controlId: 'note-21', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 3-6' },
+			{ controlId: 'note-22', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 3-7' },
+			{ controlId: 'note-23', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 3-8' },
+
+			{ controlId: 'note-24', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 4-1' },
+			{ controlId: 'note-25', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 4-2' },
+			{ controlId: 'note-26', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 4-3' },
+			{ controlId: 'note-27', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 4-4' },
+			{ controlId: 'note-28', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 4-5' },
+			{ controlId: 'note-29', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 4-6' },
+			{ controlId: 'note-30', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 4-7' },
+			{ controlId: 'note-31', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 4-8' },
+
+			{ controlId: 'note-32', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 5-1' },
+			{ controlId: 'note-33', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 5-2' },
+			{ controlId: 'note-34', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 5-3' },
+			{ controlId: 'note-35', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 5-4' },
+			{ controlId: 'note-36', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 5-5' },
+			{ controlId: 'note-37', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 5-6' },
+			{ controlId: 'note-38', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 5-7' },
+			{ controlId: 'note-39', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 5-8' },
+
+			{ controlId: 'note-40', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 6-1' },
+			{ controlId: 'note-41', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 6-2' },
+			{ controlId: 'note-42', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 6-3' },
+			{ controlId: 'note-43', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 6-4' },
+			{ controlId: 'note-44', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 6-5' },
+			{ controlId: 'note-45', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 6-6' },
+			{ controlId: 'note-46', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 6-7' },
+			{ controlId: 'note-47', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 6-8' },
+
+			{ controlId: 'note-48', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 7-1' },
+			{ controlId: 'note-49', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 7-2' },
+			{ controlId: 'note-50', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 7-3' },
+			{ controlId: 'note-51', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 7-4' },
+			{ controlId: 'note-52', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 7-5' },
+			{ controlId: 'note-53', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 7-6' },
+			{ controlId: 'note-54', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 7-7' },
+			{ controlId: 'note-55', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 7-8' },
+
+			{ controlId: 'note-56', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 8-1' },
+			{ controlId: 'note-57', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 8-2' },
+			{ controlId: 'note-58', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 8-3' },
+			{ controlId: 'note-59', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 8-4' },
+			{ controlId: 'note-60', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 8-5' },
+			{ controlId: 'note-61', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 8-6' },
+			{ controlId: 'note-62', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 8-7' },
+			{ controlId: 'note-63', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 8-8' },
+
+			// Scene launch buttons (notes 82-89) - green color only
+			{ controlId: 'note-82', type: 'button', colorSupport: 'green', friendlyName: 'Scene 1' },
+			{ controlId: 'note-83', type: 'button', colorSupport: 'green', friendlyName: 'Scene 2' },
+			{ controlId: 'note-84', type: 'button', colorSupport: 'green', friendlyName: 'Scene 3' },
+			{ controlId: 'note-85', type: 'button', colorSupport: 'green', friendlyName: 'Scene 4' },
+			{ controlId: 'note-86', type: 'button', colorSupport: 'green', friendlyName: 'Scene 5' },
+			{ controlId: 'note-87', type: 'button', colorSupport: 'green', friendlyName: 'Scene 6' },
+			{ controlId: 'note-88', type: 'button', colorSupport: 'green', friendlyName: 'Scene 7' },
+			{ controlId: 'note-89', type: 'button', colorSupport: 'green', friendlyName: 'Scene 8' },
+
+			// Faders (CC 48-56) - no color support, vertical orientation
+			{ controlId: 'cc-48', type: 'slider', colorSupport: 'none', friendlyName: 'Fader 1', orientation: 'vertical' },
+			{ controlId: 'cc-49', type: 'slider', colorSupport: 'none', friendlyName: 'Fader 2', orientation: 'vertical' },
+			{ controlId: 'cc-50', type: 'slider', colorSupport: 'none', friendlyName: 'Fader 3', orientation: 'vertical' },
+			{ controlId: 'cc-51', type: 'slider', colorSupport: 'none', friendlyName: 'Fader 4', orientation: 'vertical' },
+			{ controlId: 'cc-52', type: 'slider', colorSupport: 'none', friendlyName: 'Fader 5', orientation: 'vertical' },
+			{ controlId: 'cc-53', type: 'slider', colorSupport: 'none', friendlyName: 'Fader 6', orientation: 'vertical' },
+			{ controlId: 'cc-54', type: 'slider', colorSupport: 'none', friendlyName: 'Fader 7', orientation: 'vertical' },
+			{ controlId: 'cc-55', type: 'slider', colorSupport: 'none', friendlyName: 'Fader 8', orientation: 'vertical' },
+			{ controlId: 'cc-56', type: 'slider', colorSupport: 'none', friendlyName: 'Fader 9', orientation: 'vertical' },
+
+			// Control buttons - red color only (send as Note On messages, not CC)
+			{ controlId: 'note-100', type: 'button', colorSupport: 'red', friendlyName: 'Volume' },
+			{ controlId: 'note-101', type: 'button', colorSupport: 'red', friendlyName: 'Pan' },
+			{ controlId: 'note-102', type: 'button', colorSupport: 'red', friendlyName: 'Send' },
+			{ controlId: 'note-103', type: 'button', colorSupport: 'red', friendlyName: 'Device' },
+			{ controlId: 'note-104', type: 'button', colorSupport: 'red', friendlyName: 'Up' },
+			{ controlId: 'note-105', type: 'button', colorSupport: 'red', friendlyName: 'Down' },
+			{ controlId: 'note-106', type: 'button', colorSupport: 'red', friendlyName: 'Left' },
+			{ controlId: 'note-107', type: 'button', colorSupport: 'red', friendlyName: 'Right' },
+			{ controlId: 'note-112', type: 'button', colorSupport: 'red', friendlyName: 'Clip Stop' },
+			{ controlId: 'note-113', type: 'button', colorSupport: 'red', friendlyName: 'Solo' },
+			{ controlId: 'note-114', type: 'button', colorSupport: 'red', friendlyName: 'Mute' },
+			{ controlId: 'note-115', type: 'button', colorSupport: 'red', friendlyName: 'Rec Arm' },
+			{ controlId: 'note-116', type: 'button', colorSupport: 'red', friendlyName: 'Select' },
+			{ controlId: 'note-117', type: 'button', colorSupport: 'red', friendlyName: 'Drum' },
+			{ controlId: 'note-118', type: 'button', colorSupport: 'red', friendlyName: 'Note' },
+			{ controlId: 'note-119', type: 'button', colorSupport: 'red', friendlyName: 'Stop All Clips' },
+			{ controlId: 'note-122', type: 'button', colorSupport: 'none', friendlyName: 'Shift' }
+		];
 	}
 
 	_getColorMap() {

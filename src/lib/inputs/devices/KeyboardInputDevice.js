@@ -14,6 +14,42 @@ export class KeyboardInputDevice extends InputDevice {
 		window.addEventListener('keyup', this._boundKeyUp);
 	}
 
+	/**
+	 * Override _trigger to include keyboard-specific metadata
+	 */
+	_trigger(controlId, velocity = 1) {
+		this._emit('trigger', {
+			controlId,
+			velocity,
+			type: 'button',
+			colorSupport: 'none',
+			friendlyName: null
+		});
+	}
+
+	/**
+	 * Override _setValue to include keyboard-specific metadata
+	 */
+	_setValue(controlId, value, min = 0, max = 1) {
+		if (!this.controls.has(controlId)) {
+			this.controls.set(controlId, { type: 'value', value: 0, min, max });
+		}
+
+		const control = this.controls.get(controlId);
+		control.value = value;
+		control.min = min;
+		control.max = max;
+
+		this._emit('change', {
+			controlId,
+			value,
+			control,
+			type: 'button',
+			colorSupport: 'none',
+			friendlyName: null
+		});
+	}
+
 	_handleKeyDown(event) {
 		// Ignore if typing in input/textarea
 		if (event.target.matches('input, textarea')) return;

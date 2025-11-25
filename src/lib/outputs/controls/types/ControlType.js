@@ -59,4 +59,23 @@ export class ControlType {
 		}
 		return this.defaultValue;
 	}
+
+	/**
+	 * Get slider gradient for UI display
+	 * @returns {string} CSS gradient string
+	 */
+	getGradient() {
+		// Fallback: solid gray
+		return 'rgb(128, 128, 128)';
+	}
+
+	/**
+	 * Get color for UI display based on current value
+	 * @param {*} value - Current control value
+	 * @returns {string} CSS color string
+	 */
+	getColor(value) {
+		// Fallback: solid gray
+		return 'rgb(128, 128, 128)';
+	}
 }

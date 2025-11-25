@@ -1,5 +1,5 @@
 import { DeviceType } from './DeviceType.js';
-import { SliderControl } from '../controls/index.js';
+import { CONTROL_TYPES } from '../controls/index.js';
 
 /**
  * Dimmer Device Type
@@ -17,12 +17,9 @@ export class DimmerDeviceType extends DeviceType {
             defaultValues: [255],  // Full brightness by default
             controls: [
                 {
-                    name: 'Intensity',
-                    type: new SliderControl('intensity', 'Intensity'),
-                    startChannel: 0,
-                    color: '#ffffff',
-                    gradient: 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,255,255) 100%)',
-                    thumbColor: (value) => `rgb(${value}, ${value}, ${value})`
+                    name: 'Dimmer',
+                    type: CONTROL_TYPES.Dimmer,
+                    startChannel: 0
                 }
             ]
         });

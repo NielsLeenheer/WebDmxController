@@ -12,6 +12,29 @@ export class AkaiLPD8MK2Profile extends MIDIDeviceProfile {
 		this.noteToPadIndex = new Map(this.padNotes.map((note, index) => [note, index]));
 		this.deviceId = 0x7f; // Broadcast to all devices by default
 
+		// Define control capabilities
+		this.controls = [
+			// Pads (support RGB color via SysEx)
+			{ controlId: 'note-36', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 1' },
+			{ controlId: 'note-37', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 2' },
+			{ controlId: 'note-38', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 3' },
+			{ controlId: 'note-39', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 4' },
+			{ controlId: 'note-40', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 5' },
+			{ controlId: 'note-41', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 6' },
+			{ controlId: 'note-42', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 7' },
+			{ controlId: 'note-43', type: 'pad', colorSupport: 'rgb', friendlyName: 'Pad 8' },
+
+			// Knobs (no color support) - CC 70-77
+			{ controlId: 'cc-70', type: 'knob', colorSupport: 'none', friendlyName: 'K1' },
+			{ controlId: 'cc-71', type: 'knob', colorSupport: 'none', friendlyName: 'K2' },
+			{ controlId: 'cc-72', type: 'knob', colorSupport: 'none', friendlyName: 'K3' },
+			{ controlId: 'cc-73', type: 'knob', colorSupport: 'none', friendlyName: 'K4' },
+			{ controlId: 'cc-74', type: 'knob', colorSupport: 'none', friendlyName: 'K5' },
+			{ controlId: 'cc-75', type: 'knob', colorSupport: 'none', friendlyName: 'K6' },
+			{ controlId: 'cc-76', type: 'knob', colorSupport: 'none', friendlyName: 'K7' },
+			{ controlId: 'cc-77', type: 'knob', colorSupport: 'none', friendlyName: 'K8' }
+		];
+
 		// Track current color state for all pads
 		// The Akai LPD8 MK2 requires all pad colors to be sent in a single SysEx message
 		this.padColors = new Map(); // note -> color name

@@ -75,8 +75,15 @@
         return device.type === 'midi' || device.type === 'bluetooth';
     }
 
-    function shouldAssignColor(device, controlId) {
-        return deviceSupportsColors(device) && isColorCapableControl(controlId);
+    function shouldAssignColorSupport(device, controlId) {
+        // For now, Thingy:52 buttons support RGB
+        // Other devices will get colorSupport from profile/device definitions
+        if (device.type === 'bluetooth' && device.thingyDevice) {
+            return 'rgb';
+        }
+        // For other devices, would need to query device profile
+        // Default to 'none' if no color support
+        return 'none';
     }
 
     function registerColorUsage(deviceId, controlId, color) {
@@ -111,7 +118,13 @@
     // Event handlers
     let inputEventHandlers = [];
 
-    function getNextAvailableColor(deviceId) {
+    function getNextAvailableColor(deviceId, colorSupport = 'rgb') {
+        // Get fixed color for single-color buttons
+        if (colorSupport === 'red') return 'red';
+        if (colorSupport === 'green') return 'green';
+        if (colorSupport === 'none') return null;
+        
+        // For RGB buttons, cycle through available colors
         const usedColors = deviceColorUsage.get(deviceId);
         const usedColorsArray = usedColors ? Array.from(usedColors) : [];
         
@@ -141,7 +154,10 @@
                 handleRawInput({
                     deviceId: device.id,
                     controlId: eventData.controlId,
-                    type: eventData.velocity !== undefined ? 'trigger' : 'change',
+                    type: eventData.type, // Pass type from device event
+                    colorSupport: eventData.colorSupport, // Pass colorSupport from device event
+                    friendlyName: eventData.friendlyName, // Pass friendlyName from device event
+                    orientation: eventData.orientation, // Pass orientation from device event
                     device
                 });
             };
@@ -159,7 +175,7 @@
     function handleRawInput(event) {
         if (!isListening) return;
 
-        const { deviceId, controlId, device } = event;
+        const { deviceId, controlId, device, type, colorSupport, friendlyName, orientation } = event;
 
         // Check if this input already exists
         const existing = inputs.find(
@@ -168,17 +184,21 @@
 
         if (!existing) {
             // Auto-save new input
-            const name = formatInputName(device?.name || deviceId, controlId);
-
-            // Stream Deck (HID, not keyboard) and MIDI devices support colors
-            const supportsColor = shouldAssignColor(device, controlId);
+            const name = friendlyName || formatInputName(device?.name || deviceId, controlId);
+            
+            // Get appropriate color based on colorSupport type
+            const color = getNextAvailableColor(deviceId, colorSupport);
 
             const input = inputLibrary.create({
                 name,
                 inputDeviceId: deviceId,
                 inputControlId: controlId,
-                inputDeviceName: device?.name || deviceId, // Store device name for display
-                color: supportsColor ? getNextAvailableColor(deviceId) : null  // unique random color if supported
+                inputDeviceName: device?.name || deviceId,
+                type: type || 'button', // Use type from device
+                colorSupport: colorSupport || 'none', // Use colorSupport from device
+                friendlyName: friendlyName || null, // Use friendlyName from device
+                orientation: orientation || null, // Use orientation from device
+                color
             });
 
             // Initialize pressure property for button inputs
@@ -186,7 +206,7 @@
                 inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
             }
 
-            if (supportsColor) {
+            if (colorSupport && colorSupport !== 'none') {
                 registerColorUsage(deviceId, controlId, input.color);
 
                 // Refresh all colors on the device to show assigned vs unassigned buttons
@@ -204,7 +224,10 @@
             handleRawInput({
                 deviceId: device.id,
                 controlId: eventData.controlId,
-                type: eventData.velocity !== undefined ? 'trigger' : 'change',
+                type: eventData.type, // Pass type from device event
+                colorSupport: eventData.colorSupport, // Pass colorSupport from device event
+                friendlyName: eventData.friendlyName, // Pass friendlyName from device event
+                orientation: eventData.orientation, // Pass orientation from device event
                 device
             });
         };
@@ -276,8 +299,8 @@
                 updates.buttonMode = result.buttonMode;
             }
 
-            // Update color if it changed and control is color-capable
-            if (result.color !== oldColor && isColorCapableControl(existingInput.inputControlId)) {
+            // Update color if it changed and control supports color
+            if (result.color !== oldColor && existingInput.colorSupport && existingInput.colorSupport !== 'none') {
                 // Release old color usage
                 if (oldColor) {
                     releaseColorUsage(existingInput.inputDeviceId, existingInput.inputControlId, oldColor);
@@ -358,8 +381,8 @@
             // Only apply to devices that support colors
             if (!deviceSupportsColors(device)) continue;
 
-            // For MIDI devices with profiles, get all pads and set colors
-            if (device.type === 'midi' && device.profile && device.profile.padNotes) {
+            // For MIDI devices with profiles, clear all color-capable controls
+            if (device.type === 'midi' && device.profile) {
                 // Build a map of assigned controls for this device
                 const assignedControls = new Map();
                 for (const input of inputs) {
@@ -368,11 +391,16 @@
                     }
                 }
 
+                // Get all color-capable controls from the profile
+                const colorCapableControls = device.profile.controls?.filter(
+                    ctrl => ctrl.colorSupport && ctrl.colorSupport !== 'none'
+                ) || [];
+
                 // Check if device supports batch color updates (Akai LPD8 MK2, etc.)
                 const supportsBatchUpdate = typeof device.profile.setPadColor === 'function' &&
                                            typeof device.profile.flushColors === 'function';
 
-                if (supportsBatchUpdate) {
+                if (supportsBatchUpdate && device.profile.padNotes) {
                     // Batch mode: update all pad states first, then send ONE message
                     for (const note of device.profile.padNotes) {
                         const controlId = `note-${note}`;
@@ -401,10 +429,9 @@
                         device.midiOutput.send(command.value);
                     }
                 } else {
-                    // Non-batch mode: send individual updates
-                    for (const note of device.profile.padNotes) {
-                        const controlId = `note-${note}`;
-                        const input = assignedControls.get(controlId);
+                    // Non-batch mode: send individual updates for all color-capable controls
+                    for (const control of colorCapableControls) {
+                        const input = assignedControls.get(control.controlId);
 
                         if (input) {
                             // Set assigned color
@@ -416,10 +443,10 @@
                                 color = (state?.state === 'on') ? input.color : 'black';
                             }
 
-                            await device.setColor(controlId, color);
+                            await device.setColor(control.controlId, color);
                         } else {
-                            // Set unassigned buttons to black
-                            await device.setColor(controlId, 'black');
+                            // Set unassigned controls to black/off
+                            await device.setColor(control.controlId, 'black');
                         }
                     }
                 }
@@ -427,7 +454,7 @@
                 // For other devices (HID, Bluetooth), apply colors only to saved inputs
                 for (const input of inputs) {
                     if (input.inputDeviceId !== device.id) continue;
-                    if (!input.color || !isColorCapableControl(input.inputControlId)) continue;
+                    if (!input.color || !input.colorSupport || input.colorSupport === 'none') continue;
 
                     // For toggle buttons, respect the current toggle state
                     let color = input.color;
@@ -445,7 +472,7 @@
     async function updateButtonColorForToggleState(input, isOn) {
         // Update button color based on toggle state (on = full color, off = black)
         const inputDevice = inputController.getInputDevice(input.inputDeviceId);
-        if (!inputDevice || !input.color || !isColorCapableControl(input.inputControlId)) return;
+        if (!inputDevice || !input.color || !input.colorSupport || input.colorSupport === 'none') return;
 
         const color = isOn ? input.color : 'black';
 
@@ -473,15 +500,18 @@
 
                 if (!existing) {
                     const name = formatInputName(device.name || device.id, controlId);
-                    const supportsColor = shouldAssignColor(device, controlId);
-                    
-                    const color = supportsColor ? getNextAvailableColor(device.id) : null;
+                    // Thingy:52 button supports RGB color
+                    const colorSupport = 'rgb';
+                    const color = getNextAvailableColor(device.id, colorSupport);
 
                     const input = inputLibrary.create({
                         name,
                         inputDeviceId: device.id,
                         inputControlId: controlId,
                         inputDeviceName: device.name || device.id,
+                        type: 'button',
+                        colorSupport: 'rgb',
+                        friendlyName: null,
                         color: color
                     });
 
@@ -490,14 +520,14 @@
                         inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
                     }
 
-                    if (supportsColor) {
+                    if (colorSupport && colorSupport !== 'none') {
                         registerColorUsage(device.id, controlId, input.color);
                     }
                 } else if (!existing.color) {
                     // Input exists but has no color assigned - assign one now
-                    const supportsColor = shouldAssignColor(device, controlId);
-                    if (supportsColor) {
-                        const color = getNextAvailableColor(device.id);
+                    const colorSupport = shouldAssignColorSupport(device, controlId);
+                    if (colorSupport && colorSupport !== 'none') {
+                        const color = getNextAvailableColor(device.id, colorSupport);
                         inputLibrary.update(existing.id, { color });
                         registerColorUsage(device.id, controlId, color);
                     }
@@ -528,14 +558,18 @@
 
                 if (!existing) {
                     const name = formatInputName(device.name || device.id, controlId);
-                    const supportsColor = shouldAssignColor(device, controlId);
+                    // Thingy:52 button supports RGB color
+                    const colorSupport = 'rgb';
 
                     const input = inputLibrary.create({
                         name,
                         inputDeviceId: device.id,
                         inputControlId: controlId,
                         inputDeviceName: device.name || device.id,
-                        color: supportsColor ? getNextAvailableColor(device.id) : null
+                        type: 'button',
+                        colorSupport: 'rgb',
+                        friendlyName: null,
+                        color: getNextAvailableColor(device.id, colorSupport)
                     });
 
                     // Initialize pressure property for button input
@@ -543,14 +577,14 @@
                         inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
                     }
 
-                    if (supportsColor) {
+                    if (colorSupport && colorSupport !== 'none') {
                         registerColorUsage(device.id, controlId, input.color);
                     }
                 } else if (!existing.color) {
                     // Input exists but has no color assigned - assign one now
-                    const supportsColor = shouldAssignColor(device, controlId);
-                    if (supportsColor) {
-                        const color = getNextAvailableColor(device.id);
+                    const colorSupport = shouldAssignColorSupport(device, controlId);
+                    if (colorSupport && colorSupport !== 'none') {
+                        const color = getNextAvailableColor(device.id, colorSupport);
                         inputLibrary.update(existing.id, { color });
                         registerColorUsage(device.id, controlId, color);
                     }
@@ -632,7 +666,6 @@
                     {dnd}
                     stateDisplay={getInputStateDisplay(input)}
                     eulerAngles={thingyEulerAngles[input.inputDeviceId]}
-                    isColorCapable={isColorCapableControl}
                     onEdit={startEditing}
                 />
             {/each}

@@ -3,11 +3,11 @@ import { CONTROL_TYPES } from '../controls/index.js';
 
 /**
  * Flamethrower Device Type
- * Safety channel + Fuel control
+ * Safety channel + Flame control
  *
  * Channels:
  * 0: Safety
- * 1: Fuel
+ * 1: Flame
  */
 export class FlamethrowerDeviceType extends DeviceType {
     constructor() {
@@ -23,10 +23,9 @@ export class FlamethrowerDeviceType extends DeviceType {
                     startChannel: 0
                 },
                 {
-                    name: 'Fuel',
+                    name: 'Flame',
                     type: CONTROL_TYPES.Flame,
-                    startChannel: 1,
-                    color: '#ff5722'
+                    startChannel: 1
                 }
             ]
         });

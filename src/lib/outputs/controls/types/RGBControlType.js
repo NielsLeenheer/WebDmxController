@@ -3,9 +3,9 @@ import { ControlType } from './ControlType.js';
 /**
  * RGB Control Type (3 channels: red, green, blue)
  */
-export class RGBControl extends ControlType {
-	constructor() {
-		super('rgb', 'RGB', 'rgb', { r: 0, g: 0, b: 0 });
+export class RGBControlType extends ControlType {
+	constructor(id = 'rgb', name = 'RGB') {
+		super(id, name, 'rgb', { r: 0, g: 0, b: 0 });
 	}
 
 	getChannelCount() {

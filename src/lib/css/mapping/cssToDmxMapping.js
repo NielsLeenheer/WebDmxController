@@ -108,7 +108,7 @@ export const CSS_TO_DMX_MAPPING = {
 		requiredComponents: ['Amber']
 	},
 
-	// Smoke/Output custom property
+	// Smoke custom property
 	'--smoke': {
 		// Convert 0% to 100% → 0-255 DMX
 		sample: (cssValue) => {
@@ -117,13 +117,13 @@ export const CSS_TO_DMX_MAPPING = {
 			const clamped = Math.max(0, Math.min(100, percent));
 			const dmxValue = Math.round((clamped / 100) * 255);
 
-			return { 'Output': dmxValue };
+			return { 'Smoke': dmxValue };
 		},
-		requiredComponents: ['Output']
+		requiredComponents: ['Smoke']
 	},
 
-	// Fuel custom property
-	'--fuel': {
+	// Flame custom property
+	'--flame': {
 		// Convert 0% to 100% → 0-255 DMX
 		sample: (cssValue) => {
 			const match = cssValue.match(/(\d+(?:\.\d+)?)/);
@@ -131,9 +131,9 @@ export const CSS_TO_DMX_MAPPING = {
 			const clamped = Math.max(0, Math.min(100, percent));
 			const dmxValue = Math.round((clamped / 100) * 255);
 
-			return { 'Fuel': dmxValue };
+			return { 'Flame': dmxValue };
 		},
-		requiredComponents: ['Fuel']
+		requiredComponents: ['Flame']
 	},
 
 	// Safety custom property (special case)

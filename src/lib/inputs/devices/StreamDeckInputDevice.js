@@ -13,6 +13,19 @@ export class StreamDeckInputDevice extends InputDevice {
 	}
 
 	/**
+	 * Override _trigger to include Stream Deck-specific metadata
+	 */
+	_trigger(controlId, velocity = 1) {
+		this._emit('trigger', {
+			controlId,
+			velocity,
+			type: 'button',
+			colorSupport: 'rgb',
+			friendlyName: null
+		});
+	}
+
+	/**
 	 * Set color for a control (button)
 	 * @param {string} controlId - Control identifier (e.g., 'button-0')
 	 * @param {string} color - Palette color name

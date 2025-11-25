@@ -7,6 +7,7 @@
  */
 
 import { DEVICE_TYPES } from '../outputs/devices.js';
+import { CONTROL_TYPES } from '../outputs/controls/index.js';
 
 /**
  * Get controls array for rendering
@@ -43,21 +44,49 @@ export function getControlsForRendering(animation) {
 /**
  * Get color for a keyframe (for visualization)
  *
- * NEW: Works with control values
+ * Uses each control's getColor() method and mixes the results
  *
  * @param {Object} keyframe - Keyframe object with control values
  * @returns {string} RGB color string
  */
 export function getKeyframeColor(keyframe) {
-	// Extract color from control values
-	const colorValue = keyframe.values?.Color;
-	if (colorValue && typeof colorValue === 'object') {
-		const r = colorValue.r ?? 0;
-		const g = colorValue.g ?? 0;
-		const b = colorValue.b ?? 0;
-		return `rgb(${r}, ${g}, ${b})`;
+	const values = keyframe.values || {};
+	
+	// Accumulate RGB values from all controls
+	let totalR = 0, totalG = 0, totalB = 0;
+	let hasColor = false;
+	
+	for (const [controlName, value] of Object.entries(values)) {
+		// Find the control definition from device types
+		let controlDef = null;
+		for (const deviceType of Object.values(DEVICE_TYPES)) {
+			controlDef = deviceType.controls.find(c => c.name === controlName);
+			if (controlDef) break;
+		}
+		
+		if (!controlDef) continue;
+		
+		// Get color from the control type
+		const colorStr = controlDef.type.getColor?.(value);
+		if (!colorStr) continue;
+		
+		// Parse RGB color string (e.g., "rgb(255, 0, 0)")
+		const match = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+		if (match) {
+			totalR = Math.min(255, totalR + parseInt(match[1]));
+			totalG = Math.min(255, totalG + parseInt(match[2]));
+			totalB = Math.min(255, totalB + parseInt(match[3]));
+			hasColor = true;
+		}
 	}
-	return 'transparent';
+	
+	// If we have any color data, return mixed RGB color
+	if (hasColor) {
+		return `rgb(${Math.round(totalR)}, ${Math.round(totalG)}, ${Math.round(totalB)})`;
+	}
+	
+	// Return gray for non-color keyframes
+	return '#888';
 }
 
 /**

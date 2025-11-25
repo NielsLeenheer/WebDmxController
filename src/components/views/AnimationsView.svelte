@@ -1,6 +1,6 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-    import { getNumChannels } from '../../lib/animations/utils.js';
+    import { getNumControls } from '../../lib/animations/utils.js';
     import { animationLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import AnimationCard from '../cards/AnimationCard.svelte';
@@ -43,7 +43,7 @@
         const deviceType = getDeviceTypeForControls(controls);
 
         // Determine number of channels based on control selection
-        const numChannels = getNumChannels(animation);
+        const numChannels = getNumControls(animation);
         const defaultValues = new Array(numChannels).fill(0);
 
         // Add default keyframes at start and end

@@ -52,6 +52,10 @@ export class InputLibrary extends Library {
 			inputControlId: config.inputControlId || null,
 			inputDeviceName: config.inputDeviceName || null,
 			color: config.color || null,
+			type: config.type || (isButton ? 'button' : 'knob'), // NEW: explicit type
+			colorSupport: config.colorSupport || 'none', // NEW: color support type (none/rgb/red/green)
+			friendlyName: config.friendlyName || null, // NEW: friendly name for known controls
+			orientation: config.orientation || null, // NEW: orientation for faders/knobs (horizontal/vertical)
 			buttonMode,
 			cssClassOn,
 			cssClassOff,
@@ -134,6 +138,11 @@ export class InputLibrary extends Library {
 	 */
 	deserializeItem(inputData, index) {
 		// Handle backward compatibility - just ensure all properties are present
+		// For old inputs without type/supportsColor, detect from inputControlId
+		const isButton = inputData.type ?
+			['button', 'pad'].includes(inputData.type) :
+			isButtonInput({ inputControlId: inputData.inputControlId });
+
 		return {
 			id: inputData.id || crypto.randomUUID(), // Generate UUID if not present
 			name: inputData.name || 'Untitled Input',
@@ -141,6 +150,9 @@ export class InputLibrary extends Library {
 			inputControlId: inputData.inputControlId || null,
 			inputDeviceName: inputData.inputDeviceName || null,
 			color: inputData.color || null,
+			type: inputData.type || (isButton ? 'button' : 'knob'), // NEW: backward compat
+			colorSupport: inputData.colorSupport || (inputData.supportsColor ? 'rgb' : 'none'), // NEW: migrate from supportsColor
+			friendlyName: inputData.friendlyName || null, // NEW
 			buttonMode: inputData.buttonMode || 'momentary',
 			cssClassOn: inputData.cssClassOn || null,
 			cssClassOff: inputData.cssClassOff || null,
