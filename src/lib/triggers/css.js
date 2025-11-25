@@ -239,8 +239,7 @@ export function generateValueTriggerCSS(trigger, device, inputLibrary) {
 	// Build the selector - value triggers are always active
 	const selector = `#${device.cssId}`;
 
-	return `/* Value trigger: ${input.name} → ${device.name || device.cssId} ${trigger.controlName}${trigger.controlChannel ? ` (${trigger.controlChannel})` : ''} */
-${selector} {
+	return `${selector} {
   ${outputCssProperty}: ${cssValue};
 }`;
 }
