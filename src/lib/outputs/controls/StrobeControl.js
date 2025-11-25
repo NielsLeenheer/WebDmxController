@@ -48,4 +48,16 @@ export class StrobeControl extends SliderControlType {
 		// Always black for strobe
 		return '#000';
 	}
+
+	getValueMetadata() {
+		return {
+			cssProperty: '--strobe',
+			min: 0,
+			max: 255,
+			unit: '',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Strobe speed (0-255)'
+		};
+	}
 }

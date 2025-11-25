@@ -16,4 +16,16 @@ export class WhiteControl extends SliderControlType {
 	getColor(value) {
 		return `rgb(${value}, ${value}, ${value})`;
 	}
+
+	getValueMetadata() {
+		return {
+			cssProperty: '--white',
+			min: 0,
+			max: 100,
+			unit: '%',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'White intensity (0% to 100%)'
+		};
+	}
 }

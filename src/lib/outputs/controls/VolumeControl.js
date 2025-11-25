@@ -17,4 +17,16 @@ export class VolumeControl extends SliderControlType {
 		const intensity = Math.round(value * 0.784);
 		return `rgb(${intensity}, ${intensity}, ${intensity})`;
 	}
+
+	getValueMetadata() {
+		return {
+			cssProperty: '--volume',
+			min: 0,
+			max: 100,
+			unit: '%',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Volume level (0% to 100%)'
+		};
+	}
 }

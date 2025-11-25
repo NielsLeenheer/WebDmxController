@@ -198,10 +198,8 @@ export function generateValueTriggerCSS(trigger, device, inputLibrary) {
 	if (!controlDef) return '';
 
 	// Get control metadata for the specific channel (or single-channel control)
-	const controlMeta = controlDef.type.getValueMetadata(
-		trigger.controlName,
-		trigger.controlChannel
-	);
+	// Metadata is now defined in the control class itself
+	const controlMeta = controlDef.type.getValueMetadata(trigger.controlChannel);
 	if (!controlMeta) return '';
 
 	// Build the CSS property and value

@@ -17,4 +17,16 @@ export class DimmerControl extends SliderControlType {
 		const inverted = 255 - value;
 		return `rgb(${inverted}, ${inverted}, ${inverted})`;
 	}
+
+	getValueMetadata() {
+		return {
+			cssProperty: '--intensity',
+			min: 0,
+			max: 1,
+			unit: '',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Intensity/Dimmer (0 to 1)'
+		};
+	}
 }

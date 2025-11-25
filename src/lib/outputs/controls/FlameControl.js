@@ -29,4 +29,16 @@ export class FlameControl extends SliderControlType {
 			return `rgb(255, ${Math.round(152 + (193 - 152) * t)}, ${Math.round(7 * t)})`;
 		}
 	}
+
+	getValueMetadata() {
+		return {
+			cssProperty: '--flame',
+			min: 0,
+			max: 100,
+			unit: '%',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Flame intensity (0% to 100%)'
+		};
+	}
 }

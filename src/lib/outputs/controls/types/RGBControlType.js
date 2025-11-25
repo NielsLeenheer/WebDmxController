@@ -3,7 +3,7 @@ import { ControlType } from './ControlType.js';
 /**
  * RGB Control Type (3 channels: red, green, blue)
  *
- * Value metadata is defined inline for each color channel.
+ * Subclasses should override getValueMetadata() with control-specific metadata.
  */
 export class RGBControlType extends ControlType {
 	constructor(id = 'rgb', name = 'RGB') {
@@ -35,15 +35,16 @@ export class RGBControlType extends ControlType {
 	}
 
 	/**
-	 * Get value metadata for this RGB control
-	 * @param {string} controlName - Name of the control instance
+	 * Get value metadata for this RGB control.
+	 * Subclasses should override this with control-specific metadata.
+	 * This provides a generic fallback for R/G/B channels.
+	 *
 	 * @param {string|null} channel - 'r'/'red', 'g'/'green', or 'b'/'blue'
 	 * @returns {Object} Value metadata
 	 */
-	getValueMetadata(controlName, channel = null) {
-		// Red channel: 0-255
+	getValueMetadata(channel = null) {
 		const redMeta = {
-			cssProperty: null, // Part of color property, no individual CSS property
+			cssProperty: null,
 			min: 0,
 			max: 255,
 			unit: '',
@@ -53,7 +54,6 @@ export class RGBControlType extends ControlType {
 			channel: 'r'
 		};
 
-		// Green channel: 0-255
 		const greenMeta = {
 			cssProperty: null,
 			min: 0,
@@ -65,7 +65,6 @@ export class RGBControlType extends ControlType {
 			channel: 'g'
 		};
 
-		// Blue channel: 0-255
 		const blueMeta = {
 			cssProperty: null,
 			min: 0,
@@ -87,7 +86,6 @@ export class RGBControlType extends ControlType {
 			return blueMeta;
 		}
 
-		// Return all channels if no specific channel requested
 		return {
 			channels: [
 				{ ...redMeta, key: 'red' },
@@ -98,7 +96,8 @@ export class RGBControlType extends ControlType {
 	}
 
 	/**
-	 * Get available channels for this control type
+	 * Get available channels for this control type.
+	 * Subclasses should override for custom channel labels.
 	 * @returns {Array} Array of channel definitions
 	 */
 	getChannels() {

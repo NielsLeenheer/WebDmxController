@@ -4,7 +4,7 @@ import { ControlType } from './ControlType.js';
  * XY Pad Control Type (2 channels: x, y)
  * Used for Pan/Tilt on 8-bit devices
  *
- * Value metadata is defined inline for pan and tilt channels.
+ * Subclasses should override getValueMetadata() with control-specific metadata.
  */
 export class XYPadControlType extends ControlType {
 	constructor(id, name = 'Pan/Tilt') {
@@ -34,60 +34,60 @@ export class XYPadControlType extends ControlType {
 	}
 
 	/**
-	 * Get value metadata for this XY pad control
-	 * @param {string} controlName - Name of the control instance
-	 * @param {string|null} channel - 'pan'/'x' or 'tilt'/'y'
+	 * Get value metadata for this XY pad control.
+	 * Subclasses should override this with control-specific metadata.
+	 * This provides a generic fallback for X/Y channels.
+	 *
+	 * @param {string|null} channel - 'x' or 'y'
 	 * @returns {Object} Value metadata
 	 */
-	getValueMetadata(controlName, channel = null) {
-		// Pan: -50% to +50% centered at 0
-		const panMeta = {
-			cssProperty: '--pan',
-			min: -50,
-			max: 50,
-			unit: '%',
+	getValueMetadata(channel = null) {
+		const xMeta = {
+			cssProperty: `--${this.id}-x`,
+			min: 0,
+			max: 255,
+			unit: '',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: 'Pan position (-50% to +50%)',
+			description: `${this.name} X axis (0-255)`,
 			channel: 'x'
 		};
 
-		// Tilt: 0% to 100%
-		const tiltMeta = {
-			cssProperty: '--tilt',
+		const yMeta = {
+			cssProperty: `--${this.id}-y`,
 			min: 0,
-			max: 100,
-			unit: '%',
+			max: 255,
+			unit: '',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: 'Tilt position (0% to 100%)',
+			description: `${this.name} Y axis (0-255)`,
 			channel: 'y'
 		};
 
-		if (channel === 'pan' || channel === 'x') {
-			return panMeta;
+		if (channel === 'x') {
+			return xMeta;
 		}
-		if (channel === 'tilt' || channel === 'y') {
-			return tiltMeta;
+		if (channel === 'y') {
+			return yMeta;
 		}
 
-		// Return both channels if no specific channel requested
 		return {
 			channels: [
-				{ ...panMeta, key: 'pan' },
-				{ ...tiltMeta, key: 'tilt' }
+				{ ...xMeta, key: 'x' },
+				{ ...yMeta, key: 'y' }
 			]
 		};
 	}
 
 	/**
-	 * Get available channels for this control type
+	 * Get available channels for this control type.
+	 * Subclasses should override for custom channel labels.
 	 * @returns {Array} Array of channel definitions
 	 */
 	getChannels() {
 		return [
-			{ key: 'pan', label: 'Pan (X)', channel: 'x' },
-			{ key: 'tilt', label: 'Tilt (Y)', channel: 'y' }
+			{ key: 'x', label: 'X', channel: 'x' },
+			{ key: 'y', label: 'Y', channel: 'y' }
 		];
 	}
 }

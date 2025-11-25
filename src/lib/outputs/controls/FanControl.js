@@ -8,4 +8,16 @@ export class FanControl extends SliderControlType {
 	constructor() {
 		super('fan', 'Fan');
 	}
+
+	getValueMetadata() {
+		return {
+			cssProperty: '--fan',
+			min: 0,
+			max: 100,
+			unit: '%',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Fan speed (0% to 100%)'
+		};
+	}
 }

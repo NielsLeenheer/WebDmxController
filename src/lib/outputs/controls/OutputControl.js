@@ -26,4 +26,16 @@ export class SmokeControl extends SliderControlType {
 		const intensity = Math.round((value ?? 0) * 0.784); // ~200/255
 		return `rgb(${intensity}, ${intensity}, ${intensity})`;
 	}
+
+	getValueMetadata() {
+		return {
+			cssProperty: '--smoke',
+			min: 0,
+			max: 100,
+			unit: '%',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Smoke output (0% to 100%)'
+		};
+	}
 }

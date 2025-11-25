@@ -7,7 +7,7 @@ import { ControlType } from './ControlType.js';
  * Differs from SliderControl in that it has discrete on/off values
  * rather than a continuous range.
  *
- * Value metadata is defined inline based on control name.
+ * Subclasses should override getValueMetadata() with control-specific metadata.
  */
 export class ToggleControlType extends ControlType {
 	constructor(id, name = 'Toggle', offValue = 0, onValue = 255) {
@@ -40,38 +40,24 @@ export class ToggleControlType extends ControlType {
 	}
 
 	/**
-	 * Get value metadata for this toggle control
-	 * @param {string} controlName - Name of the control instance
+	 * Get value metadata for this toggle control.
+	 * Subclasses should override this with control-specific metadata.
+	 * This provides a generic fallback based on the control id/name.
+	 *
 	 * @param {string|null} channel - Not used for single-channel controls
 	 * @returns {Object} Value metadata
 	 */
-	getValueMetadata(controlName, channel = null) {
-		const nameLower = controlName.toLowerCase();
-
-		// Safety control (special CSS values: none/probably)
-		if (nameLower === 'safety') {
-			return {
-				cssProperty: '--safety',
-				min: 0,
-				max: 255,
-				unit: '',
-				dmxMin: 0,
-				dmxMax: 255,
-				isToggle: true,
-				description: 'Safety switch (on/off)'
-			};
-		}
-
-		// Generic toggle - derive CSS property from control name
+	getValueMetadata(channel = null) {
+		// Generic toggle - derive CSS property from control id
 		return {
-			cssProperty: `--${nameLower.replace(/\s+/g, '-')}`,
+			cssProperty: `--${this.id.replace(/\s+/g, '-')}`,
 			min: 0,
 			max: 255,
 			unit: '',
 			dmxMin: this.offValue,
 			dmxMax: this.onValue,
 			isToggle: true,
-			description: `${controlName} (on/off)`
+			description: `${this.name} (on/off)`
 		};
 	}
 }

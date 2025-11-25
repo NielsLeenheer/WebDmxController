@@ -57,4 +57,65 @@ export class ColorControl extends RGBControlType {
 		// Fallback to parent (gray)
 		return super.getColor(value);
 	}
+
+	getValueMetadata(channel = null) {
+		const redMeta = {
+			cssProperty: null,
+			min: 0,
+			max: 255,
+			unit: '',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Red channel (0-255)',
+			channel: 'r'
+		};
+
+		const greenMeta = {
+			cssProperty: null,
+			min: 0,
+			max: 255,
+			unit: '',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Green channel (0-255)',
+			channel: 'g'
+		};
+
+		const blueMeta = {
+			cssProperty: null,
+			min: 0,
+			max: 255,
+			unit: '',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Blue channel (0-255)',
+			channel: 'b'
+		};
+
+		if (channel === 'r' || channel === 'red') {
+			return redMeta;
+		}
+		if (channel === 'g' || channel === 'green') {
+			return greenMeta;
+		}
+		if (channel === 'b' || channel === 'blue') {
+			return blueMeta;
+		}
+
+		return {
+			channels: [
+				{ ...redMeta, key: 'red' },
+				{ ...greenMeta, key: 'green' },
+				{ ...blueMeta, key: 'blue' }
+			]
+		};
+	}
+
+	getChannels() {
+		return [
+			{ key: 'red', label: 'Red', channel: 'r' },
+			{ key: 'green', label: 'Green', channel: 'g' },
+			{ key: 'blue', label: 'Blue', channel: 'b' }
+		];
+	}
 }

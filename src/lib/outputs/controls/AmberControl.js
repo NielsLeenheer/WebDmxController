@@ -16,4 +16,16 @@ export class AmberControl extends SliderControlType {
 	getColor(value) {
 		return `rgb(${value}, ${Math.round(value * 0.749)}, 0)`;
 	}
+
+	getValueMetadata() {
+		return {
+			cssProperty: '--amber',
+			min: 0,
+			max: 100,
+			unit: '%',
+			dmxMin: 0,
+			dmxMax: 255,
+			description: 'Amber intensity (0% to 100%)'
+		};
+	}
 }
