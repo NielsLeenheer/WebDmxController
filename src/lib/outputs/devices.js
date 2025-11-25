@@ -87,27 +87,6 @@ export function getDevicePreviewData(deviceType, controlValues) {
     return { controls, data };
 }
 
-/**
- * Convert named channels object to device channel array
- * DEPRECATED: Use controlValuesToDMX from converter.js instead
- *
- * This function is kept for backward compatibility with CSS sampling,
- * but should not be used in new code.
- */
-export function convertChannelsToArray(deviceType, channels) {
-    // NOTE: This function returns default values as a fallback
-    // CSS sampling path (App.svelte) still uses channel-based approach
-    // Full conversion to control values deferred (see IMPLEMENTATION_STATUS.md)
-
-    const deviceTypeDef = DEVICE_TYPES[deviceType];
-    if (!deviceTypeDef) {
-        console.warn(`Unknown device type: ${deviceType}`);
-        return [];
-    }
-
-    // Return default DMX array as fallback
-    return deviceTypeDef.getDefaultValues();
-}
 
 /**
  * Get preview data for trigger control values

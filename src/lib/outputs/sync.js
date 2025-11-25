@@ -46,17 +46,6 @@ export function canLinkDevices(sourceType, targetType) {
     return Object.keys(mapping).length > 0;
 }
 
-/**
- * Apply source device values to target device using control mapping
- * DEPRECATED: This function is no longer used with control-based values
- * Device linking is now handled directly in DeviceLibrary.propagateToLinkedDevices()
- *
- * This is kept for backward compatibility but should not be used in new code.
- */
-export function applyLinkedValues(sourceType, targetType, sourceValues, targetValues, syncedControls = null, mirrorPan = false) {
-    console.warn('applyLinkedValues() is deprecated. Use DeviceLibrary.propagateToLinkedDevices() instead.');
-    return targetValues;
-}
 
 /**
  * Get list of devices that can be linked to the given device type
@@ -89,14 +78,6 @@ export function getMappedControls(sourceType, targetType, syncedControls = null)
     return Object.keys(mapping);
 }
 
-/**
- * Get array of target channel indices that are controlled by synced controls
- * DEPRECATED: Use getMappedControls() instead
- */
-export function getMappedChannels(sourceType, targetType, syncedControls = null) {
-    console.warn('getMappedChannels() is deprecated. Use getMappedControls() instead.');
-    return [];
-}
 
 /**
  * Get available controls that can be synced between two device types

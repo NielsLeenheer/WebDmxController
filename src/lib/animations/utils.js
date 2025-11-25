@@ -180,11 +180,3 @@ export function getNumControls(animation) {
 	return animation.controls.length;
 }
 
-/**
- * Get number of channels for animation
- * DEPRECATED: Use getNumControls() instead
- */
-export function getNumChannels(animation) {
-	console.warn('getNumChannels() is deprecated. Use getNumControls() instead.');
-	return getNumControls(animation);
-}
