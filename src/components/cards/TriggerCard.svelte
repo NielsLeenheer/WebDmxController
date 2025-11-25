@@ -1,6 +1,8 @@
 <script>
 	import { deviceLibrary, animationLibrary, inputLibrary } from '../../stores.svelte.js';
-	import { getTriggerValuesPreviewData } from '../../lib/outputs/devices.js';
+	import { getTriggerValuesPreviewData, DEVICE_TYPES } from '../../lib/outputs/devices.js';
+	import { getInputExportedValues } from '../../lib/inputs/valueTypes.js';
+	import { isValueTrigger } from '../../lib/triggers/utils.js';
 	import DraggableCard from '../common/DraggableCard.svelte';
 	import Preview from '../common/Preview.svelte';
 	import IconButton from '../common/IconButton.svelte';
@@ -16,13 +18,16 @@
 	let animation = $derived(trigger.animation?.id ? animationLibrary.get(trigger.animation.id) : null);
 	let input = $derived(trigger.inputId ? inputLibrary.get(trigger.inputId) : null);
 
-	// For values triggers, compute preview data from trigger values
+	// Check if this is a value trigger
+	let isValue = $derived(isValueTrigger(trigger));
+
+	// For values triggers (actionType='values'), compute preview data from trigger values
 	let valuesPreview = $derived.by(() => {
 		if (trigger.actionType !== 'values' || !device) return null;
 		return getTriggerValuesPreviewData(device.type, trigger.values);
 	});
 
-	// Get input type label (On/Off/Up/Down)
+	// Get input type label (On/Off/Up/Down) for button triggers
 	let inputTypeLabel = $derived.by(() => {
 		if (!input) return trigger.triggerType === 'pressed' ? 'Down' : 'Up';
 
@@ -32,6 +37,33 @@
 		} else {
 			return trigger.triggerType === 'pressed' ? 'Down' : 'Up';
 		}
+	});
+
+	// For value triggers: get the input value label
+	let inputValueLabel = $derived.by(() => {
+		if (!isValue || !input) return '';
+		const exportedValues = getInputExportedValues(input);
+		const value = exportedValues.find(v => v.key === trigger.inputValueKey);
+		return value?.label || 'Value';
+	});
+
+	// For value triggers: get control label with channel if applicable
+	let controlLabel = $derived.by(() => {
+		if (!isValue || !device || !trigger.controlName) return '';
+		const deviceType = DEVICE_TYPES[device.type];
+		if (!deviceType) return trigger.controlName;
+
+		const controlDef = deviceType.controls.find(c => c.name === trigger.controlName);
+		if (!controlDef) return trigger.controlName;
+
+		if (trigger.controlChannel) {
+			const channels = controlDef.type.getChannels();
+			const channel = channels.find(ch => ch.key === trigger.controlChannel);
+			if (channel) {
+				return `${trigger.controlName} (${channel.label})`;
+			}
+		}
+		return trigger.controlName;
 	});
 </script>
 
@@ -48,7 +80,7 @@
 				class="trigger-preview"
 			/>
 			<div class="trigger-text">
-				{input?.name || 'Unknown Input'} → {inputTypeLabel}
+				{input?.name || 'Unknown Input'}{#if !isValue} → {inputTypeLabel}{/if}
 			</div>
 		{/if}
 	</div>
@@ -68,9 +100,20 @@
 		{/if}
 	</div>
 
-	<!-- Column 3: Action -->
+	<!-- Column 3: Action / Mapping -->
 	<div class="trigger-column trigger-action-column">
-		{#if trigger.actionType === 'animation'}
+		{#if isValue}
+			<!-- Value trigger: show input value → control mapping -->
+			<div class="mapping-text">
+				{inputValueLabel}
+				{#if trigger.invert}
+					<span class="invert-indicator" title="Inverted">⇄</span>
+				{:else}
+					→
+				{/if}
+				{controlLabel}
+			</div>
+		{:else if trigger.actionType === 'animation'}
 			<Preview
 				type="animation"
 				size="medium"
@@ -140,6 +183,18 @@
 		text-align: center;
 		word-wrap: break-word;
 		width: 100%;
+	}
+
+	.mapping-text {
+		font-size: 9pt;
+		color: #666;
+		text-align: center;
+		word-wrap: break-word;
+		width: 100%;
+	}
+
+	.invert-indicator {
+		color: #dc3545;
 	}
 
 	:global(.trigger-preview) {

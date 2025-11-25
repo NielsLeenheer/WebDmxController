@@ -1,9 +1,7 @@
 <script>
     import { triggerLibrary, inputLibrary, animationLibrary, deviceLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
-    import { isValueTrigger } from '../../lib/triggers/utils.js';
     import TriggerCard from '../cards/TriggerCard.svelte';
-    import ValueTriggerCard from '../cards/ValueTriggerCard.svelte';
     import Button from '../common/Button.svelte';
     import AddManualTriggerDialog from '../dialogs/AddManualTriggerDialog.svelte';
     import AddAutomaticTriggerDialog from '../dialogs/AddAutomaticTriggerDialog.svelte';
@@ -243,19 +241,11 @@
             </div>
         {:else}
             {#each triggers as trigger (trigger.id)}
-                {#if isValueTrigger(trigger)}
-                    <ValueTriggerCard
-                        {trigger}
-                        {dnd}
-                        onEdit={openEditDialog}
-                    />
-                {:else}
-                    <TriggerCard
-                        {trigger}
-                        {dnd}
-                        onEdit={openEditDialog}
-                    />
-                {/if}
+                <TriggerCard
+                    {trigger}
+                    {dnd}
+                    onEdit={openEditDialog}
+                />
             {/each}
         {/if}
     </div>
