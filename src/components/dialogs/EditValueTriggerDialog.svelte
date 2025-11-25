@@ -3,6 +3,7 @@
 	import Button from '../common/Button.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { getInputExportedValues } from '../../lib/inputs/valueTypes.js';
+	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
 	 * EditValueTriggerDialog - Promise-based dialog for editing value-based triggers
@@ -96,9 +97,11 @@
 		closeDialog();
 	}
 
-	function handleDelete() {
-		resolvePromise({ action: 'delete' });
-		closeDialog();
+	function confirmDelete() {
+		if (confirm('Are you sure you want to delete this trigger?')) {
+			resolvePromise({ action: 'delete' });
+			closeDialog();
+		}
 	}
 
 	function handleCancel() {
@@ -205,9 +208,14 @@
 		</div>
 	</form>
 
+	{#snippet tools()}
+		<Button onclick={confirmDelete} variant="secondary">
+			{@html removeIcon}
+			Delete
+		</Button>
+	{/snippet}
+
 	{#snippet buttons()}
-		<Button type="button" onclick={handleDelete} variant="danger">Delete</Button>
-		<div class="spacer"></div>
 		<Button type="button" onclick={handleCancel} variant="secondary">Cancel</Button>
 		<Button type="submit" form="edit-value-trigger-form" variant="primary">Save</Button>
 	{/snippet}
@@ -256,9 +264,5 @@
 	.checkbox-field .description {
 		margin-top: 4px;
 		margin-left: 24px;
-	}
-
-	.spacer {
-		flex: 1;
 	}
 </style>
