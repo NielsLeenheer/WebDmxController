@@ -265,12 +265,6 @@
             <div class="control-layer control-white" style="background-color: rgba(255, 255, 255, {whiteOpacity})"></div>
         {/if}
 
-        <!-- Intensity layer (deprecated) -->
-        {#if hasControl('intensity')}
-            {@const intensityOpacity = ((effectiveData().intensity ?? 0) / 255)}
-            <div class="control-layer control-intensity" style="background-color: rgba(0, 0, 0, {1 - intensityOpacity})"></div>
-        {/if}
-
         <!-- Dimmer layer (on top of all color layers) -->
         {#if hasControl('dimmer')}
             {@const dimmerValue = effectiveData().dimmer ?? 0}

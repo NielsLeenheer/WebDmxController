@@ -1,7 +1,8 @@
 <script>
-    import { onMount, onDestroy } from 'svelte';
+    import { onMount } from 'svelte';
     import { DMXController } from './lib/outputs/dmx.js';
-    import { convertChannelsToArray } from './lib/outputs/devices.js';
+    import { DEVICE_TYPES } from './lib/outputs/devices.js';
+    import { controlValuesToDMX } from './lib/outputs/controls.js';
     import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from './stores.svelte.js';
     import { TriggerManager } from './lib/triggers/manager.js';
     import { CustomPropertyManager, CSSManager } from './lib/css/index.js';
@@ -66,16 +67,20 @@
         }
 
         deviceLibrary.getAll().forEach(device => {
-            const channels = sampledValues.get(device.id);
-            if (!channels) return;
+            const controlValues = sampledValues.get(device.id);
+            if (!controlValues) return;
 
-            // Convert sampled channels to device channel array based on device type
-            const newValues = convertChannelsToArray(device.type, channels);
+            // Get device type definition
+            const deviceType = DEVICE_TYPES[device.type];
+            if (!deviceType) return;
+
+            // Convert control values to DMX array
+            const dmxArray = controlValuesToDMX(deviceType, controlValues);
 
             // Update DMX hardware
-            for (let i = 0; i < newValues.length; i++) {
+            for (let i = 0; i < dmxArray.length; i++) {
                 const channel = device.startChannel + i;
-                dmxController.setChannel(channel, newValues[i]);
+                dmxController.setChannel(channel, dmxArray[i]);
             }
         });
     }

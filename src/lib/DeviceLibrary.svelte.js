@@ -176,23 +176,13 @@ export class DeviceLibrary extends Library {
 	 * @returns {Object} Deserialized device
 	 */
 	deserializeItem(deviceData, index) {
-		// Check if defaultValues is an array (old format) or object (new format)
-		let defaultValues;
-		if (Array.isArray(deviceData.defaultValues)) {
-			// OLD FORMAT: DMX array - convert to control values
-			// For now, just reset to defaults (no users to migrate)
-			const deviceType = DEVICE_TYPES[deviceData.type];
-			defaultValues = createDefaultControlValues(deviceType);
-			console.log(`Migrated device "${deviceData.name}" from DMX array to control values`);
-		} else {
-			// NEW FORMAT: Control-based values - deep copy
-			defaultValues = {};
-			for (const [key, value] of Object.entries(deviceData.defaultValues)) {
-				if (typeof value === 'object' && value !== null) {
-					defaultValues[key] = { ...value };
-				} else {
-					defaultValues[key] = value;
-				}
+		// Deep copy control values
+		const defaultValues = {};
+		for (const [key, value] of Object.entries(deviceData.defaultValues || {})) {
+			if (typeof value === 'object' && value !== null) {
+				defaultValues[key] = { ...value };
+			} else {
+				defaultValues[key] = value;
 			}
 		}
 

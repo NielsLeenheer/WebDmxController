@@ -9,8 +9,6 @@
 import { Library } from './Library.svelte.js';
 import { generateCSSAnimation } from './animations/css.js';
 import { toCSSIdentifier } from './css/utils.js';
-import { createDefaultControlValues } from './outputs/controls.js';
-import { DEVICE_TYPES } from './outputs/devices.js';
 
 export class AnimationLibrary extends Library {
 	constructor() {
@@ -148,26 +146,14 @@ export class AnimationLibrary extends Library {
 	 * @param {number} index - Array index for order
 	 */
 	deserializeItem(animData, index) {
-		// Process keyframes, converting old format if needed
+		// Process keyframes with deep copy of control values
 		const keyframes = animData.keyframes?.map(kf => {
-			let values;
-
-			// Check if values is an array (old format) or object (new format)
-			if (Array.isArray(kf.values)) {
-				// OLD FORMAT: DMX array - convert to control values
-				// For now, just reset to defaults (no users to migrate)
-				const deviceType = DEVICE_TYPES[kf.deviceType];
-				values = createDefaultControlValues(deviceType);
-				console.log(`Migrated keyframe in animation "${animData.name}" from DMX array to control values`);
-			} else {
-				// NEW FORMAT: Control-based values - deep copy
-				values = {};
-				for (const [key, value] of Object.entries(kf.values)) {
-					if (typeof value === 'object' && value !== null) {
-						values[key] = { ...value };
-					} else {
-						values[key] = value;
-					}
+			const values = {};
+			for (const [key, value] of Object.entries(kf.values || {})) {
+				if (typeof value === 'object' && value !== null) {
+					values[key] = { ...value };
+				} else {
+					values[key] = value;
 				}
 			}
 
