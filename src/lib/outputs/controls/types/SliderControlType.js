@@ -55,6 +55,7 @@ export class SliderControlType extends ControlType {
 	getValueMetadata(channel = null) {
 		// Generic slider - derive CSS property from control id, use percentage
 		return {
+			type: 'range',
 			cssProperty: `--${this.id.replace(/\s+/g, '-')}`,
 			min: 0,
 			max: 100,

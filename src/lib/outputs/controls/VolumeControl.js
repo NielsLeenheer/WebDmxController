@@ -20,6 +20,7 @@ export class VolumeControl extends SliderControlType {
 
 	getValueMetadata() {
 		return {
+			type: 'range',
 			cssProperty: '--volume',
 			min: 0,
 			max: 100,

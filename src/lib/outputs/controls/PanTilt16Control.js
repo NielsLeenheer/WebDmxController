@@ -11,6 +11,7 @@ export class PanTilt16Control extends XYPad16ControlType {
 
 	getValueMetadata(channel = null) {
 		const panMeta = {
+			type: 'range',
 			cssProperty: '--pan',
 			min: -50,
 			max: 50,
@@ -22,6 +23,7 @@ export class PanTilt16Control extends XYPad16ControlType {
 		};
 
 		const tiltMeta = {
+			type: 'range',
 			cssProperty: '--tilt',
 			min: 0,
 			max: 100,

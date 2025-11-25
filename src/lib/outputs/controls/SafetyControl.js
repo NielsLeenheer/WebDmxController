@@ -11,13 +11,12 @@ export class SafetyControl extends ToggleControlType {
 
 	getValueMetadata() {
 		return {
+			type: 'toggle',
 			cssProperty: '--safety',
-			min: 0,
-			max: 255,
-			unit: '',
-			dmxMin: 0,
-			dmxMax: 255,
-			isToggle: true,
+			on: 'probably',
+			off: 'none',
+			dmxOn: 255,
+			dmxOff: 0,
 			description: 'Safety switch (on/off)'
 		};
 	}

@@ -32,6 +32,7 @@ export class FlameControl extends SliderControlType {
 
 	getValueMetadata() {
 		return {
+			type: 'range',
 			cssProperty: '--flame',
 			min: 0,
 			max: 100,

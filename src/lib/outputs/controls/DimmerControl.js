@@ -20,6 +20,7 @@ export class DimmerControl extends SliderControlType {
 
 	getValueMetadata() {
 		return {
+			type: 'range',
 			cssProperty: '--intensity',
 			min: 0,
 			max: 1,

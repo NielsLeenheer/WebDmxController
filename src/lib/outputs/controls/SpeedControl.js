@@ -11,6 +11,7 @@ export class SpeedControl extends SliderControlType {
 
 	getValueMetadata() {
 		return {
+			type: 'range',
 			cssProperty: '--speed',
 			min: 0,
 			max: 255,

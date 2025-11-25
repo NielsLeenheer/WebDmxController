@@ -19,6 +19,7 @@ export class AmberControl extends SliderControlType {
 
 	getValueMetadata() {
 		return {
+			type: 'range',
 			cssProperty: '--amber',
 			min: 0,
 			max: 100,

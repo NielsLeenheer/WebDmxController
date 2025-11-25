@@ -29,6 +29,7 @@ export class SmokeControl extends SliderControlType {
 
 	getValueMetadata() {
 		return {
+			type: 'range',
 			cssProperty: '--smoke',
 			min: 0,
 			max: 100,

@@ -51,6 +51,7 @@ export class StrobeControl extends SliderControlType {
 
 	getValueMetadata() {
 		return {
+			type: 'range',
 			cssProperty: '--strobe',
 			min: 0,
 			max: 255,

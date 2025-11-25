@@ -11,6 +11,7 @@ export class FanControl extends SliderControlType {
 
 	getValueMetadata() {
 		return {
+			type: 'range',
 			cssProperty: '--fan',
 			min: 0,
 			max: 100,

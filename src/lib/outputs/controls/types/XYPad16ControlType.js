@@ -59,6 +59,7 @@ export class XYPad16ControlType extends ControlType {
 	 */
 	getValueMetadata(channel = null) {
 		const xMeta = {
+			type: 'range',
 			cssProperty: `--${this.id}-x`,
 			min: 0,
 			max: 255,
@@ -70,6 +71,7 @@ export class XYPad16ControlType extends ControlType {
 		};
 
 		const yMeta = {
+			type: 'range',
 			cssProperty: `--${this.id}-y`,
 			min: 0,
 			max: 255,

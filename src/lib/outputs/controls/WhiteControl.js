@@ -19,6 +19,7 @@ export class WhiteControl extends SliderControlType {
 
 	getValueMetadata() {
 		return {
+			type: 'range',
 			cssProperty: '--white',
 			min: 0,
 			max: 100,

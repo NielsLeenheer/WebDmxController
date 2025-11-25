@@ -50,13 +50,12 @@ export class ToggleControlType extends ControlType {
 	getValueMetadata(channel = null) {
 		// Generic toggle - derive CSS property from control id
 		return {
+			type: 'toggle',
 			cssProperty: `--${this.id.replace(/\s+/g, '-')}`,
-			min: 0,
-			max: 255,
-			unit: '',
-			dmxMin: this.offValue,
-			dmxMax: this.onValue,
-			isToggle: true,
+			on: this.onValue,
+			off: this.offValue,
+			dmxOn: this.onValue,
+			dmxOff: this.offValue,
 			description: `${this.name} (on/off)`
 		};
 	}
