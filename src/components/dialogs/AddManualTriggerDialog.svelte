@@ -3,7 +3,7 @@
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-	import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
+	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
 
 	/**
 	 * AddManualTriggerDialog - Promise-based dialog for creating manual triggers
@@ -62,7 +62,7 @@
 			i.inputDeviceId === deviceId && i.inputControlId === controlId
 		);
 
-		if (!input || !isButtonInput(input)) {
+		if (!input || !isButton(input)) {
 			return [
 				{ value: 'pressed', label: 'Pressed' },
 				{ value: 'not-pressed', label: 'Not Pressed' }

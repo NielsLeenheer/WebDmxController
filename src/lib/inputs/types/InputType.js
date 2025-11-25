@@ -31,7 +31,7 @@ export class InputType {
 	 * Check if this input type supports continuous values
 	 * @returns {boolean}
 	 */
-	isContinuous() {
+	hasValues() {
 		return false;
 	}
 }

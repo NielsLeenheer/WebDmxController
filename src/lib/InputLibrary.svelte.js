@@ -6,7 +6,7 @@
  */
 
 import { Library } from './Library.svelte.js';
-import { isButtonInput, isContinuousInput } from './inputs/utils.js';
+import { isButton, hasValues } from './inputs/utils.js';
 import { toCSSIdentifier } from './css/utils.js';
 import { getInputExportedValues } from './inputs/valueTypes.js';
 
@@ -25,10 +25,10 @@ export class InputLibrary extends Library {
 		const buttonMode = config.buttonMode || 'momentary';
 
 		// Use type field to determine input capabilities
-		// Some inputs (like thingy) have both button AND continuous functionality
+		// Some inputs (like thingy) have both button AND value functionality
 		const tempInput = { type: config.type, inputControlId: config.inputControlId };
-		const hasButton = isButtonInput(tempInput);
-		const hasContinuous = isContinuousInput(tempInput);
+		const inputIsButton = isButton(tempInput);
+		const inputHasValues = hasValues(tempInput);
 
 		// Generate CSS identifiers
 		let cssClassOn = null;
@@ -38,7 +38,7 @@ export class InputLibrary extends Library {
 		let cssProperty = null;
 
 		// Button CSS classes (if input has button functionality)
-		if (hasButton) {
+		if (inputIsButton) {
 			if (buttonMode === 'toggle') {
 				cssClassOn = config.cssClassOn || `${toCSSIdentifier(name)}-on`;
 				cssClassOff = config.cssClassOff || `${toCSSIdentifier(name)}-off`;
@@ -48,8 +48,8 @@ export class InputLibrary extends Library {
 			}
 		}
 
-		// CSS property base (if input has continuous values)
-		if (hasContinuous) {
+		// CSS property base (if input has values)
+		if (inputHasValues) {
 			cssProperty = config.cssProperty || `--${toCSSIdentifier(name)}`;
 		}
 
@@ -60,7 +60,7 @@ export class InputLibrary extends Library {
 			inputControlId: config.inputControlId || null,
 			inputDeviceName: config.inputDeviceName || null,
 			color: config.color || null,
-			type: config.type || (hasButton ? 'button' : 'knob'),
+			type: config.type || (inputIsButton ? 'button' : 'knob'),
 			colorSupport: config.colorSupport || 'none',
 			friendlyName: config.friendlyName || null,
 			orientation: config.orientation || null,
@@ -112,11 +112,11 @@ export class InputLibrary extends Library {
 	 * @param {Object} input - Input object
 	 */
 	updateCSSIdentifiers(input) {
-		const hasButton = isButtonInput(input);
-		const hasContinuous = isContinuousInput(input);
+		const inputIsButton = isButton(input);
+		const inputHasValues = hasValues(input);
 
 		// Update button CSS classes
-		if (hasButton) {
+		if (inputIsButton) {
 			if (input.buttonMode === 'toggle') {
 				input.cssClassOn = `${toCSSIdentifier(input.name)}-on`;
 				input.cssClassOff = `${toCSSIdentifier(input.name)}-off`;
@@ -135,8 +135,8 @@ export class InputLibrary extends Library {
 			input.cssClassOff = null;
 		}
 
-		// Update CSS property base (for continuous values)
-		if (hasContinuous) {
+		// Update CSS property base (for values)
+		if (inputHasValues) {
 			input.cssProperty = `--${toCSSIdentifier(input.name)}`;
 		} else {
 			input.cssProperty = null;
@@ -158,15 +158,12 @@ export class InputLibrary extends Library {
 	}
 
 	/**
-	 * Get all inputs that export continuous values (not just button states)
+	 * Get all inputs that export values (not just button states)
 	 * These are inputs suitable for value-based triggers
 	 * @returns {Array} Array of inputs with exportable values
 	 */
 	getValueInputs() {
-		return this.items.filter(input => {
-			// Use InputType to check for continuous values
-			return isContinuousInput(input);
-		});
+		return this.items.filter(input => hasValues(input));
 	}
 
 	/**
@@ -177,9 +174,9 @@ export class InputLibrary extends Library {
 	deserializeItem(inputData, index) {
 		// Handle backward compatibility - just ensure all properties are present
 		// For old inputs without type/supportsColor, detect from inputControlId
-		const isButton = inputData.type ?
+		const inputIsButton = inputData.type ?
 			['button', 'pad'].includes(inputData.type) :
-			isButtonInput({ inputControlId: inputData.inputControlId });
+			isButton({ inputControlId: inputData.inputControlId });
 
 		return {
 			id: inputData.id || crypto.randomUUID(), // Generate UUID if not present
@@ -188,7 +185,7 @@ export class InputLibrary extends Library {
 			inputControlId: inputData.inputControlId || null,
 			inputDeviceName: inputData.inputDeviceName || null,
 			color: inputData.color || null,
-			type: inputData.type || (isButton ? 'button' : 'knob'), // NEW: backward compat
+			type: inputData.type || (inputIsButton ? 'button' : 'knob'), // backward compat
 			colorSupport: inputData.colorSupport || (inputData.supportsColor ? 'rgb' : 'none'), // NEW: migrate from supportsColor
 			friendlyName: inputData.friendlyName || null, // NEW
 			buttonMode: inputData.buttonMode || 'momentary',

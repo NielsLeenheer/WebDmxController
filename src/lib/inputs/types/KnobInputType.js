@@ -26,7 +26,7 @@ export class KnobInputType extends InputType {
 		];
 	}
 
-	isContinuous() {
+	hasValues() {
 		return true;
 	}
 }

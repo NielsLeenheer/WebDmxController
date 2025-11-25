@@ -214,7 +214,7 @@ export class ThingyInputType extends InputType {
 		return true;
 	}
 
-	isContinuous() {
+	hasValues() {
 		return true;
 	}
 }

@@ -13,7 +13,7 @@ import { getInputTypeForInput } from './types/index.js';
  * @param {Object} input - Input object
  * @returns {boolean}
  */
-export function isButtonInput(input) {
+export function isButton(input) {
 	// If input has a type field, use InputType to determine
 	if (input.type) {
 		const inputType = getInputTypeForInput(input);
@@ -29,19 +29,19 @@ export function isButtonInput(input) {
 }
 
 /**
- * Check if an input has continuous values (sensors, sliders, knobs)
+ * Check if an input has exportable values (sensors, sliders, knobs, pads)
  * Uses InputType to determine this based on the input's type field
  * @param {Object} input - Input object
  * @returns {boolean}
  */
-export function isContinuousInput(input) {
+export function hasValues(input) {
 	// If input has a type field, use InputType to determine
 	if (input.type) {
 		const inputType = getInputTypeForInput(input);
-		return inputType.isContinuous();
+		return inputType.hasValues();
 	}
 
-	// Fallback - CC controls and sensors are continuous
+	// Fallback - CC controls and sensors have values
 	if (!input.inputControlId) return false;
 	return input.inputControlId.startsWith('cc-') ||
 	       input.inputControlId.startsWith('euler-') ||

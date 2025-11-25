@@ -30,7 +30,7 @@ export class PadInputType extends InputType {
 		return true;
 	}
 
-	isContinuous() {
+	hasValues() {
 		return true;
 	}
 }

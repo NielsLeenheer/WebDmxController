@@ -5,7 +5,7 @@
  */
 
 import { InputDeviceManager } from './manager.js';
-import { isButtonInput } from './utils.js';
+import { isButton } from './utils.js';
 import { toCSSIdentifier } from '../css/utils.js';
 import { getInputType } from './types/index.js';
 
@@ -186,7 +186,7 @@ export class InputController {
 
 		// Handle input CSS classes and properties
 		if (input) {
-			if (isButtonInput(input)) {
+			if (isButton(input)) {
 				// Handle toggle vs momentary mode
 				const buttonMode = input.buttonMode || 'momentary';
 
@@ -248,7 +248,7 @@ export class InputController {
 		const input = this.inputLibrary.findByDeviceControl(deviceId, controlId);
 
 		// Handle input CSS classes and properties
-		if (input && isButtonInput(input)) {
+		if (input && isButton(input)) {
 			// Handle toggle vs momentary mode
 			const buttonMode = input.buttonMode || 'momentary';
 
@@ -376,7 +376,7 @@ export class InputController {
 		const inputs = this.inputLibrary.getAll();
 
 		for (const input of inputs) {
-			if (input.name && isButtonInput(input)) {
+			if (input.name && isButton(input)) {
 				// Initialize to 0%
 				this.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
 			}

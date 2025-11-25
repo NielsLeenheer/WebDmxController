@@ -1,6 +1,6 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
-    import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
+    import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
     import { inputLibrary } from '../../stores.svelte.js';
     import { getUnusedFromPalette, getPalette } from '../../lib/inputs/colors.js';
     import { toCSSIdentifier } from '../../lib/css/utils.js';
@@ -42,7 +42,7 @@
         if (!state) return '';
 
         // For buttons (toggle or momentary)
-        if (isButtonInput(input)) {
+        if (isButton(input)) {
             if (input.buttonMode === 'toggle') {
                 return state.state === 'on' ? 'On' : 'Off';
             } else {
@@ -202,7 +202,7 @@
             });
 
             // Initialize pressure property for button inputs
-            if (isButtonInput(input)) {
+            if (isButton(input)) {
                 inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
             }
 
@@ -295,7 +295,7 @@
             };
 
             // Update button mode for button inputs
-            if (isButtonInput(existingInput)) {
+            if (isButton(existingInput)) {
                 updates.buttonMode = result.buttonMode;
             }
 
@@ -319,7 +319,7 @@
                 if (inputDevice && result.color) {
                     // For toggle buttons, respect current state
                     let color = result.color;
-                    if (isButtonInput(existingInput) && existingInput.buttonMode === 'toggle') {
+                    if (isButton(existingInput) && existingInput.buttonMode === 'toggle') {
                         const state = inputStates[existingInput.id];
                         color = (state?.state === 'on') ? result.color : 'black';
                     }
@@ -356,7 +356,7 @@
     $effect(() => {
         // Initialize input states for all inputs
         for (const input of inputs) {
-            if (isButtonInput(input)) {
+            if (isButton(input)) {
                 // Initialize toggle buttons to 'off', momentary buttons have no initial state
                 if (input.buttonMode === 'toggle' && !inputStates[input.id]) {
                     inputStates[input.id] = { state: 'off' };
@@ -411,7 +411,7 @@
                             let color = input.color;
 
                             // For toggle buttons, respect the current toggle state
-                            if (isButtonInput(input) && input.buttonMode === 'toggle') {
+                            if (isButton(input) && input.buttonMode === 'toggle') {
                                 const state = inputStates[input.id];
                                 color = (state?.state === 'on') ? input.color : 'black';
                             }
@@ -438,7 +438,7 @@
                             let color = input.color;
 
                             // For toggle buttons, respect the current toggle state
-                            if (isButtonInput(input) && input.buttonMode === 'toggle') {
+                            if (isButton(input) && input.buttonMode === 'toggle') {
                                 const state = inputStates[input.id];
                                 color = (state?.state === 'on') ? input.color : 'black';
                             }
@@ -458,7 +458,7 @@
 
                     // For toggle buttons, respect the current toggle state
                     let color = input.color;
-                    if (isButtonInput(input) && input.buttonMode === 'toggle') {
+                    if (isButton(input) && input.buttonMode === 'toggle') {
                         const state = inputStates[input.id];
                         color = (state?.state === 'on') ? input.color : 'black';
                     }
@@ -516,7 +516,7 @@
                     });
 
                     // Initialize pressure property for button input
-                    if (isButtonInput(input)) {
+                    if (isButton(input)) {
                         inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
                     }
 
@@ -573,7 +573,7 @@
                     });
 
                     // Initialize pressure property for button input
-                    if (isButtonInput(input)) {
+                    if (isButton(input)) {
                         inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
                     }
 
@@ -613,21 +613,21 @@
 
                 // Update button color based on toggle state
                 updateButtonColorForToggleState(mapping, toggleState);
-            } else if (isButtonInput(mapping)) {
+            } else if (isButton(mapping)) {
                 // For momentary buttons, show pressed state
                 inputStates[mapping.id] = { state: 'pressed' };
             }
         });
 
         inputController.on('input-release', ({ mapping }) => {
-            if (isButtonInput(mapping) && mapping.buttonMode !== 'toggle') {
+            if (isButton(mapping) && mapping.buttonMode !== 'toggle') {
                 // For momentary buttons, clear pressed state
                 inputStates[mapping.id] = { state: 'released' };
             }
         });
 
         inputController.on('input-valuechange', ({ mapping, value }) => {
-            if (!isButtonInput(mapping)) {
+            if (!isButton(mapping)) {
                 // For knobs/sliders, store the value (0-1)
                 inputStates[mapping.id] = { value: Math.round(value * 100) };
             }

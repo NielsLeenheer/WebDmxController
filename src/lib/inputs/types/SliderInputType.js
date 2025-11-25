@@ -26,7 +26,7 @@ export class SliderInputType extends InputType {
 		];
 	}
 
-	isContinuous() {
+	hasValues() {
 		return true;
 	}
 }

@@ -3,7 +3,7 @@
     import { getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from '../../stores.svelte.js';
-    import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
+    import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
     import Preview from '../common/Preview.svelte';
 
     let {
@@ -166,7 +166,7 @@
                     <h4>Inputs</h4>
                     <div class="css-identifiers">
                         {#each inputs as input (input.id)}
-                            {#if isButtonInput(input)}
+                            {#if isButton(input)}
                                 <!-- Buttons show classes based on mode -->
                                 {#if input.buttonMode === 'toggle'}
                                     <!-- Toggle buttons show on and off classes -->

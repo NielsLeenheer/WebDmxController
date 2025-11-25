@@ -1,6 +1,6 @@
 <script>
 	import { paletteColorToHex } from '../../lib/inputs/colors.js';
-	import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
+	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
 	import DraggableCard from '../common/DraggableCard.svelte';
 	import Preview from '../common/Preview.svelte';
 	import editIcon from '../../assets/glyphs/edit.svg?raw';
