@@ -36,11 +36,14 @@ export function getProperties(controlValues, controls) {
 			properties[mapping.properties.y.name] = mapping.properties.y.convert(yValue);
 
 		} else if (control.type.type === 'rgb') {
-			// RGB/RGBA Color control
+			// RGB/RGBA Color control - output individual variables and color property
 			const r = controlValue.r ?? 0;
 			const g = controlValue.g ?? 0;
 			const b = controlValue.b ?? 0;
-			properties.color = `rgb(${r}, ${g}, ${b})`;
+			properties['--red'] = r;
+			properties['--green'] = g;
+			properties['--blue'] = b;
+			properties.color = `rgb(var(--red), var(--green), var(--blue))`;
 
 		} else if (control.type.type === 'toggle') {
 			// Toggle control

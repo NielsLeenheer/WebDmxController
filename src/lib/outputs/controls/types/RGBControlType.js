@@ -45,7 +45,7 @@ export class RGBControlType extends ControlType {
 	getValueMetadata(channel = null) {
 		const redMeta = {
 			type: 'range',
-			cssProperty: null,
+			cssProperty: '--red',
 			min: 0,
 			max: 255,
 			unit: '',
@@ -57,7 +57,7 @@ export class RGBControlType extends ControlType {
 
 		const greenMeta = {
 			type: 'range',
-			cssProperty: null,
+			cssProperty: '--green',
 			min: 0,
 			max: 255,
 			unit: '',
@@ -69,7 +69,7 @@ export class RGBControlType extends ControlType {
 
 		const blueMeta = {
 			type: 'range',
-			cssProperty: null,
+			cssProperty: '--blue',
 			min: 0,
 			max: 255,
 			unit: '',
