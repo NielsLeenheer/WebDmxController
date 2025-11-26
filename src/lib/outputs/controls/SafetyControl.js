@@ -22,4 +22,17 @@ export class SafetyControl extends ToggleControlType {
 			component: 'Safety'
 		};
 	}
+
+	getSamplingConfig() {
+		const meta = this.getValueMetadata();
+		return {
+			cssProperty: meta.cssProperty,
+			parse: (cssValue) => {
+				const value = cssValue.trim().toLowerCase();
+				const isOn = value === String(meta.on).toLowerCase() ||
+					value === String(meta.dmxOn);
+				return { [meta.component]: isOn ? meta.dmxOn : meta.dmxOff };
+			}
+		};
+	}
 }

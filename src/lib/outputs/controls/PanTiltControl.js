@@ -59,4 +59,35 @@ export class PanTiltControl extends XYPadControlType {
 			{ key: 'tilt', label: 'Tilt (Y)', channel: 'y' }
 		];
 	}
+
+	getSamplingConfig() {
+		const allMeta = this.getValueMetadata();
+		const panMeta = allMeta.channels[0];
+		const tiltMeta = allMeta.channels[1];
+
+		return {
+			properties: [
+				{
+					cssProperty: panMeta.cssProperty,
+					parse: (cssValue) => {
+						const match = cssValue.match(/(-?\d+(?:\.\d+)?)/);
+						const value = match ? parseFloat(match[1]) : 0;
+						const normalized = (value - panMeta.min) / (panMeta.max - panMeta.min);
+						const dmxValue = Math.round(normalized * (panMeta.dmxMax - panMeta.dmxMin) + panMeta.dmxMin);
+						return { [panMeta.component]: Math.max(panMeta.dmxMin, Math.min(panMeta.dmxMax, dmxValue)) };
+					}
+				},
+				{
+					cssProperty: tiltMeta.cssProperty,
+					parse: (cssValue) => {
+						const match = cssValue.match(/(-?\d+(?:\.\d+)?)/);
+						const value = match ? parseFloat(match[1]) : 0;
+						const normalized = (value - tiltMeta.min) / (tiltMeta.max - tiltMeta.min);
+						const dmxValue = Math.round(normalized * (tiltMeta.dmxMax - tiltMeta.dmxMin) + tiltMeta.dmxMin);
+						return { [tiltMeta.component]: Math.max(tiltMeta.dmxMin, Math.min(tiltMeta.dmxMax, dmxValue)) };
+					}
+				}
+			]
+		};
+	}
 }
