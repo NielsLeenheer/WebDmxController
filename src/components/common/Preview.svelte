@@ -343,7 +343,7 @@
         {@const sliderPosition = value * 0.7} <!-- Adjust for 30% handle size: 0% -> 0%, 100% -> 70% -->
         {@const keyChar = data.inputControlId?.startsWith('key-') ? extractKeyChar(data.inputControlId) : null}
         
-        {#if inputType === 'button' || inputType === 'pad'}
+        {#if inputType === 'button' || inputType === 'pad' || inputType === 'thingy'}
             {#if !euler}
                 <!-- Non-3D Button/Pad: colored or gray square -->
                 <div class="preview-input button-preview" style="background: {inputColor};">
@@ -353,7 +353,7 @@
                 </div>
                 
                 <!-- Orientation indicator for Thingy:52 (when not in 3D mode) -->
-                {#if data.inputControlId === 'thingy'}
+                {#if inputType === 'thingy'}
                     <div class="orientation-indicator"></div>
                 {/if}
             {/if}
