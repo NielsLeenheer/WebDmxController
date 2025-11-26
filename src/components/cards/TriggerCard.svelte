@@ -60,7 +60,7 @@
 			const channels = controlDef.type.getChannels();
 			const channel = channels.find(ch => ch.key === trigger.controlChannel);
 			if (channel) {
-				return `${trigger.controlName} (${channel.label})`;
+				return `${trigger.controlName} → ${channel.label}`;
 			}
 		}
 		return trigger.controlName;
