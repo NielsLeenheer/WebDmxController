@@ -3,10 +3,10 @@
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import TriggerCard from '../cards/TriggerCard.svelte';
     import Button from '../common/Button.svelte';
-    import AddManualTriggerDialog from '../dialogs/AddManualTriggerDialog.svelte';
+    import AddActionTriggerDialog from '../dialogs/AddActionTriggerDialog.svelte';
     import AddAutomaticTriggerDialog from '../dialogs/AddAutomaticTriggerDialog.svelte';
     import AddValueTriggerDialog from '../dialogs/AddValueTriggerDialog.svelte';
-    import EditManualTriggerDialog from '../dialogs/EditManualTriggerDialog.svelte';
+    import EditActionTriggerDialog from '../dialogs/EditActionTriggerDialog.svelte';
     import EditAutomaticTriggerDialog from '../dialogs/EditAutomaticTriggerDialog.svelte';
     import EditValueTriggerDialog from '../dialogs/EditValueTriggerDialog.svelte';
 
@@ -22,10 +22,10 @@
     let valueCapableInputs = $derived(inputLibrary.getValueInputs());
 
     // Dialog references
-    let addManualTriggerDialog;
+    let addActionTriggerDialog;
     let addAutomaticTriggerDialog;
     let addValueTriggerDialog;
-    let editManualTriggerDialog;
+    let editActionTriggerDialog;
     let editAutomaticTriggerDialog;
     let editValueTriggerDialog;
 
@@ -38,8 +38,8 @@
         orientation: 'vertical'
     });
 
-    async function openManualTriggerDialog() {
-        const result = await addManualTriggerDialog.open(availableInputs, availableAnimations, devices);
+    async function openActionTriggerDialog() {
+        const result = await addActionTriggerDialog.open(availableInputs, availableAnimations, devices);
 
         if (!result) return; // User cancelled
 
@@ -149,8 +149,8 @@
                 }
             });
         } else {
-            // Manual trigger
-            const result = await editManualTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
+            // Action trigger
+            const result = await editActionTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
 
             if (!result) return; // User cancelled
 
@@ -203,18 +203,11 @@
 <div class="triggers-view">
     <div class="add-trigger-section">
         <Button
-            onclick={openManualTriggerDialog}
+            onclick={openActionTriggerDialog}
             variant="secondary"
             disabled={availableInputs.length === 0 || devices.length === 0}
         >
-            Add Manual Trigger
-        </Button>
-        <Button
-            onclick={openAutomaticTriggerDialog}
-            variant="secondary"
-            disabled={availableAnimations.length === 0 || devices.length === 0}
-        >
-            Add Automatic Trigger
+            Add Action Trigger
         </Button>
         <Button
             onclick={openValueTriggerDialog}
@@ -222,6 +215,13 @@
             disabled={valueCapableInputs.length === 0 || devices.length === 0}
         >
             Add Value Trigger
+        </Button>
+        <Button
+            onclick={openAutomaticTriggerDialog}
+            variant="secondary"
+            disabled={availableAnimations.length === 0 || devices.length === 0}
+        >
+            Add Automatic Trigger
         </Button>
     </div>
 
@@ -253,8 +253,8 @@
 
 
 <!-- Dialog Components -->
-<AddManualTriggerDialog
-    bind:this={addManualTriggerDialog}
+<AddActionTriggerDialog
+    bind:this={addActionTriggerDialog}
 />
 
 <AddAutomaticTriggerDialog
@@ -265,8 +265,8 @@
     bind:this={addValueTriggerDialog}
 />
 
-<EditManualTriggerDialog
-    bind:this={editManualTriggerDialog}
+<EditActionTriggerDialog
+    bind:this={editActionTriggerDialog}
 />
 
 <EditAutomaticTriggerDialog

@@ -7,10 +7,10 @@
 	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
-	 * EditManualTriggerDialog - Promise-based dialog for editing manual triggers
+	 * EditActionTriggerDialog - Promise-based dialog for editing action triggers
 	 *
 	 * Usage:
-	 *   const result = await editManualTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
+	 *   const result = await editActionTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
 	 *   if (result) {
 	 *     if (result.delete) {
 	 *       // Handle delete
@@ -215,8 +215,8 @@
 </script>
 
 {#if editingTrigger}
-<Dialog bind:dialogRef={dialogRef} title="Trigger" onclose={handleCancel}>
-	<form id="edit-manual-trigger-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
+<Dialog bind:dialogRef={dialogRef} title="Edit Action Trigger" onclose={handleCancel}>
+	<form id="edit-action-trigger-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
 		<div class="trigger-columns">
 			<!-- Column 1: Trigger Configuration -->
 			<div class="trigger-column">
@@ -335,7 +335,7 @@
 
 	{#snippet buttons()}
 		<Button onclick={handleCancel} variant="secondary">Cancel</Button>
-		<Button type="submit" form="edit-manual-trigger-form" variant="primary">Save</Button>
+		<Button type="submit" form="edit-action-trigger-form" variant="primary">Save</Button>
 	{/snippet}
 </Dialog>
 {/if}

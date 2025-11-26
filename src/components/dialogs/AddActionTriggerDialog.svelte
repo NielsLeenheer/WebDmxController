@@ -6,10 +6,10 @@
 	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
 
 	/**
-	 * AddManualTriggerDialog - Promise-based dialog for creating manual triggers
+	 * AddActionTriggerDialog - Promise-based dialog for creating action triggers
 	 *
 	 * Usage:
-	 *   const result = await addManualTriggerDialog.open(availableInputs, availableAnimations, devices);
+	 *   const result = await addActionTriggerDialog.open(availableInputs, availableAnimations, devices);
 	 *   if (result) {
 	 *     // Create trigger with result data
 	 *   }
@@ -195,8 +195,8 @@
 	}
 </script>
 
-<Dialog bind:dialogRef={dialogRef} title="Create Manual Trigger" onclose={handleCancel}>
-	<form id="manual-trigger-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
+<Dialog bind:dialogRef={dialogRef} title="Create Action Trigger" onclose={handleCancel}>
+	<form id="action-trigger-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
 		<div class="trigger-columns">
 			<!-- Column 1: Trigger Configuration -->
 			<div class="trigger-column">
@@ -306,7 +306,7 @@
 
 	{#snippet buttons()}
 		<Button type="button" onclick={handleCancel} variant="secondary">Cancel</Button>
-		<Button type="submit" form="manual-trigger-form" variant="primary">Create</Button>
+		<Button type="submit" form="action-trigger-form" variant="primary">Create</Button>
 	{/snippet}
 </Dialog>
 
