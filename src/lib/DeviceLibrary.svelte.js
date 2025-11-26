@@ -36,7 +36,7 @@ export class DeviceLibrary extends Library {
 	 */
 	create(type, startChannel, name = '', linkedTo = null, cssId = null, syncedControls = null, mirrorPan = false) {
 		const deviceType = DEVICE_TYPES[type];
-		const deviceName = name || `${deviceType.name} ${this.items.length + 1}`;
+		const deviceName = name || this._generateUniqueName(deviceType.name);
 
 		const device = {
 			// id and order will be auto-set by base class
@@ -52,6 +52,31 @@ export class DeviceLibrary extends Library {
 		};
 
 		return this.add(device);
+	}
+
+	/**
+	 * Generate a unique name for a device
+	 * First device of a type gets the base name (e.g., "RGB Light")
+	 * Subsequent devices get numbered names (e.g., "RGB Light 2", "RGB Light 3")
+	 * @param {string} baseName - Base name from device type
+	 * @returns {string} Unique device name
+	 */
+	_generateUniqueName(baseName) {
+		// Get all existing names
+		const existingNames = new Set(this.items.map(d => d.name));
+
+		// If base name is available, use it
+		if (!existingNames.has(baseName)) {
+			return baseName;
+		}
+
+		// Find the next available number
+		let number = 2;
+		while (existingNames.has(`${baseName} ${number}`)) {
+			number++;
+		}
+
+		return `${baseName} ${number}`;
 	}
 
 	/**

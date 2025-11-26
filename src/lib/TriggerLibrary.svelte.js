@@ -11,7 +11,7 @@
  */
 
 import { Library } from './Library.svelte.js';
-import { generateCSSTriggers, generateValueTriggerCSS } from './triggers/css.js';
+import { generateCSSTriggers, generateValueTriggersCSS } from './triggers/css.js';
 
 export class TriggerLibrary extends Library {
 	constructor() {
@@ -110,12 +110,14 @@ export class TriggerLibrary extends Library {
 			if (css) cssRules.push(css);
 		}
 
-		// Generate CSS for value-based triggers
-		for (const trigger of valueTriggers) {
-			const device = devices.find(d => d.id === trigger.deviceId);
+		// Generate CSS for value-based triggers (grouped by device)
+		const valueDeviceIds = new Set(valueTriggers.map(t => t.deviceId).filter(id => id));
+		for (const deviceId of valueDeviceIds) {
+			const device = devices.find(d => d.id === deviceId);
 			if (!device) continue;
 
-			const css = generateValueTriggerCSS(trigger, device, inputLibrary);
+			const deviceValueTriggers = valueTriggers.filter(t => t.deviceId === deviceId);
+			const css = generateValueTriggersCSS(deviceValueTriggers, device, inputLibrary);
 			if (css) cssRules.push(css);
 		}
 

@@ -170,37 +170,61 @@ ${props}
 }
 
 /**
- * Generate CSS for a value-based trigger
- * Maps an input value to a device control continuously
+ * Generate CSS for multiple value-based triggers on a single device
+ * Combines all triggers into a single CSS rule block
  *
- * @param {Object} trigger - Value trigger object
+ * @param {Array} triggers - Array of value trigger objects for this device
  * @param {Object} device - Target device object
  * @param {Object} inputLibrary - InputLibrary instance
- * @returns {string} CSS rule for the value mapping
+ * @returns {string} Combined CSS rule for all value mappings
  */
-export function generateValueTriggerCSS(trigger, device, inputLibrary) {
-	if (!trigger || !device || !inputLibrary) return '';
-	if (trigger.triggerType !== 'value') return '';
+export function generateValueTriggersCSS(triggers, device, inputLibrary) {
+	if (!triggers || !device || !inputLibrary) return '';
 
-	// Get input and its exported values
-	const input = inputLibrary.get(trigger.inputId);
-	if (!input) return '';
-
-	const exportedValues = getInputExportedValues(input);
-	const inputValue = exportedValues.find(v => v.key === trigger.inputValueKey);
-	if (!inputValue || !inputValue.cssProperty) return '';
-
-	// Get device type and control
 	const deviceType = DEVICE_TYPES[device.type];
 	if (!deviceType) return '';
 
+	// Collect all CSS property/value pairs
+	const properties = [];
+
+	for (const trigger of triggers) {
+		if (trigger.triggerType !== 'value') continue;
+
+		const propValue = _generateValueTriggerProperty(trigger, device, deviceType, inputLibrary);
+		if (propValue) {
+			properties.push(propValue);
+		}
+	}
+
+	if (properties.length === 0) return '';
+
+	// Build combined CSS rule
+	const selector = `#${device.cssId}`;
+	const props = properties.map(p => `  ${p.property}: ${p.value};`).join('\n');
+
+	return `${selector} {\n${props}\n}`;
+}
+
+/**
+ * Generate CSS property/value for a single value trigger
+ * @private
+ */
+function _generateValueTriggerProperty(trigger, device, deviceType, inputLibrary) {
+	// Get input and its exported values
+	const input = inputLibrary.get(trigger.inputId);
+	if (!input) return null;
+
+	const exportedValues = getInputExportedValues(input);
+	const inputValue = exportedValues.find(v => v.key === trigger.inputValueKey);
+	if (!inputValue || !inputValue.cssProperty) return null;
+
 	const controlDef = deviceType.controls.find(c => c.name === trigger.controlName);
-	if (!controlDef) return '';
+	if (!controlDef) return null;
 
 	// Get control metadata for the specific channel (or single-channel control)
 	// Metadata is now defined in the control class itself
 	const controlMeta = controlDef.type.getValueMetadata(trigger.controlChannel);
-	if (!controlMeta) return '';
+	if (!controlMeta) return null;
 
 	// Build the CSS property and value
 	const inputCssProperty = inputValue.cssProperty;
@@ -209,7 +233,7 @@ export function generateValueTriggerCSS(trigger, device, inputLibrary) {
 	if (!outputCssProperty) {
 		// Control doesn't have a direct CSS property (e.g., individual RGB channels)
 		// Skip for now - could be extended to support rgb() building
-		return '';
+		return null;
 	}
 
 	// Determine input and output ranges (use overrides if provided)
@@ -236,12 +260,7 @@ export function generateValueTriggerCSS(trigger, device, inputLibrary) {
 		outputUnit
 	);
 
-	// Build the selector - value triggers are always active
-	const selector = `#${device.cssId}`;
-
-	return `${selector} {
-  ${outputCssProperty}: ${cssValue};
-}`;
+	return { property: outputCssProperty, value: cssValue };
 }
 
 /**

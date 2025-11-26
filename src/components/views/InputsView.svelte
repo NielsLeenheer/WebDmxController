@@ -517,6 +517,13 @@
             }
         });
 
+        // Clear euler angles when Thingy devices disconnect
+        inputController.on('deviceremoved', (device) => {
+            if (device.type === 'bluetooth' && thingyEulerAngles[device.id]) {
+                delete thingyEulerAngles[device.id];
+            }
+        });
+
         // Now process already-connected devices
         // Track Euler angles and assign colors for any already-connected Thingy:52 devices
         const devices = inputController.getInputDevices();
