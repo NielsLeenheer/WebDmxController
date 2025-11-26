@@ -55,8 +55,8 @@ export class PanTilt16Control extends XYPad16ControlType {
 
 	getChannels() {
 		return [
-			{ key: 'pan', label: 'Pan (X)', channel: 'x' },
-			{ key: 'tilt', label: 'Tilt (Y)', channel: 'y' }
+			{ key: 'pan', label: 'Pan', channel: 'x' },
+			{ key: 'tilt', label: 'Tilt', channel: 'y' }
 		];
 	}
 
