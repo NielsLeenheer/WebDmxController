@@ -246,6 +246,7 @@ export function generateValueTriggerCSS(trigger, device, inputLibrary) {
 
 /**
  * Generate a CSS calc() expression for value conversion
+ * Uses the general linear transformation: output = (input - inputMin) / inputRange * outputRange + outputMin
  * @private
  */
 function _generateCalcExpression(
@@ -259,96 +260,47 @@ function _generateCalcExpression(
 ) {
 	const inputRange = inputMax - inputMin;
 	const outputRange = outputMax - outputMin;
+	const scale = outputRange / inputRange;
 
 	// Special case: direct mapping when ranges and units match
 	if (inputMin === outputMin && inputMax === outputMax && inputUnit === outputUnit) {
 		return `var(${inputProperty})`;
 	}
 
-	// Special case: percentage input to different percentage output
-	if (inputUnit === '%' && outputUnit === '%' && inputMin === 0 && inputMax === 100) {
-		// Input is 0-100%
-		if (outputMin === 0 && outputMax === 100) {
-			// Direct mapping
-			return `var(${inputProperty})`;
-		}
-		if (outputMin === -50 && outputMax === 50) {
-			// 0-100% to -50% to 50%: subtract 50
-			return `calc(var(${inputProperty}) - 50%)`;
-		}
-		// General: scale and offset
-		const scale = outputRange / 100;
-		if (scale === 1) {
-			return `calc(var(${inputProperty}) + ${outputMin}${outputUnit})`;
-		}
-		return `calc(var(${inputProperty}) * ${scale} + ${outputMin}${outputUnit})`;
-	}
-
-	// Special case: degree input to percentage output
-	if (inputUnit === 'deg' && outputUnit === '%') {
-		// e.g., -180deg to 180deg → 0% to 100%
-		// Formula: (value - inputMin) / inputRange * outputRange + outputMin
-		// With CSS: calc((var(--input) - inputMin) / inputRange * outputRange + outputMin)
-		if (inputMin === -180 && inputMax === 180 && outputMin === 0 && outputMax === 100) {
-			// (val + 180deg) / 360deg * 100%
-			return `calc((var(${inputProperty}) + 180deg) / 360deg * 100%)`;
-		}
-		if (inputMin === -180 && inputMax === 180 && outputMin === -50 && outputMax === 50) {
-			// (val + 180deg) / 360deg * 100% - 50%
-			return `calc((var(${inputProperty}) + 180deg) / 360deg * 100% - 50%)`;
-		}
-		if (inputMin === -90 && inputMax === 90 && outputMin === 0 && outputMax === 100) {
-			// Tilt: (val + 90deg) / 180deg * 100%
-			return `calc((var(${inputProperty}) + 90deg) / 180deg * 100%)`;
-		}
-	}
-
-	// Special case: percentage input to unitless output (0-100% to 0-1)
-	if (inputUnit === '%' && outputUnit === '' && inputMin === 0 && inputMax === 100) {
-		if (outputMin === 0 && outputMax === 1) {
-			// 0-100% to 0-1: divide by 100
-			return `calc(var(${inputProperty}) / 100%)`;
-		}
-		if (outputMin === 0 && outputMax === 255) {
-			// 0-100% to 0-255
-			return `calc(var(${inputProperty}) / 100% * 255)`;
-		}
-	}
-
-	// General case: normalize input to 0-1, then scale to output
-	// CSS calc has limitations with mixed units, so we try to produce valid CSS
-
-	// If units are different, we need careful handling
-	if (inputUnit !== outputUnit) {
-		// This is complex - try a reasonable approximation
-		// Assume input comes as a numeric value with unit
-		if (inputUnit === '' && outputUnit === '%') {
-			// Unitless to percentage
-			const scale = outputRange / inputRange * 100;
-			const offset = outputMin - (inputMin / inputRange * outputRange);
-			return `calc(var(${inputProperty}) * ${scale / inputRange}% + ${offset}%)`;
-		}
-	}
-
 	// Same unit - straightforward linear transformation
-	// y = (x - inputMin) / inputRange * outputRange + outputMin
-	const scale = outputRange / inputRange;
-
-	if (inputMin === 0 && outputMin === 0) {
-		// Simple scaling
-		if (scale === 1) {
-			return `var(${inputProperty})`;
+	if (inputUnit === outputUnit) {
+		if (inputMin === 0 && outputMin === 0) {
+			return scale === 1 ? `var(${inputProperty})` : `calc(var(${inputProperty}) * ${scale})`;
 		}
-		return `calc(var(${inputProperty}) * ${scale})`;
+		const offset = outputMin - (inputMin * scale);
+		if (offset === 0) {
+			return `calc(var(${inputProperty}) * ${scale})`;
+		}
+		if (scale === 1) {
+			return `calc(var(${inputProperty}) + ${offset}${outputUnit})`;
+		}
+		return `calc(var(${inputProperty}) * ${scale} + ${offset}${outputUnit})`;
 	}
 
-	// Full transformation
-	const offset = outputMin - (inputMin * scale);
-	if (offset === 0) {
-		return `calc(var(${inputProperty}) * ${scale})`;
+	// Cross-unit conversion: normalize input to 0-1, then scale to output
+	// Formula: (input - inputMin) / inputRange * outputRange + outputMin
+	// CSS: calc((var(--input) + offsetDeg) / rangeDeg * outputRange + outputMin)
+
+	const inputOffsetVal = -inputMin;
+	const inputOffsetStr = inputOffsetVal !== 0 ? ` + ${inputOffsetVal}${inputUnit}` : '';
+
+	// Build the normalization part: (var(--input) + offset) / range
+	// This produces a unitless 0-1 value
+	const normalized = `(var(${inputProperty})${inputOffsetStr}) / ${inputRange}${inputUnit}`;
+
+	// Scale and offset to output range
+	if (outputMin === 0) {
+		if (outputRange === 1 && outputUnit === '') {
+			// Output is 0-1 unitless
+			return `calc(${normalized})`;
+		}
+		return `calc(${normalized} * ${outputRange}${outputUnit})`;
 	}
-	if (scale === 1) {
-		return `calc(var(${inputProperty}) + ${offset}${outputUnit})`;
-	}
-	return `calc(var(${inputProperty}) * ${scale} + ${offset}${outputUnit})`;
+
+	return `calc(${normalized} * ${outputRange}${outputUnit} + ${outputMin}${outputUnit})`;
 }
