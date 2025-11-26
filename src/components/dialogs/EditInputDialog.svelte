@@ -71,8 +71,8 @@
 
 	function isColorCapableControl(controlId) {
 		if (!controlId || typeof controlId !== 'string') return false;
-		// Thingy:52 button uses 'button' (not 'button-'), so check exact match too
-		if (controlId === 'button') return true;
+		// Thingy:52 uses 'thingy' controlId (single input with button + sensor functionality)
+		if (controlId === 'thingy') return true;
 		const COLOR_CAPABLE_PREFIXES = ['button-', 'note-'];
 		return COLOR_CAPABLE_PREFIXES.some(prefix => controlId.startsWith(prefix));
 	}

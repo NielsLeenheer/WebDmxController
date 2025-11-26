@@ -61,8 +61,8 @@
 
     function isColorCapableControl(controlId) {
         if (!controlId || typeof controlId !== 'string') return false;
-        // Thingy:52 button uses 'button' (not 'button-'), so check exact match too
-        if (controlId === 'button') return true;
+        // Thingy:52 uses 'thingy' controlId (single input with button + sensor functionality)
+        if (controlId === 'thingy') return true;
         return COLOR_CAPABLE_PREFIXES.some(prefix => controlId.startsWith(prefix));
     }
 
@@ -485,52 +485,24 @@
         // Apply colors when devices connect
         inputController.on('deviceadded', (device) => {
             // Track Euler angles for Thingy:52 devices
-            if (device.type === 'bluetooth') {
-                if (device.thingyDevice) {
-                    device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
-                        thingyEulerAngles[device.id] = { roll, pitch, yaw };
-                    });
-                }
+            if (device.type === 'bluetooth' && device.thingyDevice) {
+                device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
+                    thingyEulerAngles[device.id] = { roll, pitch, yaw };
+                });
 
-                // Auto-create button input for Thingy:52 (it always has exactly one button)
-                const controlId = 'button';
-                const existing = inputs.find(
-                    input => input.inputDeviceId === device.id && input.inputControlId === controlId
+                // Assign color to thingy input if it doesn't have one
+                // The input is created by the controller with controlId 'thingy'
+                const thingyInput = inputs.find(
+                    input => input.inputDeviceId === device.id && input.inputControlId === 'thingy'
                 );
 
-                if (!existing) {
-                    const name = formatInputName(device.name || device.id, controlId);
-                    // Thingy:52 button supports RGB color
-                    const colorSupport = 'rgb';
-                    const color = getNextAvailableColor(device.id, colorSupport);
+                if (thingyInput && !thingyInput.color) {
+                    const color = getNextAvailableColor(device.id, 'rgb');
+                    inputLibrary.update(thingyInput.id, { color });
+                    registerColorUsage(device.id, 'thingy', color);
 
-                    const input = inputLibrary.create({
-                        name,
-                        inputDeviceId: device.id,
-                        inputControlId: controlId,
-                        inputDeviceName: device.name || device.id,
-                        type: 'button',
-                        colorSupport: 'rgb',
-                        friendlyName: null,
-                        color: color
-                    });
-
-                    // Initialize pressure property for button input
-                    if (isButton(input)) {
-                        inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
-                    }
-
-                    if (colorSupport && colorSupport !== 'none') {
-                        registerColorUsage(device.id, controlId, input.color);
-                    }
-                } else if (!existing.color) {
-                    // Input exists but has no color assigned - assign one now
-                    const colorSupport = shouldAssignColorSupport(device, controlId);
-                    if (colorSupport && colorSupport !== 'none') {
-                        const color = getNextAvailableColor(device.id, colorSupport);
-                        inputLibrary.update(existing.id, { color });
-                        registerColorUsage(device.id, controlId, color);
-                    }
+                    // Initialize pressure property for thingy input (it has button functionality)
+                    inputController.customPropertyManager.setProperty(`${toCSSIdentifier(thingyInput.name)}-pressure`, '0.0%');
                 }
             }
 
@@ -546,54 +518,28 @@
         });
 
         // Now process already-connected devices
-        // Auto-create button inputs for any already-connected Thingy:52 devices
+        // Track Euler angles and assign colors for any already-connected Thingy:52 devices
         const devices = inputController.getInputDevices();
         for (const device of devices) {
             if (device.type === 'bluetooth' && device.thingyDevice) {
-                // Auto-create button input for Thingy:52 (it always has exactly one button)
-                const controlId = 'button';
-                const existing = inputs.find(
-                    input => input.inputDeviceId === device.id && input.inputControlId === controlId
-                );
-
-                if (!existing) {
-                    const name = formatInputName(device.name || device.id, controlId);
-                    // Thingy:52 button supports RGB color
-                    const colorSupport = 'rgb';
-
-                    const input = inputLibrary.create({
-                        name,
-                        inputDeviceId: device.id,
-                        inputControlId: controlId,
-                        inputDeviceName: device.name || device.id,
-                        type: 'button',
-                        colorSupport: 'rgb',
-                        friendlyName: null,
-                        color: getNextAvailableColor(device.id, colorSupport)
-                    });
-
-                    // Initialize pressure property for button input
-                    if (isButton(input)) {
-                        inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
-                    }
-
-                    if (colorSupport && colorSupport !== 'none') {
-                        registerColorUsage(device.id, controlId, input.color);
-                    }
-                } else if (!existing.color) {
-                    // Input exists but has no color assigned - assign one now
-                    const colorSupport = shouldAssignColorSupport(device, controlId);
-                    if (colorSupport && colorSupport !== 'none') {
-                        const color = getNextAvailableColor(device.id, colorSupport);
-                        inputLibrary.update(existing.id, { color });
-                        registerColorUsage(device.id, controlId, color);
-                    }
-                }
-
                 // Track Euler angles
                 device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
                     thingyEulerAngles[device.id] = { roll, pitch, yaw };
                 });
+
+                // Assign color to thingy input if it doesn't have one
+                const thingyInput = inputs.find(
+                    input => input.inputDeviceId === device.id && input.inputControlId === 'thingy'
+                );
+
+                if (thingyInput && !thingyInput.color) {
+                    const color = getNextAvailableColor(device.id, 'rgb');
+                    inputLibrary.update(thingyInput.id, { color });
+                    registerColorUsage(device.id, 'thingy', color);
+
+                    // Initialize pressure property for thingy input (it has button functionality)
+                    inputController.customPropertyManager.setProperty(`${toCSSIdentifier(thingyInput.name)}-pressure`, '0.0%');
+                }
             }
         }
 

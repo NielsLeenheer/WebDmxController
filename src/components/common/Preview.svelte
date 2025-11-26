@@ -237,8 +237,8 @@
         {/each}
     {:else}
         <!-- Non-3D rendering (original code) -->
-        <!-- Dark gray background (for devices/controls, and buttons/pads - not for knobs/sliders) -->
-        {#if type !== 'input' || (type === 'input' && (data.type === 'button' || data.type === 'pad' || !data.type))}
+        <!-- Dark gray background (for devices/controls, and buttons/pads/thingy - not for knobs/sliders) -->
+        {#if type !== 'input' || (type === 'input' && (data.type === 'button' || data.type === 'pad' || data.type === 'thingy' || !data.type))}
             <div class="preview-base"></div>
         {/if}
 
