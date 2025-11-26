@@ -15,10 +15,13 @@ import { CONTROL_CSS_MAPPING } from '../css/mapping/controlToCssMapping.js';
  *
  * @param {Object} controlValues - Control values object { "Color": { r, g, b }, "Dimmer": 255, ... }
  * @param {Array} controls - Array of control definitions from device type
+ * @param {Object} options - Optional settings
+ * @param {boolean} options.includeColorProperty - Include combined color property (only for device defaults)
  * @returns {Object} CSS properties object
  */
-export function getProperties(controlValues, controls) {
+export function getProperties(controlValues, controls, options = {}) {
 	const properties = {};
+	const { includeColorProperty = false } = options;
 
 	for (const control of controls) {
 		const controlValue = controlValues[control.name];
@@ -36,14 +39,17 @@ export function getProperties(controlValues, controls) {
 			properties[mapping.properties.y.name] = mapping.properties.y.convert(yValue);
 
 		} else if (control.type.type === 'rgb') {
-			// RGB/RGBA Color control - output individual variables and color property
+			// RGB/RGBA Color control - output individual variables
 			const r = controlValue.r ?? 0;
 			const g = controlValue.g ?? 0;
 			const b = controlValue.b ?? 0;
 			properties['--red'] = r;
 			properties['--green'] = g;
 			properties['--blue'] = b;
-			properties.color = `rgb(var(--red), var(--green), var(--blue))`;
+			// Only include combined color property for device defaults
+			if (includeColorProperty) {
+				properties.color = `rgb(var(--red), var(--green), var(--blue))`;
+			}
 
 		} else if (control.type.type === 'toggle') {
 			// Toggle control
@@ -84,8 +90,8 @@ export function generateCSSBlock(device) {
 	// Get control values from device (NEW: control values object, not DMX array)
 	const controlValues = device.defaultValues || {};
 
-	// Generate CSS properties from control values
-	const properties = getProperties(controlValues, deviceType.controls);
+	// Generate CSS properties from control values (include color property for device defaults)
+	const properties = getProperties(controlValues, deviceType.controls, { includeColorProperty: true });
 
 	if (Object.keys(properties).length === 0) return null;
 
