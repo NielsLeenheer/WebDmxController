@@ -2,16 +2,38 @@
  * CSS Generation for Device Outputs
  *
  * Functions for converting control values to CSS properties
- * NEW ARCHITECTURE: Works with control-based values instead of DMX arrays
+ * Uses control metadata (getValueMetadata) for property names and value conversion
  */
 
 import { DEVICE_TYPES } from './devices.js';
-import { CONTROL_CSS_MAPPING } from '../css/mapping/controlToCssMapping.js';
+
+/**
+ * Convert a DMX value to CSS value using control metadata
+ * @param {number} dmxValue - DMX value (0-255 or 0-65535)
+ * @param {Object} meta - Value metadata from getValueMetadata()
+ * @returns {string} CSS value with unit
+ */
+function dmxToCssValue(dmxValue, meta) {
+	const dmxRange = meta.dmxMax - meta.dmxMin;
+	const cssRange = meta.max - meta.min;
+	const normalized = (dmxValue - meta.dmxMin) / dmxRange;
+	const cssValue = normalized * cssRange + meta.min;
+
+	// Format based on unit
+	if (meta.unit === '%') {
+		return `${cssValue.toFixed(1)}%`;
+	} else if (meta.unit === '') {
+		// Unitless - check if it should be integer or decimal
+		if (Number.isInteger(meta.min) && Number.isInteger(meta.max) && meta.max > 1) {
+			return Math.round(cssValue).toString();
+		}
+		return cssValue.toFixed(3);
+	}
+	return cssValue.toString();
+}
 
 /**
  * Get CSS properties from control values
- *
- * NEW: Accepts control values object instead of DMX array
  *
  * @param {Object} controlValues - Control values object { "Color": { r, g, b }, "Dimmer": 255, ... }
  * @param {Array} controls - Array of control definitions from device type
@@ -27,25 +49,36 @@ export function getProperties(controlValues, controls, options = {}) {
 		const controlValue = controlValues[control.name];
 		if (controlValue === undefined) continue;
 
-		const mapping = CONTROL_CSS_MAPPING[control.type.type];
-		if (!mapping) continue;
+		const meta = control.type.getValueMetadata?.();
+		if (!meta) continue;
 
 		if (control.type.type === 'xypad') {
-			// XY Pad control (e.g., Pan/Tilt)
+			// XY Pad control (e.g., Pan/Tilt) - has multiple channels
 			const xValue = controlValue.x ?? 128;
 			const yValue = controlValue.y ?? 128;
 
-			properties[mapping.properties.x.name] = mapping.properties.x.convert(xValue);
-			properties[mapping.properties.y.name] = mapping.properties.y.convert(yValue);
+			if (meta.channels) {
+				const xMeta = meta.channels[0];
+				const yMeta = meta.channels[1];
+				properties[xMeta.cssProperty] = dmxToCssValue(xValue, xMeta);
+				properties[yMeta.cssProperty] = dmxToCssValue(yValue, yMeta);
+			}
 
 		} else if (control.type.type === 'rgb') {
-			// RGB/RGBA Color control - output individual variables
+			// RGB Color control - has multiple channels
 			const r = controlValue.r ?? 0;
 			const g = controlValue.g ?? 0;
 			const b = controlValue.b ?? 0;
-			properties['--red'] = r;
-			properties['--green'] = g;
-			properties['--blue'] = b;
+
+			if (meta.channels) {
+				const rMeta = meta.channels[0];
+				const gMeta = meta.channels[1];
+				const bMeta = meta.channels[2];
+				properties[rMeta.cssProperty] = dmxToCssValue(r, rMeta);
+				properties[gMeta.cssProperty] = dmxToCssValue(g, gMeta);
+				properties[bMeta.cssProperty] = dmxToCssValue(b, bMeta);
+			}
+
 			// Only include combined color property for device defaults
 			if (includeColorProperty) {
 				properties.color = `rgb(var(--red), var(--green), var(--blue))`;
@@ -54,18 +87,13 @@ export function getProperties(controlValues, controls, options = {}) {
 		} else if (control.type.type === 'toggle') {
 			// Toggle control
 			const value = controlValue ?? control.type.offValue;
-
-			const propName = mapping.properties.value.getName(control.name);
-			const propValue = mapping.properties.value.convert(value, control.name, control);
-			properties[propName] = propValue;
+			const isOn = value >= meta.dmxOn;
+			properties[meta.cssProperty] = isOn ? meta.on : meta.off;
 
 		} else if (control.type.type === 'slider') {
 			// Slider control (Dimmer, Intensity, White, Amber, etc.)
 			const value = controlValue ?? 0;
-
-			const propName = mapping.properties.value.getName(control.name);
-			const propValue = mapping.properties.value.convert(value, control.name);
-			properties[propName] = propValue;
+			properties[meta.cssProperty] = dmxToCssValue(value, meta);
 		}
 	}
 
