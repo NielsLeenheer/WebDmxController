@@ -34,12 +34,14 @@ export class FlameControl extends SliderControlType {
 		return {
 			type: 'range',
 			cssProperty: '--flame',
+			sample: true,
 			min: 0,
 			max: 100,
 			unit: '%',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: 'Flame intensity (0% to 100%)'
+			description: 'Flame intensity (0% to 100%)',
+			component: 'Flame'
 		};
 	}
 }

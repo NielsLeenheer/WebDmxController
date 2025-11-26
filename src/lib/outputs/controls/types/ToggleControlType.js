@@ -49,14 +49,33 @@ export class ToggleControlType extends ControlType {
 	 */
 	getValueMetadata(channel = null) {
 		// Generic toggle - derive CSS property from control id
+		const cssProperty = `--${this.id.replace(/\s+/g, '-')}`;
 		return {
 			type: 'toggle',
-			cssProperty: `--${this.id.replace(/\s+/g, '-')}`,
+			cssProperty,
+			sample: true,
 			on: this.onValue,
 			off: this.offValue,
 			dmxOn: this.onValue,
 			dmxOff: this.offValue,
-			description: `${this.name} (on/off)`
+			description: `${this.name} (on/off)`,
+			component: this.name
+		};
+	}
+
+	getSamplingConfig() {
+		const meta = this.getValueMetadata();
+		if (!meta.sample) return null;
+
+		return {
+			cssProperty: meta.cssProperty,
+			parse: (cssValue) => {
+				const value = cssValue.trim().toLowerCase();
+				// Check if it matches the "on" value (could be string like "probably" or number)
+				const isOn = value === String(meta.on).toLowerCase() ||
+					value === String(meta.dmxOn);
+				return { [meta.component]: isOn ? meta.dmxOn : meta.dmxOff };
+			}
 		};
 	}
 }

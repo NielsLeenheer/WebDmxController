@@ -13,25 +13,29 @@ export class PanTiltControl extends XYPadControlType {
 		const panMeta = {
 			type: 'range',
 			cssProperty: '--pan',
+			sample: true,
 			min: -50,
 			max: 50,
 			unit: '%',
 			dmxMin: 0,
 			dmxMax: 255,
 			description: 'Pan position (-50% to +50%)',
-			channel: 'x'
+			channel: 'x',
+			component: 'Pan'
 		};
 
 		const tiltMeta = {
 			type: 'range',
 			cssProperty: '--tilt',
+			sample: true,
 			min: 0,
 			max: 100,
 			unit: '%',
 			dmxMin: 0,
 			dmxMax: 255,
 			description: 'Tilt position (0% to 100%)',
-			channel: 'y'
+			channel: 'y',
+			component: 'Tilt'
 		};
 
 		if (channel === 'pan' || channel === 'x') {

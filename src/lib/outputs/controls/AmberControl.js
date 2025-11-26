@@ -21,12 +21,14 @@ export class AmberControl extends SliderControlType {
 		return {
 			type: 'range',
 			cssProperty: '--amber',
+			sample: true,
 			min: 0,
 			max: 100,
 			unit: '%',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: 'Amber intensity (0% to 100%)'
+			description: 'Amber intensity (0% to 100%)',
+			component: 'Amber'
 		};
 	}
 }

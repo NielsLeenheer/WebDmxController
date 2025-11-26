@@ -62,37 +62,43 @@ export class ColorControl extends RGBControlType {
 		const redMeta = {
 			type: 'range',
 			cssProperty: '--red',
+			sample: false, // Sampled from combined 'color' property
 			min: 0,
 			max: 255,
 			unit: '',
 			dmxMin: 0,
 			dmxMax: 255,
 			description: 'Red channel (0-255)',
-			channel: 'r'
+			channel: 'r',
+			component: 'Red'
 		};
 
 		const greenMeta = {
 			type: 'range',
 			cssProperty: '--green',
+			sample: false, // Sampled from combined 'color' property
 			min: 0,
 			max: 255,
 			unit: '',
 			dmxMin: 0,
 			dmxMax: 255,
 			description: 'Green channel (0-255)',
-			channel: 'g'
+			channel: 'g',
+			component: 'Green'
 		};
 
 		const blueMeta = {
 			type: 'range',
 			cssProperty: '--blue',
+			sample: false, // Sampled from combined 'color' property
 			min: 0,
 			max: 255,
 			unit: '',
 			dmxMin: 0,
 			dmxMax: 255,
 			description: 'Blue channel (0-255)',
-			channel: 'b'
+			channel: 'b',
+			component: 'Blue'
 		};
 
 		if (channel === 'r' || channel === 'red') {
@@ -111,6 +117,25 @@ export class ColorControl extends RGBControlType {
 				{ ...greenMeta, key: 'green' },
 				{ ...blueMeta, key: 'blue' }
 			]
+		};
+	}
+
+	/**
+	 * Get sampling configuration for this control
+	 * RGB samples from the combined 'color' property
+	 */
+	getSamplingConfig() {
+		return {
+			cssProperty: 'color',
+			parse: (cssValue) => {
+				const match = cssValue.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+				if (!match) return null;
+				return {
+					Red: parseInt(match[1]),
+					Green: parseInt(match[2]),
+					Blue: parseInt(match[3])
+				};
+			}
 		};
 	}
 

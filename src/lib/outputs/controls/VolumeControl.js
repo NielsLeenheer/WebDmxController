@@ -22,12 +22,14 @@ export class VolumeControl extends SliderControlType {
 		return {
 			type: 'range',
 			cssProperty: '--volume',
+			sample: true,
 			min: 0,
 			max: 100,
 			unit: '%',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: 'Volume level (0% to 100%)'
+			description: 'Volume level (0% to 100%)',
+			component: 'Volume'
 		};
 	}
 }

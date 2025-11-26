@@ -53,12 +53,14 @@ export class StrobeControl extends SliderControlType {
 		return {
 			type: 'range',
 			cssProperty: '--strobe',
+			sample: true,
 			min: 0,
 			max: 255,
 			unit: '',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: 'Strobe speed (0-255)'
+			description: 'Strobe speed (0-255)',
+			component: 'Strobe'
 		};
 	}
 }

@@ -13,11 +13,13 @@ export class SafetyControl extends ToggleControlType {
 		return {
 			type: 'toggle',
 			cssProperty: '--safety',
+			sample: true,
 			on: 'probably',
 			off: 'none',
 			dmxOn: 255,
 			dmxOff: 0,
-			description: 'Safety switch (on/off)'
+			description: 'Safety switch (on/off)',
+			component: 'Safety'
 		};
 	}
 }

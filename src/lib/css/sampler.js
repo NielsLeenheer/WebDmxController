@@ -2,11 +2,10 @@
  * CSS Sampler
  *
  * Samples CSS computed styles from device elements and converts them to DMX channel values
+ * Uses control metadata (getSamplingConfig) for conversions
  */
 
 import { DEVICE_TYPES } from '../outputs/devices.js';
-import { CSS_TO_DMX_MAPPING } from './mapping/cssToDmxMapping.js';
-import { CONTROL_CSS_MAPPING } from './mapping/controlToCssMapping.js';
 
 export class CSSSampler {
 	constructor() {
@@ -93,9 +92,7 @@ export class CSSSampler {
 
 	/**
 	 * Sample CSS properties based on device controls and convert to component values
-	 * This is the inverse of generateCSSProperties - it reads CSS and produces component values
-	 *
-	 * NEW: Works with control-based architecture (no components layer)
+	 * Uses control metadata (getSamplingConfig) for conversions
 	 *
 	 * @param {CSSStyleDeclaration} computed - Computed style from getComputedStyle()
 	 * @param {Array} controls - Array of control definitions from device type
@@ -104,78 +101,47 @@ export class CSSSampler {
 	sampleCSSProperties(computed, controls) {
 		const result = {};
 
-		// Process each control
 		for (const control of controls) {
-			const mapping = CONTROL_CSS_MAPPING[control.type.type];
-			if (!mapping) continue;
+			const samplingConfig = control.type.getSamplingConfig?.();
+			if (!samplingConfig) continue;
 
-			if (control.type.type === 'xypad' || control.type.type === 'xypad16') {
-				// XY Pad control (e.g., Pan/Tilt)
-				// Sample X property (pan)
-				const xValue = computed.getPropertyValue(mapping.properties.x.name);
-				if (xValue) {
-					const xMapping = CSS_TO_DMX_MAPPING[mapping.properties.x.name];
-					if (xMapping) {
-						const sampledX = xMapping.sample(xValue);
-						Object.assign(result, sampledX);
+			// Handle multi-property controls (XY pads)
+			if (samplingConfig.properties) {
+				for (const propConfig of samplingConfig.properties) {
+					const cssValue = computed.getPropertyValue(propConfig.cssProperty);
+					if (cssValue) {
+						const sampled = propConfig.parse(cssValue);
+						if (sampled) {
+							Object.assign(result, sampled);
+						}
 					}
 				}
-
-				// Sample Y property (tilt)
-				const yValue = computed.getPropertyValue(mapping.properties.y.name);
-				if (yValue) {
-					const yMapping = CSS_TO_DMX_MAPPING[mapping.properties.y.name];
-					if (yMapping) {
-						const sampledY = yMapping.sample(yValue);
-						Object.assign(result, sampledY);
-					}
+			}
+			// Handle single-property controls (sliders, toggles, RGB)
+			else if (samplingConfig.cssProperty) {
+				// Get CSS value - use getPropertyValue for custom properties, direct access for standard ones
+				let cssValue;
+				if (samplingConfig.cssProperty.startsWith('--')) {
+					cssValue = computed.getPropertyValue(samplingConfig.cssProperty);
+				} else {
+					// Standard CSS property (e.g., 'color', 'opacity')
+					cssValue = computed[samplingConfig.cssProperty];
 				}
-
-			} else if (control.type.type === 'rgb') {
-				// RGB Color control - sample the color property
-				const colorValue = computed.color;
-				if (colorValue) {
-					const colorMapping = CSS_TO_DMX_MAPPING['color'];
-					const sampledColor = colorMapping.sample(colorValue);
-					Object.assign(result, sampledColor);
-				}
-
-			} else if (control.type.type === 'toggle') {
-				// Toggle control
-				const propName = mapping.properties.value.getName(control.name);
-				const cssValue = computed.getPropertyValue(propName);
-
-				if (cssValue) {
-					const cssMapping = CSS_TO_DMX_MAPPING[propName];
-					if (cssMapping) {
-						const sampledValue = cssMapping.sample(cssValue);
-						Object.assign(result, sampledValue);
-					}
-				}
-
-			} else if (control.type.type === 'slider') {
-				// Slider control (Dimmer, Intensity, White, Amber, etc.)
-				const propName = mapping.properties.value.getName(control.name);
-
-				let cssValue = computed.getPropertyValue(propName);
 
 				// For intensity/dimmer, also check opacity as fallback
 				if (!cssValue && (control.name === 'Dimmer' || control.name === 'Intensity')) {
 					cssValue = computed.opacity;
 					if (cssValue) {
-						const opacityMapping = CSS_TO_DMX_MAPPING['opacity'];
-						const sampledOpacity = opacityMapping.sample(cssValue);
-						// Use the control name to determine which key to use
-						result[control.name] = sampledOpacity.Intensity || sampledOpacity.Dimmer;
+						// Convert opacity (0-1) to DMX (0-255)
+						const value = parseFloat(cssValue) || 1;
+						const clamped = Math.max(0, Math.min(1, value));
+						const dmxValue = Math.round(clamped * 255);
+						result[control.name] = dmxValue;
 					}
 				} else if (cssValue) {
-					const cssMapping = CSS_TO_DMX_MAPPING[propName];
-					if (cssMapping) {
-						const sampledValue = cssMapping.sample(cssValue);
-						// The mapping returns component name -> value
-						// For control-based arch, we need to map to the control's component name
-						// For simple sliders, the component name matches the control name
-						Object.assign(result, sampledValue);
+					const sampled = samplingConfig.parse(cssValue);
+					if (sampled) {
+						Object.assign(result, sampled);
 					}
 				}
 			}

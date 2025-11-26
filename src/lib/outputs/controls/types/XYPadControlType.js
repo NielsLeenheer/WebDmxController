@@ -45,25 +45,29 @@ export class XYPadControlType extends ControlType {
 		const xMeta = {
 			type: 'range',
 			cssProperty: `--${this.id}-x`,
+			sample: true,
 			min: 0,
 			max: 255,
 			unit: '',
 			dmxMin: 0,
 			dmxMax: 255,
 			description: `${this.name} X axis (0-255)`,
-			channel: 'x'
+			channel: 'x',
+			component: `${this.name}X`
 		};
 
 		const yMeta = {
 			type: 'range',
 			cssProperty: `--${this.id}-y`,
+			sample: true,
 			min: 0,
 			max: 255,
 			unit: '',
 			dmxMin: 0,
 			dmxMax: 255,
 			description: `${this.name} Y axis (0-255)`,
-			channel: 'y'
+			channel: 'y',
+			component: `${this.name}Y`
 		};
 
 		if (channel === 'x') {
@@ -77,6 +81,37 @@ export class XYPadControlType extends ControlType {
 			channels: [
 				{ ...xMeta, key: 'x' },
 				{ ...yMeta, key: 'y' }
+			]
+		};
+	}
+
+	getSamplingConfig() {
+		const allMeta = this.getValueMetadata();
+		const xMeta = allMeta.channels[0];
+		const yMeta = allMeta.channels[1];
+
+		return {
+			properties: [
+				{
+					cssProperty: xMeta.cssProperty,
+					parse: (cssValue) => {
+						const match = cssValue.match(/(-?\d+(?:\.\d+)?)/);
+						const value = match ? parseFloat(match[1]) : 0;
+						const normalized = (value - xMeta.min) / (xMeta.max - xMeta.min);
+						const dmxValue = Math.round(normalized * (xMeta.dmxMax - xMeta.dmxMin) + xMeta.dmxMin);
+						return { [xMeta.component]: Math.max(xMeta.dmxMin, Math.min(xMeta.dmxMax, dmxValue)) };
+					}
+				},
+				{
+					cssProperty: yMeta.cssProperty,
+					parse: (cssValue) => {
+						const match = cssValue.match(/(-?\d+(?:\.\d+)?)/);
+						const value = match ? parseFloat(match[1]) : 0;
+						const normalized = (value - yMeta.min) / (yMeta.max - yMeta.min);
+						const dmxValue = Math.round(normalized * (yMeta.dmxMax - yMeta.dmxMin) + yMeta.dmxMin);
+						return { [yMeta.component]: Math.max(yMeta.dmxMin, Math.min(yMeta.dmxMax, dmxValue)) };
+					}
+				}
 			]
 		};
 	}

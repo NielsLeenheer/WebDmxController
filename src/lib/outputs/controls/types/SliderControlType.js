@@ -54,15 +54,35 @@ export class SliderControlType extends ControlType {
 	 */
 	getValueMetadata(channel = null) {
 		// Generic slider - derive CSS property from control id, use percentage
+		const cssProperty = `--${this.id.replace(/\s+/g, '-')}`;
 		return {
 			type: 'range',
-			cssProperty: `--${this.id.replace(/\s+/g, '-')}`,
+			cssProperty,
+			sample: true,
 			min: 0,
 			max: 100,
 			unit: '%',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: `${this.name} (0% to 100%)`
+			description: `${this.name} (0% to 100%)`,
+			component: this.name
+		};
+	}
+
+	getSamplingConfig() {
+		const meta = this.getValueMetadata();
+		if (!meta.sample) return null;
+
+		return {
+			cssProperty: meta.cssProperty,
+			parse: (cssValue) => {
+				const match = cssValue.match(/(-?\d+(?:\.\d+)?)/);
+				const value = match ? parseFloat(match[1]) : 0;
+				// Convert from CSS range to DMX range
+				const normalized = (value - meta.min) / (meta.max - meta.min);
+				const dmxValue = Math.round(normalized * (meta.dmxMax - meta.dmxMin) + meta.dmxMin);
+				return { [meta.component]: Math.max(meta.dmxMin, Math.min(meta.dmxMax, dmxValue)) };
+			}
 		};
 	}
 }

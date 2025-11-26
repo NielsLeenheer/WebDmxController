@@ -31,12 +31,14 @@ export class SmokeControl extends SliderControlType {
 		return {
 			type: 'range',
 			cssProperty: '--smoke',
+			sample: true,
 			min: 0,
 			max: 100,
 			unit: '%',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: 'Smoke output (0% to 100%)'
+			description: 'Smoke output (0% to 100%)',
+			component: 'Smoke'
 		};
 	}
 }

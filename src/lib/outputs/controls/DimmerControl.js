@@ -22,12 +22,14 @@ export class DimmerControl extends SliderControlType {
 		return {
 			type: 'range',
 			cssProperty: '--intensity',
+			sample: true,
 			min: 0,
 			max: 1,
 			unit: '',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: 'Intensity/Dimmer (0 to 1)'
+			description: 'Intensity/Dimmer (0 to 1)',
+			component: 'Dimmer'
 		};
 	}
 }

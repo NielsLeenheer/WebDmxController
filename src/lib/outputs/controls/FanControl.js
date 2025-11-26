@@ -13,12 +13,14 @@ export class FanControl extends SliderControlType {
 		return {
 			type: 'range',
 			cssProperty: '--fan',
+			sample: true,
 			min: 0,
 			max: 100,
 			unit: '%',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: 'Fan speed (0% to 100%)'
+			description: 'Fan speed (0% to 100%)',
+			component: 'Fan'
 		};
 	}
 }

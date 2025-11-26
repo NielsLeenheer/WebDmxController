@@ -100,4 +100,14 @@ export class ControlType {
 		// Default: single-channel control
 		return [{ key: 'value', label: 'Value', channel: null }];
 	}
+
+	/**
+	 * Get sampling configuration for this control
+	 * Defines how to sample CSS values and convert to DMX
+	 * @returns {Object|null} Sampling config with cssProperty and parse function
+	 */
+	getSamplingConfig() {
+		// Override in subclasses
+		return null;
+	}
 }

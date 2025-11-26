@@ -13,12 +13,14 @@ export class SpeedControl extends SliderControlType {
 		return {
 			type: 'range',
 			cssProperty: '--speed',
+			sample: true,
 			min: 0,
 			max: 255,
 			unit: '',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: 'Speed (0-255)'
+			description: 'Speed (0-255)',
+			component: 'Speed'
 		};
 	}
 }
