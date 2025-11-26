@@ -21,7 +21,7 @@
 		size="medium"
 		data={input}
 		stateValue={stateDisplay}
-		euler={input.inputControlId === 'button' && eulerAngles ? eulerAngles : null}
+		euler={input.inputControlId === 'thingy' && eulerAngles ? eulerAngles : null}
 		class="input-preview"
 	/>
 	<div class="input-header">

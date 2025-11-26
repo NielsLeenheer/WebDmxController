@@ -352,8 +352,8 @@
                     {/if}
                 </div>
                 
-                <!-- Orientation indicator for Thingy:52 button (when not in 3D mode) -->
-                {#if data.inputControlId === 'button'}
+                <!-- Orientation indicator for Thingy:52 (when not in 3D mode) -->
+                {#if data.inputControlId === 'thingy'}
                     <div class="orientation-indicator"></div>
                 {/if}
             {/if}
