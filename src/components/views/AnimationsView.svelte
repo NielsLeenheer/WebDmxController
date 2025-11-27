@@ -39,29 +39,13 @@
         // Create animation using library
         const animation = animationLibrary.create(result.name, controls, displayName);
 
-        // Determine device type for initial keyframes
-        const deviceType = getDeviceTypeForControls(controls);
-
         // Determine number of channels based on control selection
         const numChannels = getNumControls(animation);
         const defaultValues = new Array(numChannels).fill(0);
 
         // Add default keyframes at start and end
-        animationLibrary.addKeyframe(animation.id, 0, deviceType, defaultValues);
-        animationLibrary.addKeyframe(animation.id, 1, deviceType, defaultValues);
-    }
-
-    // Get a device type that has the specified controls (for keyframe rendering)
-    function getDeviceTypeForControls(controls) {
-        for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
-            const hasAllControls = controls.every(controlId =>
-                deviceDef.controls.some(c => c.id === controlId)
-            );
-            if (hasAllControls) {
-                return deviceKey;
-            }
-        }
-        return 'rgb'; // Fallback
+        animationLibrary.addKeyframe(animation.id, 0, defaultValues);
+        animationLibrary.addKeyframe(animation.id, 1, defaultValues);
     }
 
     // Parse selected target into controls array and displayName

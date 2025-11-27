@@ -54,10 +54,9 @@ export class AnimationLibrary extends Library {
 	 * Add a keyframe to an animation
 	 * @param {string} animationId - Animation ID
 	 * @param {number} time - Time (0-1)
-	 * @param {string} deviceType - Device type for rendering
-	 * @param {Object} values - Control values object { "Color": { r, g, b }, ... }
+	 * @param {Object} values - Control values object { "color": { r, g, b }, ... }
 	 */
-	addKeyframe(animationId, time, deviceType, values) {
+	addKeyframe(animationId, time, values) {
 		const animation = this.get(animationId);
 		if (!animation) return;
 
@@ -73,7 +72,6 @@ export class AnimationLibrary extends Library {
 
 		const keyframe = {
 			time,
-			deviceType,
 			values: valuesCopy
 		};
 
@@ -100,7 +98,7 @@ export class AnimationLibrary extends Library {
 	 * Update a keyframe's time or values
 	 * @param {string} animationId - Animation ID
 	 * @param {number} keyframeIndex - Index of keyframe
-	 * @param {Object} updates - Properties to update (time, values, deviceType)
+	 * @param {Object} updates - Properties to update (time, values)
 	 */
 	updateKeyframe(animationId, keyframeIndex, updates) {
 		const animation = this.get(animationId);
@@ -159,7 +157,6 @@ export class AnimationLibrary extends Library {
 
 			return {
 				time: kf.time,
-				deviceType: kf.deviceType,
 				values
 			};
 		}) || [];
