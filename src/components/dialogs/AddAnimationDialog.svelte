@@ -44,21 +44,25 @@
 	function getAllAnimationTargets() {
 		const targets = [];
 
-		// First, collect all unique control names across all device types
-		const controlNamesSet = new Set();
+		// First, collect all unique controls across all device types
+		// Use device control id (c.id) so animations work across different device types
+		const controlsMap = new Map(); // id -> name
 		for (const deviceDef of Object.values(DEVICE_TYPES)) {
 			for (const control of deviceDef.controls) {
-				controlNamesSet.add(control.name);
+				// Use device control id (e.g., 'pantilt') not type id (e.g., 'pantilt16')
+				if (!controlsMap.has(control.id)) {
+					controlsMap.set(control.id, control.type.name);
+				}
 			}
 		}
 
 		// Add individual controls (device-agnostic)
-		const sortedControlNames = Array.from(controlNamesSet).sort();
-		for (const controlName of sortedControlNames) {
+		const sortedControlIds = Array.from(controlsMap.keys()).sort();
+		for (const controlId of sortedControlIds) {
 			targets.push({
 				type: 'control',
-				value: `control|${controlName}`,
-				label: controlName
+				value: `control|${controlId}`,
+				label: controlsMap.get(controlId)
 			});
 		}
 

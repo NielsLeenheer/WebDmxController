@@ -26,21 +26,21 @@
 
 	// Get control label with channel if applicable
 	let controlLabel = $derived.by(() => {
-		if (!device || !trigger.controlName) return 'Unknown';
+		if (!device || !trigger.controlId) return 'Unknown';
 		const deviceType = DEVICE_TYPES[device.type];
-		if (!deviceType) return trigger.controlName;
+		if (!deviceType) return trigger.controlId;
 
-		const controlDef = deviceType.controls.find(c => c.name === trigger.controlName);
-		if (!controlDef) return trigger.controlName;
+		const controlDef = deviceType.controls.find(c => c.id === trigger.controlId);
+		if (!controlDef) return trigger.controlId;
 
-		if (trigger.controlChannel) {
+		if (trigger.controlValueId) {
 			const values = controlDef.type.getValueMetadata().values;
-			const value = values.find(v => v.id === trigger.controlChannel);
+			const value = values.find(v => v.id === trigger.controlValueId);
 			if (value) {
-				return `${trigger.controlName} → ${value.label}`;
+				return `${controlDef.type.name} → ${value.label}`;
 			}
 		}
-		return trigger.controlName;
+		return controlDef.type.name;
 	});
 </script>
 

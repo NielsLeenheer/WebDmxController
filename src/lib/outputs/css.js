@@ -46,7 +46,7 @@ export function getProperties(controlValues, controls, options = {}) {
 	const { includeColorProperty = false } = options;
 
 	for (const control of controls) {
-		const controlValue = controlValues[control.name];
+		const controlValue = controlValues[control.id];
 		if (controlValue === undefined) continue;
 
 		const meta = control.type.getValueMetadata?.();
@@ -54,21 +54,21 @@ export function getProperties(controlValues, controls, options = {}) {
 
 		if (control.type.type === 'xypad' || control.type.type === 'xypad16') {
 			// XY Pad control (e.g., Pan/Tilt) - has multiple values
-			const xValue = controlValue.x ?? 128;
-			const yValue = controlValue.y ?? 128;
+			const panValue = controlValue.pan ?? 128;
+			const tiltValue = controlValue.tilt ?? 128;
 
 			if (meta.values) {
-				const xMeta = meta.values[0];
-				const yMeta = meta.values[1];
-				properties[xMeta.cssProperty] = dmxToCssValue(xValue, xMeta);
-				properties[yMeta.cssProperty] = dmxToCssValue(yValue, yMeta);
+				const panMeta = meta.values[0];
+				const tiltMeta = meta.values[1];
+				properties[panMeta.cssProperty] = dmxToCssValue(panValue, panMeta);
+				properties[tiltMeta.cssProperty] = dmxToCssValue(tiltValue, tiltMeta);
 			}
 
 		} else if (control.type.type === 'rgb') {
 			// RGB Color control - has multiple values
-			const r = controlValue.r ?? 0;
-			const g = controlValue.g ?? 0;
-			const b = controlValue.b ?? 0;
+			const r = controlValue.red ?? 0;
+			const g = controlValue.green ?? 0;
+			const b = controlValue.blue ?? 0;
 
 			if (meta.values) {
 				const rMeta = meta.values[0];

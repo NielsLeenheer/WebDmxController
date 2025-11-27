@@ -54,14 +54,14 @@
     // Get a device type that has the specified controls (for keyframe rendering)
     function getDeviceTypeForControls(controls) {
         for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
-            const hasAllControls = controls.every(controlName =>
-                deviceDef.controls.some(c => c.name === controlName)
+            const hasAllControls = controls.every(controlId =>
+                deviceDef.controls.some(c => c.id === controlId)
             );
             if (hasAllControls) {
                 return deviceKey;
             }
         }
-        return 'RGB'; // Fallback
+        return 'rgb'; // Fallback
     }
 
     // Parse selected target into controls array and displayName
@@ -71,25 +71,36 @@
 
         if (targetType === 'control') {
             // Single control (device-agnostic)
-            const controlName = parts[1];
+            const controlId = parts[1];
+            
+            // Find the friendly name for this control
+            let friendlyName = controlId;
+            for (const deviceDef of Object.values(DEVICE_TYPES)) {
+                const control = deviceDef.controls.find(c => c.id === controlId);
+                if (control) {
+                    friendlyName = control.type.name;
+                    break;
+                }
+            }
+            
             return {
-                controls: [controlName],
-                displayName: controlName
+                controls: [controlId],
+                displayName: friendlyName
             };
         } else if (targetType === 'device') {
             // All controls for this device type
             const deviceType = parts[1];
             const deviceDef = DEVICE_TYPES[deviceType];
-            const controlNames = deviceDef.controls.map(c => c.name);
+            const controlIds = deviceDef.controls.map(c => c.id);
             return {
-                controls: controlNames,  // Array of all control names from this device
+                controls: controlIds,  // Array of all control ids from this device
                 displayName: deviceDef.name
             };
         }
 
         // Fallback
         return {
-            controls: ['Color'],
+            controls: ['color'],
             displayName: 'Color'
         };
     }

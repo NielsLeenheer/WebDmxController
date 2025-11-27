@@ -18,7 +18,7 @@
 	 * Get display name for animation
 	 */
 	function getDisplayName() {
-		return animation.displayName || animation.controls?.join(', ') || 'Animation';
+		return animation.displayName || 'Animation';
 	}
 
 	let displayName = $derived(getDisplayName());

@@ -18,7 +18,7 @@
  *
  * @example
  * const deviceType = DEVICE_TYPES.RGB;
- * const controlValues = { "Color": { r: 255, g: 128, b: 64 } };
+ * const controlValues = { "color": { r: 255, g: 128, b: 64 } };
  * const dmx = controlValuesToDMX(deviceType, controlValues);
  * // Returns: [255, 128, 64]
  */
@@ -28,7 +28,7 @@ export function controlValuesToDMX(deviceType, controlValues) {
 
 	// Process each control defined in the device type
 	for (const controlDef of deviceType.controls) {
-		const value = controlValues?.[controlDef.name];
+		const value = controlValues?.[controlDef.id];
 		if (value === undefined) {
 			// Control not set, use default from dmxArray
 			continue;
@@ -58,10 +58,10 @@ export function controlValuesToDMX(deviceType, controlValues) {
  * @returns {Object} Control values object { "Color": { r, g, b }, "Dimmer": 255, ... }
  *
  * @example
- * const deviceType = DEVICE_TYPES.RGB;
+ * const deviceType = DEVICE_TYPES['rgb'];
  * const dmx = [255, 128, 64];
  * const controlValues = dmxToControlValues(deviceType, dmx);
- * // Returns: { "Color": { r: 255, g: 128, b: 64 } }
+ * // Returns: { "color": { r: 255, g: 128, b: 64 } }
  */
 export function dmxToControlValues(deviceType, dmxArray) {
 	const controlValues = {};
@@ -76,7 +76,7 @@ export function dmxToControlValues(deviceType, dmxArray) {
 
 		// Convert to control value
 		// Input: plain array, Output: plain object/number
-		controlValues[controlDef.name] = controlDef.type.dmxToValue(controlDMX);
+		controlValues[controlDef.id] = controlDef.type.dmxToValue(controlDMX);
 	}
 
 	return controlValues;
@@ -92,12 +92,12 @@ export function dmxToControlValues(deviceType, dmxArray) {
  * @returns {Object} Control values object with defaults
  *
  * @example
- * const deviceType = DEVICE_TYPES.MOVING_HEAD;
+ * const deviceType = DEVICE_TYPES['moving-head'];
  * const defaults = createDefaultControlValues(deviceType);
  * // Returns: {
- * //   "Pan/Tilt": { x: 128, y: 128 },
- * //   "Dimmer": 255,
- * //   "Color": { r: 0, g: 0, b: 0 },
+ * //   "pantilt": { x: 128, y: 128 },
+ * //   "dimmer": 255,
+ * //   "color": { r: 0, g: 0, b: 0 },
  * //   ...
  * // }
  */
@@ -105,49 +105,10 @@ export function createDefaultControlValues(deviceType) {
 	const controlValues = {};
 
 	for (const controlDef of deviceType.controls) {
-		// Get default value from control type
-		controlValues[controlDef.name] = controlDef.type.getDefaultValue();
+		controlValues[controlDef.id] = controlDef.type.getDefaultValue();
 	}
 
 	return controlValues;
-}
-
-/**
- * Merge control values from source to target
- *
- * Copies control values from source to target, but only for controls
- * that exist in the target device type. Useful for device linking.
- *
- * @param {Object} sourceValues - Source control values
- * @param {Object} targetValues - Target control values (will be modified)
- * @param {Array<string>} controlNames - Names of controls to merge (optional, default: all common)
- * @returns {Object} Updated target values
- *
- * @example
- * const source = { "Color": { r: 255, g: 0, b: 0 }, "Dimmer": 200 };
- * const target = { "Color": { r: 0, g: 0, b: 0 }, "Dimmer": 255 };
- * mergeControlValues(source, target, ["Color"]);
- * // target is now: { "Color": { r: 255, g: 0, b: 0 }, "Dimmer": 255 }
- */
-export function mergeControlValues(sourceValues, targetValues, controlNames = null) {
-	// If no control names specified, merge all controls that exist in both
-	const controlsToMerge = controlNames ?? Object.keys(sourceValues).filter(
-		name => name in targetValues
-	);
-
-	for (const controlName of controlsToMerge) {
-		if (sourceValues[controlName] !== undefined) {
-			// Deep copy the value to avoid reference sharing
-			const value = sourceValues[controlName];
-			if (typeof value === 'object' && value !== null) {
-				targetValues[controlName] = { ...value };
-			} else {
-				targetValues[controlName] = value;
-			}
-		}
-	}
-
-	return targetValues;
 }
 
 /**
@@ -156,18 +117,18 @@ export function mergeControlValues(sourceValues, targetValues, controlNames = nu
  * Mirrors the X (pan) value: 255 - x
  * This is useful for linked devices facing opposite directions.
  *
- * @param {Object} controlValue - Pan/Tilt control value { x, y }
- * @returns {Object} Mirrored control value { x: 255-x, y }
+ * @param {Object} controlValue - Pan/Tilt control value { pan, tilt }
+ * @returns {Object} Mirrored control value { pan: 255-pan, tilt }
  *
  * @example
- * mirrorPanTilt({ x: 200, y: 100 })
- * // Returns: { x: 55, y: 100 }
+ * mirrorPanTilt({ pan: 200, tilt: 100 })
+ * // Returns: { pan: 55, tilt: 100 }
  */
 export function mirrorPanTilt(controlValue) {
-	if (controlValue && typeof controlValue === 'object' && 'x' in controlValue) {
+	if (controlValue && typeof controlValue === 'object' && 'pan' in controlValue) {
 		return {
 			...controlValue,
-			x: 255 - controlValue.x
+			pan: 255 - controlValue.pan
 		};
 	}
 	return controlValue;

@@ -10,8 +10,13 @@ import { ControlType } from './ControlType.js';
  * Each Control subclass must implement getValueMetadata() and getSamplingConfig()
  */
 export class ToggleControlType extends ControlType {
-	constructor(id, name = 'Toggle', offValue = 0, onValue = 255) {
-		super(id, name, 'toggle', offValue);
+	constructor({ id, name, offValue = 0, onValue = 255 }) {
+		super({
+			id,
+			name,
+			type: 'toggle',
+			defaultValue: offValue
+		});
 		this.offValue = offValue;
 		this.onValue = onValue;
 	}

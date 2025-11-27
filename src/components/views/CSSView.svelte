@@ -73,53 +73,16 @@
         return unsubscribe;
     });
 
-    /**
-     * Convert component values from CSS sampler to control values
-     * The CSS sampler returns component values like { red: 255, green: 0, blue: 0 }
-     * We need to convert to control values like { "Color": { r: 255, g: 0, b: 0 } }
-     */
-    function convertComponentsToControlValues(deviceType, componentValues) {
-        const controlValues = {};
-        const deviceTypeDef = DEVICE_TYPES[deviceType];
-        if (!deviceTypeDef) return controlValues;
-
-        // Map components back to controls
-        for (const control of deviceTypeDef.controls) {
-            if (control.type.type === 'rgb' || control.type.type === 'rgba') {
-                // RGB control - gather r, g, b from component values
-                controlValues[control.name] = {
-                    r: componentValues.red ?? 0,
-                    g: componentValues.green ?? 0,
-                    b: componentValues.blue ?? 0
-                };
-            } else if (control.type.type === 'xypad' || control.type.type === 'xypad16') {
-                // XY Pad control
-                controlValues[control.name] = {
-                    x: componentValues.pan ?? 128,
-                    y: componentValues.tilt ?? 128
-                };
-            } else if (control.type.type === 'slider' || control.type.type === 'toggle') {
-                // Slider/Toggle control - direct mapping by control name (lowercase)
-                const controlId = control.name.toLowerCase();
-                if (componentValues[controlId] !== undefined) {
-                    controlValues[control.name] = componentValues[controlId];
-                }
-            }
-        }
-
-        return controlValues;
-    }
-
     // Get preview data for a device
     function getPreviewData(device) {
-        const componentValues = sampledDeviceData.get(device.id);
-        if (!componentValues) {
-            // Use default values if no sampled data
+        const controlValues = sampledDeviceData.get(device.id);
+        
+        // Use default values if no sampled data or sampled data is empty
+        if (!controlValues || Object.keys(controlValues).length === 0) {
             return getDevicePreviewData(device.type, device.defaultValues);
         }
 
-        // Convert component values to control values for preview
-        const controlValues = convertComponentsToControlValues(device.type, componentValues);
+        // Sampled values are already in the correct format (keyed by device control id)
         return getDevicePreviewData(device.type, controlValues);
     }
 </script>

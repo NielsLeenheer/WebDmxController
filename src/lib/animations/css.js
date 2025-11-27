@@ -4,7 +4,6 @@
  * Functions for converting animations to CSS @keyframes rules
  */
 
-import { getDeviceColor } from '../outputs/devices.js';
 import { getProperties } from '../outputs/css.js';
 import { getControlsForRendering } from './utils.js';
 

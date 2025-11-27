@@ -11,13 +11,13 @@ import { CONTROL_TYPES } from '../controls/index.js';
 export class DimmerDeviceType extends DeviceType {
     constructor() {
         super({
-            id: 'DIMMER',
+            id: 'dimmer',
             name: 'Dimmer',
             channels: 1,
             defaultValues: [255],  // Full brightness by default
             controls: [
                 {
-                    name: 'Dimmer',
+                    id: 'dimmer',
                     type: CONTROL_TYPES.Dimmer,
                     startChannel: 0
                 }
@@ -25,5 +25,3 @@ export class DimmerDeviceType extends DeviceType {
         });
     }
 }
-
-export const DIMMER = new DimmerDeviceType();

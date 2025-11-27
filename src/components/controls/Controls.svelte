@@ -4,76 +4,76 @@
 
     let {
         controls, // Array of control definitions
-        values = $bindable({}), // Control values object (e.g., { "Color": { r, g, b }, "Dimmer": 255 })
-        onChange = null, // Callback: (controlName, value) => void
-        disabledControls = [], // Array of control names that should be disabled
-        enabledControls = $bindable(null), // Optional: array of enabled control names, null = show all without checkboxes
+        values = $bindable({}), // Control values object (e.g., { "rgb": { r, g, b }, "dimmer": 255 })
+        onChange = null, // Callback: (controlId, value) => void
+        disabledControls = [], // Array of control ids that should be disabled
+        enabledControls = $bindable(null), // Optional: array of enabled control ids, null = show all without checkboxes
         showCheckboxes = false // Whether to show enable/disable checkboxes
     } = $props();
 
     // Initialize enabledControls if showCheckboxes is true and enabledControls is null
     $effect(() => {
         if (showCheckboxes && enabledControls === null) {
-            enabledControls = controls.map(c => c.name);
+            enabledControls = controls.map(c => c.id);
         }
     });
 
     function isControlEnabled(control) {
         if (!showCheckboxes || enabledControls === null) return true;
-        return enabledControls.includes(control.name);
+        return enabledControls.includes(control.id);
     }
 
     function toggleControlEnabled(control) {
         if (!showCheckboxes || enabledControls === null) return;
 
-        if (enabledControls.includes(control.name)) {
-            enabledControls = enabledControls.filter(name => name !== control.name);
+        if (enabledControls.includes(control.id)) {
+            enabledControls = enabledControls.filter(id => id !== control.id);
         } else {
-            enabledControls = [...enabledControls, control.name];
+            enabledControls = [...enabledControls, control.id];
         }
     }
 
-    function handleControlChange(controlName, value) {
+    function handleControlChange(controlId, value) {
         if (onChange) {
-            onChange(controlName, value);
+            onChange(controlId, value);
         } else {
             // If no onChange handler, mutate directly (for $bindable use case)
             if (typeof value === 'object' && value !== null) {
-                values[controlName] = { ...value };
+                values[controlId] = { ...value };
             } else {
-                values[controlName] = value;
+                values[controlId] = value;
             }
         }
     }
 
-    function handleRGBComponentChange(controlName, component, value) {
-        const currentValue = values[controlName] || { r: 0, g: 0, b: 0 };
+    function handleRGBComponentChange(controlId, component, value) {
+        const currentValue = values[controlId] || { r: 0, g: 0, b: 0 };
         const newValue = { ...currentValue, [component]: value };
-        handleControlChange(controlName, newValue);
+        handleControlChange(controlId, newValue);
     }
 
-    function handleXYPadChange(controlName, xValue, yValue) {
-        handleControlChange(controlName, { x: xValue, y: yValue });
+    function handleXYPadChange(controlId, panValue, tiltValue) {
+        handleControlChange(controlId, { pan: panValue, tilt: tiltValue });
     }
 
-    function handleToggleChange(controlName, control) {
+    function handleToggleChange(controlId, control) {
         // Toggle between off and on values
-        const currentValue = values[controlName];
+        const currentValue = values[controlId];
         const onValue = control.type.onValue;
         const offValue = control.type.offValue;
         const newValue = currentValue === onValue ? offValue : onValue;
-        handleControlChange(controlName, newValue);
+        handleControlChange(controlId, newValue);
     }
 
-    function handleTextInputChange(controlName, inputValue, e, component = null) {
+    function handleTextInputChange(controlId, inputValue, e, component = null) {
         const numValue = parseInt(inputValue);
         if (!isNaN(numValue) && numValue >= 0 && numValue <= 255) {
             if (component) {
                 // RGB component change
-                handleRGBComponentChange(controlName, component, numValue);
+                handleRGBComponentChange(controlId, component, numValue);
             } else {
                 // Scalar value change
-                handleControlChange(controlName, numValue);
+                handleControlChange(controlId, numValue);
             }
         } else if (inputValue === '') {
             // Allow empty for easier editing
@@ -81,9 +81,9 @@
         } else {
             // Invalid value, revert to current value
             if (component) {
-                e.target.value = values[controlName]?.[component] ?? 0;
+                e.target.value = values[controlId]?.[component] ?? 0;
             } else {
-                e.target.value = values[controlName] ?? 0;
+                e.target.value = values[controlId] ?? 0;
             }
         }
     }
@@ -93,8 +93,8 @@
         e.target.value = e.target.value.replace(/[^0-9]/g, '');
     }
 
-    function isControlDisabled(controlName) {
-        return disabledControls.includes(controlName);
+    function isControlDisabled(controlId) {
+        return disabledControls.includes(controlId);
     }
 
     // Generate gradient background for slider based on control
@@ -113,8 +113,8 @@
 <div class="controls">
     {#each controls as control}
         {#if control.type.type === 'xypad' || control.type.type === 'xypad16'}
-            {@const controlValue = values[control.name] || { x: 128, y: 128 }}
-            {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
+            {@const controlValue = values[control.id] || { pan: 128, tilt: 128 }}
+            {@const controlDisabled = isControlDisabled(control.id) || !isControlEnabled(control)}
             <div class="control-xypad">
                 <div class="control-header">
                     {#if showCheckboxes}
@@ -125,41 +125,41 @@
                             class="control-checkbox"
                         />
                     {/if}
-                    <label>{control.name}</label>
+                    <label>{control.type.name}</label>
                 </div>
                 <div class="xypad-wrapper" class:disabled={controlDisabled}>
                     <XYPad
-                        panValue={controlValue.x}
-                        tiltValue={controlValue.y}
-                        onUpdate={(x, y) => !controlDisabled && handleXYPadChange(control.name, x, y)}
+                        panValue={controlValue.pan}
+                        tiltValue={controlValue.tilt}
+                        onUpdate={(pan, tilt) => !controlDisabled && handleXYPadChange(control.id, pan, tilt)}
                     />
                 </div>
                 <div class="xypad-inputs">
                     <input
                         type="text"
-                        value={controlValue.x}
+                        value={controlValue.pan}
                         oninput={handleTextInput}
-                        onchange={(e) => !controlDisabled && handleXYPadChange(control.name, parseInt(e.target.value) || 0, controlValue.y)}
+                        onchange={(e) => !controlDisabled && handleXYPadChange(control.id, parseInt(e.target.value) || 0, controlValue.tilt)}
                         class="value-input"
-                        title="X"
+                        title="Pan"
                         disabled={controlDisabled}
                         maxlength="3"
                     />
                     <input
                         type="text"
-                        value={controlValue.y}
+                        value={controlValue.tilt}
                         oninput={handleTextInput}
-                        onchange={(e) => !controlDisabled && handleXYPadChange(control.name, controlValue.x, parseInt(e.target.value) || 0)}
+                        onchange={(e) => !controlDisabled && handleXYPadChange(control.id, controlValue.pan, parseInt(e.target.value) || 0)}
                         class="value-input"
-                        title="Y"
+                        title="Tilt"
                         disabled={controlDisabled}
                         maxlength="3"
                     />
                 </div>
             </div>
-        {:else if control.type.type === 'rgb' || control.type.type === 'rgba'}
-            {@const colorValue = values[control.name] || { r: 0, g: 0, b: 0 }}
-            {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
+        {:else if control.type.type === 'rgb'}
+            {@const colorValue = values[control.id] || { red: 0, green: 0, blue: 0 }}
+            {@const controlDisabled = isControlDisabled(control.id) || !isControlEnabled(control)}
             <!-- Red -->
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
@@ -172,44 +172,44 @@
                 {/if}
                 <label class:disabled={controlDisabled}>Red</label>
                 <div class="slider-wrapper">
-                    <input type="range" min="0" max="255" value={colorValue.r}
-                        oninput={(e) => !controlDisabled && handleRGBComponentChange(control.name, 'r', parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient(control, 'red')}; --thumb-color: {getThumbColor(control, colorValue.r, 'red')}"
+                    <input type="range" min="0" max="255" value={colorValue.red}
+                        oninput={(e) => !controlDisabled && handleRGBComponentChange(control.id, 'red', parseInt(e.target.value))}
+                        style="--slider-gradient: {getSliderGradient(control, 'red')}; --thumb-color: {getThumbColor(control, colorValue.red, 'red')}"
                         disabled={controlDisabled} class="color-slider" />
                 </div>
-                <input type="text" value={colorValue.r} oninput={handleTextInput}
-                    onchange={(e) => !controlDisabled && handleTextInputChange(control.name, e.target.value, e, 'r')}
+                <input type="text" value={colorValue.red} oninput={handleTextInput}
+                    onchange={(e) => !controlDisabled && handleTextInputChange(control.id, e.target.value, e, 'red')}
                     class="value-input" disabled={controlDisabled} maxlength="3" />
             </div>
             <!-- Green -->
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 <label class:disabled={controlDisabled} style={showCheckboxes ? 'grid-column-start: 2' : ''}>Green</label>
                 <div class="slider-wrapper">
-                    <input type="range" min="0" max="255" value={colorValue.g}
-                        oninput={(e) => !controlDisabled && handleRGBComponentChange(control.name, 'g', parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient(control, 'green')}; --thumb-color: {getThumbColor(control, colorValue.g, 'green')}"
+                    <input type="range" min="0" max="255" value={colorValue.green}
+                        oninput={(e) => !controlDisabled && handleRGBComponentChange(control.id, 'green', parseInt(e.target.value))}
+                        style="--slider-gradient: {getSliderGradient(control, 'green')}; --thumb-color: {getThumbColor(control, colorValue.green, 'green')}"
                         disabled={controlDisabled} class="color-slider" />
                 </div>
-                <input type="text" value={colorValue.g} oninput={handleTextInput}
-                    onchange={(e) => !controlDisabled && handleTextInputChange(control.name, e.target.value, e, 'g')}
+                <input type="text" value={colorValue.green} oninput={handleTextInput}
+                    onchange={(e) => !controlDisabled && handleTextInputChange(control.id, e.target.value, e, 'green')}
                     class="value-input" disabled={controlDisabled} maxlength="3" />
             </div>
             <!-- Blue -->
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 <label class:disabled={controlDisabled} style={showCheckboxes ? 'grid-column-start: 2' : ''}>Blue</label>
                 <div class="slider-wrapper">
-                    <input type="range" min="0" max="255" value={colorValue.b}
-                        oninput={(e) => !controlDisabled && handleRGBComponentChange(control.name, 'b', parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient(control, 'blue')}; --thumb-color: {getThumbColor(control, colorValue.b, 'blue')}"
+                    <input type="range" min="0" max="255" value={colorValue.blue}
+                        oninput={(e) => !controlDisabled && handleRGBComponentChange(control.id, 'blue', parseInt(e.target.value))}
+                        style="--slider-gradient: {getSliderGradient(control, 'blue')}; --thumb-color: {getThumbColor(control, colorValue.blue, 'blue')}"
                         disabled={controlDisabled} class="color-slider" />
                 </div>
-                <input type="text" value={colorValue.b} oninput={handleTextInput}
-                    onchange={(e) => !controlDisabled && handleTextInputChange(control.name, e.target.value, e, 'b')}
+                <input type="text" value={colorValue.blue} oninput={handleTextInput}
+                    onchange={(e) => !controlDisabled && handleTextInputChange(control.id, e.target.value, e, 'blue')}
                     class="value-input" disabled={controlDisabled} maxlength="3" />
             </div>
         {:else if control.type.type === 'toggle'}
-            {@const controlValue = values[control.name] ?? control.type.offValue}
-            {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
+            {@const controlValue = values[control.id] ?? control.type.offValue}
+            {@const controlDisabled = isControlDisabled(control.id) || !isControlEnabled(control)}
             {@const isOn = controlValue === control.type.onValue}
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
@@ -220,28 +220,28 @@
                         class="control-checkbox"
                     />
                 {/if}
-                <label class:disabled={controlDisabled}>{control.name}</label>
+                <label class:disabled={controlDisabled}>{control.type.name}</label>
                 <div class="toggle-wrapper">
                     <ToggleSwitch
                         checked={isOn}
                         disabled={controlDisabled}
-                        onchange={() => handleToggleChange(control.name, control)}
-                        label="{control.name}"
+                        onchange={() => handleToggleChange(control.id, control)}
+                        label={control.type.name}
                     />
                 </div>
                 <input
                     type="text"
                     value={controlValue}
                     oninput={handleTextInput}
-                    onchange={(e) => !controlDisabled && handleTextInputChange(control.name, e.target.value, e)}
+                    onchange={(e) => !controlDisabled && handleTextInputChange(control.id, e.target.value, e)}
                     class="value-input"
                     disabled={controlDisabled}
                     maxlength="3"
                 />
             </div>
         {:else if control.type.type === 'slider'}
-            {@const controlValue = values[control.name] ?? 0}
-            {@const controlDisabled = isControlDisabled(control.name) || !isControlEnabled(control)}
+            {@const controlValue = values[control.id] ?? 0}
+            {@const controlDisabled = isControlDisabled(control.id) || !isControlEnabled(control)}
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
                     <input
@@ -251,14 +251,14 @@
                         class="control-checkbox"
                     />
                 {/if}
-                <label class:disabled={controlDisabled}>{control.name}</label>
+                <label class:disabled={controlDisabled}>{control.type.name}</label>
                 <div class="slider-wrapper">
                     <input
                         type="range"
                         min="0"
                         max="255"
                         value={controlValue}
-                        oninput={(e) => !controlDisabled && handleControlChange(control.name, parseInt(e.target.value))}
+                        oninput={(e) => !controlDisabled && handleControlChange(control.id, parseInt(e.target.value))}
                         style="--slider-gradient: {getSliderGradient(control)}; --thumb-color: {getThumbColor(control, controlValue)}"
                         disabled={controlDisabled}
                         class="color-slider"
@@ -268,7 +268,7 @@
                     type="text"
                     value={controlValue}
                     oninput={handleTextInput}
-                    onchange={(e) => !controlDisabled && handleTextInputChange(control.name, e.target.value, e)}
+                    onchange={(e) => !controlDisabled && handleTextInputChange(control.id, e.target.value, e)}
                     class="value-input"
                     disabled={controlDisabled}
                     maxlength="3"

@@ -91,12 +91,12 @@ export class CSSSampler {
 	}
 
 	/**
-	 * Sample CSS properties based on device controls and convert to component values
+	 * Sample CSS properties based on device controls and convert to control values
 	 * Uses control metadata (getSamplingConfig) for conversions
 	 *
 	 * @param {CSSStyleDeclaration} computed - Computed style from getComputedStyle()
 	 * @param {Array} controls - Array of control definitions from device type
-	 * @returns {Object} Map of component names to DMX values (e.g., {Red: 255, Green: 128, Blue: 0})
+	 * @returns {Object} Control values object keyed by device control id
 	 */
 	sampleCSSProperties(computed, controls) {
 		const result = {};
@@ -107,41 +107,38 @@ export class CSSSampler {
 
 			// Handle multi-property controls (XY pads)
 			if (samplingConfig.properties) {
+				const controlValue = {};
 				for (const propConfig of samplingConfig.properties) {
 					const cssValue = computed.getPropertyValue(propConfig.cssProperty);
 					if (cssValue) {
 						const sampled = propConfig.parse(cssValue);
-						if (sampled) {
-							Object.assign(result, sampled);
+						if (sampled !== null && sampled !== undefined) {
+							// Merge component values (e.g., {pan: 128}, {tilt: 128})
+							Object.assign(controlValue, sampled);
 						}
 					}
+				}
+				if (Object.keys(controlValue).length > 0) {
+					result[control.id] = controlValue;
 				}
 			}
 			// Handle single-property controls (sliders, toggles, RGB)
 			else if (samplingConfig.cssProperty) {
-				// Get CSS value - use getPropertyValue for custom properties, direct access for standard ones
+				// Get CSS value
 				let cssValue;
 				if (samplingConfig.cssProperty.startsWith('--')) {
 					cssValue = computed.getPropertyValue(samplingConfig.cssProperty);
 				} else {
-					// Standard CSS property (e.g., 'color', 'opacity')
+					// Standard CSS property (e.g., 'color')
 					cssValue = computed[samplingConfig.cssProperty];
 				}
 
-				// For intensity/dimmer, also check opacity as fallback
-				if (!cssValue && (control.name === 'Dimmer' || control.name === 'Intensity')) {
-					cssValue = computed.opacity;
-					if (cssValue) {
-						// Convert opacity (0-1) to DMX (0-255)
-						const value = parseFloat(cssValue) || 1;
-						const clamped = Math.max(0, Math.min(1, value));
-						const dmxValue = Math.round(clamped * 255);
-						result[control.name] = dmxValue;
-					}
-				} else if (cssValue) {
+				if (cssValue) {
 					const sampled = samplingConfig.parse(cssValue);
-					if (sampled) {
-						Object.assign(result, sampled);
+					if (sampled !== null && sampled !== undefined) {
+						// For single-property controls, store the value under the control id
+						// Note: sampled can be 0 which is valid, so we check !== null/undefined
+						result[control.id] = sampled;
 					}
 				}
 			}

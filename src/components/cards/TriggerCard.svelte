@@ -49,47 +49,47 @@
 
 	// For value triggers: get control label with channel if applicable
 	let controlLabel = $derived.by(() => {
-		if (!isValue || !device || !trigger.controlName) return '';
+		if (!isValue || !device || !trigger.controlId) return '';
 		const deviceType = DEVICE_TYPES[device.type];
-		if (!deviceType) return trigger.controlName;
+		if (!deviceType) return trigger.controlId;
 
-		const controlDef = deviceType.controls.find(c => c.name === trigger.controlName);
-		if (!controlDef) return trigger.controlName;
+		const controlDef = deviceType.controls.find(c => c.id === trigger.controlId);
+		if (!controlDef) return trigger.controlId;
 
-		if (trigger.controlChannel) {
+		if (trigger.controlValueId) {
 			const values = controlDef.type.getValueMetadata().values;
-			const value = values.find(v => v.id === trigger.controlChannel);
+			const value = values.find(v => v.id === trigger.controlValueId);
 			if (value) {
-				return `${trigger.controlName} → ${value.label}`;
+				return `${controlDef.type.name} → ${value.label}`;
 			}
 		}
-		return trigger.controlName;
+		return controlDef.type.name;
 	});
 
 	// For value triggers: get control preview data
 	let controlPreview = $derived.by(() => {
-		if (!isValue || !device || !trigger.controlName) return null;
+		if (!isValue || !device || !trigger.controlId) return null;
 		const deviceType = DEVICE_TYPES[device.type];
 		if (!deviceType) return null;
 
-		const controlDef = deviceType.controls.find(c => c.name === trigger.controlName);
+		const controlDef = deviceType.controls.find(c => c.id === trigger.controlId);
 		if (!controlDef) return null;
 
-		const controlTypeId = controlDef.type.type;
+		const controlTypeId = controlDef.type.id;
+		const controlTypeType = controlDef.type.type;
+
 		const controls = [];
 		const data = {};
 
-		if (controlTypeId === 'rgb') {
-			controls.push('color');
+		controls.push(controlTypeId);
+
+		if (controlTypeType === 'rgb') {
 			// Show a neutral gray for RGB preview
 			data.color = 'rgb(128, 128, 128)';
-		} else if (controlTypeId === 'slider' || controlTypeId === 'toggle') {
-			const controlKey = controlDef.name.toLowerCase();
-			controls.push(controlKey);
+		} else if (controlTypeType === 'slider' || controlTypeType === 'toggle') {
 			// Show midpoint value for slider preview
-			data[controlKey] = 128;
-		} else if (controlTypeId === 'xypad') {
-			controls.push('pantilt');
+			data[controlTypeId] = 128;
+		} else if (controlTypeType === 'xypad') {
 			data.pan = 128;
 			data.tilt = 128;
 		}

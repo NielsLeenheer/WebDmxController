@@ -88,16 +88,16 @@
 	}
 
 	// Handle device control changes for setValue triggers
-	function handleControlValueChange(controlName, value) {
+	function handleControlValueChange(controlId, value) {
 		if (typeof value === 'object' && value !== null) {
 			controlValues = {
 				...controlValues,
-				[controlName]: { ...value }
+				[controlId]: { ...value }
 			};
 		} else {
 			controlValues = {
 				...controlValues,
-				[controlName]: Math.max(0, Math.min(255, parseInt(value) || 0))
+				[controlId]: Math.max(0, Math.min(255, parseInt(value) || 0))
 			};
 		}
 	}
@@ -172,9 +172,9 @@
 		// Return trigger configuration
 		// Filter controlValues to only include enabled controls
 		const filteredValues = {};
-		for (const controlName of enabledControls) {
-			if (controlValues[controlName] !== undefined) {
-				filteredValues[controlName] = controlValues[controlName];
+		for (const controlId of enabledControls) {
+			if (controlValues[controlId] !== undefined) {
+				filteredValues[controlId] = controlValues[controlId];
 			}
 		}
 

@@ -68,8 +68,8 @@ export class TriggerLibrary extends Library {
 			inputValueKey: config.inputValueKey || 'value', // Which value from input (value, pressure, etc.)
 			// Output target
 			deviceId: config.deviceId || null,
-			controlName: config.controlName || null, // Target control (e.g., 'Pan/Tilt', 'Dimmer')
-			controlChannel: config.controlChannel || null, // For multi-value controls: 'pan', 'tilt', 'red', 'green', 'blue' (value id)
+			controlId: config.controlId || null, // Target control type id (e.g., 'color', 'dimmer', 'pantilt')
+			controlValueId: config.controlValueId || null, // For multi-value controls: 'x', 'y', 'red', 'green', 'blue' (value id)
 			// Optional range overrides
 			inputMin: config.inputMin ?? null,
 			inputMax: config.inputMax ?? null,
@@ -138,8 +138,8 @@ export class TriggerLibrary extends Library {
 				inputId: triggerData.inputId || null,
 				inputValueKey: triggerData.inputValueKey || 'value',
 				deviceId: triggerData.deviceId || null,
-				controlName: triggerData.controlName || null,
-				controlChannel: triggerData.controlChannel || null,
+				controlId: triggerData.controlId || triggerData.controlName || null, // Support old 'controlName' for migration
+				controlValueId: triggerData.controlValueId || triggerData.controlChannel || null, // Support old 'controlChannel' for migration
 				inputMin: triggerData.inputMin ?? null,
 				inputMax: triggerData.inputMax ?? null,
 				outputMin: triggerData.outputMin ?? null,

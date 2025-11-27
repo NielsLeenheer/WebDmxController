@@ -26,8 +26,8 @@
 	let selectedInputId = $state(null);
 	let selectedValueKey = $state('value');
 	let selectedDeviceId = $state(null);
-	let selectedControlName = $state(null);
-	let selectedChannel = $state(null);
+	let selectedControlId = $state(null);
+	let selectedValueId = $state(null);
 	let invert = $state(false);
 
 	// Derived values
@@ -38,9 +38,9 @@
 	let controls = $derived(deviceType ? deviceType.controls : []);
 
 	// Get control values for selected control
-	let selectedControlDef = $derived(controls.find(c => c.name === selectedControlName));
+	let selectedControlDef = $derived(controls.find(c => c.id === selectedControlId));
 	let controlValues = $derived(selectedControlDef ? selectedControlDef.type.getValueMetadata().values : []);
-	let needsChannelSelection = $derived(controlValues.length > 1);
+	let needsValueSelection = $derived(controlValues.length > 1);
 
 	// Update selected value when input changes
 	$effect(() => {
@@ -51,19 +51,19 @@
 
 	// Update selected control when device changes
 	$effect(() => {
-		if (controls.length > 0 && !controls.find(c => c.name === selectedControlName)) {
-			selectedControlName = controls[0].name;
+		if (controls.length > 0 && !controls.find(c => c.id === selectedControlId)) {
+			selectedControlId = controls[0].id;
 		}
 	});
 
-	// Update channel when control changes
+	// Update value when control changes
 	$effect(() => {
-		if (needsChannelSelection && controlValues.length > 0) {
-			if (!controlValues.find(v => v.id === selectedChannel)) {
-				selectedChannel = controlValues[0].id;
+		if (needsValueSelection && controlValues.length > 0) {
+			if (!controlValues.find(v => v.id === selectedValueId)) {
+				selectedValueId = controlValues[0].id;
 			}
 		} else {
-			selectedChannel = null;
+			selectedValueId = null;
 		}
 	});
 
@@ -85,8 +85,8 @@
 			selectedInputId = inputs[0]?.id || null;
 			selectedValueKey = 'value';
 			selectedDeviceId = devs[0]?.id || null;
-			selectedControlName = null;
-			selectedChannel = null;
+			selectedControlId = null;
+			selectedValueId = null;
 			invert = false;
 
 			requestAnimationFrame(() => {
@@ -96,7 +96,7 @@
 	}
 
 	function handleSave() {
-		if (!selectedInputId || !selectedDeviceId || !selectedControlName) {
+		if (!selectedInputId || !selectedDeviceId || !selectedControlId) {
 			resolvePromise(null);
 			closeDialog();
 			return;
@@ -107,8 +107,8 @@
 			inputId: selectedInputId,
 			inputValueKey: selectedValueKey,
 			deviceId: selectedDeviceId,
-			controlName: selectedControlName,
-			controlChannel: needsChannelSelection ? selectedChannel : null,
+			controlId: selectedControlId,
+			controlValueId: needsValueSelection ? selectedValueId : null,
 			invert
 		};
 
@@ -135,8 +135,8 @@
 	function getControlDescription() {
 		if (!selectedControlDef) return '';
 		const meta = selectedControlDef.type.getValueMetadata(
-			selectedControlName,
-			needsChannelSelection ? selectedChannel : null
+			selectedControlId,
+			needsValueSelection ? selectedValueId : null
 		);
 		return meta?.description || '';
 	}
@@ -182,18 +182,18 @@
 				{#if controls.length > 0}
 					<div class="dialog-input-group">
 						<label for="value-trigger-control">Control:</label>
-						<select id="value-trigger-control" bind:value={selectedControlName}>
+						<select id="value-trigger-control" bind:value={selectedControlId}>
 							{#each controls as control}
-								<option value={control.name}>{control.name}</option>
+								<option value={control.id}>{control.type.name}</option>
 							{/each}
 						</select>
 					</div>
 				{/if}
 
-				{#if needsChannelSelection}
+				{#if needsValueSelection}
 					<div class="dialog-input-group">
-						<label for="value-trigger-channel">Component:</label>
-						<select id="value-trigger-channel" bind:value={selectedChannel}>
+						<label for="value-trigger-value-id">Component:</label>
+						<select id="value-trigger-value-id" bind:value={selectedValueId}>
 							{#each controlValues as value}
 								<option value={value.id}>{value.label}</option>
 							{/each}

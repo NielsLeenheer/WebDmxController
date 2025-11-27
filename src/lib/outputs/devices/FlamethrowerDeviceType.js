@@ -12,18 +12,18 @@ import { CONTROL_TYPES } from '../controls/index.js';
 export class FlamethrowerDeviceType extends DeviceType {
     constructor() {
         super({
-            id: 'FLAMETHROWER',
+            id: 'flamethrower',
             name: 'Flamethrower',
             channels: 2,
             defaultValues: [0, 0],
             controls: [
                 {
-                    name: 'Safety',
+                    id: 'safety',
                     type: CONTROL_TYPES.Safety,
                     startChannel: 0
                 },
                 {
-                    name: 'Flame',
+                    id: 'flame',
                     type: CONTROL_TYPES.Flame,
                     startChannel: 1
                 }
@@ -31,5 +31,3 @@ export class FlamethrowerDeviceType extends DeviceType {
         });
     }
 }
-
-export const FLAMETHROWER = new FlamethrowerDeviceType();

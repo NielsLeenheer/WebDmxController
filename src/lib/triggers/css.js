@@ -148,7 +148,7 @@ function _generateManualValuesCSS(device, trigger, inputLibrary) {
 	// NEW: trigger.values is now a control values object
 	// Filter controls to only those present in trigger.values (implicit enabling)
 	const filteredControls = deviceType.controls.filter(control =>
-		trigger.values.hasOwnProperty(control.name)
+		trigger.values.hasOwnProperty(control.id)
 	);
 
 	// Generate CSS properties from control values
@@ -218,17 +218,17 @@ function _generateValueTriggerProperty(trigger, device, deviceType, inputLibrary
 	const inputValue = exportedValues.find(v => v.key === trigger.inputValueKey);
 	if (!inputValue || !inputValue.cssProperty) return null;
 
-	const controlDef = deviceType.controls.find(c => c.name === trigger.controlName);
+	const controlDef = deviceType.controls.find(c => c.id === trigger.controlId);
 	if (!controlDef) return null;
 
 	// Get control metadata and find the specific value by id
 	const metadata = controlDef.type.getValueMetadata();
 	if (!metadata || !metadata.values) return null;
 
-	// For single-value controls, controlChannel may be null - use first value
+	// For single-value controls, controlValueId may be null - use first value
 	// For multi-value controls, find by id
-	const controlMeta = trigger.controlChannel
-		? metadata.values.find(v => v.id === trigger.controlChannel)
+	const controlMeta = trigger.controlValueId
+		? metadata.values.find(v => v.id === trigger.controlValueId)
 		: metadata.values[0];
 	if (!controlMeta) return null;
 

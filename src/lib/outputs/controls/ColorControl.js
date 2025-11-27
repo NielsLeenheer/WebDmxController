@@ -6,7 +6,10 @@ import { RGBControlType } from './types/RGBControlType.js';
  */
 export class ColorControl extends RGBControlType {
 	constructor() {
-		super('rgb', 'Color');
+		super({
+			id: 'color',
+			name: 'Color',
+		});
 	}
 
 	/**
@@ -48,9 +51,9 @@ export class ColorControl extends RGBControlType {
 		
 		// Handle RGB object (full color)
 		if (typeof value === 'object' && value !== null) {
-			const r = value.r ?? 0;
-			const g = value.g ?? 0;
-			const b = value.b ?? 0;
+			const r = value.red ?? 0;
+			const g = value.green ?? 0;
+			const b = value.blue ?? 0;
 			return `rgb(${r}, ${g}, ${b})`;
 		}
 		

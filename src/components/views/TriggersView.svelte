@@ -98,8 +98,8 @@
             inputId: result.inputId,
             inputValueKey: result.inputValueKey,
             deviceId: result.deviceId,
-            controlName: result.controlName,
-            controlChannel: result.controlChannel,
+            controlId: result.controlId,
+            controlValueId: result.controlValueId,
             invert: result.invert
         });
     }
@@ -122,8 +122,8 @@
                 inputId: result.data.inputId,
                 inputValueKey: result.data.inputValueKey,
                 deviceId: result.data.deviceId,
-                controlName: result.data.controlName,
-                controlChannel: result.data.controlChannel,
+                controlId: result.data.controlId,
+                controlValueId: result.data.controlValueId,
                 invert: result.data.invert
             });
         } else if (trigger.triggerType === 'always') {

@@ -6,7 +6,10 @@ import { SliderControlType } from './types/SliderControlType.js';
  */
 export class StrobeControl extends SliderControlType {
 	constructor() {
-		super('strobe', 'Strobe');
+		super({
+			id: 'strobe',
+			name: 'Strobe',
+		});
 	}
 
 	/**
@@ -76,7 +79,7 @@ export class StrobeControl extends SliderControlType {
 				const value = match ? parseFloat(match[1]) : 0;
 				const normalized = (value - meta.min) / (meta.max - meta.min);
 				const dmxValue = Math.round(normalized * (meta.dmxMax - meta.dmxMin) + meta.dmxMin);
-				return { [meta.id]: Math.max(meta.dmxMin, Math.min(meta.dmxMax, dmxValue)) };
+				return Math.max(meta.dmxMin, Math.min(meta.dmxMax, dmxValue));
 			}
 		};
 	}

@@ -11,13 +11,13 @@ import { CONTROL_TYPES } from '../controls/index.js';
 export class SmokeDeviceType extends DeviceType {
     constructor() {
         super({
-            id: 'SMOKE',
+            id: 'smoke',
             name: 'Smoke Machine',
             channels: 1,
             defaultValues: [0],
             controls: [
                 {
-                    name: 'Smoke',
+                    id: 'smoke',
                     type: CONTROL_TYPES.Smoke,
                     startChannel: 0
                 }
@@ -25,5 +25,3 @@ export class SmokeDeviceType extends DeviceType {
         });
     }
 }
-
-export const SMOKE = new SmokeDeviceType();

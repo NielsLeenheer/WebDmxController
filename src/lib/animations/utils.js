@@ -19,26 +19,26 @@ import { CONTROL_TYPES } from '../outputs/controls/index.js';
  */
 export function getControlsForRendering(animation) {
 	if (!animation.controls || animation.controls.length === 0) {
-		// Fallback: use RGB device controls
-		return DEVICE_TYPES.RGB.controls;
+		// Fallback: use rgb device controls
+		return DEVICE_TYPES['rgb'].controls;
 	}
 
 	// Find a device type that has all the required controls
 	for (const deviceDef of Object.values(DEVICE_TYPES)) {
-		const hasAllControls = animation.controls.every(controlName =>
-			deviceDef.controls.some(c => c.name === controlName)
+		const hasAllControls = animation.controls.every(controlId =>
+			deviceDef.controls.some(c => c.id === controlId)
 		);
 		if (hasAllControls) {
 			// Filter to only the controls we want
 			const filteredControls = deviceDef.controls.filter(c =>
-				animation.controls.includes(c.name)
+				animation.controls.includes(c.id)
 			);
 			return filteredControls;
 		}
 	}
 
-	// Fallback to RGB if no device type matches
-	return DEVICE_TYPES.RGB.controls;
+	// Fallback to rgb if no device type matches
+	return DEVICE_TYPES['rgb'].controls;
 }
 
 /**
@@ -56,11 +56,11 @@ export function getKeyframeColor(keyframe) {
 	let totalR = 0, totalG = 0, totalB = 0;
 	let hasColor = false;
 	
-	for (const [controlName, value] of Object.entries(values)) {
+	for (const [controlId, value] of Object.entries(values)) {
 		// Find the control definition from device types
 		let controlDef = null;
 		for (const deviceType of Object.values(DEVICE_TYPES)) {
-			controlDef = deviceType.controls.find(c => c.name === controlName);
+			controlDef = deviceType.controls.find(c => c.id === controlId);
 			if (controlDef) break;
 		}
 		
@@ -126,32 +126,32 @@ export function getValuesAtTime(animation, time) {
 			const t = (time - kf1.time) / (kf2.time - kf1.time);
 			const interpolatedValues = {};
 
-			// Get all control names from both keyframes
-			const controlNames = new Set([
+			// Get all control ids from both keyframes
+			const controlIds = new Set([
 				...Object.keys(kf1.values),
 				...Object.keys(kf2.values)
 			]);
 
-			for (const controlName of controlNames) {
-				const v1 = kf1.values[controlName];
-				const v2 = kf2.values[controlName];
+			for (const controlId of controlIds) {
+				const v1 = kf1.values[controlId];
+				const v2 = kf2.values[controlId];
 
 				if (v1 === undefined) {
-					interpolatedValues[controlName] = v2;
+					interpolatedValues[controlId] = v2;
 				} else if (v2 === undefined) {
-					interpolatedValues[controlName] = v1;
+					interpolatedValues[controlId] = v1;
 				} else if (typeof v1 === 'object' && typeof v2 === 'object') {
 					// Interpolate object values (e.g., RGB, Pan/Tilt)
-					interpolatedValues[controlName] = {};
+					interpolatedValues[controlId] = {};
 					const keys = new Set([...Object.keys(v1), ...Object.keys(v2)]);
 					for (const key of keys) {
 						const val1 = v1[key] ?? 0;
 						const val2 = v2[key] ?? 0;
-						interpolatedValues[controlName][key] = Math.round(val1 + (val2 - val1) * t);
+						interpolatedValues[controlId][key] = Math.round(val1 + (val2 - val1) * t);
 					}
 				} else {
 					// Interpolate scalar values (e.g., Dimmer)
-					interpolatedValues[controlName] = Math.round(v1 + (v2 - v1) * t);
+					interpolatedValues[controlId] = Math.round(v1 + (v2 - v1) * t);
 				}
 			}
 

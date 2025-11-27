@@ -6,7 +6,12 @@ import { ToggleControlType } from './types/ToggleControlType.js';
  */
 export class SafetyControl extends ToggleControlType {
 	constructor() {
-		super('safety', 'Safety', 0, 255);
+		super({
+			id: 'safety',
+			name: 'Safety',
+			offValue: 0,
+			onValue: 255,
+		});
 	}
 
 	getValueMetadata() {
@@ -34,7 +39,7 @@ export class SafetyControl extends ToggleControlType {
 				const value = cssValue.trim().toLowerCase();
 				const isOn = value === String(meta.on).toLowerCase() ||
 					value === String(meta.dmxOn);
-				return { [meta.id]: isOn ? meta.dmxOn : meta.dmxOff };
+				return isOn ? meta.dmxOn : meta.dmxOff;
 			}
 		};
 	}

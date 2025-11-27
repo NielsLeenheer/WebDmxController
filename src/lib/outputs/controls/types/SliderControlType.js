@@ -6,8 +6,13 @@ import { ControlType } from './ControlType.js';
  * Each Control subclass must implement getValueMetadata() and getSamplingConfig()
  */
 export class SliderControlType extends ControlType {
-	constructor(id, name = 'Slider') {
-		super(id, name, 'slider', 0);
+	constructor({ id, name }) {
+		super({
+			id,
+			name,
+			type: 'slider',
+			defaultValue: 0
+		});
 	}
 
 	getChannelCount() {

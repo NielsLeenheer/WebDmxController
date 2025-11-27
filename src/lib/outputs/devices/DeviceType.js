@@ -19,7 +19,7 @@
 export class DeviceType {
     /**
      * @param {Object} config - Device type configuration
-     * @param {string} config.id - Unique identifier (e.g., 'RGB', 'MOVING_HEAD_11CH')
+     * @param {string} config.id - Unique identifier (e.g., 'rgb', 'moving-head-11ch')
      * @param {string} config.name - Display name (e.g., 'RGB Light')
      * @param {number} config.channels - Total DMX channels
      * @param {Array<number>} config.defaultValues - Default values for all channels
@@ -48,7 +48,7 @@ export class DeviceType {
                 const channel = control.startChannel + i;
                 if (channel >= this.channels) {
                     throw new Error(
-                        `Control "${control.name}" exceeds channel count: ` +
+                        `Control "${control.type.name}" exceeds channel count: ` +
                         `channel ${channel} >= ${this.channels} channels`
                     );
                 }
@@ -65,20 +65,20 @@ export class DeviceType {
     }
 
     /**
-     * Get control definition by name
-     * @param {string} name - Control name
+     * Get control definition by id
+     * @param {string} id - Control type id
      * @returns {Object|undefined} Control definition
      */
-    getControl(name) {
-        return this.controls.find(c => c.name === name);
+    getControl(id) {
+        return this.controls.find(c => c.id === id);
     }
 
     /**
-     * Get all control names
-     * @returns {Array<string>} Control names
+     * Get all control ids
+     * @returns {Array<string>} Device control ids
      */
-    getControlNames() {
-        return this.controls.map(c => c.name);
+    getControlIds() {
+        return this.controls.map(c => c.id);
     }
 }
 

@@ -70,8 +70,8 @@
         deviceLibrary.remove(deviceId);
     }
 
-    function handleDeviceValueChange(device, controlName, value) {
-        deviceLibrary.updateValue(device.id, controlName, value);
+    function handleDeviceValueChange(device, controlId, value) {
+        deviceLibrary.updateValue(device.id, controlId, value);
     }
 
     /**

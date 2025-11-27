@@ -6,7 +6,10 @@ import { XYPad16ControlType } from './types/XYPad16ControlType.js';
  */
 export class PanTilt16Control extends XYPad16ControlType {
 	constructor() {
-		super('pantilt16', 'Pan/Tilt');
+		super({
+			id: 'pantilt16',
+			name: 'Pan/Tilt',
+		});
 	}
 
 	getValueMetadata() {
@@ -57,7 +60,7 @@ export class PanTilt16Control extends XYPad16ControlType {
 						const value = match ? parseFloat(match[1]) : 0;
 						const normalized = (value - panMeta.min) / (panMeta.max - panMeta.min);
 						const dmxValue = Math.round(normalized * (panMeta.dmxMax - panMeta.dmxMin) + panMeta.dmxMin);
-						return { [panMeta.id]: Math.max(panMeta.dmxMin, Math.min(panMeta.dmxMax, dmxValue)) };
+						return { pan: Math.max(panMeta.dmxMin, Math.min(panMeta.dmxMax, dmxValue)) };
 					}
 				},
 				{
@@ -67,7 +70,7 @@ export class PanTilt16Control extends XYPad16ControlType {
 						const value = match ? parseFloat(match[1]) : 0;
 						const normalized = (value - tiltMeta.min) / (tiltMeta.max - tiltMeta.min);
 						const dmxValue = Math.round(normalized * (tiltMeta.dmxMax - tiltMeta.dmxMin) + tiltMeta.dmxMin);
-						return { [tiltMeta.id]: Math.max(tiltMeta.dmxMin, Math.min(tiltMeta.dmxMax, dmxValue)) };
+						return { tilt: Math.max(tiltMeta.dmxMin, Math.min(tiltMeta.dmxMax, dmxValue)) };
 					}
 				}
 			]

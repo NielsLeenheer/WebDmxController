@@ -14,7 +14,7 @@
  * - They are NOT stored in $state or localStorage
  */
 export class ControlType {
-	constructor(id, name, type, defaultValue) {
+	constructor({ id, name, type, defaultValue }) {
 		this.id = id;          // Unique identifier string
 		this.name = name;      // Display name
 		this.type = type;      // UI type: 'rgb', 'slider', 'xypad', etc.

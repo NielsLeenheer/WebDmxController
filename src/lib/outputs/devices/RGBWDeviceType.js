@@ -2,36 +2,34 @@ import { DeviceType } from './DeviceType.js';
 import { CONTROL_TYPES } from '../controls/index.js';
 
 /**
- * RGBA Light Device Type
- * 4-channel RGB + Amber fixture
+ * RGBW Light Device Type
+ * 4-channel RGB + White fixture
  *
  * Channels:
  * 0: Red
  * 1: Green
  * 2: Blue
- * 3: Amber
+ * 3: White
  */
-export class RGBADeviceType extends DeviceType {
+export class RGBWDeviceType extends DeviceType {
     constructor() {
         super({
-            id: 'RGBA',
-            name: 'RGBA Light',
+            id: 'rgbw',
+            name: 'RGBW Light',
             channels: 4,
             defaultValues: [0, 0, 0, 0],
             controls: [
                 {
-                    name: 'Color',
-                    type: CONTROL_TYPES.RGB,
+                    id: 'color',
+                    type: CONTROL_TYPES.Color,
                     startChannel: 0
                 },
                 {
-                    name: 'Amber',
-                    type: CONTROL_TYPES.Amber,
+                    id: 'white',
+                    type: CONTROL_TYPES.White,
                     startChannel: 3
                 }
             ]
         });
     }
 }
-
-export const RGBA = new RGBADeviceType();
