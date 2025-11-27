@@ -52,28 +52,28 @@ export function getProperties(controlValues, controls, options = {}) {
 		const meta = control.type.getValueMetadata?.();
 		if (!meta) continue;
 
-		if (control.type.type === 'xypad') {
-			// XY Pad control (e.g., Pan/Tilt) - has multiple channels
+		if (control.type.type === 'xypad' || control.type.type === 'xypad16') {
+			// XY Pad control (e.g., Pan/Tilt) - has multiple values
 			const xValue = controlValue.x ?? 128;
 			const yValue = controlValue.y ?? 128;
 
-			if (meta.channels) {
-				const xMeta = meta.channels[0];
-				const yMeta = meta.channels[1];
+			if (meta.values) {
+				const xMeta = meta.values[0];
+				const yMeta = meta.values[1];
 				properties[xMeta.cssProperty] = dmxToCssValue(xValue, xMeta);
 				properties[yMeta.cssProperty] = dmxToCssValue(yValue, yMeta);
 			}
 
 		} else if (control.type.type === 'rgb') {
-			// RGB Color control - has multiple channels
+			// RGB Color control - has multiple values
 			const r = controlValue.r ?? 0;
 			const g = controlValue.g ?? 0;
 			const b = controlValue.b ?? 0;
 
-			if (meta.channels) {
-				const rMeta = meta.channels[0];
-				const gMeta = meta.channels[1];
-				const bMeta = meta.channels[2];
+			if (meta.values) {
+				const rMeta = meta.values[0];
+				const gMeta = meta.values[1];
+				const bMeta = meta.values[2];
 				properties[rMeta.cssProperty] = dmxToCssValue(r, rMeta);
 				properties[gMeta.cssProperty] = dmxToCssValue(g, gMeta);
 				properties[bMeta.cssProperty] = dmxToCssValue(b, bMeta);
@@ -87,13 +87,15 @@ export function getProperties(controlValues, controls, options = {}) {
 		} else if (control.type.type === 'toggle') {
 			// Toggle control
 			const value = controlValue ?? control.type.offValue;
-			const isOn = value >= meta.dmxOn;
-			properties[meta.cssProperty] = isOn ? meta.on : meta.off;
+			const toggleMeta = meta.values?.[0] || meta;
+			const isOn = value >= toggleMeta.dmxOn;
+			properties[toggleMeta.cssProperty] = isOn ? toggleMeta.on : toggleMeta.off;
 
 		} else if (control.type.type === 'slider') {
 			// Slider control (Dimmer, Intensity, White, Amber, etc.)
 			const value = controlValue ?? 0;
-			properties[meta.cssProperty] = dmxToCssValue(value, meta);
+			const sliderMeta = meta.values?.[0] || meta;
+			properties[sliderMeta.cssProperty] = dmxToCssValue(value, sliderMeta);
 		}
 	}
 

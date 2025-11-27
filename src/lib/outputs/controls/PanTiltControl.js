@@ -9,8 +9,10 @@ export class PanTiltControl extends XYPadControlType {
 		super('pantilt', 'Pan/Tilt');
 	}
 
-	getValueMetadata(channel = null) {
+	getValueMetadata() {
 		const panMeta = {
+			id: 'pan',
+			label: 'Pan',
 			type: 'range',
 			cssProperty: '--pan',
 			sample: true,
@@ -19,12 +21,12 @@ export class PanTiltControl extends XYPadControlType {
 			unit: '%',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: 'Pan position (-50% to +50%)',
-			channel: 'x',
-			component: 'Pan'
+			description: 'Pan position (-50% to +50%)'
 		};
 
 		const tiltMeta = {
+			id: 'tilt',
+			label: 'Tilt',
 			type: 'range',
 			cssProperty: '--tilt',
 			sample: true,
@@ -33,37 +35,18 @@ export class PanTiltControl extends XYPadControlType {
 			unit: '%',
 			dmxMin: 0,
 			dmxMax: 255,
-			description: 'Tilt position (0% to 100%)',
-			channel: 'y',
-			component: 'Tilt'
+			description: 'Tilt position (0% to 100%)'
 		};
-
-		if (channel === 'pan' || channel === 'x') {
-			return panMeta;
-		}
-		if (channel === 'tilt' || channel === 'y') {
-			return tiltMeta;
-		}
 
 		return {
-			channels: [
-				{ ...panMeta, key: 'pan' },
-				{ ...tiltMeta, key: 'tilt' }
-			]
+			values: [panMeta, tiltMeta]
 		};
-	}
-
-	getChannels() {
-		return [
-			{ key: 'pan', label: 'Pan', channel: 'x' },
-			{ key: 'tilt', label: 'Tilt', channel: 'y' }
-		];
 	}
 
 	getSamplingConfig() {
 		const allMeta = this.getValueMetadata();
-		const panMeta = allMeta.channels[0];
-		const tiltMeta = allMeta.channels[1];
+		const panMeta = allMeta.values[0];
+		const tiltMeta = allMeta.values[1];
 
 		return {
 			properties: [
@@ -74,7 +57,7 @@ export class PanTiltControl extends XYPadControlType {
 						const value = match ? parseFloat(match[1]) : 0;
 						const normalized = (value - panMeta.min) / (panMeta.max - panMeta.min);
 						const dmxValue = Math.round(normalized * (panMeta.dmxMax - panMeta.dmxMin) + panMeta.dmxMin);
-						return { [panMeta.component]: Math.max(panMeta.dmxMin, Math.min(panMeta.dmxMax, dmxValue)) };
+						return { [panMeta.id]: Math.max(panMeta.dmxMin, Math.min(panMeta.dmxMax, dmxValue)) };
 					}
 				},
 				{
@@ -84,7 +67,7 @@ export class PanTiltControl extends XYPadControlType {
 						const value = match ? parseFloat(match[1]) : 0;
 						const normalized = (value - tiltMeta.min) / (tiltMeta.max - tiltMeta.min);
 						const dmxValue = Math.round(normalized * (tiltMeta.dmxMax - tiltMeta.dmxMin) + tiltMeta.dmxMin);
-						return { [tiltMeta.component]: Math.max(tiltMeta.dmxMin, Math.min(tiltMeta.dmxMax, dmxValue)) };
+						return { [tiltMeta.id]: Math.max(tiltMeta.dmxMin, Math.min(tiltMeta.dmxMax, dmxValue)) };
 					}
 				}
 			]

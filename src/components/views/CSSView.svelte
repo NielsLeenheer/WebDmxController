@@ -75,7 +75,7 @@
 
     /**
      * Convert component values from CSS sampler to control values
-     * The CSS sampler returns component values like { Red: 255, Green: 0, Blue: 0 }
+     * The CSS sampler returns component values like { red: 255, green: 0, blue: 0 }
      * We need to convert to control values like { "Color": { r: 255, g: 0, b: 0 } }
      */
     function convertComponentsToControlValues(deviceType, componentValues) {
@@ -88,20 +88,21 @@
             if (control.type.type === 'rgb' || control.type.type === 'rgba') {
                 // RGB control - gather r, g, b from component values
                 controlValues[control.name] = {
-                    r: componentValues.Red ?? 0,
-                    g: componentValues.Green ?? 0,
-                    b: componentValues.Blue ?? 0
+                    r: componentValues.red ?? 0,
+                    g: componentValues.green ?? 0,
+                    b: componentValues.blue ?? 0
                 };
             } else if (control.type.type === 'xypad' || control.type.type === 'xypad16') {
                 // XY Pad control
                 controlValues[control.name] = {
-                    x: componentValues.Pan ?? 128,
-                    y: componentValues.Tilt ?? 128
+                    x: componentValues.pan ?? 128,
+                    y: componentValues.tilt ?? 128
                 };
             } else if (control.type.type === 'slider' || control.type.type === 'toggle') {
-                // Slider/Toggle control - direct mapping by control name
-                if (componentValues[control.name] !== undefined) {
-                    controlValues[control.name] = componentValues[control.name];
+                // Slider/Toggle control - direct mapping by control name (lowercase)
+                const controlId = control.name.toLowerCase();
+                if (componentValues[controlId] !== undefined) {
+                    controlValues[control.name] = componentValues[controlId];
                 }
             }
         }

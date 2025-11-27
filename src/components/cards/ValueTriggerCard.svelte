@@ -34,10 +34,10 @@
 		if (!controlDef) return trigger.controlName;
 
 		if (trigger.controlChannel) {
-			const channels = controlDef.type.getChannels();
-			const channel = channels.find(ch => ch.key === trigger.controlChannel);
-			if (channel) {
-				return `${trigger.controlName} (${channel.label})`;
+			const values = controlDef.type.getValueMetadata().values;
+			const value = values.find(v => v.id === trigger.controlChannel);
+			if (value) {
+				return `${trigger.controlName} → ${value.label}`;
 			}
 		}
 		return trigger.controlName;

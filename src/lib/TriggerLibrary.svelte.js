@@ -69,7 +69,7 @@ export class TriggerLibrary extends Library {
 			// Output target
 			deviceId: config.deviceId || null,
 			controlName: config.controlName || null, // Target control (e.g., 'Pan/Tilt', 'Dimmer')
-			controlChannel: config.controlChannel || null, // For multi-channel controls: 'pan', 'tilt', 'r', 'g', 'b'
+			controlChannel: config.controlChannel || null, // For multi-value controls: 'pan', 'tilt', 'red', 'green', 'blue' (value id)
 			// Optional range overrides
 			inputMin: config.inputMin ?? null,
 			inputMax: config.inputMax ?? null,

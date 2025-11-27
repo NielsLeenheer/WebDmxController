@@ -82,23 +82,11 @@ export class ControlType {
 	/**
 	 * Get value metadata for this control type
 	 * Used by value-based triggers for type conversion
-	 * @param {string} controlName - Name of the control instance
-	 * @param {string|null} channel - Optional channel for multi-channel controls
-	 * @returns {Object|null} Value metadata including CSS property, range, unit
+	 * @returns {Object} Value metadata with values array containing id, label, CSS property, range, unit
 	 */
-	getValueMetadata(controlName, channel = null) {
+	getValueMetadata() {
 		// Override in subclasses
-		return null;
-	}
-
-	/**
-	 * Get available channels for this control type
-	 * Used by value-based triggers UI to select specific channels
-	 * @returns {Array} Array of channel definitions
-	 */
-	getChannels() {
-		// Default: single-channel control
-		return [{ key: 'value', label: 'Value', channel: null }];
+		return { values: [] };
 	}
 
 	/**

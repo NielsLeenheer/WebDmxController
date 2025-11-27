@@ -221,9 +221,15 @@ function _generateValueTriggerProperty(trigger, device, deviceType, inputLibrary
 	const controlDef = deviceType.controls.find(c => c.name === trigger.controlName);
 	if (!controlDef) return null;
 
-	// Get control metadata for the specific channel (or single-channel control)
-	// Metadata is now defined in the control class itself
-	const controlMeta = controlDef.type.getValueMetadata(trigger.controlChannel);
+	// Get control metadata and find the specific value by id
+	const metadata = controlDef.type.getValueMetadata();
+	if (!metadata || !metadata.values) return null;
+
+	// For single-value controls, controlChannel may be null - use first value
+	// For multi-value controls, find by id
+	const controlMeta = trigger.controlChannel
+		? metadata.values.find(v => v.id === trigger.controlChannel)
+		: metadata.values[0];
 	if (!controlMeta) return null;
 
 	// Build the CSS property and value

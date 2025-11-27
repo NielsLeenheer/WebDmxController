@@ -38,10 +38,10 @@
 	let deviceType = $derived(selectedDevice ? DEVICE_TYPES[selectedDevice.type] : null);
 	let controls = $derived(deviceType ? deviceType.controls : []);
 
-	// Get control channels for selected control
+	// Get control values for selected control
 	let selectedControlDef = $derived(controls.find(c => c.name === selectedControlName));
-	let controlChannels = $derived(selectedControlDef ? selectedControlDef.type.getChannels() : []);
-	let needsChannelSelection = $derived(controlChannels.length > 1);
+	let controlValues = $derived(selectedControlDef ? selectedControlDef.type.getValueMetadata().values : []);
+	let needsChannelSelection = $derived(controlValues.length > 1);
 
 	/**
 	 * Open the dialog
@@ -180,10 +180,10 @@
 
 				{#if needsChannelSelection}
 					<div class="dialog-input-group">
-						<label for="edit-value-trigger-channel">Channel:</label>
+						<label for="edit-value-trigger-channel">Component:</label>
 						<select id="edit-value-trigger-channel" bind:value={selectedChannel}>
-							{#each controlChannels as channel}
-								<option value={channel.key}>{channel.label}</option>
+							{#each controlValues as value}
+								<option value={value.id}>{value.label}</option>
 							{/each}
 						</select>
 					</div>
