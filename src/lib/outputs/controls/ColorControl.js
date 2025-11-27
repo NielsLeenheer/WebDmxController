@@ -101,8 +101,18 @@ export class ColorControl extends RGBControlType {
 			description: 'Blue channel (0-255)'
 		};
 
+		const colorMeta = {
+			id: 'color',
+			label: 'Color',
+			type: 'composite',
+			cssProperty: 'color',
+			value: 'rgb(var(--red), var(--green), var(--blue))',
+			sample: true, // This is the property we sample from
+			description: 'Combined RGB color'
+		};
+
 		return {
-			values: [redMeta, greenMeta, blueMeta]
+			values: [redMeta, greenMeta, blueMeta, colorMeta]
 		};
 	}
 

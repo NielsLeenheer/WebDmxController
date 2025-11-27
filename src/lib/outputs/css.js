@@ -74,14 +74,15 @@ export function getProperties(controlValues, controls, options = {}) {
 				const rMeta = meta.values[0];
 				const gMeta = meta.values[1];
 				const bMeta = meta.values[2];
+				const colorMeta = meta.values[3];
 				properties[rMeta.cssProperty] = dmxToCssValue(r, rMeta);
 				properties[gMeta.cssProperty] = dmxToCssValue(g, gMeta);
 				properties[bMeta.cssProperty] = dmxToCssValue(b, bMeta);
-			}
 
-			// Only include combined color property for device defaults
-			if (includeColorProperty) {
-				properties.color = `rgb(var(--red), var(--green), var(--blue))`;
+				// Only include combined color property for device defaults
+				if (includeColorProperty && colorMeta) {
+					properties[colorMeta.cssProperty] = colorMeta.value;
+				}
 			}
 
 		} else if (control.type.type === 'toggle') {
