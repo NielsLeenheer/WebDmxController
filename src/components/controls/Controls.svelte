@@ -174,7 +174,7 @@
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={colorValue.r}
                         oninput={(e) => !controlDisabled && handleRGBComponentChange(control.name, 'r', parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient(control, 'Red')}; --thumb-color: {getThumbColor(control, colorValue.r, 'Red')}"
+                        style="--slider-gradient: {getSliderGradient(control, 'red')}; --thumb-color: {getThumbColor(control, colorValue.r, 'red')}"
                         disabled={controlDisabled} class="color-slider" />
                 </div>
                 <input type="text" value={colorValue.r} oninput={handleTextInput}
@@ -187,7 +187,7 @@
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={colorValue.g}
                         oninput={(e) => !controlDisabled && handleRGBComponentChange(control.name, 'g', parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient(control, 'Green')}; --thumb-color: {getThumbColor(control, colorValue.g, 'Green')}"
+                        style="--slider-gradient: {getSliderGradient(control, 'green')}; --thumb-color: {getThumbColor(control, colorValue.g, 'green')}"
                         disabled={controlDisabled} class="color-slider" />
                 </div>
                 <input type="text" value={colorValue.g} oninput={handleTextInput}
@@ -200,7 +200,7 @@
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={colorValue.b}
                         oninput={(e) => !controlDisabled && handleRGBComponentChange(control.name, 'b', parseInt(e.target.value))}
-                        style="--slider-gradient: {getSliderGradient(control, 'Blue')}; --thumb-color: {getThumbColor(control, colorValue.b, 'Blue')}"
+                        style="--slider-gradient: {getSliderGradient(control, 'blue')}; --thumb-color: {getThumbColor(control, colorValue.b, 'blue')}"
                         disabled={controlDisabled} class="color-slider" />
                 </div>
                 <input type="text" value={colorValue.b} oninput={handleTextInput}

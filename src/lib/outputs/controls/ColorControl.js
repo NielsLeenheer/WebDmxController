@@ -11,16 +11,16 @@ export class ColorControl extends RGBControlType {
 
 	/**
 	 * Get gradient for RGB or a specific component
-	 * @param {string} [component] - Optional: 'Red', 'Green', or 'Blue' for component gradient
+	 * @param {string} [id] - Optional: 'red', 'green', or 'blue' for component gradient
 	 * @returns {string} CSS gradient string
 	 */
-	getGradient(component) {
-		switch (component) {
-			case 'Red':
+	getGradient(id) {
+		switch (id) {
+			case 'red':
 				return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(255,0,0) 100%)';
-			case 'Green':
+			case 'green':
 				return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(0,255,0) 100%)';
-			case 'Blue':
+			case 'blue':
 				return 'linear-gradient(to right, rgb(0,0,0) 0%, rgb(0,0,255) 100%)';
 			default:
 				return super.getGradient();
@@ -30,18 +30,18 @@ export class ColorControl extends RGBControlType {
 	/**
 	 * Get color for RGB or a specific component
 	 * @param {number|Object} value - Component value (0-255) or RGB object {r, g, b}
-	 * @param {string} [component] - Optional: 'Red', 'Green', or 'Blue' for component color
+	 * @param {string} [id] - Optional: 'red', 'green', or 'blue' for component color
 	 * @returns {string} CSS color string
 	 */
-	getColor(value, component) {
+	getColor(value, id) {
 		// Handle component-specific colors
-		if (component) {
-			switch (component) {
-				case 'Red':
+		if (id) {
+			switch (id) {
+				case 'red':
 					return `rgb(${value}, 0, 0)`;
-				case 'Green':
+				case 'green':
 					return `rgb(0, ${value}, 0)`;
-				case 'Blue':
+				case 'blue':
 					return `rgb(0, 0, ${value})`;
 			}
 		}

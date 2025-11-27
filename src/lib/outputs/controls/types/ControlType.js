@@ -62,9 +62,10 @@ export class ControlType {
 
 	/**
 	 * Get slider gradient for UI display
+	 * @param {string} [id] - Optional: value id for multi-value controls
 	 * @returns {string} CSS gradient string
 	 */
-	getGradient() {
+	getGradient(id) {
 		// Fallback: solid gray
 		return 'rgb(128, 128, 128)';
 	}
@@ -72,9 +73,10 @@ export class ControlType {
 	/**
 	 * Get color for UI display based on current value
 	 * @param {*} value - Current control value
+	 * @param {string} [id] - Optional: value id for multi-value controls
 	 * @returns {string} CSS color string
 	 */
-	getColor(value) {
+	getColor(value, id) {
 		// Fallback: solid gray
 		return 'rgb(128, 128, 128)';
 	}
