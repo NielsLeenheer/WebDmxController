@@ -162,7 +162,7 @@
 					<label for="edit-value-trigger-device">Device:</label>
 					<select id="edit-value-trigger-device" bind:value={selectedDeviceId}>
 						{#each devices as device}
-							<option value={device.id}>{device.name || device.cssId}</option>
+							<option value={device.id}>{device.name || device.cssIdentifier}</option>
 						{/each}
 					</select>
 				</div>

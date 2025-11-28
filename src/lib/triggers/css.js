@@ -70,7 +70,7 @@ function _generateAutomaticTriggersCSS(device, automaticTriggers, animationLibra
 	
 	const animationValue = animationSpecs.join(', ');
 	
-	return `#${device.cssId} {
+	return `#${device.cssIdentifier} {
   animation: ${animationValue};
 }`;
 }
@@ -124,7 +124,7 @@ function _generateManualAnimationCSS(device, trigger, automaticTriggers, animati
 		: thisAnimation;
 	
 	const cssClassName = getCSSClassName(trigger, inputLibrary);
-	const selector = `.${cssClassName} #${device.cssId}`;
+	const selector = `.${cssClassName} #${device.cssIdentifier}`;
 	
 	return `${selector} {
   animation: ${animationValue};
@@ -162,7 +162,7 @@ function _generateManualValuesCSS(device, trigger, inputLibrary) {
 		.join('\n');
 
 	const cssClassName = getCSSClassName(trigger, inputLibrary);
-	const selector = `.${cssClassName} #${device.cssId}`;
+	const selector = `.${cssClassName} #${device.cssIdentifier}`;
 
 	return `${selector} {
 ${props}
@@ -199,7 +199,7 @@ export function generateValueTriggersCSS(triggers, device, inputLibrary) {
 	if (properties.length === 0) return '';
 
 	// Build combined CSS rule
-	const selector = `#${device.cssId}`;
+	const selector = `#${device.cssIdentifier}`;
 	const props = properties.map(p => `  ${p.property}: ${p.value};`).join('\n');
 
 	return `${selector} {\n${props}\n}`;

@@ -105,7 +105,7 @@
                                     data={previewData.data}
                                     title={device.name}
                                 />
-                                <code class="device-id">#{device.cssId}</code>
+                                <code class="device-id">#{device.cssIdentifier}</code>
                             </div>
                         {/each}
                     </div>

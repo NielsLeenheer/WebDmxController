@@ -108,7 +108,7 @@ export function getProperties(controlValues, controls, options = {}) {
  *
  * NEW: Works with control-based values
  *
- * @param {Object} device - Device object with type, defaultValues (control values), cssId, linkedTo
+ * @param {Object} device - Device object with type, defaultValues (control values), cssIdentifier, linkedTo
  * @returns {string|null} CSS block string or null if no CSS should be generated
  */
 export function generateCSSBlock(device) {
@@ -131,5 +131,5 @@ export function generateCSSBlock(device) {
 		.map(([prop, value]) => `  ${prop}: ${value};`)
 		.join('\n');
 
-	return `#${device.cssId} {\n${props}\n}`;
+	return `#${device.cssIdentifier} {\n${props}\n}`;
 }

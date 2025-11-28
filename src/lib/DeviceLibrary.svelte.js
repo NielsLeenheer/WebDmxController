@@ -29,12 +29,12 @@ export class DeviceLibrary extends Library {
 	 * @param {number} startChannel - Starting DMX channel
 	 * @param {string} name - Device name
 	 * @param {string|null} linkedTo - ID of device to link to
-	 * @param {string|null} cssId - CSS-safe ID
+	 * @param {string|null} cssIdentifier - CSS-safe ID
 	 * @param {Array<string>|null} syncedControls - Control names to sync when linked
 	 * @param {boolean} mirrorPan - Mirror pan values for linked devices
 	 * @returns {Object} The created device
 	 */
-	create(type, startChannel, name = '', linkedTo = null, cssId = null, syncedControls = null, mirrorPan = false) {
+	create(type, startChannel, name = '', linkedTo = null, cssIdentifier = null, syncedControls = null, mirrorPan = false) {
 		const deviceType = DEVICE_TYPES[type];
 		const deviceName = name || this._generateUniqueName(deviceType.name);
 
@@ -48,7 +48,7 @@ export class DeviceLibrary extends Library {
 			linkedTo,
 			syncedControls,
 			mirrorPan,
-			cssId: cssId || toCSSIdentifier(deviceName)
+			cssIdentifier: cssIdentifier || toCSSIdentifier(deviceName)
 		};
 
 		return this.add(device);
@@ -112,7 +112,7 @@ export class DeviceLibrary extends Library {
 	update(deviceId, updates) {
 		// Update CSS ID if name changed
 		if (updates.name) {
-			updates.cssId = toCSSIdentifier(updates.name);
+			updates.cssIdentifier = toCSSIdentifier(updates.name);
 		}
 
 		return super.update(deviceId, updates);
@@ -220,7 +220,7 @@ export class DeviceLibrary extends Library {
 			linkedTo: deviceData.linkedTo || null,
 			syncedControls: deviceData.syncedControls || null,
 			mirrorPan: deviceData.mirrorPan || false,
-			cssId: deviceData.cssId,
+			cssIdentifier: deviceData.cssIdentifier || deviceData.cssId,
 			order: deviceData.order !== undefined ? deviceData.order : index
 		};
 	}

@@ -80,7 +80,7 @@
 				class="trigger-preview"
 			/>
 			<div class="trigger-text">
-				{device.name || device.cssId}
+				{device.name || device.cssIdentifier}
 			</div>
 			<div class="trigger-subtext">
 				{controlLabel}
