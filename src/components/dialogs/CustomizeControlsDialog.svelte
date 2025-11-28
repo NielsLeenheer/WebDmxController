@@ -43,23 +43,23 @@
 		});
 	}
 
-	function isSyncControlSelected(controlName) {
+	function isSyncControlSelected(controlId) {
 		if (selectedSyncControls === null) return true; // All controls selected
-		return selectedSyncControls.includes(controlName);
+		return selectedSyncControls.includes(controlId);
 	}
 
-	function toggleSyncControl(controlName) {
+	function toggleSyncControl(controlId) {
 		if (selectedSyncControls === null) {
 			// If currently syncing all, create array with all except this one
 			selectedSyncControls = availableControls
-				.map(c => c.controlName)
-				.filter(name => name !== controlName);
-		} else if (selectedSyncControls.includes(controlName)) {
+				.map(c => c.controlId)
+				.filter(id => id !== controlId);
+		} else if (selectedSyncControls.includes(controlId)) {
 			// Remove from array
-			selectedSyncControls = selectedSyncControls.filter(name => name !== controlName);
+			selectedSyncControls = selectedSyncControls.filter(id => id !== controlId);
 		} else {
 			// Add to array
-			selectedSyncControls = [...selectedSyncControls, controlName];
+			selectedSyncControls = [...selectedSyncControls, controlId];
 		}
 	}
 
@@ -100,18 +100,18 @@
 					<label class="sync-control-item">
 						<input
 							type="checkbox"
-							checked={isSyncControlSelected(control.controlName)}
-							onchange={() => toggleSyncControl(control.controlName)}
+							checked={isSyncControlSelected(control.controlId)}
+							onchange={() => toggleSyncControl(control.controlId)}
 						/>
-						<span>{control.controlName}</span>
+						<span>{control.sourceControl.type.name}</span>
 					</label>
-					{#if control.controlName === 'Pan/Tilt'}
+					{#if control.controlId === 'pantilt'}
 						<label class="mirror-option">
 							—
 							<input
 								type="checkbox"
 								bind:checked={mirrorPan}
-								disabled={!isSyncControlSelected('Pan/Tilt')}
+								disabled={!isSyncControlSelected('pantilt')}
 							/>
 							<span>Mirror</span>
 						</label>

@@ -2,11 +2,10 @@
  * CSS Sampler
  *
  * Samples CSS computed styles from device elements and converts them to DMX channel values
+ * Uses control metadata (getSamplingConfig) for conversions
  */
 
 import { DEVICE_TYPES } from '../outputs/devices.js';
-import { CSS_TO_DMX_MAPPING } from './mapping/cssToDmxMapping.js';
-import { CONTROL_CSS_MAPPING } from './mapping/controlToCssMapping.js';
 
 export class CSSSampler {
 	constructor() {
@@ -39,19 +38,19 @@ export class CSSSampler {
 		// Create/update elements for current devices
 		for (const device of devices) {
 			let element = this.deviceElements.get(device.id);
-			const newCssId = device.cssId;
+			const newCssIdentifier = device.cssIdentifier;
 
 			if (!element) {
 				element = document.createElement('div');
-				element.id = newCssId;
+				element.id = newCssIdentifier;
 				element.className = 'dmx-device';
 				element.dataset.deviceType = device.type;
 				this.container.appendChild(element);
 				this.deviceElements.set(device.id, element);
 			} else {
 				// Update element ID if CSS ID changed
-				if (element.id !== newCssId) {
-					element.id = newCssId;
+				if (element.id !== newCssIdentifier) {
+					element.id = newCssIdentifier;
 				}
 			}
 
@@ -92,90 +91,54 @@ export class CSSSampler {
 	}
 
 	/**
-	 * Sample CSS properties based on device controls and convert to component values
-	 * This is the inverse of generateCSSProperties - it reads CSS and produces component values
-	 *
-	 * NEW: Works with control-based architecture (no components layer)
+	 * Sample CSS properties based on device controls and convert to control values
+	 * Uses control metadata (getSamplingConfig) for conversions
 	 *
 	 * @param {CSSStyleDeclaration} computed - Computed style from getComputedStyle()
 	 * @param {Array} controls - Array of control definitions from device type
-	 * @returns {Object} Map of component names to DMX values (e.g., {Red: 255, Green: 128, Blue: 0})
+	 * @returns {Object} Control values object keyed by device control id
 	 */
 	sampleCSSProperties(computed, controls) {
 		const result = {};
 
-		// Process each control
 		for (const control of controls) {
-			const mapping = CONTROL_CSS_MAPPING[control.type.type];
-			if (!mapping) continue;
+			const samplingConfig = control.type.getSamplingConfig?.();
+			if (!samplingConfig) continue;
 
-			if (control.type.type === 'xypad' || control.type.type === 'xypad16') {
-				// XY Pad control (e.g., Pan/Tilt)
-				// Sample X property (pan)
-				const xValue = computed.getPropertyValue(mapping.properties.x.name);
-				if (xValue) {
-					const xMapping = CSS_TO_DMX_MAPPING[mapping.properties.x.name];
-					if (xMapping) {
-						const sampledX = xMapping.sample(xValue);
-						Object.assign(result, sampledX);
+			// Handle multi-property controls (XY pads)
+			if (samplingConfig.properties) {
+				const controlValue = {};
+				for (const propConfig of samplingConfig.properties) {
+					const cssValue = computed.getPropertyValue(propConfig.cssProperty);
+					if (cssValue) {
+						const sampled = propConfig.parse(cssValue);
+						if (sampled !== null && sampled !== undefined) {
+							// Merge component values (e.g., {pan: 128}, {tilt: 128})
+							Object.assign(controlValue, sampled);
+						}
 					}
 				}
-
-				// Sample Y property (tilt)
-				const yValue = computed.getPropertyValue(mapping.properties.y.name);
-				if (yValue) {
-					const yMapping = CSS_TO_DMX_MAPPING[mapping.properties.y.name];
-					if (yMapping) {
-						const sampledY = yMapping.sample(yValue);
-						Object.assign(result, sampledY);
-					}
+				if (Object.keys(controlValue).length > 0) {
+					result[control.id] = controlValue;
 				}
-
-			} else if (control.type.type === 'rgb') {
-				// RGB Color control - sample the color property
-				const colorValue = computed.color;
-				if (colorValue) {
-					const colorMapping = CSS_TO_DMX_MAPPING['color'];
-					const sampledColor = colorMapping.sample(colorValue);
-					Object.assign(result, sampledColor);
+			}
+			// Handle single-property controls (sliders, toggles, RGB)
+			else if (samplingConfig.cssProperty) {
+				// Get CSS value
+				let cssValue;
+				if (samplingConfig.cssProperty.startsWith('--')) {
+					cssValue = computed.getPropertyValue(samplingConfig.cssProperty);
+				} else {
+					// Standard CSS property (e.g., 'color')
+					cssValue = computed[samplingConfig.cssProperty];
 				}
-
-			} else if (control.type.type === 'toggle') {
-				// Toggle control
-				const propName = mapping.properties.value.getName(control.name);
-				const cssValue = computed.getPropertyValue(propName);
 
 				if (cssValue) {
-					const cssMapping = CSS_TO_DMX_MAPPING[propName];
-					if (cssMapping) {
-						const sampledValue = cssMapping.sample(cssValue);
-						Object.assign(result, sampledValue);
-					}
-				}
-
-			} else if (control.type.type === 'slider') {
-				// Slider control (Dimmer, Intensity, White, Amber, etc.)
-				const propName = mapping.properties.value.getName(control.name);
-
-				let cssValue = computed.getPropertyValue(propName);
-
-				// For intensity/dimmer, also check opacity as fallback
-				if (!cssValue && (control.name === 'Dimmer' || control.name === 'Intensity')) {
-					cssValue = computed.opacity;
-					if (cssValue) {
-						const opacityMapping = CSS_TO_DMX_MAPPING['opacity'];
-						const sampledOpacity = opacityMapping.sample(cssValue);
-						// Use the control name to determine which key to use
-						result[control.name] = sampledOpacity.Intensity || sampledOpacity.Dimmer;
-					}
-				} else if (cssValue) {
-					const cssMapping = CSS_TO_DMX_MAPPING[propName];
-					if (cssMapping) {
-						const sampledValue = cssMapping.sample(cssValue);
-						// The mapping returns component name -> value
-						// For control-based arch, we need to map to the control's component name
-						// For simple sliders, the component name matches the control name
-						Object.assign(result, sampledValue);
+					const sampled = samplingConfig.parse(cssValue);
+					if (sampled !== null && sampled !== undefined) {
+						// For single-property controls, store the value under the control id
+						// Note: sampled can be 0 which is valid, so we check !== null/undefined
+						result[control.id] = sampled;
 					}
 				}
 			}

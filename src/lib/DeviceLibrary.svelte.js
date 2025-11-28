@@ -11,7 +11,7 @@
 
 import { Library } from './Library.svelte.js';
 import { DEVICE_TYPES } from './outputs/devices.js';
-import { createDefaultControlValues, mergeControlValues, mirrorPanTilt } from './outputs/controls.js';
+import { createDefaultControlValues, mirrorPanTilt } from './outputs/controls.js';
 import { toCSSIdentifier } from './css/utils.js';
 import { generateCSSBlock } from './outputs/css.js';
 
@@ -29,14 +29,14 @@ export class DeviceLibrary extends Library {
 	 * @param {number} startChannel - Starting DMX channel
 	 * @param {string} name - Device name
 	 * @param {string|null} linkedTo - ID of device to link to
-	 * @param {string|null} cssId - CSS-safe ID
+	 * @param {string|null} cssIdentifier - CSS-safe ID
 	 * @param {Array<string>|null} syncedControls - Control names to sync when linked
 	 * @param {boolean} mirrorPan - Mirror pan values for linked devices
 	 * @returns {Object} The created device
 	 */
-	create(type, startChannel, name = '', linkedTo = null, cssId = null, syncedControls = null, mirrorPan = false) {
+	create(type, startChannel, name = '', linkedTo = null, cssIdentifier = null, syncedControls = null, mirrorPan = false) {
 		const deviceType = DEVICE_TYPES[type];
-		const deviceName = name || `${deviceType.name} ${this.items.length + 1}`;
+		const deviceName = name || this._generateUniqueName(deviceType.name);
 
 		const device = {
 			// id and order will be auto-set by base class
@@ -48,28 +48,53 @@ export class DeviceLibrary extends Library {
 			linkedTo,
 			syncedControls,
 			mirrorPan,
-			cssId: cssId || toCSSIdentifier(deviceName)
+			cssIdentifier: cssIdentifier || toCSSIdentifier(deviceName)
 		};
 
 		return this.add(device);
 	}
 
 	/**
+	 * Generate a unique name for a device
+	 * First device of a type gets the base name (e.g., "RGB Light")
+	 * Subsequent devices get numbered names (e.g., "RGB Light 2", "RGB Light 3")
+	 * @param {string} baseName - Base name from device type
+	 * @returns {string} Unique device name
+	 */
+	_generateUniqueName(baseName) {
+		// Get all existing names
+		const existingNames = new Set(this.items.map(d => d.name));
+
+		// If base name is available, use it
+		if (!existingNames.has(baseName)) {
+			return baseName;
+		}
+
+		// Find the next available number
+		let number = 2;
+		while (existingNames.has(`${baseName} ${number}`)) {
+			number++;
+		}
+
+		return `${baseName} ${number}`;
+	}
+
+	/**
 	 * Update device control value and propagate to linked devices
 	 * @param {string} deviceId - Device ID
-	 * @param {string} controlName - Control name (e.g., 'Color', 'Dimmer', 'Pan/Tilt')
+	 * @param {string} controlId - Control type id (e.g., 'color', 'dimmer', 'pantilt')
 	 * @param {*} value - New control value (object, number, etc.)
 	 */
-	updateValue(deviceId, controlName, value) {
+	updateValue(deviceId, controlId, value) {
 		const device = this.get(deviceId);
 		if (!device) return;
 
 		// Update control value (reactivity handled by $state)
 		// Deep copy if object to avoid reference sharing
 		if (typeof value === 'object' && value !== null) {
-			device.defaultValues[controlName] = { ...value };
+			device.defaultValues[controlId] = { ...value };
 		} else {
-			device.defaultValues[controlName] = value;
+			device.defaultValues[controlId] = value;
 		}
 
 		// Propagate to linked devices
@@ -87,7 +112,7 @@ export class DeviceLibrary extends Library {
 	update(deviceId, updates) {
 		// Update CSS ID if name changed
 		if (updates.name) {
-			updates.cssId = toCSSIdentifier(updates.name);
+			updates.cssIdentifier = toCSSIdentifier(updates.name);
 		}
 
 		return super.update(deviceId, updates);
@@ -122,23 +147,23 @@ export class DeviceLibrary extends Library {
 				// Otherwise, sync all common controls
 				const controlsToSync = device.syncedControls ||
 					Object.keys(sourceDevice.defaultValues).filter(
-						name => name in device.defaultValues
+						id => id in device.defaultValues
 					);
 
 				// Merge control values from source to target
-				for (const controlName of controlsToSync) {
-					let value = sourceDevice.defaultValues[controlName];
+				for (const controlId of controlsToSync) {
+					let value = sourceDevice.defaultValues[controlId];
 
 					// Apply pan mirroring if enabled and this is a Pan/Tilt control
-					if (device.mirrorPan && controlName === 'Pan/Tilt') {
+					if (device.mirrorPan && controlId === 'pantilt') {
 						value = mirrorPanTilt(value);
 					}
 
 					// Update control value (reactivity handled by $state)
 					if (typeof value === 'object' && value !== null) {
-						device.defaultValues[controlName] = { ...value };
+						device.defaultValues[controlId] = { ...value };
 					} else {
-						device.defaultValues[controlName] = value;
+						device.defaultValues[controlId] = value;
 					}
 				}
 			}
@@ -195,8 +220,47 @@ export class DeviceLibrary extends Library {
 			linkedTo: deviceData.linkedTo || null,
 			syncedControls: deviceData.syncedControls || null,
 			mirrorPan: deviceData.mirrorPan || false,
-			cssId: deviceData.cssId,
+			cssIdentifier: deviceData.cssIdentifier || deviceData.cssId,
 			order: deviceData.order !== undefined ? deviceData.order : index
 		};
+	}
+
+	/**
+	 * Migrate old device type IDs to new format
+	 * Call this manually to update devices stored with old UPPERCASE_WITH_UNDERSCORE IDs
+	 * to new lowercase-with-dash format
+	 * 
+	 * Usage: deviceLibrary.migrateDeviceTypeIds()
+	 */
+	migrateDeviceTypeIds() {
+		const typeIdMap = {
+			'RGB': 'rgb',
+			'RGBA': 'rgba',
+			'RGBW': 'rgbw',
+			'DIMMER': 'dimmer',
+			'SMOKE': 'smoke',
+			'MOVING_HEAD': 'moving-head',
+			'MOVING_HEAD_11CH': 'moving-head-11ch',
+			'FLAMETHROWER': 'flamethrower'
+		};
+
+		let migratedCount = 0;
+
+		for (const device of this.items) {
+			if (typeIdMap[device.type]) {
+				console.log(`Migrating device "${device.name}": ${device.type} → ${typeIdMap[device.type]}`);
+				device.type = typeIdMap[device.type];
+				migratedCount++;
+			}
+		}
+
+		if (migratedCount > 0) {
+			this.save();
+			console.log(`Migration complete. ${migratedCount} device(s) updated.`);
+		} else {
+			console.log('No devices needed migration.');
+		}
+
+		return migratedCount;
 	}
 }

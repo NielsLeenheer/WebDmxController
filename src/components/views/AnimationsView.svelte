@@ -1,12 +1,15 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-    import { getNumControls } from '../../lib/animations/utils.js';
+    import { getControlsForRendering } from '../../lib/animations/utils.js';
     import { animationLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import AnimationCard from '../cards/AnimationCard.svelte';
     import Button from '../common/Button.svelte';
     import AddAnimationDialog from '../dialogs/AddAnimationDialog.svelte';
     import EditAnimationDialog from '../dialogs/EditAnimationDialog.svelte';
+
+    import { Icon } from 'svelte-icon';
+    import newIcon from '../../assets/icons/new.svg?raw';
 
     // Get data reactively
     let devices = $derived(deviceLibrary.getAll());
@@ -34,63 +37,70 @@
 
         // Parse selected target
         const parsed = parseAnimationTarget(result.target);
-        const { controls, displayName } = parsed;
+        const { controls, targetLabel } = parsed;
 
         // Create animation using library
-        const animation = animationLibrary.create(result.name, controls, displayName);
+        const animation = animationLibrary.create(result.name, controls, targetLabel);
 
-        // Determine device type for initial keyframes
-        const deviceType = getDeviceTypeForControls(controls);
-
-        // Determine number of channels based on control selection
-        const numChannels = getNumControls(animation);
-        const defaultValues = new Array(numChannels).fill(0);
+        // Create default values object keyed by control ID
+        const defaultValues = createDefaultKeyframeValues(animation);
 
         // Add default keyframes at start and end
-        animationLibrary.addKeyframe(animation.id, 0, deviceType, defaultValues);
-        animationLibrary.addKeyframe(animation.id, 1, deviceType, defaultValues);
+        animationLibrary.addKeyframe(animation.id, 0, defaultValues);
+        animationLibrary.addKeyframe(animation.id, 1, defaultValues);
     }
 
-    // Get a device type that has the specified controls (for keyframe rendering)
-    function getDeviceTypeForControls(controls) {
-        for (const [deviceKey, deviceDef] of Object.entries(DEVICE_TYPES)) {
-            const hasAllControls = controls.every(controlName =>
-                deviceDef.controls.some(c => c.name === controlName)
-            );
-            if (hasAllControls) {
-                return deviceKey;
-            }
+    // Create default keyframe values object for an animation
+    function createDefaultKeyframeValues(animation) {
+        const controls = getControlsForRendering(animation);
+        const values = {};
+        
+        for (const control of controls) {
+            // Get the default value from the control type
+            values[control.id] = control.type.getDefaultValue();
         }
-        return 'RGB'; // Fallback
+        
+        return values;
     }
 
-    // Parse selected target into controls array and displayName
+    // Parse selected target into controls array and targetLabel
     function parseAnimationTarget(target) {
         const parts = target.split('|');
         const targetType = parts[0];
 
         if (targetType === 'control') {
             // Single control (device-agnostic)
-            const controlName = parts[1];
+            const controlId = parts[1];
+            
+            // Find the friendly name for this control
+            let friendlyName = controlId;
+            for (const deviceDef of Object.values(DEVICE_TYPES)) {
+                const control = deviceDef.controls.find(c => c.id === controlId);
+                if (control) {
+                    friendlyName = control.type.name;
+                    break;
+                }
+            }
+            
             return {
-                controls: [controlName],
-                displayName: controlName
+                controls: [controlId],
+                targetLabel: friendlyName
             };
         } else if (targetType === 'device') {
             // All controls for this device type
             const deviceType = parts[1];
             const deviceDef = DEVICE_TYPES[deviceType];
-            const controlNames = deviceDef.controls.map(c => c.name);
+            const controlIds = deviceDef.controls.map(c => c.id);
             return {
-                controls: controlNames,  // Array of all control names from this device
-                displayName: deviceDef.name
+                controls: controlIds,  // Array of all control ids from this device
+                targetLabel: deviceDef.name
             };
         }
 
         // Fallback
         return {
-            controls: ['Color'],
-            displayName: 'Color'
+            controls: ['color'],
+            targetLabel: 'Color'
         };
     }
 
@@ -114,6 +124,7 @@
 <div class="animations-view">
     <div class="add-animation-section">
         <Button onclick={openNewAnimationDialog} variant="secondary">
+            <Icon data={newIcon} />
             Add Animation
         </Button>
     </div>

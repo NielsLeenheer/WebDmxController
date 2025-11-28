@@ -3,7 +3,7 @@
     import { getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from '../../stores.svelte.js';
-    import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
+    import { isButton } from '../../lib/inputs/utils.js';
     import Preview from '../common/Preview.svelte';
 
     let {
@@ -73,52 +73,16 @@
         return unsubscribe;
     });
 
-    /**
-     * Convert component values from CSS sampler to control values
-     * The CSS sampler returns component values like { Red: 255, Green: 0, Blue: 0 }
-     * We need to convert to control values like { "Color": { r: 255, g: 0, b: 0 } }
-     */
-    function convertComponentsToControlValues(deviceType, componentValues) {
-        const controlValues = {};
-        const deviceTypeDef = DEVICE_TYPES[deviceType];
-        if (!deviceTypeDef) return controlValues;
-
-        // Map components back to controls
-        for (const control of deviceTypeDef.controls) {
-            if (control.type.type === 'rgb' || control.type.type === 'rgba') {
-                // RGB control - gather r, g, b from component values
-                controlValues[control.name] = {
-                    r: componentValues.Red ?? 0,
-                    g: componentValues.Green ?? 0,
-                    b: componentValues.Blue ?? 0
-                };
-            } else if (control.type.type === 'xypad' || control.type.type === 'xypad16') {
-                // XY Pad control
-                controlValues[control.name] = {
-                    x: componentValues.Pan ?? 128,
-                    y: componentValues.Tilt ?? 128
-                };
-            } else if (control.type.type === 'slider' || control.type.type === 'toggle') {
-                // Slider/Toggle control - direct mapping by control name
-                if (componentValues[control.name] !== undefined) {
-                    controlValues[control.name] = componentValues[control.name];
-                }
-            }
-        }
-
-        return controlValues;
-    }
-
     // Get preview data for a device
     function getPreviewData(device) {
-        const componentValues = sampledDeviceData.get(device.id);
-        if (!componentValues) {
-            // Use default values if no sampled data
+        const controlValues = sampledDeviceData.get(device.id);
+        
+        // Use default values if no sampled data or sampled data is empty
+        if (!controlValues || Object.keys(controlValues).length === 0) {
             return getDevicePreviewData(device.type, device.defaultValues);
         }
 
-        // Convert component values to control values for preview
-        const controlValues = convertComponentsToControlValues(device.type, componentValues);
+        // Sampled values are already in the correct format (keyed by device control id)
         return getDevicePreviewData(device.type, controlValues);
     }
 </script>
@@ -141,7 +105,7 @@
                                     data={previewData.data}
                                     title={device.name}
                                 />
-                                <code class="device-id">#{device.cssId}</code>
+                                <code class="device-id">#{device.cssIdentifier}</code>
                             </div>
                         {/each}
                     </div>
@@ -154,7 +118,7 @@
                     <h4>Animations</h4>
                     <div class="css-identifiers">
                         {#each animations as animation (animation.name)}
-                            <code class="css-identifier">{animation.cssName}</code>
+                            <code class="css-identifier">{animation.cssIdentifier}</code>
                         {/each}
                     </div>
                 </div>
@@ -166,20 +130,20 @@
                     <h4>Inputs</h4>
                     <div class="css-identifiers">
                         {#each inputs as input (input.id)}
-                            {#if isButtonInput(input)}
+                            {#if isButton(input)}
                                 <!-- Buttons show classes based on mode -->
                                 {#if input.buttonMode === 'toggle'}
                                     <!-- Toggle buttons show on and off classes -->
-                                    <code class="css-identifier">.{input.cssClassOn}</code>
-                                    <code class="css-identifier">.{input.cssClassOff}</code>
+                                    <code class="css-identifier">.{input.cssIdentifier}-on</code>
+                                    <code class="css-identifier">.{input.cssIdentifier}-off</code>
                                 {:else}
                                     <!-- Momentary buttons show down and up classes -->
-                                    <code class="css-identifier">.{input.cssClassDown}</code>
-                                    <code class="css-identifier">.{input.cssClassUp}</code>
+                                    <code class="css-identifier">.{input.cssIdentifier}-down</code>
+                                    <code class="css-identifier">.{input.cssIdentifier}-up</code>
                                 {/if}
                             {:else}
                                 <!-- Sliders/Knobs show custom property -->
-                                <code class="css-identifier">{getInputPropertyName(input)}</code>
+                                <code class="css-identifier">--{input.cssIdentifier}</code>
                             {/if}
                         {/each}
                     </div>

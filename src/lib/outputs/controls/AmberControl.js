@@ -6,7 +6,10 @@ import { SliderControlType } from './types/SliderControlType.js';
  */
 export class AmberControl extends SliderControlType {
 	constructor() {
-		super('amber', 'Amber');
+		super({
+			id: 'amber',
+			name: 'Amber',
+		});
 	}
 
 	getGradient() {
@@ -15,5 +18,37 @@ export class AmberControl extends SliderControlType {
 
 	getColor(value) {
 		return `rgb(${value}, ${Math.round(value * 0.749)}, 0)`;
+	}
+
+	getValueMetadata() {
+		return {
+			values: [{
+				id: 'amber',
+				label: 'Amber',
+				type: 'range',
+				cssProperty: '--amber',
+				sample: true,
+				min: 0,
+				max: 100,
+				unit: '%',
+				dmxMin: 0,
+				dmxMax: 255,
+				description: 'Amber intensity (0% to 100%)'
+			}]
+		};
+	}
+
+	getSamplingConfig() {
+		const meta = this.getValueMetadata().values[0];
+		return {
+			cssProperty: meta.cssProperty,
+			parse: (cssValue) => {
+				const match = cssValue.match(/(-?\d+(?:\.\d+)?)/);
+				const value = match ? parseFloat(match[1]) : 0;
+				const normalized = (value - meta.min) / (meta.max - meta.min);
+				const dmxValue = Math.round(normalized * (meta.dmxMax - meta.dmxMin) + meta.dmxMin);
+				return Math.max(meta.dmxMin, Math.min(meta.dmxMax, dmxValue));
+			}
+		};
 	}
 }

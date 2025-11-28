@@ -13,15 +13,6 @@
 		animationLibrary, // Animation library reference
 		onSettings       // Callback when settings button clicked
 	} = $props();
-
-	/**
-	 * Get display name for animation
-	 */
-	function getDisplayName() {
-		return animation.displayName || animation.controls?.join(', ') || 'Animation';
-	}
-
-	let displayName = $derived(getDisplayName());
 </script>
 
 <DraggableCard {dnd} item={animation} class="animation-card">
@@ -35,7 +26,7 @@
 		<h3>{animation.name}</h3>
 
 		<div class="badge">
-			{displayName}
+			{animation.targetLabel || 'Animation'}
 		</div>
 
 		<IconButton

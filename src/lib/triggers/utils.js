@@ -12,16 +12,25 @@ import { toCSSIdentifier } from '../css/utils.js';
  * @returns {boolean}
  */
 export function isAutomatic(trigger) {
-	return trigger.triggerType === 'always';
+	return trigger.type === 'auto';
 }
 
 /**
- * Check if trigger is manual (input-based)
+ * Check if trigger is manual (input-based action trigger)
  * @param {Object} trigger - Trigger object
  * @returns {boolean}
  */
 export function isManual(trigger) {
-	return !isAutomatic(trigger);
+	return trigger.type === 'action';
+}
+
+/**
+ * Check if trigger is a value-based trigger (continuous input-to-control mapping)
+ * @param {Object} trigger - Trigger object
+ * @returns {boolean}
+ */
+export function isValueTrigger(trigger) {
+	return trigger.type === 'value';
 }
 
 /**
@@ -32,26 +41,23 @@ export function isManual(trigger) {
  */
 export function getCSSClassName(trigger, inputLibrary) {
 	// For automatic (always) triggers
-	if (trigger.triggerType === 'always') {
+	if (trigger.type === 'auto') {
 		return 'always';
 	}
 
-	// For manual triggers - get input from library
-	if (!inputLibrary || !trigger.inputId) {
+	// For action triggers - get input from library
+	if (!inputLibrary || !trigger.input?.id) {
 		return `trigger-${trigger.id || 'unknown'}`;
 	}
 
-	const input = inputLibrary.get(trigger.inputId);
+	const input = inputLibrary.get(trigger.input.id);
 	if (!input) {
 		return `trigger-${trigger.id || 'unknown'}`;
 	}
 
-	// Use the input's CSS classes based on trigger type and button mode
-	const buttonMode = input.buttonMode || 'momentary';
+	// Derive CSS class name from input's cssIdentifier and input.state
+	const cssId = input.cssIdentifier;
+	const state = trigger.input.state || 'down';
 	
-	if (buttonMode === 'toggle') {
-		return trigger.triggerType === 'pressed' ? input.cssClassOn : input.cssClassOff;
-	} else {
-		return trigger.triggerType === 'pressed' ? input.cssClassDown : input.cssClassUp;
-	}
+	return `${cssId}-${state}`;
 }

@@ -14,7 +14,7 @@
  * - They are NOT stored in $state or localStorage
  */
 export class ControlType {
-	constructor(id, name, type, defaultValue) {
+	constructor({ id, name, type, defaultValue }) {
 		this.id = id;          // Unique identifier string
 		this.name = name;      // Display name
 		this.type = type;      // UI type: 'rgb', 'slider', 'xypad', etc.
@@ -62,9 +62,10 @@ export class ControlType {
 
 	/**
 	 * Get slider gradient for UI display
+	 * @param {string} [id] - Optional: value id for multi-value controls
 	 * @returns {string} CSS gradient string
 	 */
-	getGradient() {
+	getGradient(id) {
 		// Fallback: solid gray
 		return 'rgb(128, 128, 128)';
 	}
@@ -72,10 +73,31 @@ export class ControlType {
 	/**
 	 * Get color for UI display based on current value
 	 * @param {*} value - Current control value
+	 * @param {string} [id] - Optional: value id for multi-value controls
 	 * @returns {string} CSS color string
 	 */
-	getColor(value) {
+	getColor(value, id) {
 		// Fallback: solid gray
 		return 'rgb(128, 128, 128)';
+	}
+
+	/**
+	 * Get value metadata for this control type
+	 * Used by value-based triggers for type conversion
+	 * @returns {Object} Value metadata with values array containing id, label, CSS property, range, unit
+	 */
+	getValueMetadata() {
+		// Override in subclasses
+		return { values: [] };
+	}
+
+	/**
+	 * Get sampling configuration for this control
+	 * Defines how to sample CSS values and convert to DMX
+	 * @returns {Object|null} Sampling config with cssProperty and parse function
+	 */
+	getSamplingConfig() {
+		// Override in subclasses
+		return null;
 	}
 }

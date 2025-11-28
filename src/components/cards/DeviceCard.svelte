@@ -2,7 +2,6 @@
 	import { Icon } from 'svelte-icon';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { getMappedControls } from '../../lib/outputs/sync.js';
-	import { getDeviceColor } from '../../lib/outputs/devices.js';
 	import DraggableCard from '../common/DraggableCard.svelte';
 	import CardHeader from '../common/CardHeader.svelte';
 	import Controls from '../controls/Controls.svelte';
@@ -57,7 +56,7 @@
 	<Controls
 		controls={DEVICE_TYPES[device.type].controls}
 		values={device.defaultValues}
-		onChange={(controlName, value) => onValueChange?.(device, controlName, value)}
+		onChange={(controlId, value) => onValueChange?.(device, controlId, value)}
 		disabledControls={disabledControls}
 	/>
 </DraggableCard>

@@ -36,11 +36,11 @@ export class InputDeviceManager {
 	 * Setup Stream Deck event listeners
 	 */
 	_setupStreamDeckListeners() {
-		this.streamDeckManager.on('connected', ({ device, model, serialNumber }) => {
+		this.streamDeckManager.on('connected', ({ device, model, serialNumber, buttonCount }) => {
 			console.log(`Stream Deck connected: ${model}`);
 
 			// Create StreamDeckInputDevice wrapper with manager reference
-			const inputDevice = new StreamDeckInputDevice(device, serialNumber, model, this.streamDeckManager);
+			const inputDevice = new StreamDeckInputDevice(device, serialNumber, model, this.streamDeckManager, buttonCount);
 			this.devices.set(serialNumber, inputDevice);
 			this._emit('deviceadded', inputDevice);
 		});

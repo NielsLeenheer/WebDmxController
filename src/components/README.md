@@ -23,7 +23,7 @@ components/
     ├── DevicesView.svelte
     ├── UniverseView.svelte
     ├── TimelineView.svelte
-    └── CSSView.svelte
+    └── EditorView.svelte
 ```
 
 ## Component Categories
@@ -49,7 +49,7 @@ Main application views (full-screen content areas):
 - **DevicesView**: Device management and configuration
 - **UniverseView**: 512-channel DMX universe grid
 - **TimelineView**: Keyframe-based animation timeline
-- **CSSView**: CSS animation-driven DMX control
+- **EditorView**: CSS animation-driven DMX control
 
 ## Usage
 

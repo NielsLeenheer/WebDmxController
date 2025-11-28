@@ -7,13 +7,16 @@
     import Button from '../common/Button.svelte';
     import EditDeviceDialog from '../dialogs/EditDeviceDialog.svelte';
 
+    import { Icon } from 'svelte-icon';
+    import newIcon from '../../assets/icons/new.svg?raw';
+
     let { dmxController, isActive = false } = $props();
 
     // Get devices
     let devices = $derived(deviceLibrary.getAll());
 
     // Device type selection
-    let selectedType = $state('RGB');
+    let selectedType = $state('rgb');
 
     // Dialog reference
     let editDeviceDialog;
@@ -70,8 +73,8 @@
         deviceLibrary.remove(deviceId);
     }
 
-    function handleDeviceValueChange(device, controlName, value) {
-        deviceLibrary.updateValue(device.id, controlName, value);
+    function handleDeviceValueChange(device, controlId, value) {
+        deviceLibrary.updateValue(device.id, controlId, value);
     }
 
     /**
@@ -114,6 +117,7 @@
             {/each}
         </select>
         <Button onclick={() => addDevice(selectedType)} variant="secondary">
+            <Icon data={newIcon} />
             Add Device
         </Button>
     </div>

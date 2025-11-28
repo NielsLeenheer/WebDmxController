@@ -1,6 +1,6 @@
 <script>
 	import { paletteColorToHex } from '../../lib/inputs/colors.js';
-	import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
+	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
 	import DraggableCard from '../common/DraggableCard.svelte';
 	import Preview from '../common/Preview.svelte';
 	import editIcon from '../../assets/glyphs/edit.svg?raw';
@@ -21,16 +21,16 @@
 		size="medium"
 		data={input}
 		stateValue={stateDisplay}
-		euler={input.inputControlId === 'button' && eulerAngles ? eulerAngles : null}
+		euler={input.controlId === 'thingy' && eulerAngles ? eulerAngles : null}
 		class="input-preview"
 	/>
 	<div class="input-header">
 		<div class="input-name">{input.name}</div>
 		<div class="input-device-name">
-			{input.inputDeviceName || input.inputDeviceId}
-			{#if input.friendlyName}
+			{input.deviceName || input.deviceId}
+			{#if input.controlName}
 				<span class="separator">•</span>
-				{input.friendlyName}
+				{input.controlName}
 			{/if}
 		</div>
 	</div>

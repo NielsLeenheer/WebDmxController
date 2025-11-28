@@ -56,11 +56,11 @@
 			devices = devs;
 
 			// Initialize form state from trigger
-			selectedDevice = trigger.deviceId;
-			selectedAnimation = trigger.animation?.id;
-			duration = trigger.animation?.duration || 1000;
-			looping = trigger.animation?.iterations === 'infinite';
-			easing = trigger.animation?.easing || 'linear';
+			selectedDevice = trigger.output?.id;
+			selectedAnimation = trigger.action?.animation?.id;
+			duration = trigger.action?.animation?.duration || 1000;
+			looping = trigger.action?.animation?.iterations === 'infinite';
+			easing = trigger.action?.animation?.easing || 'linear';
 
 			requestAnimationFrame(() => {
 				dialogRef?.showModal();

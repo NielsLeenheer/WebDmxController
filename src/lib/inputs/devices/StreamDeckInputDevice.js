@@ -4,12 +4,44 @@ import { InputDevice } from './InputDevice.js';
  * Stream Deck Input Device (Elgato Stream Deck via WebHID)
  */
 export class StreamDeckInputDevice extends InputDevice {
-	constructor(streamDeck, serialNumber, model, streamDeckManager) {
-		super(serialNumber, model || 'Stream Deck', 'hid');
+	constructor(streamDeck, serialNumber, model, streamDeckManager, buttonCount = 6) {
+		super(serialNumber, model || 'Stream Deck', 'streamdeck');
 		this.streamDeck = streamDeck;
 		this.serialNumber = serialNumber;
 		this.model = model;
 		this.streamDeckManager = streamDeckManager;
+		this.buttonCount = buttonCount;
+	}
+
+	/**
+	 * Get friendly name for a button
+	 * @param {string} controlId - Control identifier (e.g., 'button-0')
+	 * @returns {string} Friendly name (e.g., 'Button 1')
+	 */
+	_getFriendlyName(controlId) {
+		if (controlId.startsWith('button-')) {
+			const buttonIndex = parseInt(controlId.replace('button-', ''));
+			if (!isNaN(buttonIndex)) {
+				// Display 1-based button numbers to users
+				return `Button ${buttonIndex + 1}`;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Get all control IDs for this device
+	 * @returns {Array<{controlId: string, colorSupport: string}>}
+	 */
+	getControls() {
+		const controls = [];
+		for (let i = 0; i < this.buttonCount; i++) {
+			controls.push({
+				controlId: `button-${i}`,
+				colorSupport: 'rgb'
+			});
+		}
+		return controls;
 	}
 
 	/**
@@ -21,7 +53,7 @@ export class StreamDeckInputDevice extends InputDevice {
 			velocity,
 			type: 'button',
 			colorSupport: 'rgb',
-			friendlyName: null
+			friendlyName: this._getFriendlyName(controlId)
 		});
 	}
 

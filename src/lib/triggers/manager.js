@@ -10,8 +10,8 @@
 export class TriggerManager {
 	constructor() {
 		this.activeClasses = new Set();
-		this.notPressedClasses = new Set(); // Track not-pressed triggers
-		this.alwaysClasses = new Set(); // Track always triggers
+		this.upClasses = new Set(); // Track up/off state triggers
+		this.alwaysClasses = new Set(); // Track always/auto triggers
 		this.container = null; // Will be set to the container element
 	}
 
@@ -21,8 +21,8 @@ export class TriggerManager {
 	setContainer(element) {
 		this.container = element;
 
-		// Apply all not-pressed and always classes to the container
-		for (const className of this.notPressedClasses) {
+		// Apply all up/off and always classes to the container
+		for (const className of this.upClasses) {
 			element.classList.add(className);
 		}
 		for (const className of this.alwaysClasses) {
@@ -37,13 +37,14 @@ export class TriggerManager {
 		if (mapping.mode !== 'trigger') return;
 
 		// Both animation and setValue actions use CSS classes
-		// For not-pressed and always types, add to permanent sets
-		if (mapping.triggerType === 'not-pressed') {
-			this.notPressedClasses.add(mapping.cssClassName);
+		// For up/off and auto types, add to permanent sets
+		const state = mapping.input?.state;
+		if (state === 'up' || state === 'off') {
+			this.upClasses.add(mapping.cssClassName);
 			if (this.container) {
 				this.container.classList.add(mapping.cssClassName);
 			}
-		} else if (mapping.triggerType === 'always') {
+		} else if (mapping.type === 'auto') {
 			this.alwaysClasses.add(mapping.cssClassName);
 			if (this.container) {
 				this.container.classList.add(mapping.cssClassName);
@@ -58,7 +59,7 @@ export class TriggerManager {
 		if (mapping.mode !== 'trigger') return;
 
 		// Both animation and setValue actions use CSS classes
-		this.notPressedClasses.delete(mapping.cssClassName);
+		this.upClasses.delete(mapping.cssClassName);
 		this.alwaysClasses.delete(mapping.cssClassName);
 
 		if (this.container) {
@@ -75,16 +76,17 @@ export class TriggerManager {
 
 		// Both animation and setValue actions use CSS classes
 		const className = mapping.cssClassName;
+		const state = mapping.input?.state;
 
-		if (mapping.triggerType === 'pressed') {
-			// Pressed: Add class when triggered
+		if (state === 'down' || state === 'on') {
+			// Down/On: Add class when triggered
 			this.container.classList.add(className);
 			this.activeClasses.add(className);
-		} else if (mapping.triggerType === 'not-pressed') {
-			// Not-pressed: Remove class when triggered (pressed)
+		} else if (state === 'up' || state === 'off') {
+			// Up/Off: Remove class when triggered (pressed)
 			this.container.classList.remove(className);
 		}
-		// 'always' type is always on, no action needed on trigger
+		// 'auto' type is always on, no action needed on trigger
 	}
 
 	/**
@@ -96,16 +98,17 @@ export class TriggerManager {
 
 		// Both animation and setValue actions use CSS classes
 		const className = mapping.cssClassName;
+		const state = mapping.input?.state;
 
-		if (mapping.triggerType === 'pressed') {
-			// Pressed: Remove class when released
+		if (state === 'down' || state === 'on') {
+			// Down/On: Remove class when released
 			this.container.classList.remove(className);
 			this.activeClasses.delete(className);
-		} else if (mapping.triggerType === 'not-pressed') {
-			// Not-pressed: Add class back when released
+		} else if (state === 'up' || state === 'off') {
+			// Up/Off: Add class back when released
 			this.container.classList.add(className);
 		}
-		// 'always' type is always on, no action needed on release
+		// 'auto' type is always on, no action needed on release
 	}
 
 	/**

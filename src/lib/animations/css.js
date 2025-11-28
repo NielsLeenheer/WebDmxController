@@ -4,7 +4,6 @@
  * Functions for converting animations to CSS @keyframes rules
  */
 
-import { getDeviceColor } from '../outputs/devices.js';
 import { getProperties } from '../outputs/css.js';
 import { getControlsForRendering } from './utils.js';
 
@@ -28,7 +27,7 @@ export function generateCSSAnimation(animation) {
 		return `${percent}% { ${props}; }`;
 	}).join('\n  ');
 
-	return `@keyframes ${animation.cssName} {\n  ${keyframeRules}\n}`;
+	return `@keyframes ${animation.cssIdentifier} {\n  ${keyframeRules}\n}`;
 }
 
 /**

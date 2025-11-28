@@ -13,19 +13,17 @@ import { CONTROL_TYPES } from '../controls/index.js';
 export class RGBDeviceType extends DeviceType {
     constructor() {
         super({
-            id: 'RGB',
+            id: 'rgb',
             name: 'RGB Light',
             channels: 3,
             defaultValues: [0, 0, 0],
             controls: [
                 {
-                    name: 'Color',
-                    type: CONTROL_TYPES.RGB,
+                    id: 'color',
+                    type: CONTROL_TYPES.Color,
                     startChannel: 0
                 }
             ]
         });
     }
 }
-
-export const RGB = new RGBDeviceType();

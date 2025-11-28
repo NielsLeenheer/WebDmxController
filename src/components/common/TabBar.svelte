@@ -1,0 +1,100 @@
+<script>
+    /**
+     * Reusable TabBar component
+     *
+     * @prop {Array} tabs - Array of tab objects with structure: { id: string, label: string, icon?: string, anchorName?: string }
+     * @prop {string} activeTab - Currently active tab ID
+     * @prop {Function} onTabChange - Callback when tab changes, receives tab ID
+     * @prop {boolean} wrap - Whether to wrap tabs when they overflow
+     */
+    let {
+        tabs = [],
+        activeTab = $bindable(''),
+        onTabChange = null,
+        wrap = false
+    } = $props();
+
+    function handleTabClick(tabId) {
+        activeTab = tabId;
+        if (onTabChange) {
+            onTabChange(tabId);
+        }
+    }
+</script>
+
+<div class="tab-bar" class:wrap={wrap}>
+    {#each tabs as tab}
+        <button
+            class="tab"
+            class:active={activeTab === tab.id}
+            onclick={() => handleTabClick(tab.id)}
+            title={tab.label}
+            style={tab.anchorName ? `anchor-name: --${tab.anchorName}` : ''}
+        >
+            {#if tab.icon}
+                <div class="tab-icon">
+                    {@html tab.icon}
+                </div>
+            {/if}
+            {#if tab.label && !tab.icon}
+                <span class="tab-label">{tab.label}</span>
+            {/if}
+        </button>
+    {/each}
+</div>
+
+<style>
+    .tab-bar {
+        display: inline-flex;
+        gap: 4px;
+        background: #eee;
+        border-radius: 6px;
+    }
+
+    .tab-bar.wrap {
+        flex-wrap: wrap;
+    }
+
+    .tab {
+        flex: 1;
+        padding: 4px 12px;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: system-ui;
+        font-size: 10pt;
+        color: #666;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+    }
+
+    .tab-bar.wrap .tab {
+        flex: 0 1 auto;
+        min-width: fit-content;
+    }
+
+    .tab.active {
+        background: #1976d2;
+        color: #bbdefb;
+    }
+
+    .tab-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 20px;
+    }
+
+    .tab-icon :global(svg) {
+        width: 100%;
+        height: 100%;
+    }
+
+    .tab-label {
+        user-select: none;
+    }
+</style>

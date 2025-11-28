@@ -8,8 +8,7 @@
     import cssIcon from '../../assets/icons/css.svg?raw';
 
     let {
-        view = $bindable(),
-        onClearUniverse = null
+        view = $bindable()
     } = $props();
 </script>
 
@@ -42,7 +41,7 @@
         <label>
             <input type="radio" name="view" value="css" bind:group={view}>
             <Icon data={cssIcon} />
-            CSS
+            Editor
         </label>
 
         <label>
@@ -51,12 +50,6 @@
             Universe
         </label>
     </nav>
-
-    {#if view === 'universe' && onClearUniverse}
-        <div class="clear-universe">
-            <button onclick={onClearUniverse}>Clear</button>
-        </div>
-    {/if}
 </div>
 
 <style>
@@ -105,16 +98,5 @@
     input[type="radio"] {
         position: absolute;
         opacity: 0;
-    }
-
-    .clear-universe {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
-
-    .clear-universe button {
-        margin: 0;
-        height: 32px;
     }
 </style>

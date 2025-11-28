@@ -19,16 +19,16 @@ export class AnimationLibrary extends Library {
 	 * Create and add a new animation
 	 * @param {string} name - Animation name
 	 * @param {Array<string>} controls - Control names to animate
-	 * @param {string} displayName - Display name for UI
+	 * @param {string} targetLabel - Label describing the animation target (control or device type name)
 	 * @returns {Object} Created animation object
 	 */
-	create(name, controls, displayName) {
+	create(name, controls, targetLabel) {
 		const animation = {
 			name,
 			controls: controls || [],
-			displayName: displayName || null,
+			targetLabel: targetLabel || null,
 			keyframes: [],
-			cssName: toCSSIdentifier(name),
+			cssIdentifier: toCSSIdentifier(name),
 			order: this.items.length
 		};
 
@@ -38,13 +38,13 @@ export class AnimationLibrary extends Library {
 	/**
 	 * Update animation properties
 	 * @param {string} id - Animation ID
-	 * @param {Object} updates - Properties to update (name, controls, displayName, etc.)
+	 * @param {Object} updates - Properties to update (name, controls, targetLabel, etc.)
 	 * @returns {boolean} Success status
 	 */
 	update(id, updates) {
-		// Update CSS name if name changed
+		// Update CSS identifier if name changed
 		if (updates.name) {
-			updates.cssName = toCSSIdentifier(updates.name);
+			updates.cssIdentifier = toCSSIdentifier(updates.name);
 		}
 
 		return super.update(id, updates);
@@ -54,10 +54,9 @@ export class AnimationLibrary extends Library {
 	 * Add a keyframe to an animation
 	 * @param {string} animationId - Animation ID
 	 * @param {number} time - Time (0-1)
-	 * @param {string} deviceType - Device type for rendering
-	 * @param {Object} values - Control values object { "Color": { r, g, b }, ... }
+	 * @param {Object} values - Control values object { "color": { red, green, blue }, ... }
 	 */
-	addKeyframe(animationId, time, deviceType, values) {
+	addKeyframe(animationId, time, values) {
 		const animation = this.get(animationId);
 		if (!animation) return;
 
@@ -73,7 +72,6 @@ export class AnimationLibrary extends Library {
 
 		const keyframe = {
 			time,
-			deviceType,
 			values: valuesCopy
 		};
 
@@ -100,7 +98,7 @@ export class AnimationLibrary extends Library {
 	 * Update a keyframe's time or values
 	 * @param {string} animationId - Animation ID
 	 * @param {number} keyframeIndex - Index of keyframe
-	 * @param {Object} updates - Properties to update (time, values, deviceType)
+	 * @param {Object} updates - Properties to update (time, values)
 	 */
 	updateKeyframe(animationId, keyframeIndex, updates) {
 		const animation = this.get(animationId);
@@ -159,7 +157,6 @@ export class AnimationLibrary extends Library {
 
 			return {
 				time: kf.time,
-				deviceType: kf.deviceType,
 				values
 			};
 		}) || [];
@@ -168,9 +165,9 @@ export class AnimationLibrary extends Library {
 			id: animData.id || crypto.randomUUID(),
 			name: animData.name,
 			controls: animData.controls || [],
-			displayName: animData.displayName || null,
+			targetLabel: animData.targetLabel || null,
 			keyframes,
-			cssName: animData.cssName || toCSSIdentifier(animData.name),
+			cssIdentifier: animData.cssIdentifier || toCSSIdentifier(animData.name),
 			order: animData.order !== undefined ? animData.order : index
 		};
 	}

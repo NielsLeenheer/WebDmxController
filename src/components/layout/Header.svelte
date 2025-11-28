@@ -16,13 +16,13 @@
     let connectedDevices = $state([]);
 
     // Filter devices by type
-    let streamDeckDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && d.streamDeck));
-    let hidDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && !d.streamDeck && d.id !== 'keyboard'));
-    let bluetoothDevices = $derived(connectedDevices.filter(d => d.type === 'bluetooth'));
+    let streamDeckDevices = $derived(connectedDevices.filter(d => d.type === 'streamdeck'));
+    let hidDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && d.id !== 'keyboard'));
+    let thingyDevices = $derived(connectedDevices.filter(d => d.type === 'thingy'));
     let midiDevices = $derived(connectedDevices.filter(d => d.type === 'midi'));
 
     // Unified list of all connected devices
-    let allConnectedDevices = $derived([...streamDeckDevices, ...hidDevices, ...bluetoothDevices, ...midiDevices]);
+    let allConnectedDevices = $derived([...streamDeckDevices, ...hidDevices, ...thingyDevices, ...midiDevices]);
 
     // MIDI button should be disabled if we already have MIDI access
     let hasMidiAccess = $derived(midiDevices.length > 0);
@@ -48,6 +48,8 @@
             await inputController?.requestStreamDeck();
             // Update device list
             connectedDevices = inputController?.getInputDevices() || [];
+            // Close dialog on successful connection
+            closeDevicesDialog();
         } catch (error) {
             alert(`Failed to connect Stream Deck: ${error.message}\n\nPlease close the Elgato Stream Deck software and try again.`);
         }
@@ -59,7 +61,11 @@
             await inputController?.inputDeviceManager?.initMIDI();
             // Update device list
             connectedDevices = inputController?.getInputDevices() || [];
+            // Close dialog on successful connection
+            closeDevicesDialog();
         } catch (error) {
+            // Silently ignore user cancellation
+            if (error.name === 'NotFoundError') return;
             alert(`Failed to connect MIDI: ${error.message}`);
         }
     }
@@ -69,6 +75,8 @@
             await inputController?.requestHIDDevice();
             // Update device list
             connectedDevices = inputController?.getInputDevices() || [];
+            // Close dialog on successful connection
+            closeDevicesDialog();
         } catch (error) {
             alert(`Failed to connect HID device: ${error.message}`);
         }
@@ -79,7 +87,11 @@
             await inputController?.requestThingy52();
             // Update device list
             connectedDevices = inputController?.getInputDevices() || [];
+            // Close dialog on successful connection
+            closeDevicesDialog();
         } catch (error) {
+            // Silently ignore user cancellation
+            if (error.name === 'NotFoundError') return;
             alert(`Failed to connect Thingy:52: ${error.message}\n\nMake sure your device is powered on and in range.`);
         }
     }

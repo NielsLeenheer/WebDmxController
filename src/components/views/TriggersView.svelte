@@ -3,10 +3,15 @@
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import TriggerCard from '../cards/TriggerCard.svelte';
     import Button from '../common/Button.svelte';
-    import AddManualTriggerDialog from '../dialogs/AddManualTriggerDialog.svelte';
+    import AddActionTriggerDialog from '../dialogs/AddActionTriggerDialog.svelte';
     import AddAutomaticTriggerDialog from '../dialogs/AddAutomaticTriggerDialog.svelte';
-    import EditManualTriggerDialog from '../dialogs/EditManualTriggerDialog.svelte';
+    import AddValueTriggerDialog from '../dialogs/AddValueTriggerDialog.svelte';
+    import EditActionTriggerDialog from '../dialogs/EditActionTriggerDialog.svelte';
     import EditAutomaticTriggerDialog from '../dialogs/EditAutomaticTriggerDialog.svelte';
+    import EditValueTriggerDialog from '../dialogs/EditValueTriggerDialog.svelte';
+
+    import { Icon } from 'svelte-icon';
+    import newIcon from '../../assets/icons/new.svg?raw';
 
     // Get devices reactively from library
     let devices = $derived(deviceLibrary.getAll());
@@ -16,11 +21,16 @@
     let availableAnimations = $derived(animationLibrary.getAll());
     let triggers = $derived(triggerLibrary.getAll());
 
+    // Get inputs that can be used for value triggers (those with continuous values)
+    let valueCapableInputs = $derived(inputLibrary.getValueInputs());
+
     // Dialog references
-    let addManualTriggerDialog;
+    let addActionTriggerDialog;
     let addAutomaticTriggerDialog;
-    let editManualTriggerDialog;
+    let addValueTriggerDialog;
+    let editActionTriggerDialog;
     let editAutomaticTriggerDialog;
+    let editValueTriggerDialog;
 
     // Drag and drop helper
     const dnd = createDragDrop({
@@ -31,32 +41,37 @@
         orientation: 'vertical'
     });
 
-    async function openManualTriggerDialog() {
-        const result = await addManualTriggerDialog.open(availableInputs, availableAnimations, devices);
+    async function openActionTriggerDialog() {
+        const result = await addActionTriggerDialog.open(availableInputs, availableAnimations, devices);
 
         if (!result) return; // User cancelled
 
         const [inputDeviceId, inputControlId] = result.input.split('_');
         const input = availableInputs.find(i =>
-            i.inputDeviceId === inputDeviceId && i.inputControlId === inputControlId
+            i.deviceId === inputDeviceId && i.controlId === inputControlId
         );
         if (!input) return;
 
         // Create trigger using library method
         triggerLibrary.create({
-            triggerType: result.triggerType,
-            actionType: result.actionType,
-            inputId: input.id,
-            deviceId: result.device,
-            // Animation action properties
-            animation: result.actionType === 'animation' ? {
-                id: result.animation,
-                duration: result.duration,
-                easing: result.easing,
-                iterations: result.looping ? 'infinite' : 1
-            } : null,
-            // Values action properties
-            values: result.actionType === 'values' ? result.values : null
+            type: 'action',
+            input: {
+                id: input.id,
+                state: result.inputState
+            },
+            output: {
+                id: result.device
+            },
+            action: {
+                type: result.actionType,
+                animation: result.actionType === 'animation' ? {
+                    id: result.animation,
+                    duration: result.duration,
+                    easing: result.easing,
+                    iterations: result.looping ? 'infinite' : 1
+                } : null,
+                values: result.actionType === 'values' ? result.values : null
+            }
         });
     }
 
@@ -67,21 +82,80 @@
 
         // Create trigger using library method
         triggerLibrary.create({
-            triggerType: 'always',
-            actionType: 'animation',
-            inputId: null,
-            deviceId: result.device,
-            animation: {
-                id: result.animation,
-                duration: result.duration,
-                easing: result.easing,
-                iterations: result.looping ? 'infinite' : 1
+            type: 'auto',
+            output: {
+                id: result.device
+            },
+            action: {
+                type: 'animation',
+                animation: {
+                    id: result.animation,
+                    duration: result.duration,
+                    easing: result.easing,
+                    iterations: result.looping ? 'infinite' : 1
+                }
+            }
+        });
+    }
+
+    async function openValueTriggerDialog() {
+        const result = await addValueTriggerDialog.open(valueCapableInputs, devices);
+
+        if (!result) return; // User cancelled
+
+        // Create value trigger using library method
+        triggerLibrary.create({
+            type: 'value',
+            input: {
+                id: result.inputId,
+                value: result.inputValueKey
+            },
+            output: {
+                id: result.deviceId
+            },
+            action: {
+                type: 'copy',
+                copy: {
+                    control: result.controlId,
+                    component: result.controlValueId,
+                    invert: result.invert
+                }
             }
         });
     }
 
     async function openEditDialog(trigger) {
-        if (trigger.triggerType === 'always') {
+        if (trigger.type === 'value') {
+            // Value-based trigger
+            const result = await editValueTriggerDialog.open(trigger, valueCapableInputs, devices);
+
+            if (!result || result.action === 'cancel') return; // User cancelled
+
+            if (result.action === 'delete') {
+                // Handle delete
+                triggerLibrary.remove(trigger.id);
+                return;
+            }
+
+            // Handle save
+            triggerLibrary.update(trigger.id, {
+                input: {
+                    id: result.data.inputId,
+                    value: result.data.inputValueKey
+                },
+                output: {
+                    id: result.data.deviceId
+                },
+                action: {
+                    type: 'copy',
+                    copy: {
+                        control: result.data.controlId,
+                        component: result.data.controlValueId,
+                        invert: result.data.invert
+                    }
+                }
+            });
+        } else if (trigger.type === 'auto') {
             // Automatic trigger
             const result = await editAutomaticTriggerDialog.open(trigger, availableAnimations, devices);
 
@@ -95,17 +169,22 @@
 
             // Handle save using library update method
             triggerLibrary.update(trigger.id, {
-                deviceId: result.device,
-                animation: {
-                    id: result.animation,
-                    duration: result.duration,
-                    easing: result.easing,
-                    iterations: result.looping ? 'infinite' : 1
+                output: {
+                    id: result.device
+                },
+                action: {
+                    type: 'animation',
+                    animation: {
+                        id: result.animation,
+                        duration: result.duration,
+                        easing: result.easing,
+                        iterations: result.looping ? 'infinite' : 1
+                    }
                 }
             });
         } else {
-            // Manual trigger
-            const result = await editManualTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
+            // Action trigger
+            const result = await editActionTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
 
             if (!result) return; // User cancelled
 
@@ -118,8 +197,8 @@
             // Handle save - parse the selected input
             const [newInputDeviceId, newInputControlId] = result.input.split('_');
             const selectedInput = availableInputs.find(input =>
-                input.inputDeviceId === newInputDeviceId &&
-                input.inputControlId === newInputControlId
+                input.deviceId === newInputDeviceId &&
+                input.controlId === newInputControlId
             );
 
             if (!selectedInput) return;
@@ -129,23 +208,29 @@
 
             // Build updates object based on action type
             const updates = {
-                inputId: selectedInput.id,
-                triggerType: result.triggerType,
-                actionType: result.actionType,
-                deviceId: result.device
+                input: {
+                    id: selectedInput.id,
+                    state: result.inputState
+                },
+                output: {
+                    id: result.device
+                },
+                action: {
+                    type: result.actionType,
+                    animation: null,
+                    values: null
+                }
             };
 
             if (result.actionType === 'animation') {
-                updates.animation = {
+                updates.action.animation = {
                     id: result.animation,
                     duration: result.duration,
                     easing: result.easing,
                     iterations: result.looping ? 'infinite' : 1
                 };
-                updates.values = null;
             } else {
-                updates.animation = null;
-                updates.values = result.values;
+                updates.action.values = result.values;
             }
 
             // Update using library method
@@ -158,17 +243,27 @@
 <div class="triggers-view">
     <div class="add-trigger-section">
         <Button
-            onclick={openManualTriggerDialog}
+            onclick={openActionTriggerDialog}
             variant="secondary"
             disabled={availableInputs.length === 0 || devices.length === 0}
         >
-            Add Manual Trigger
+            <Icon data={newIcon} />
+            Add Action Trigger
+        </Button>
+        <Button
+            onclick={openValueTriggerDialog}
+            variant="secondary"
+            disabled={valueCapableInputs.length === 0 || devices.length === 0}
+        >
+            <Icon data={newIcon} />
+            Add Value Trigger
         </Button>
         <Button
             onclick={openAutomaticTriggerDialog}
             variant="secondary"
             disabled={availableAnimations.length === 0 || devices.length === 0}
         >
+            <Icon data={newIcon} />
             Add Automatic Trigger
         </Button>
     </div>
@@ -201,20 +296,28 @@
 
 
 <!-- Dialog Components -->
-<AddManualTriggerDialog
-    bind:this={addManualTriggerDialog}
+<AddActionTriggerDialog
+    bind:this={addActionTriggerDialog}
 />
 
 <AddAutomaticTriggerDialog
     bind:this={addAutomaticTriggerDialog}
 />
 
-<EditManualTriggerDialog
-    bind:this={editManualTriggerDialog}
+<AddValueTriggerDialog
+    bind:this={addValueTriggerDialog}
+/>
+
+<EditActionTriggerDialog
+    bind:this={editActionTriggerDialog}
 />
 
 <EditAutomaticTriggerDialog
     bind:this={editAutomaticTriggerDialog}
+/>
+
+<EditValueTriggerDialog
+    bind:this={editValueTriggerDialog}
 />
 
 <style>

@@ -17,28 +17,28 @@ import { CONTROL_TYPES } from '../controls/index.js';
 export class MovingHeadDeviceType extends DeviceType {
     constructor() {
         super({
-            id: 'MOVING_HEAD',
+            id: 'moving-head',
             name: 'Moving Head (Basic)',
             channels: 7,
             defaultValues: [0, 0, 255, 0, 0, 0, 0],  // Dimmer at full brightness
             controls: [
                 {
-                    name: 'Pan/Tilt',
+                    id: 'pantilt',
                     type: CONTROL_TYPES.PanTilt,
                     startChannel: 0
                 },
                 {
-                    name: 'Dimmer',
+                    id: 'dimmer',
                     type: CONTROL_TYPES.Dimmer,
                     startChannel: 2
                 },
                 {
-                    name: 'Color',
-                    type: CONTROL_TYPES.RGB,
+                    id: 'color',
+                    type: CONTROL_TYPES.Color,
                     startChannel: 3
                 },
                 {
-                    name: 'White',
+                    id: 'white',
                     type: CONTROL_TYPES.White,
                     startChannel: 6
                 }
@@ -46,5 +46,3 @@ export class MovingHeadDeviceType extends DeviceType {
         });
     }
 }
-
-export const MOVING_HEAD = new MovingHeadDeviceType();

@@ -1,6 +1,5 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-    import { getDeviceColor } from '../../lib/outputs/devices.js';
     import { getControlsForRendering, getKeyframeColor } from '../../lib/animations/utils.js';
     import { paletteColorToHex } from '../../lib/inputs/colors.js';
 
@@ -71,21 +70,21 @@
             return [];
         }
 
-        // Check if animation has pan/tilt controls
-        const hasPanTilt = animation.controls && animation.controls.includes('Pan/Tilt');
+        // Check if animation has pan/tilt controls (using device control id)
+        const hasPanTilt = animation.controls && animation.controls.includes('pantilt');
         if (!hasPanTilt) return [];
 
         // Extract pan/tilt values from each keyframe
         return animation.keyframes
             .map(keyframe => {
                 const values = keyframe.values || {};
-                const panTilt = values['Pan/Tilt'];
+                const panTilt = values['pantilt'];
                 
                 if (panTilt && typeof panTilt === 'object') {
                     // Convert 0-255 to percentage, accounting for dot size (10px on 32px = ~31%)
                     // Constrain to 15% - 85% to keep dot edges within bounds
-                    const rawX = (panTilt.x ?? 128) / 255;
-                    const rawY = (panTilt.y ?? 128) / 255;
+                    const rawX = (panTilt.pan ?? 128) / 255;
+                    const rawY = (panTilt.tilt ?? 128) / 255;
                     return {
                         x: 15 + (rawX * 70),
                         y: 15 + ((1 - rawY) * 70)
@@ -100,11 +99,11 @@
     function generateAnimationPreview(animation) {
         if (!animation) return '#888';
 
-        // Check if animation has color-related controls
+        // Check if animation has color-related controls (using device control ids)
         const hasColor = animation.controls && (
-            animation.controls.includes('Color') ||
-            animation.controls.includes('Amber') ||
-            animation.controls.includes('White')
+            animation.controls.includes('color') ||
+            animation.controls.includes('amber') ||
+            animation.controls.includes('white')
         );
 
         if (!hasColor || !animation.keyframes || animation.keyframes.length === 0) {
@@ -139,17 +138,8 @@
             const controlsList = [];
 
             for (const control of deviceType.controls) {
-                const controlTypeId = control.type.type;
-
-                if (controlTypeId === 'rgb') {
-                    controlsList.push('color');
-                } else if (controlTypeId === 'xypad' || controlTypeId === 'xypad16') {
-                    controlsList.push('pantilt');
-                } else if (controlTypeId === 'slider' || controlTypeId === 'toggle') {
-                    // Add slider/toggle controls by their lowercase name
-                    const controlKey = control.name.toLowerCase();
-                    controlsList.push(controlKey);
-                }
+                // Use the control definition's id (e.g., 'pantilt', 'color', 'dimmer')
+                controlsList.push(control.id);
             }
 
             return controlsList;
@@ -169,22 +159,9 @@
 
             // Dynamically extract data based on device controls
             for (const control of deviceType.controls) {
-                const controlTypeId = control.type.type;
-                const value = controlValues[control.name];
-
-                if (controlTypeId === 'rgb') {
-                    // RGB control - get color
-                    result.color = getDeviceColor(device.type, controlValues);
-                } else if (controlTypeId === 'xypad' || controlTypeId === 'xypad16') {
-                    // Pan/Tilt control
-                    const panTilt = value || { x: 128, y: 128 };
-                    result.pan = panTilt.x ?? 128;
-                    result.tilt = panTilt.y ?? 128;
-                } else if (controlTypeId === 'slider' || controlTypeId === 'toggle') {
-                    // Slider/toggle controls - add by lowercase name
-                    const controlKey = control.name.toLowerCase();
-                    result[controlKey] = value ?? (controlTypeId === 'toggle' ? control.type.offValue : 0);
-                }
+                // Use the control definition's id as the key
+                const value = controlValues[control.id];
+                result[control.id] = value;
             }
 
             return result;
@@ -237,8 +214,8 @@
         {/each}
     {:else}
         <!-- Non-3D rendering (original code) -->
-        <!-- Dark gray background (for devices/controls, and buttons/pads - not for knobs/sliders) -->
-        {#if type !== 'input' || (type === 'input' && (data.type === 'button' || data.type === 'pad' || !data.type))}
+        <!-- Dark gray background (for devices/controls, and buttons/pads/thingy - not for knobs/sliders) -->
+        {#if type !== 'input' || (type === 'input' && (data.type === 'button' || data.type === 'pad' || data.type === 'thingy' || !data.type))}
             <div class="preview-base"></div>
         {/if}
 
@@ -247,9 +224,11 @@
         
         <!-- Base color layer -->
         {#if hasControl('color')}
+            {@const colorValue = effectiveData().color}
+            {@const color = colorValue ? `rgb(${colorValue.red ?? 0}, ${colorValue.green ?? 0}, ${colorValue.blue ?? 0})` : 'transparent'}
             <div 
                 class="control-layer control-color" 
-                style="background-color: {effectiveData().color || '#888'}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
+                style="background-color: {color}"
             ></div>
         {/if}
 
@@ -310,8 +289,9 @@
 
         <!-- Pan/Tilt layer -->
         {#if hasControl('pantilt')}
-            {@const rawX = (effectiveData().pan ?? 0) / 255}
-            {@const rawY = (effectiveData().tilt ?? 0) / 255}
+            {@const pantiltValue = effectiveData().pantilt ?? { pan: 0, tilt: 0 }}
+            {@const rawX = (pantiltValue.pan ?? 0) / 255}
+            {@const rawY = (pantiltValue.tilt ?? 0) / 255}
             {@const dotX = 15 + (rawX * 70)}
             {@const dotY = 15 + ((1 - rawY) * 70)}
             <div class="control-layer control-pantilt">
@@ -341,9 +321,9 @@
         {@const value = stateValue ? parseFloat(stateValue) : 0}
         {@const knobAngle = 30 + (value * 2.7)} <!-- 7 o'clock to 5 o'clock = 30deg to 300deg = 270 degrees total (0deg = 6 o'clock, clockwise) -->
         {@const sliderPosition = value * 0.7} <!-- Adjust for 30% handle size: 0% -> 0%, 100% -> 70% -->
-        {@const keyChar = data.inputControlId?.startsWith('key-') ? extractKeyChar(data.inputControlId) : null}
+        {@const keyChar = data.controlId?.startsWith('key-') ? extractKeyChar(data.controlId) : null}
         
-        {#if inputType === 'button' || inputType === 'pad'}
+        {#if inputType === 'button' || inputType === 'pad' || inputType === 'thingy'}
             {#if !euler}
                 <!-- Non-3D Button/Pad: colored or gray square -->
                 <div class="preview-input button-preview" style="background: {inputColor};">
@@ -352,8 +332,8 @@
                     {/if}
                 </div>
                 
-                <!-- Orientation indicator for Thingy:52 button (when not in 3D mode) -->
-                {#if data.inputControlId === 'button'}
+                <!-- Orientation indicator for Thingy:52 (when not in 3D mode) -->
+                {#if inputType === 'thingy'}
                     <div class="orientation-indicator"></div>
                 {/if}
             {/if}
@@ -560,7 +540,6 @@
         position: absolute;
         border-radius: 6px;
         box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2);
-        transition: left 0.1s, bottom 0.1s;
     }
 
     .slider-preview.horizontal .slider-handle {

@@ -184,8 +184,7 @@
         const values = getValuesAtTime(animation, roundedTime);
 
         // Add new keyframe using library method
-        const deviceType = animation.keyframes[0]?.deviceType || 'RGB';
-        animationLibrary.addKeyframe(animation.id, roundedTime, deviceType, values);
+        animationLibrary.addKeyframe(animation.id, roundedTime, values);
 
         if (onUpdate) onUpdate();
         if (onUpdate) onUpdate();

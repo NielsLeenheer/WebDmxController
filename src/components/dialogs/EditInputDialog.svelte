@@ -1,7 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
-	import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
+	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
 	import { toCSSIdentifier } from '../../lib/css/utils.js';
 	import { getPalette, paletteColorToHex } from '../../lib/inputs/colors.js';
 	import removeIcon from '../../assets/icons/remove.svg?raw';
@@ -62,17 +62,14 @@
 
 	function deviceSupportsColors(device) {
 		if (!device) return false;
-		if (device.type === 'hid') {
-			return device.id !== 'keyboard';
-		}
-		// MIDI and Bluetooth (Thingy:52) support colors
-		return device.type === 'midi' || device.type === 'bluetooth';
+		// StreamDeck, MIDI and Thingy:52 support colors
+		return device.type === 'streamdeck' || device.type === 'midi' || device.type === 'thingy';
 	}
 
 	function isColorCapableControl(controlId) {
 		if (!controlId || typeof controlId !== 'string') return false;
-		// Thingy:52 button uses 'button' (not 'button-'), so check exact match too
-		if (controlId === 'button') return true;
+		// Thingy:52 uses 'thingy' controlId (single input with button + sensor functionality)
+		if (controlId === 'thingy') return true;
 		const COLOR_CAPABLE_PREFIXES = ['button-', 'note-'];
 		return COLOR_CAPABLE_PREFIXES.some(prefix => controlId.startsWith(prefix));
 	}
@@ -143,7 +140,7 @@
 				autofocus
 			/>
 			<div class="css-identifiers">
-				{#if isButtonInput(editingInput)}
+				{#if isButton(editingInput)}
 					{#if editingButtonMode === 'toggle'}
 						<code class="css-identifier">.{toCSSIdentifier(editingName)}-on</code>
 						<code class="css-identifier">.{toCSSIdentifier(editingName)}-off</code>
@@ -157,7 +154,7 @@
 			</div>
 		</div>
 
-		{#if isButtonInput(editingInput)}
+		{#if isButton(editingInput)}
 			<div class="dialog-input-group">
 				<label for="button-mode">Button Mode:</label>
 				<select id="button-mode" bind:value={editingButtonMode}>

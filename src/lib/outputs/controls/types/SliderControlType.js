@@ -2,10 +2,17 @@ import { ControlType } from './ControlType.js';
 
 /**
  * Slider Control Type (1 channel: single value 0-255)
+ *
+ * Each Control subclass must implement getValueMetadata() and getSamplingConfig()
  */
 export class SliderControlType extends ControlType {
-	constructor(id, name = 'Slider') {
-		super(id, name, 'slider', 0);
+	constructor({ id, name }) {
+		super({
+			id,
+			name,
+			type: 'slider',
+			defaultValue: 0
+		});
 	}
 
 	getChannelCount() {

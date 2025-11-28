@@ -1,9 +1,8 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
-    import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
+    import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
     import { inputLibrary } from '../../stores.svelte.js';
     import { getUnusedFromPalette, getPalette } from '../../lib/inputs/colors.js';
-    import { toCSSIdentifier } from '../../lib/css/utils.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import InputCard from '../cards/InputCard.svelte';
     import Button from '../common/Button.svelte';
@@ -42,7 +41,7 @@
         if (!state) return '';
 
         // For buttons (toggle or momentary)
-        if (isButtonInput(input)) {
+        if (isButton(input)) {
             if (input.buttonMode === 'toggle') {
                 return state.state === 'on' ? 'On' : 'Off';
             } else {
@@ -61,24 +60,21 @@
 
     function isColorCapableControl(controlId) {
         if (!controlId || typeof controlId !== 'string') return false;
-        // Thingy:52 button uses 'button' (not 'button-'), so check exact match too
-        if (controlId === 'button') return true;
+        // Thingy:52 uses 'thingy' controlId (single input with button + sensor functionality)
+        if (controlId === 'thingy') return true;
         return COLOR_CAPABLE_PREFIXES.some(prefix => controlId.startsWith(prefix));
     }
 
     function deviceSupportsColors(device) {
         if (!device) return false;
-        if (device.type === 'hid') {
-            return device.id !== 'keyboard';
-        }
-        // MIDI and Bluetooth (Thingy:52) support colors
-        return device.type === 'midi' || device.type === 'bluetooth';
+        // StreamDeck, MIDI and Thingy:52 support colors
+        return device.type === 'streamdeck' || device.type === 'midi' || device.type === 'thingy';
     }
 
     function shouldAssignColorSupport(device, controlId) {
         // For now, Thingy:52 buttons support RGB
         // Other devices will get colorSupport from profile/device definitions
-        if (device.type === 'bluetooth' && device.thingyDevice) {
+        if (device.type === 'thingy') {
             return 'rgb';
         }
         // For other devices, would need to query device profile
@@ -111,7 +107,7 @@
         deviceColorUsage.clear();
         deviceColorIndices.clear();
         for (const input of inputs) {
-            registerColorUsage(input.inputDeviceId, input.inputControlId, input.color);
+            registerColorUsage(input.deviceId, input.controlId, input.color);
         }
     }
 
@@ -177,9 +173,12 @@
 
         const { deviceId, controlId, device, type, colorSupport, friendlyName, orientation } = event;
 
+        // Skip Thingy:52 inputs entirely - they are added via the connect dialog, not by listening
+        if (device?.type === 'thingy') return;
+
         // Check if this input already exists
         const existing = inputs.find(
-            input => input.inputDeviceId === deviceId && input.inputControlId === controlId
+            input => input.deviceId === deviceId && input.controlId === controlId
         );
 
         if (!existing) {
@@ -191,19 +190,19 @@
 
             const input = inputLibrary.create({
                 name,
-                inputDeviceId: deviceId,
-                inputControlId: controlId,
-                inputDeviceName: device?.name || deviceId,
-                type: type || 'button', // Use type from device
-                colorSupport: colorSupport || 'none', // Use colorSupport from device
-                friendlyName: friendlyName || null, // Use friendlyName from device
-                orientation: orientation || null, // Use orientation from device
+                deviceId: deviceId,
+                deviceName: device?.name || deviceId,
+                controlId: controlId,
+                controlName: friendlyName || null,
+                type: type || 'button',
+                colorSupport: colorSupport || 'none',
+                orientation: orientation || null,
                 color
             });
 
             // Initialize pressure property for button inputs
-            if (isButtonInput(input)) {
-                inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
+            if (isButton(input)) {
+                inputController.customPropertyManager.setProperty(`${input.cssIdentifier}-pressure`, '0.0%');
             }
 
             if (colorSupport && colorSupport !== 'none') {
@@ -295,7 +294,7 @@
             };
 
             // Update button mode for button inputs
-            if (isButtonInput(existingInput)) {
+            if (isButton(existingInput)) {
                 updates.buttonMode = result.buttonMode;
             }
 
@@ -303,7 +302,7 @@
             if (result.color !== oldColor && existingInput.colorSupport && existingInput.colorSupport !== 'none') {
                 // Release old color usage
                 if (oldColor) {
-                    releaseColorUsage(existingInput.inputDeviceId, existingInput.inputControlId, oldColor);
+                    releaseColorUsage(existingInput.deviceId, existingInput.controlId, oldColor);
                 }
 
                 // Update color
@@ -311,24 +310,24 @@
 
                 // Register new color usage
                 if (result.color) {
-                    registerColorUsage(existingInput.inputDeviceId, existingInput.inputControlId, result.color);
+                    registerColorUsage(existingInput.deviceId, existingInput.controlId, result.color);
                 }
 
                 // Update color on hardware (only if device is connected)
-                const inputDevice = inputController.getInputDevice(existingInput.inputDeviceId);
+                const inputDevice = inputController.getInputDevice(existingInput.deviceId);
                 if (inputDevice && result.color) {
                     // For toggle buttons, respect current state
                     let color = result.color;
-                    if (isButtonInput(existingInput) && existingInput.buttonMode === 'toggle') {
+                    if (isButton(existingInput) && existingInput.buttonMode === 'toggle') {
                         const state = inputStates[existingInput.id];
                         color = (state?.state === 'on') ? result.color : 'black';
                     }
 
                     // Use generic setColor method
-                    await inputDevice.setColor(existingInput.inputControlId, color);
+                    await inputDevice.setColor(existingInput.controlId, color);
 
                     // Update Thingy device LED color if it's a Thingy device
-                    if (inputDevice.type === 'bluetooth' && inputDevice.thingyDevice) {
+                    if (inputDevice.type === 'thingy' && inputDevice.thingyDevice) {
                         inputDevice.thingyDevice.setDeviceColor(result.color);
                     }
                 }
@@ -344,7 +343,7 @@
         if (!input) return;
 
         // Release color usage for this device
-        releaseColorUsage(input.inputDeviceId, input.inputControlId, input.color);
+        releaseColorUsage(input.deviceId, input.controlId, input.color);
 
         inputLibrary.remove(inputId);
 
@@ -356,7 +355,7 @@
     $effect(() => {
         // Initialize input states for all inputs
         for (const input of inputs) {
-            if (isButtonInput(input)) {
+            if (isButton(input)) {
                 // Initialize toggle buttons to 'off', momentary buttons have no initial state
                 if (input.buttonMode === 'toggle' && !inputStates[input.id]) {
                     inputStates[input.id] = { state: 'off' };
@@ -386,8 +385,8 @@
                 // Build a map of assigned controls for this device
                 const assignedControls = new Map();
                 for (const input of inputs) {
-                    if (input.inputDeviceId === device.id && input.color) {
-                        assignedControls.set(input.inputControlId, input);
+                    if (input.deviceId === device.id && input.color) {
+                        assignedControls.set(input.controlId, input);
                     }
                 }
 
@@ -411,7 +410,7 @@
                             let color = input.color;
 
                             // For toggle buttons, respect the current toggle state
-                            if (isButtonInput(input) && input.buttonMode === 'toggle') {
+                            if (isButton(input) && input.buttonMode === 'toggle') {
                                 const state = inputStates[input.id];
                                 color = (state?.state === 'on') ? input.color : 'black';
                             }
@@ -438,7 +437,7 @@
                             let color = input.color;
 
                             // For toggle buttons, respect the current toggle state
-                            if (isButtonInput(input) && input.buttonMode === 'toggle') {
+                            if (isButton(input) && input.buttonMode === 'toggle') {
                                 const state = inputStates[input.id];
                                 color = (state?.state === 'on') ? input.color : 'black';
                             }
@@ -450,20 +449,53 @@
                         }
                     }
                 }
-            } else {
-                // For other devices (HID, Bluetooth), apply colors only to saved inputs
+            } else if (typeof device.getControls === 'function') {
+                // For devices with getControls() method (StreamDeck, etc.)
+                const controls = device.getControls();
+                
+                // Build a map of assigned controls for this device
+                const assignedControls = new Map();
                 for (const input of inputs) {
-                    if (input.inputDeviceId !== device.id) continue;
+                    if (input.deviceId === device.id && input.color) {
+                        assignedControls.set(input.controlId, input);
+                    }
+                }
+
+                for (const control of controls) {
+                    if (!control.colorSupport || control.colorSupport === 'none') continue;
+
+                    const input = assignedControls.get(control.controlId);
+
+                    if (input) {
+                        // Set assigned color
+                        let color = input.color;
+
+                        // For toggle buttons, respect the current toggle state
+                        if (isButton(input) && input.buttonMode === 'toggle') {
+                            const state = inputStates[input.id];
+                            color = (state?.state === 'on') ? input.color : 'black';
+                        }
+
+                        await device.setColor(control.controlId, color);
+                    } else {
+                        // Set unassigned controls to black/off
+                        await device.setColor(control.controlId, 'black');
+                    }
+                }
+            } else {
+                // For other devices (HID, Bluetooth) without getControls(), apply colors only to saved inputs
+                for (const input of inputs) {
+                    if (input.deviceId !== device.id) continue;
                     if (!input.color || !input.colorSupport || input.colorSupport === 'none') continue;
 
                     // For toggle buttons, respect the current toggle state
                     let color = input.color;
-                    if (isButtonInput(input) && input.buttonMode === 'toggle') {
+                    if (isButton(input) && input.buttonMode === 'toggle') {
                         const state = inputStates[input.id];
                         color = (state?.state === 'on') ? input.color : 'black';
                     }
 
-                    await device.setColor(input.inputControlId, color);
+                    await device.setColor(input.controlId, color);
                 }
             }
         }
@@ -471,13 +503,13 @@
 
     async function updateButtonColorForToggleState(input, isOn) {
         // Update button color based on toggle state (on = full color, off = black)
-        const inputDevice = inputController.getInputDevice(input.inputDeviceId);
+        const inputDevice = inputController.getInputDevice(input.deviceId);
         if (!inputDevice || !input.color || !input.colorSupport || input.colorSupport === 'none') return;
 
         const color = isOn ? input.color : 'black';
 
         // Use generic setColor method for all device types
-        await inputDevice.setColor(input.inputControlId, color);
+        await inputDevice.setColor(input.controlId, color);
     }
 
     onMount(() => {
@@ -485,52 +517,24 @@
         // Apply colors when devices connect
         inputController.on('deviceadded', (device) => {
             // Track Euler angles for Thingy:52 devices
-            if (device.type === 'bluetooth') {
-                if (device.thingyDevice) {
-                    device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
-                        thingyEulerAngles[device.id] = { roll, pitch, yaw };
-                    });
-                }
+            if (device.type === 'thingy' && device.thingyDevice) {
+                device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
+                    thingyEulerAngles[device.id] = { roll, pitch, yaw };
+                });
 
-                // Auto-create button input for Thingy:52 (it always has exactly one button)
-                const controlId = 'button';
-                const existing = inputs.find(
-                    input => input.inputDeviceId === device.id && input.inputControlId === controlId
+                // Assign color to thingy input if it doesn't have one
+                // The input is created by the controller with controlId 'thingy'
+                const thingyInput = inputs.find(
+                    input => input.deviceId === device.id && input.controlId === 'thingy'
                 );
 
-                if (!existing) {
-                    const name = formatInputName(device.name || device.id, controlId);
-                    // Thingy:52 button supports RGB color
-                    const colorSupport = 'rgb';
-                    const color = getNextAvailableColor(device.id, colorSupport);
+                if (thingyInput && !thingyInput.color) {
+                    const color = getNextAvailableColor(device.id, 'rgb');
+                    inputLibrary.update(thingyInput.id, { color });
+                    registerColorUsage(device.id, 'thingy', color);
 
-                    const input = inputLibrary.create({
-                        name,
-                        inputDeviceId: device.id,
-                        inputControlId: controlId,
-                        inputDeviceName: device.name || device.id,
-                        type: 'button',
-                        colorSupport: 'rgb',
-                        friendlyName: null,
-                        color: color
-                    });
-
-                    // Initialize pressure property for button input
-                    if (isButtonInput(input)) {
-                        inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
-                    }
-
-                    if (colorSupport && colorSupport !== 'none') {
-                        registerColorUsage(device.id, controlId, input.color);
-                    }
-                } else if (!existing.color) {
-                    // Input exists but has no color assigned - assign one now
-                    const colorSupport = shouldAssignColorSupport(device, controlId);
-                    if (colorSupport && colorSupport !== 'none') {
-                        const color = getNextAvailableColor(device.id, colorSupport);
-                        inputLibrary.update(existing.id, { color });
-                        registerColorUsage(device.id, controlId, color);
-                    }
+                    // Initialize pressure property for thingy input (it has button functionality)
+                    inputController.customPropertyManager.setProperty(`${thingyInput.cssIdentifier}-pressure`, '0.0%');
                 }
             }
 
@@ -545,55 +549,36 @@
             }
         });
 
+        // Clear euler angles when Thingy devices disconnect
+        inputController.on('deviceremoved', (device) => {
+            if (device.type === 'thingy' && thingyEulerAngles[device.id]) {
+                delete thingyEulerAngles[device.id];
+            }
+        });
+
         // Now process already-connected devices
-        // Auto-create button inputs for any already-connected Thingy:52 devices
+        // Track Euler angles and assign colors for any already-connected Thingy:52 devices
         const devices = inputController.getInputDevices();
         for (const device of devices) {
-            if (device.type === 'bluetooth' && device.thingyDevice) {
-                // Auto-create button input for Thingy:52 (it always has exactly one button)
-                const controlId = 'button';
-                const existing = inputs.find(
-                    input => input.inputDeviceId === device.id && input.inputControlId === controlId
-                );
-
-                if (!existing) {
-                    const name = formatInputName(device.name || device.id, controlId);
-                    // Thingy:52 button supports RGB color
-                    const colorSupport = 'rgb';
-
-                    const input = inputLibrary.create({
-                        name,
-                        inputDeviceId: device.id,
-                        inputControlId: controlId,
-                        inputDeviceName: device.name || device.id,
-                        type: 'button',
-                        colorSupport: 'rgb',
-                        friendlyName: null,
-                        color: getNextAvailableColor(device.id, colorSupport)
-                    });
-
-                    // Initialize pressure property for button input
-                    if (isButtonInput(input)) {
-                        inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
-                    }
-
-                    if (colorSupport && colorSupport !== 'none') {
-                        registerColorUsage(device.id, controlId, input.color);
-                    }
-                } else if (!existing.color) {
-                    // Input exists but has no color assigned - assign one now
-                    const colorSupport = shouldAssignColorSupport(device, controlId);
-                    if (colorSupport && colorSupport !== 'none') {
-                        const color = getNextAvailableColor(device.id, colorSupport);
-                        inputLibrary.update(existing.id, { color });
-                        registerColorUsage(device.id, controlId, color);
-                    }
-                }
-
+            if (device.type === 'thingy' && device.thingyDevice) {
                 // Track Euler angles
                 device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
                     thingyEulerAngles[device.id] = { roll, pitch, yaw };
                 });
+
+                // Assign color to thingy input if it doesn't have one
+                const thingyInput = inputs.find(
+                    input => input.deviceId === device.id && input.controlId === 'thingy'
+                );
+
+                if (thingyInput && !thingyInput.color) {
+                    const color = getNextAvailableColor(device.id, 'rgb');
+                    inputLibrary.update(thingyInput.id, { color });
+                    registerColorUsage(device.id, 'thingy', color);
+
+                    // Initialize pressure property for thingy input (it has button functionality)
+                    inputController.customPropertyManager.setProperty(`${thingyInput.cssIdentifier}-pressure`, '0.0%');
+                }
             }
         }
 
@@ -613,21 +598,21 @@
 
                 // Update button color based on toggle state
                 updateButtonColorForToggleState(mapping, toggleState);
-            } else if (isButtonInput(mapping)) {
+            } else if (isButton(mapping)) {
                 // For momentary buttons, show pressed state
                 inputStates[mapping.id] = { state: 'pressed' };
             }
         });
 
         inputController.on('input-release', ({ mapping }) => {
-            if (isButtonInput(mapping) && mapping.buttonMode !== 'toggle') {
+            if (isButton(mapping) && mapping.buttonMode !== 'toggle') {
                 // For momentary buttons, clear pressed state
                 inputStates[mapping.id] = { state: 'released' };
             }
         });
 
         inputController.on('input-valuechange', ({ mapping, value }) => {
-            if (!isButtonInput(mapping)) {
+            if (!isButton(mapping)) {
                 // For knobs/sliders, store the value (0-1)
                 inputStates[mapping.id] = { value: Math.round(value * 100) };
             }
@@ -665,7 +650,7 @@
                     {input}
                     {dnd}
                     stateDisplay={getInputStateDisplay(input)}
-                    eulerAngles={thingyEulerAngles[input.inputDeviceId]}
+                    eulerAngles={thingyEulerAngles[input.deviceId]}
                     onEdit={startEditing}
                 />
             {/each}

@@ -2,33 +2,40 @@ import { ControlType } from './ControlType.js';
 
 /**
  * RGB Control Type (3 channels: red, green, blue)
+ *
+ * Each Control subclass must implement getValueMetadata() and getSamplingConfig()
  */
 export class RGBControlType extends ControlType {
-	constructor(id = 'rgb', name = 'RGB') {
-		super(id, name, 'rgb', { r: 0, g: 0, b: 0 });
+	constructor({ id, name }) {
+		super({
+			id,
+			name,
+			type: 'rgb',
+			defaultValue: { red: 0, green: 0, blue: 0 }
+		});
 	}
 
 	getChannelCount() {
 		return 3;
 	}
 
-	// Input: plain object { r, g, b }
-	// Output: plain array [r, g, b]
+	// Input: plain object { red, green, blue }
+	// Output: plain array [red, green, blue]
 	valueToDMX(value) {
 		return [
-			value?.r ?? 0,
-			value?.g ?? 0,
-			value?.b ?? 0
+			value?.red ?? 0,
+			value?.green ?? 0,
+			value?.blue ?? 0
 		];
 	}
 
-	// Input: plain array [r, g, b, ...]
-	// Output: plain object { r, g, b }
+	// Input: plain array [red, green, blue, ...]
+	// Output: plain object { red, green, blue }
 	dmxToValue(dmxValues) {
 		return {
-			r: dmxValues[0] ?? 0,
-			g: dmxValues[1] ?? 0,
-			b: dmxValues[2] ?? 0
+			red: dmxValues[0] ?? 0,
+			green: dmxValues[1] ?? 0,
+			blue: dmxValues[2] ?? 0
 		};
 	}
 }

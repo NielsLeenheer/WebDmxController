@@ -4,38 +4,105 @@
  * Defines typed CSS custom properties used for DMX control
  */
 
-@property --safety {
-  syntax: "none | probably";
+/* RGB Color channels (0-255) */
+@property --red {
+  syntax: "<integer>";
   inherits: false;
-  initial-value: none;
+  initial-value: 0;
 }
 
+@property --green {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --blue {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+
+/* Dimmer/Intensity (0-1) */
+@property --intensity {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+/* White channel (0%-100%) */
+@property --white {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+/* Amber channel (0%-100%) */
+@property --amber {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+/* Strobe speed (0-255) */
+@property --strobe {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+
+/* Speed (0-255) */
+@property --speed {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+
+/* Flame intensity (0%-100%) */
 @property --flame {
   syntax: "<percentage>";
   inherits: false;
   initial-value: 0%;
 }
 
+/* Smoke output (0%-100%) */
 @property --smoke {
   syntax: "<percentage>";
   inherits: false;
   initial-value: 0%;
 }
 
+/* Fan speed (0%-100%) */
+@property --fan {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+/* Volume level (0%-100%) */
+@property --volume {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+/* Pan position (-50% to 50%) */
 @property --pan {
   syntax: "<percentage>";
   inherits: false;
   initial-value: 0%;
 }
 
+/* Tilt position (0%-100%) */
 @property --tilt {
   syntax: "<percentage>";
   inherits: false;
   initial-value: 0%;
 }
 
-@property --amber {
-  syntax: "<percentage>";
+/* Safety switch (on/off) */
+@property --safety {
+  syntax: "none | probably";
   inherits: false;
-  initial-value: 0%;
+  initial-value: none;
 }

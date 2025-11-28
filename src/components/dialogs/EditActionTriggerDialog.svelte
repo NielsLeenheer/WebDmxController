@@ -3,14 +3,14 @@
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-	import { isButtonInput, getInputPropertyName } from '../../lib/inputs/utils.js';
+	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
 	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
-	 * EditManualTriggerDialog - Promise-based dialog for editing manual triggers
+	 * EditActionTriggerDialog - Promise-based dialog for editing action triggers
 	 *
 	 * Usage:
-	 *   const result = await editManualTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
+	 *   const result = await editActionTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
 	 *   if (result) {
 	 *     if (result.delete) {
 	 *       // Handle delete
@@ -32,7 +32,7 @@
 
 	// Form state
 	let selectedInput = $state(null);
-	let triggerType = $state('pressed');
+	let inputState = $state('down');
 	let actionType = $state('animation');
 	let selectedDevice = $state(null);
 	let selectedAnimation = $state(null);
@@ -53,22 +53,22 @@
 		'cubic-bezier(0.68, -0.55, 0.265, 1.55)' // Back easing
 	];
 
-	// Get trigger type options based on the selected input's button mode
-	function getTriggerTypeOptions() {
+	// Get input state options based on the selected input's button mode
+	function getInputStateOptions() {
 		if (!selectedInput) return [
-			{ value: 'pressed', label: 'Pressed' },
-			{ value: 'not-pressed', label: 'Not Pressed' }
+			{ value: 'down', label: 'Down' },
+			{ value: 'up', label: 'Up' }
 		];
 
 		const [deviceId, controlId] = selectedInput.split('_');
 		const input = availableInputs.find(i =>
-			i.inputDeviceId === deviceId && i.inputControlId === controlId
+			i.deviceId === deviceId && i.controlId === controlId
 		);
 
-		if (!input || !isButtonInput(input)) {
+		if (!input || !isButton(input)) {
 			return [
-				{ value: 'pressed', label: 'Pressed' },
-				{ value: 'not-pressed', label: 'Not Pressed' }
+				{ value: 'down', label: 'Down' },
+				{ value: 'up', label: 'Up' }
 			];
 		}
 
@@ -76,28 +76,28 @@
 
 		if (buttonMode === 'toggle') {
 			return [
-				{ value: 'pressed', label: 'On' },
-				{ value: 'not-pressed', label: 'Off' }
+				{ value: 'on', label: 'On' },
+				{ value: 'off', label: 'Off' }
 			];
 		} else {
 			return [
-				{ value: 'pressed', label: 'Down' },
-				{ value: 'not-pressed', label: 'Up' }
+				{ value: 'down', label: 'Down' },
+				{ value: 'up', label: 'Up' }
 			];
 		}
 	}
 
 	// Handle device control changes for setValue triggers
-	function handleControlValueChange(controlName, value) {
+	function handleControlValueChange(controlId, value) {
 		if (typeof value === 'object' && value !== null) {
 			controlValues = {
 				...controlValues,
-				[controlName]: { ...value }
+				[controlId]: { ...value }
 			};
 		} else {
 			controlValues = {
 				...controlValues,
-				[controlName]: Math.max(0, Math.min(255, parseInt(value) || 0))
+				[controlId]: Math.max(0, Math.min(255, parseInt(value) || 0))
 			};
 		}
 	}
@@ -108,7 +108,7 @@
 	 * @param {Array} inputs - Available input mappings
 	 * @param {Array} animations - Available animations
 	 * @param {Array} devs - Available devices
-	 * @returns {Promise<{input, triggerType, actionType, device, animation, duration, looping, easing, values}|{delete: true}|null>}
+	 * @returns {Promise<{input, inputState, actionType, device, animation, duration, looping, easing, values}|{delete: true}|null>}
 	 */
 	export function open(trigger, inputs, animations, devs) {
 		return new Promise((resolve) => {
@@ -121,15 +121,15 @@
 			devices = devs;
 
 			// Initialize form state from trigger
-			// Find the input matching trigger.inputId
-			const input = inputs.find(i => i.id === trigger.inputId);
-			selectedInput = input ? `${input.inputDeviceId}_${input.inputControlId}` : null;
-			triggerType = trigger.triggerType;
-			actionType = trigger.actionType === 'setValue' ? 'values' : trigger.actionType || 'animation';
+			// Find the input matching trigger.input.id
+			const input = inputs.find(i => i.id === trigger.input?.id);
+			selectedInput = input ? `${input.deviceId}_${input.controlId}` : null;
+			inputState = trigger.input?.state || 'down';
+			actionType = trigger.action?.type === 'setValue' ? 'values' : trigger.action?.type || 'animation';
 
 			if (actionType === 'values') {
-				selectedDevice = trigger.deviceId;
-				controlValues = {...(trigger.values || {})};
+				selectedDevice = trigger.output?.id;
+				controlValues = {...(trigger.action?.values || {})};
 				enabledControls = Object.keys(controlValues);
 
 				// If enabledControls is empty, initialize with all controls
@@ -141,14 +141,14 @@
 					}
 				}
 			} else {
-				selectedDevice = trigger.deviceId;
-				selectedAnimation = trigger.animation?.id;
+				selectedDevice = trigger.output?.id;
+				selectedAnimation = trigger.action?.animation?.id;
 				enabledControls = [];
 			}
 
-			duration = trigger.animation?.duration || 1000;
-			looping = trigger.animation?.iterations === 'infinite';
-			easing = trigger.animation?.easing || 'linear';
+			duration = trigger.action?.animation?.duration || 1000;
+			looping = trigger.action?.animation?.iterations === 'infinite';
+			easing = trigger.action?.animation?.easing || 'linear';
 
 			requestAnimationFrame(() => {
 				dialogRef?.showModal();
@@ -172,15 +172,15 @@
 		// Return trigger configuration
 		// Filter controlValues to only include enabled controls
 		const filteredValues = {};
-		for (const controlName of enabledControls) {
-			if (controlValues[controlName] !== undefined) {
-				filteredValues[controlName] = controlValues[controlName];
+		for (const controlId of enabledControls) {
+			if (controlValues[controlId] !== undefined) {
+				filteredValues[controlId] = controlValues[controlId];
 			}
 		}
 
 		const result = {
 			input: selectedInput,
-			triggerType,
+			inputState,
 			actionType,
 			device: selectedDevice,
 			animation: selectedAnimation,
@@ -215,8 +215,8 @@
 </script>
 
 {#if editingTrigger}
-<Dialog bind:dialogRef={dialogRef} title="Trigger" onclose={handleCancel}>
-	<form id="edit-manual-trigger-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
+<Dialog bind:dialogRef={dialogRef} title="Edit Action Trigger" onclose={handleCancel}>
+	<form id="edit-action-trigger-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
 		<div class="trigger-columns">
 			<!-- Column 1: Trigger Configuration -->
 			<div class="trigger-column">
@@ -224,7 +224,7 @@
 					<label for="edit-trigger-input">Input:</label>
 					<select id="edit-trigger-input" bind:value={selectedInput}>
 						{#each availableInputs as input}
-							<option value={input.inputDeviceId + '_' + input.inputControlId}>
+							<option value={input.deviceId + '_' + input.controlId}>
 								{input.name}
 							</option>
 						{/each}
@@ -232,10 +232,10 @@
 				</div>
 
 				<div class="dialog-input-group">
-					<label for="edit-trigger-type">Trigger Type:</label>
-					<select id="edit-trigger-type" bind:value={triggerType}>
-						{#each getTriggerTypeOptions() as type}
-							<option value={type.value}>{type.label}</option>
+					<label for="edit-trigger-state">Trigger State:</label>
+					<select id="edit-trigger-state" bind:value={inputState}>
+						{#each getInputStateOptions() as state}
+							<option value={state.value}>{state.label}</option>
 						{/each}
 					</select>
 				</div>
@@ -335,7 +335,7 @@
 
 	{#snippet buttons()}
 		<Button onclick={handleCancel} variant="secondary">Cancel</Button>
-		<Button type="submit" form="edit-manual-trigger-form" variant="primary">Save</Button>
+		<Button type="submit" form="edit-action-trigger-form" variant="primary">Save</Button>
 	{/snippet}
 </Dialog>
 {/if}

@@ -24,7 +24,7 @@
 	let selectedDevice = $state(null);
 	let selectedAnimation = $state(null);
 	let duration = $state(1000);
-	let looping = $state(false);
+	let looping = $state(true);
 	let easing = $state('linear');
 
 	const EASING_FUNCTIONS = [
@@ -49,9 +49,9 @@
 
 			// Initialize form state
 			selectedDevice = devs[0]?.id || null;
-			selectedAnimation = animations[0]?.cssName || null;
+			selectedAnimation = animations[0]?.cssIdentifier || null;
 			duration = 1000;
-			looping = false;
+			looping = true;
 			easing = 'linear';
 
 			requestAnimationFrame(() => {

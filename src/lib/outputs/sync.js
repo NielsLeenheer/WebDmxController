@@ -11,10 +11,10 @@ import { DEVICE_TYPES } from './devices.js';
 
 /**
  * Get control mapping from source device type to target device type
- * Returns a map of source control name → target control name for compatible controls
+ * Returns a map of source control id → target control id for compatible controls
  *
- * NEW: Simplified - just checks if control names match
- * (controls with same name are assumed compatible)
+ * NEW: Simplified - just checks if control ids match
+ * (controls with same id are assumed compatible)
  */
 export function getControlMapping(sourceType, targetType) {
     const sourceDeviceType = DEVICE_TYPES[sourceType];
@@ -24,14 +24,14 @@ export function getControlMapping(sourceType, targetType) {
         return {};
     }
 
-    const sourceControlNames = sourceDeviceType.getControlNames();
-    const targetControlNames = new Set(targetDeviceType.getControlNames());
+    const sourceControlIds = sourceDeviceType.getControlIds();
+    const targetControlIds = new Set(targetDeviceType.getControlIds());
     const mapping = {};
 
-    // Find common controls by name
-    for (const controlName of sourceControlNames) {
-        if (targetControlNames.has(controlName)) {
-            mapping[controlName] = controlName;  // Same name on both sides
+    // Find common controls by id
+    for (const controlId of sourceControlIds) {
+        if (targetControlIds.has(controlId)) {
+            mapping[controlId] = controlId;  // Same id on both sides
         }
     }
 
@@ -57,31 +57,31 @@ export function getLinkableDeviceTypes(deviceType) {
 }
 
 /**
- * Get array of control names that are synced between two devices
+ * Get array of control ids that are synced between two devices
  *
- * NEW: Returns control names instead of channel indices
+ * NEW: Returns control ids instead of channel indices
  *
  * @param {string} sourceType - Source device type
  * @param {string} targetType - Target device type
- * @param {Array<string>|null} syncedControls - Array of control names that are synced, or null for all
- * @returns {Array<string>} Array of control names that are synced
+ * @param {Array<string>|null} syncedControls - Array of control ids that are synced, or null for all
+ * @returns {Array<string>} Array of control ids that are synced
  */
 export function getMappedControls(sourceType, targetType, syncedControls = null) {
     const mapping = getControlMapping(sourceType, targetType);
 
     // If syncedControls is specified, filter the mapping
     if (syncedControls !== null) {
-        return Object.keys(mapping).filter(name => syncedControls.includes(name));
+        return Object.keys(mapping).filter(id => syncedControls.includes(id));
     }
 
-    // Otherwise, return all mapped control names
+    // Otherwise, return all mapped control ids
     return Object.keys(mapping);
 }
 
 
 /**
  * Get available controls that can be synced between two device types
- * Returns array of { controlName, sourceControl, targetControl } objects
+ * Returns array of { controlId, sourceControl, targetControl } objects
  */
 export function getAvailableSyncControls(sourceType, targetType) {
     const mapping = getControlMapping(sourceType, targetType);
@@ -89,13 +89,13 @@ export function getAvailableSyncControls(sourceType, targetType) {
     const targetDeviceType = DEVICE_TYPES[targetType];
     const result = [];
 
-    for (const controlName of Object.keys(mapping)) {
-        const sourceControl = sourceDeviceType.getControl(controlName);
-        const targetControl = targetDeviceType.getControl(controlName);
+    for (const controlId of Object.keys(mapping)) {
+        const sourceControl = sourceDeviceType.getControl(controlId);
+        const targetControl = targetDeviceType.getControl(controlId);
 
         if (sourceControl && targetControl) {
             result.push({
-                controlName,
+                controlId,
                 sourceControl,
                 targetControl
             });

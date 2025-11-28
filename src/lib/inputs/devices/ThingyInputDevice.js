@@ -5,7 +5,7 @@ import { InputDevice } from './InputDevice.js';
  */
 export class ThingyInputDevice extends InputDevice {
 	constructor(thingyDevice) {
-		super(thingyDevice.id, thingyDevice.name, 'bluetooth');
+		super(thingyDevice.id, thingyDevice.name, 'thingy');
 		this.thingyDevice = thingyDevice;
 
 		// Set up button handlers
@@ -112,11 +112,12 @@ export class ThingyInputDevice extends InputDevice {
 
 	/**
 	 * Set color for a control (button LED)
-	 * @param {string} controlId - Control identifier (should be 'button')
+	 * @param {string} controlId - Control identifier ('thingy' for the unified input)
 	 * @param {string} color - Palette color name
 	 */
 	async setColor(controlId, color) {
-		if (controlId === 'button' && this.thingyDevice) {
+		// Accept 'thingy' controlId (the unified input) to set the device LED
+		if (controlId === 'thingy' && this.thingyDevice) {
 			await this.thingyDevice.setDeviceColor(color);
 		}
 	}

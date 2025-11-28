@@ -37,7 +37,7 @@ import { PanTilt16Control } from './PanTilt16Control.js';
  */
 export const CONTROL_TYPES = {
 	// Color control
-	RGB: new ColorControl(),
+	Color: new ColorControl(),
 
 	// Single-channel controls
 	Dimmer: new DimmerControl(),
