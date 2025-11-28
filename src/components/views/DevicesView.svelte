@@ -13,7 +13,7 @@
     let devices = $derived(deviceLibrary.getAll());
 
     // Device type selection
-    let selectedType = $state('RGB');
+    let selectedType = $state('rgb');
 
     // Dialog reference
     let editDeviceDialog;
