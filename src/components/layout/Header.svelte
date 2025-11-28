@@ -48,6 +48,8 @@
             await inputController?.requestStreamDeck();
             // Update device list
             connectedDevices = inputController?.getInputDevices() || [];
+            // Close dialog on successful connection
+            closeDevicesDialog();
         } catch (error) {
             alert(`Failed to connect Stream Deck: ${error.message}\n\nPlease close the Elgato Stream Deck software and try again.`);
         }
@@ -59,6 +61,8 @@
             await inputController?.inputDeviceManager?.initMIDI();
             // Update device list
             connectedDevices = inputController?.getInputDevices() || [];
+            // Close dialog on successful connection
+            closeDevicesDialog();
         } catch (error) {
             alert(`Failed to connect MIDI: ${error.message}`);
         }
@@ -69,6 +73,8 @@
             await inputController?.requestHIDDevice();
             // Update device list
             connectedDevices = inputController?.getInputDevices() || [];
+            // Close dialog on successful connection
+            closeDevicesDialog();
         } catch (error) {
             alert(`Failed to connect HID device: ${error.message}`);
         }
@@ -79,6 +85,8 @@
             await inputController?.requestThingy52();
             // Update device list
             connectedDevices = inputController?.getInputDevices() || [];
+            // Close dialog on successful connection
+            closeDevicesDialog();
         } catch (error) {
             alert(`Failed to connect Thingy:52: ${error.message}\n\nMake sure your device is powered on and in range.`);
         }
