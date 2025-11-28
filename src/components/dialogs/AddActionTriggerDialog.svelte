@@ -26,7 +26,7 @@
 
 	// Form state
 	let selectedInput = $state(null);
-	let triggerType = $state('pressed');
+	let inputState = $state('down');
 	let actionType = $state('animation');
 	let selectedDevice = $state(null);
 	let selectedAnimation = $state(null);
@@ -47,12 +47,12 @@
 		'cubic-bezier(0.68, -0.55, 0.265, 1.55)' // Back easing
 	];
 
-	// Get trigger type options based on the selected input's button mode
-	function getTriggerTypeOptions() {
+	// Get input state options based on the selected input's button mode
+	function getInputStateOptions() {
 		if (!selectedInput) {
 			return [
-				{ value: 'pressed', label: 'Pressed' },
-				{ value: 'not-pressed', label: 'Not Pressed' }
+				{ value: 'down', label: 'Down' },
+				{ value: 'up', label: 'Up' }
 			];
 		}
 
@@ -64,8 +64,8 @@
 
 		if (!input || !isButton(input)) {
 			return [
-				{ value: 'pressed', label: 'Pressed' },
-				{ value: 'not-pressed', label: 'Not Pressed' }
+				{ value: 'down', label: 'Down' },
+				{ value: 'up', label: 'Up' }
 			];
 		}
 
@@ -73,13 +73,13 @@
 
 		if (buttonMode === 'toggle') {
 			return [
-				{ value: 'pressed', label: 'On' },
-				{ value: 'not-pressed', label: 'Off' }
+				{ value: 'on', label: 'On' },
+				{ value: 'off', label: 'Off' }
 			];
 		} else {
 			return [
-				{ value: 'pressed', label: 'Down' },
-				{ value: 'not-pressed', label: 'Up' }
+				{ value: 'down', label: 'Down' },
+				{ value: 'up', label: 'Up' }
 			];
 		}
 	}
@@ -115,7 +115,7 @@
 	 * @param {Array} inputs - Available input mappings
 	 * @param {Array} animations - Available animations
 	 * @param {Array} devs - Available devices
-	 * @returns {Promise<{input, triggerType, actionType, device, animation, duration, looping, easing, values}|null>}
+	 * @returns {Promise<{input, inputState, actionType, device, animation, duration, looping, easing, values}|null>}
 	 */
 	export function open(inputs, animations, devs) {
 		return new Promise((resolve) => {
@@ -129,7 +129,7 @@
 			// Initialize form state
 			// Format: deviceId_controlId (needed for parsing in TriggersView)
 			selectedInput = inputs[0] ? `${inputs[0].deviceId}_${inputs[0].controlId}` : null;
-			triggerType = 'pressed';
+			inputState = 'down';
 			actionType = 'animation';
 			selectedDevice = devs[0]?.id || null;
 			selectedAnimation = animations[0]?.cssIdentifier || null;
@@ -171,7 +171,7 @@
 
 		const result = {
 			input: selectedInput,
-			triggerType,
+			inputState,
 			actionType,
 			device: selectedDevice,
 			animation: selectedAnimation,
@@ -210,10 +210,10 @@
 				</div>
 
 				<div class="dialog-input-group">
-					<label for="trigger-type">Trigger Type:</label>
-					<select id="trigger-type" bind:value={triggerType}>
-						{#each getTriggerTypeOptions() as type}
-							<option value={type.value}>{type.label}</option>
+					<label for="trigger-state">Trigger State:</label>
+					<select id="trigger-state" bind:value={inputState}>
+						{#each getInputStateOptions() as state}
+							<option value={state.value}>{state.label}</option>
 						{/each}
 					</select>
 				</div>

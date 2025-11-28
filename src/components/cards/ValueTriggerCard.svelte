@@ -13,29 +13,29 @@
 		onEdit            // Callback when edit button clicked
 	} = $props();
 
-	let device = $derived(deviceLibrary.get(trigger.deviceId));
-	let input = $derived(trigger.inputId ? inputLibrary.get(trigger.inputId) : null);
+	let device = $derived(deviceLibrary.get(trigger.output?.id));
+	let input = $derived(trigger.input?.id ? inputLibrary.get(trigger.input.id) : null);
 
 	// Get the input value label
 	let inputValueLabel = $derived.by(() => {
 		if (!input) return 'Value';
 		const exportedValues = getInputExportedValues(input);
-		const value = exportedValues.find(v => v.key === trigger.inputValueKey);
+		const value = exportedValues.find(v => v.key === trigger.input?.value);
 		return value?.label || 'Value';
 	});
 
 	// Get control label with channel if applicable
 	let controlLabel = $derived.by(() => {
-		if (!device || !trigger.controlId) return 'Unknown';
+		if (!device || !trigger.action?.copy?.control) return 'Unknown';
 		const deviceType = DEVICE_TYPES[device.type];
-		if (!deviceType) return trigger.controlId;
+		if (!deviceType) return trigger.action.copy.control;
 
-		const controlDef = deviceType.controls.find(c => c.id === trigger.controlId);
-		if (!controlDef) return trigger.controlId;
+		const controlDef = deviceType.controls.find(c => c.id === trigger.action.copy.control);
+		if (!controlDef) return trigger.action.copy.control;
 
-		if (trigger.controlValueId) {
+		if (trigger.action.copy.component) {
 			const values = controlDef.type.getValueMetadata().values;
-			const value = values.find(v => v.id === trigger.controlValueId);
+			const value = values.find(v => v.id === trigger.action.copy.component);
 			if (value) {
 				return `${controlDef.type.name} → ${value.label}`;
 			}
@@ -63,7 +63,7 @@
 
 	<!-- Arrow with invert indicator -->
 	<div class="trigger-arrow">
-		{#if trigger.invert}
+		{#if trigger.action?.copy?.invert}
 			<span class="arrow inverted" title="Inverted">⇄</span>
 		{:else}
 			<span class="arrow">→</span>

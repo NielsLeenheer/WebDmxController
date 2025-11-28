@@ -21,11 +21,11 @@ export function generateCSSTriggers(device, allTriggers, animationLibrary, input
 	const cssRules = [];
 	
 	// Get all triggers for this device
-	const deviceTriggers = allTriggers.filter(t => t.deviceId === device.id);
+	const deviceTriggers = allTriggers.filter(t => t.output?.id === device.id);
 	
 	// Separate automatic and manual triggers
-	const automaticTriggers = deviceTriggers.filter(t => t.triggerType === 'always');
-	const manualTriggers = deviceTriggers.filter(t => t.triggerType !== 'always');
+	const automaticTriggers = deviceTriggers.filter(t => t.type === 'auto');
+	const manualTriggers = deviceTriggers.filter(t => t.type !== 'auto');
 	
 	// Generate CSS for automatic triggers (combined)
 	if (automaticTriggers.length > 0) {
@@ -49,23 +49,24 @@ export function generateCSSTriggers(device, allTriggers, animationLibrary, input
 function _generateAutomaticTriggersCSS(device, automaticTriggers, animationLibrary) {
 	// Only handle animation triggers for automatic
 	const animationTriggers = automaticTriggers.filter(t => 
-		t.actionType === 'animation' && t.animation?.id
+		t.action?.type === 'animation' && t.action?.animation?.id
 	);
 	
 	if (animationTriggers.length === 0) return '';
 	
 	// Combine all automatic animations for this device
 	const animationSpecs = animationTriggers.map(trigger => {
-		const iterVal = trigger.animation.iterations === 'infinite' 
+		const anim = trigger.action.animation;
+		const iterVal = anim.iterations === 'infinite' 
 			? 'infinite' 
-			: trigger.animation.iterations;
-		const durSec = (trigger.animation.duration / 1000).toFixed(3);
+			: anim.iterations;
+		const durSec = (anim.duration / 1000).toFixed(3);
 		
 		// Look up animation to get cssIdentifier
-		const animation = animationLibrary?.get(trigger.animation.id);
-		const animName = animation?.cssIdentifier || trigger.animation.id;
+		const animation = animationLibrary?.get(anim.id);
+		const animName = animation?.cssIdentifier || anim.id;
 		
-		return `${animName} ${durSec}s ${trigger.animation.easing} ${iterVal}`;
+		return `${animName} ${durSec}s ${anim.easing} ${iterVal}`;
 	});
 	
 	const animationValue = animationSpecs.join(', ');
@@ -80,9 +81,9 @@ function _generateAutomaticTriggersCSS(device, automaticTriggers, animationLibra
  * @private
  */
 function _generateManualTriggerCSS(device, trigger, automaticTriggers, animationLibrary, inputLibrary) {
-	if (trigger.actionType === 'animation') {
+	if (trigger.action?.type === 'animation') {
 		return _generateManualAnimationCSS(device, trigger, automaticTriggers, animationLibrary, inputLibrary);
-	} else if (trigger.actionType === 'values') {
+	} else if (trigger.action?.type === 'values') {
 		return _generateManualValuesCSS(device, trigger, inputLibrary);
 	}
 	return '';
@@ -93,29 +94,31 @@ function _generateManualTriggerCSS(device, trigger, automaticTriggers, animation
  * @private
  */
 function _generateManualAnimationCSS(device, trigger, automaticTriggers, animationLibrary, inputLibrary) {
-	if (!trigger.animation?.id) return '';
+	if (!trigger.action?.animation?.id) return '';
 	
-	const iterationsValue = trigger.animation.iterations === 'infinite' 
+	const anim = trigger.action.animation;
+	const iterationsValue = anim.iterations === 'infinite' 
 		? 'infinite' 
-		: trigger.animation.iterations;
-	const durationSec = (trigger.animation.duration / 1000).toFixed(3);
+		: anim.iterations;
+	const durationSec = (anim.duration / 1000).toFixed(3);
 	
 	// Look up animation to get cssIdentifier
-	const animation = animationLibrary?.get(trigger.animation.id);
-	const animName = animation?.cssIdentifier || trigger.animation.id;
+	const animation = animationLibrary?.get(anim.id);
+	const animName = animation?.cssIdentifier || anim.id;
 	
 	// Build the animation specification for this trigger
-	const thisAnimation = `${animName} ${durationSec}s ${trigger.animation.easing} ${iterationsValue}`;
+	const thisAnimation = `${animName} ${durationSec}s ${anim.easing} ${iterationsValue}`;
 	
 	// Get automatic animations for this device to preserve them
 	const automaticAnimationSpecs = automaticTriggers
-		.filter(t => t.actionType === 'animation' && t.animation?.id)
+		.filter(t => t.action?.type === 'animation' && t.action?.animation?.id)
 		.map(t => {
-			const iterVal = t.animation.iterations === 'infinite' ? 'infinite' : t.animation.iterations;
-			const durSec = (t.animation.duration / 1000).toFixed(3);
-			const anim = animationLibrary?.get(t.animation.id);
-			const animName = anim?.cssIdentifier || t.animation.id;
-			return `${animName} ${durSec}s ${t.animation.easing} ${iterVal}`;
+			const a = t.action.animation;
+			const iterVal = a.iterations === 'infinite' ? 'infinite' : a.iterations;
+			const durSec = (a.duration / 1000).toFixed(3);
+			const anim = animationLibrary?.get(a.id);
+			const animName = anim?.cssIdentifier || a.id;
+			return `${animName} ${durSec}s ${a.easing} ${iterVal}`;
 		});
 	
 	// Combine automatic animations with this animation
@@ -139,20 +142,20 @@ function _generateManualAnimationCSS(device, trigger, automaticTriggers, animati
  * @private
  */
 function _generateManualValuesCSS(device, trigger, inputLibrary) {
-	if (!trigger.values) return '';
+	const values = trigger.action?.values;
+	if (!values) return '';
 
 	// Get device type
 	const deviceType = DEVICE_TYPES[device.type];
 	if (!deviceType) return '';
 
-	// NEW: trigger.values is now a control values object
-	// Filter controls to only those present in trigger.values (implicit enabling)
+	// Filter controls to only those present in output.values (implicit enabling)
 	const filteredControls = deviceType.controls.filter(control =>
-		trigger.values.hasOwnProperty(control.id)
+		values.hasOwnProperty(control.id)
 	);
 
 	// Generate CSS properties from control values
-	const properties = getProperties(trigger.values, filteredControls);
+	const properties = getProperties(values, filteredControls);
 
 	if (Object.keys(properties).length === 0) return '';
 
@@ -188,7 +191,7 @@ export function generateValueTriggersCSS(triggers, device, inputLibrary) {
 	const properties = [];
 
 	for (const trigger of triggers) {
-		if (trigger.triggerType !== 'value') continue;
+		if (trigger.type !== 'value') continue;
 
 		const propValue = _generateValueTriggerProperty(trigger, device, deviceType, inputLibrary);
 		if (propValue) {
@@ -211,24 +214,24 @@ export function generateValueTriggersCSS(triggers, device, inputLibrary) {
  */
 function _generateValueTriggerProperty(trigger, device, deviceType, inputLibrary) {
 	// Get input and its exported values
-	const input = inputLibrary.get(trigger.inputId);
+	const input = inputLibrary.get(trigger.input?.id);
 	if (!input) return null;
 
 	const exportedValues = getInputExportedValues(input);
-	const inputValue = exportedValues.find(v => v.key === trigger.inputValueKey);
+	const inputValue = exportedValues.find(v => v.key === trigger.input?.value);
 	if (!inputValue || !inputValue.cssProperty) return null;
 
-	const controlDef = deviceType.controls.find(c => c.id === trigger.controlId);
+	const controlDef = deviceType.controls.find(c => c.id === trigger.action?.copy?.control);
 	if (!controlDef) return null;
 
 	// Get control metadata and find the specific value by id
 	const metadata = controlDef.type.getValueMetadata();
 	if (!metadata || !metadata.values) return null;
 
-	// For single-value controls, controlValueId may be null - use first value
+	// For single-value controls, component may be null - use first value
 	// For multi-value controls, find by id
-	const controlMeta = trigger.controlValueId
-		? metadata.values.find(v => v.id === trigger.controlValueId)
+	const controlMeta = trigger.action?.copy?.component
+		? metadata.values.find(v => v.id === trigger.action.copy.component)
 		: metadata.values[0];
 	if (!controlMeta) return null;
 
@@ -251,8 +254,8 @@ function _generateValueTriggerProperty(trigger, device, deviceType, inputLibrary
 	const outputUnit = controlMeta.unit || '';
 
 	// Handle inversion
-	const effectiveOutputMin = trigger.invert ? outputMax : outputMin;
-	const effectiveOutputMax = trigger.invert ? outputMin : outputMax;
+	const effectiveOutputMin = trigger.action?.copy?.invert ? outputMax : outputMin;
+	const effectiveOutputMax = trigger.action?.copy?.invert ? outputMin : outputMax;
 
 	// Generate the CSS calc() expression
 	const cssValue = _generateCalcExpression(

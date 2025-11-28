@@ -14,51 +14,56 @@
 		onEdit            // Callback when edit button clicked
 	} = $props();
 
-	let device = $derived(deviceLibrary.get(trigger.deviceId));
-	let animation = $derived(trigger.animation?.id ? animationLibrary.get(trigger.animation.id) : null);
-	let input = $derived(trigger.inputId ? inputLibrary.get(trigger.inputId) : null);
+	let device = $derived(deviceLibrary.get(trigger.output?.id));
+	let animation = $derived(trigger.action?.animation?.id ? animationLibrary.get(trigger.action.animation.id) : null);
+	let input = $derived(trigger.input?.id ? inputLibrary.get(trigger.input.id) : null);
 
 	// Check if this is a value trigger
 	let isValue = $derived(isValueTrigger(trigger));
 
 	// For values triggers (actionType='values'), compute preview data from trigger values
 	let valuesPreview = $derived.by(() => {
-		if (trigger.actionType !== 'values' || !device) return null;
-		return getTriggerValuesPreviewData(device.type, trigger.values);
+		if (trigger.action?.type !== 'values' || !device) return null;
+		return getTriggerValuesPreviewData(device.type, trigger.action?.values);
 	});
 
 	// Get input type label (On/Off/Up/Down) for button triggers
 	let inputTypeLabel = $derived.by(() => {
-		if (!input) return trigger.triggerType === 'pressed' ? 'Down' : 'Up';
+		if (!input) return 'Down';
 
-		// Check if it's toggle mode
-		if (input.buttonMode === 'toggle') {
-			return trigger.triggerType === 'pressed' ? 'On' : 'Off';
-		} else {
-			return trigger.triggerType === 'pressed' ? 'Down' : 'Up';
-		}
+		// Use input.state from trigger
+		const state = trigger.input?.state || 'down';
+		
+		// Map state to user-friendly label
+		const stateLabels = {
+			'down': 'Down',
+			'up': 'Up',
+			'on': 'On',
+			'off': 'Off'
+		};
+		return stateLabels[state] || state;
 	});
 
 	// For value triggers: get the input value label
 	let inputValueLabel = $derived.by(() => {
 		if (!isValue || !input) return '';
 		const exportedValues = getInputExportedValues(input);
-		const value = exportedValues.find(v => v.key === trigger.inputValueKey);
+		const value = exportedValues.find(v => v.key === trigger.input?.value);
 		return value?.label || 'Value';
 	});
 
 	// For value triggers: get control label with channel if applicable
 	let controlLabel = $derived.by(() => {
-		if (!isValue || !device || !trigger.controlId) return '';
+		if (!isValue || !device || !trigger.action?.copy?.control) return '';
 		const deviceType = DEVICE_TYPES[device.type];
-		if (!deviceType) return trigger.controlId;
+		if (!deviceType) return trigger.action.copy.control;
 
-		const controlDef = deviceType.controls.find(c => c.id === trigger.controlId);
-		if (!controlDef) return trigger.controlId;
+		const controlDef = deviceType.controls.find(c => c.id === trigger.action.copy.control);
+		if (!controlDef) return trigger.action.copy.control;
 
-		if (trigger.controlValueId) {
+		if (trigger.action.copy.component) {
 			const values = controlDef.type.getValueMetadata().values;
-			const value = values.find(v => v.id === trigger.controlValueId);
+			const value = values.find(v => v.id === trigger.action.copy.component);
 			if (value) {
 				return `${controlDef.type.name} → ${value.label}`;
 			}
@@ -68,11 +73,11 @@
 
 	// For value triggers: get control preview data
 	let controlPreview = $derived.by(() => {
-		if (!isValue || !device || !trigger.controlId) return null;
+		if (!isValue || !device || !trigger.action?.copy?.control) return null;
 		const deviceType = DEVICE_TYPES[device.type];
 		if (!deviceType) return null;
 
-		const controlDef = deviceType.controls.find(c => c.id === trigger.controlId);
+		const controlDef = deviceType.controls.find(c => c.id === trigger.action.copy.control);
 		if (!controlDef) return null;
 
 		const controlTypeId = controlDef.type.id;
@@ -101,7 +106,7 @@
 <DraggableCard {dnd} item={trigger} class="trigger-card">
 	<!-- Column 1: Input -->
 	<div class="trigger-column trigger-input-column">
-		{#if trigger.triggerType === 'always'}
+		{#if trigger.type === 'auto'}
 			<div class="trigger-text">Always</div>
 		{:else}
 			<Preview
@@ -143,9 +148,10 @@
 				class="trigger-preview"
 			/>
 			<div class="trigger-text">
-				{controlLabel}{#if trigger.invert} <span class="invert-indicator" title="Inverted">⇄</span>{/if}
+				{controlLabel}{#if trigger.action?.copy?.invert} <span class="invert-indicator" title="Inverted">⇄</span>{/if}
 			</div>
-		{:else if trigger.actionType === 'animation'}
+		{:else if trigger.action?.type === 'animation'}
+			<Preview
 			<Preview
 				type="animation"
 				size="medium"

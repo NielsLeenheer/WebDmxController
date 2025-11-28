@@ -60,12 +60,12 @@
 			devices = devs;
 
 			// Initialize form state from existing trigger
-			selectedInputId = trig.inputId;
-			selectedValueKey = trig.inputValueKey || 'value';
-			selectedDeviceId = trig.deviceId;
-			selectedControlId = trig.controlId;
-			selectedValueId = trig.controlValueId;
-			invert = trig.invert || false;
+			selectedInputId = trig.input?.id;
+			selectedValueKey = trig.input?.value || 'value';
+			selectedDeviceId = trig.output?.id;
+			selectedControlId = trig.action?.copy?.control;
+			selectedValueId = trig.action?.copy?.component;
+			invert = trig.action?.copy?.invert || false;
 
 			requestAnimationFrame(() => {
 				dialogRef?.showModal();

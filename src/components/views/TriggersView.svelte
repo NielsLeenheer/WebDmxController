@@ -51,19 +51,24 @@
 
         // Create trigger using library method
         triggerLibrary.create({
-            triggerType: result.triggerType,
-            actionType: result.actionType,
-            inputId: input.id,
-            deviceId: result.device,
-            // Animation action properties
-            animation: result.actionType === 'animation' ? {
-                id: result.animation,
-                duration: result.duration,
-                easing: result.easing,
-                iterations: result.looping ? 'infinite' : 1
-            } : null,
-            // Values action properties
-            values: result.actionType === 'values' ? result.values : null
+            type: 'action',
+            input: {
+                id: input.id,
+                state: result.inputState
+            },
+            output: {
+                id: result.device
+            },
+            action: {
+                type: result.actionType,
+                animation: result.actionType === 'animation' ? {
+                    id: result.animation,
+                    duration: result.duration,
+                    easing: result.easing,
+                    iterations: result.looping ? 'infinite' : 1
+                } : null,
+                values: result.actionType === 'values' ? result.values : null
+            }
         });
     }
 
@@ -74,15 +79,18 @@
 
         // Create trigger using library method
         triggerLibrary.create({
-            triggerType: 'always',
-            actionType: 'animation',
-            inputId: null,
-            deviceId: result.device,
-            animation: {
-                id: result.animation,
-                duration: result.duration,
-                easing: result.easing,
-                iterations: result.looping ? 'infinite' : 1
+            type: 'auto',
+            output: {
+                id: result.device
+            },
+            action: {
+                type: 'animation',
+                animation: {
+                    id: result.animation,
+                    duration: result.duration,
+                    easing: result.easing,
+                    iterations: result.looping ? 'infinite' : 1
+                }
             }
         });
     }
@@ -94,18 +102,27 @@
 
         // Create value trigger using library method
         triggerLibrary.create({
-            triggerType: 'value',
-            inputId: result.inputId,
-            inputValueKey: result.inputValueKey,
-            deviceId: result.deviceId,
-            controlId: result.controlId,
-            controlValueId: result.controlValueId,
-            invert: result.invert
+            type: 'value',
+            input: {
+                id: result.inputId,
+                value: result.inputValueKey
+            },
+            output: {
+                id: result.deviceId
+            },
+            action: {
+                type: 'copy',
+                copy: {
+                    control: result.controlId,
+                    component: result.controlValueId,
+                    invert: result.invert
+                }
+            }
         });
     }
 
     async function openEditDialog(trigger) {
-        if (trigger.triggerType === 'value') {
+        if (trigger.type === 'value') {
             // Value-based trigger
             const result = await editValueTriggerDialog.open(trigger, valueCapableInputs, devices);
 
@@ -119,14 +136,23 @@
 
             // Handle save
             triggerLibrary.update(trigger.id, {
-                inputId: result.data.inputId,
-                inputValueKey: result.data.inputValueKey,
-                deviceId: result.data.deviceId,
-                controlId: result.data.controlId,
-                controlValueId: result.data.controlValueId,
-                invert: result.data.invert
+                input: {
+                    id: result.data.inputId,
+                    value: result.data.inputValueKey
+                },
+                output: {
+                    id: result.data.deviceId
+                },
+                action: {
+                    type: 'copy',
+                    copy: {
+                        control: result.data.controlId,
+                        component: result.data.controlValueId,
+                        invert: result.data.invert
+                    }
+                }
             });
-        } else if (trigger.triggerType === 'always') {
+        } else if (trigger.type === 'auto') {
             // Automatic trigger
             const result = await editAutomaticTriggerDialog.open(trigger, availableAnimations, devices);
 
@@ -140,12 +166,17 @@
 
             // Handle save using library update method
             triggerLibrary.update(trigger.id, {
-                deviceId: result.device,
-                animation: {
-                    id: result.animation,
-                    duration: result.duration,
-                    easing: result.easing,
-                    iterations: result.looping ? 'infinite' : 1
+                output: {
+                    id: result.device
+                },
+                action: {
+                    type: 'animation',
+                    animation: {
+                        id: result.animation,
+                        duration: result.duration,
+                        easing: result.easing,
+                        iterations: result.looping ? 'infinite' : 1
+                    }
                 }
             });
         } else {
@@ -174,23 +205,29 @@
 
             // Build updates object based on action type
             const updates = {
-                inputId: selectedInput.id,
-                triggerType: result.triggerType,
-                actionType: result.actionType,
-                deviceId: result.device
+                input: {
+                    id: selectedInput.id,
+                    state: result.inputState
+                },
+                output: {
+                    id: result.device
+                },
+                action: {
+                    type: result.actionType,
+                    animation: null,
+                    values: null
+                }
             };
 
             if (result.actionType === 'animation') {
-                updates.animation = {
+                updates.action.animation = {
                     id: result.animation,
                     duration: result.duration,
                     easing: result.easing,
                     iterations: result.looping ? 'infinite' : 1
                 };
-                updates.values = null;
             } else {
-                updates.animation = null;
-                updates.values = result.values;
+                updates.action.values = result.values;
             }
 
             // Update using library method

@@ -3,11 +3,31 @@
  *
  * Extends Library base class with trigger-specific functionality.
  * Stores triggers as plain objects (not class instances) for proper reactivity.
- * Trigger values are stored as control-based objects (NEW ARCHITECTURE).
  *
  * Trigger Types:
- * - 'pressed' / 'not-pressed' / 'always': Traditional triggers (animation or static values)
- * - 'value': Value-based triggers that map input values to control values continuously
+ * - 'auto': Automatic triggers (always running)
+ * - 'action': Action triggers (triggered by button state)
+ * - 'value': Value-based triggers (map input values to control values continuously)
+ *
+ * Structure:
+ * {
+ *   type: 'auto' | 'action' | 'value',
+ *   input: {
+ *     id,                           // input id from InputLibrary
+ *     state,                        // for action: 'up' | 'down' | 'on' | 'off'
+ *     value                         // for value: input value key (e.g., 'value', 'pressure')
+ *   },
+ *   output: {
+ *     id                           // output device id from DeviceLibrary
+ *   },
+ *   action: {
+ *     type: 'animation' | 'values' | 'copy',
+ *     animation: { id, duration, easing, iterations },  // for type='animation'
+ *     values: { ... },              // for type='values'
+ *     copy: { control, component, invert }              // for type='copy' (value triggers)
+ *   },
+ *   order: number
+ * }
  */
 
 import { Library } from './Library.svelte.js';
@@ -24,37 +44,75 @@ export class TriggerLibrary extends Library {
 	 * @returns {Object} Created trigger object
 	 */
 	create(config = {}) {
-		const triggerType = config.triggerType || 'pressed';
+		const type = config.type || 'action';
 
-		// Value triggers map input values to control values continuously
-		if (triggerType === 'value') {
+		// Automatic triggers (always running)
+		if (type === 'auto') {
+			const actionType = config.action?.type || 'animation';
 			return this.add({
-				triggerType: 'value',
-				inputId: config.inputId || null,
-				inputValueKey: config.inputValueKey || 'value',
-				deviceId: config.deviceId || null,
-				controlId: config.controlId || null,
-				controlValueId: config.controlValueId || null,
-				invert: config.invert || false,
+				type: 'auto',
+				output: {
+					id: config.output?.id || null
+				},
+				action: {
+					type: actionType,
+					animation: actionType === 'animation' ? {
+						id: config.action?.animation?.id || null,
+						duration: config.action?.animation?.duration || 1000,
+						easing: config.action?.animation?.easing || 'linear',
+						iterations: config.action?.animation?.iterations || 1
+					} : null,
+					values: actionType === 'values' ? (config.action?.values || {}) : null
+				},
 				order: this.items.length
 			});
 		}
 
-		// Action triggers (pressed/not-pressed/always) run animations or set static values
-		const actionType = config.actionType || 'animation';
+		// Value triggers map input values to control values continuously
+		if (type === 'value') {
+			return this.add({
+				type: 'value',
+				input: {
+					id: config.input?.id || null,
+					value: config.input?.value || 'value'
+				},
+				output: {
+					id: config.output?.id || null
+				},
+				action: {
+					type: 'copy',
+					copy: {
+						control: config.action?.copy?.control || null,
+						component: config.action?.copy?.component || null,
+						invert: config.action?.copy?.invert || false
+					}
+				},
+				order: this.items.length
+			});
+		}
+
+		// Action triggers (triggered by button state)
+		const actionType = config.action?.type || 'animation';
 
 		return this.add({
-			triggerType,
-			inputId: config.inputId || null,
-			actionType,
-			deviceId: config.deviceId || null,
-			animation: actionType === 'animation' ? {
-				id: config.animation?.id || null,
-				duration: config.animation?.duration || 1000,
-				easing: config.animation?.easing || 'linear',
-				iterations: config.animation?.iterations || 1
-			} : null,
-			values: actionType === 'values' ? (config.values || {}) : null,
+			type: 'action',
+			input: {
+				id: config.input?.id || null,
+				state: config.input?.state || 'down'
+			},
+			output: {
+				id: config.output?.id || null
+			},
+			action: {
+				type: actionType,
+				animation: actionType === 'animation' ? {
+					id: config.action?.animation?.id || null,
+					duration: config.action?.animation?.duration || 1000,
+					easing: config.action?.animation?.easing || 'linear',
+					iterations: config.action?.animation?.iterations || 1
+				} : null,
+				values: actionType === 'values' ? (config.action?.values || {}) : null
+			},
 			order: this.items.length
 		});
 	}
@@ -71,11 +129,11 @@ export class TriggerLibrary extends Library {
 		const allTriggers = this.getAll();
 
 		// Separate value triggers from other triggers
-		const valueTriggers = allTriggers.filter(t => t.triggerType === 'value');
-		const otherTriggers = allTriggers.filter(t => t.triggerType !== 'value');
+		const valueTriggers = allTriggers.filter(t => t.type === 'value');
+		const otherTriggers = allTriggers.filter(t => t.type !== 'value');
 
 		// Get unique device IDs that are used in non-value triggers
-		const deviceIds = new Set(otherTriggers.map(t => t.deviceId).filter(id => id));
+		const deviceIds = new Set(otherTriggers.map(t => t.output?.id).filter(id => id));
 
 		// Generate CSS for each device (traditional triggers)
 		const cssRules = [];
@@ -88,12 +146,12 @@ export class TriggerLibrary extends Library {
 		}
 
 		// Generate CSS for value-based triggers (grouped by device)
-		const valueDeviceIds = new Set(valueTriggers.map(t => t.deviceId).filter(id => id));
+		const valueDeviceIds = new Set(valueTriggers.map(t => t.output?.id).filter(id => id));
 		for (const deviceId of valueDeviceIds) {
 			const device = devices.find(d => d.id === deviceId);
 			if (!device) continue;
 
-			const deviceValueTriggers = valueTriggers.filter(t => t.deviceId === deviceId);
+			const deviceValueTriggers = valueTriggers.filter(t => t.output?.id === deviceId);
 			const css = generateValueTriggersCSS(deviceValueTriggers, device, inputLibrary);
 			if (css) cssRules.push(css);
 		}
@@ -103,32 +161,94 @@ export class TriggerLibrary extends Library {
 
 	/**
 	 * Deserialize trigger data from storage
-	 * @param {Object} triggerData - Serialized trigger data
+	 * @param {Object} data - Serialized trigger data
 	 * @param {number} index - Array index for order
 	 */
-	deserializeItem(triggerData, index) {
-		// Handle value-based triggers
-		if (triggerData.triggerType === 'value') {
+	deserializeItem(data, index) {
+		// Determine trigger type (handle legacy triggerType migration)
+		let type = data.type;
+		if (!type && data.triggerType) {
+			// Migrate old triggerType to new type
+			if (data.triggerType === 'value') {
+				type = 'value';
+			} else if (data.triggerType === 'always') {
+				type = 'auto';
+			} else {
+				type = 'action';
+			}
+		}
+		type = type || 'action';
+
+		// Handle automatic triggers
+		if (type === 'auto') {
+			const actionType = data.action?.type || data.actionType || 'animation';
+
+			// Handle values deserialization with deep copy
+			let values = null;
+			if (actionType === 'values') {
+				values = {};
+				const sourceValues = data.action?.values || data.values || {};
+				for (const [key, value] of Object.entries(sourceValues)) {
+					if (typeof value === 'object' && value !== null) {
+						values[key] = { ...value };
+					} else {
+						values[key] = value;
+					}
+				}
+			}
+
 			return {
-				id: triggerData.id || crypto.randomUUID(),
-				triggerType: 'value',
-				inputId: triggerData.inputId || null,
-				inputValueKey: triggerData.inputValueKey || 'value',
-				deviceId: triggerData.deviceId || null,
-				controlId: triggerData.controlId || triggerData.controlName || null, // Support old 'controlName' for migration
-				controlValueId: triggerData.controlValueId || triggerData.controlChannel || null, // Support old 'controlChannel' for migration
-				invert: triggerData.invert || false,
-				order: triggerData.order !== undefined ? triggerData.order : index
+				id: data.id || crypto.randomUUID(),
+				type: 'auto',
+				output: {
+					id: data.output?.id || data.output?.device?.id || data.deviceId || null
+				},
+				action: {
+					type: actionType,
+					animation: actionType === 'animation' ? {
+						id: data.action?.animation?.id || data.animation?.id || data.animationName || null,
+						duration: data.action?.animation?.duration || data.animation?.duration || data.duration || 1000,
+						easing: data.action?.animation?.easing || data.animation?.easing || data.easing || 'linear',
+						iterations: data.action?.animation?.iterations || data.animation?.iterations || data.iterations || 1
+					} : null,
+					values
+				},
+				order: data.order !== undefined ? data.order : index
 			};
 		}
 
-		const actionType = triggerData.actionType || 'animation';
+		// Handle value-based triggers
+		if (type === 'value') {
+			return {
+				id: data.id || crypto.randomUUID(),
+				type: 'value',
+				input: {
+					id: data.input?.id || data.inputId || null,
+					value: data.input?.value || data.inputValueKey || 'value'
+				},
+				output: {
+					id: data.output?.id || data.output?.device?.id || data.deviceId || null
+				},
+				action: {
+					type: 'copy',
+					copy: {
+						control: data.action?.copy?.control || data.output?.control?.id || data.controlId || data.controlName || null,
+						component: data.action?.copy?.component || data.output?.control?.value || data.controlValueId || data.controlChannel || null,
+						invert: data.action?.copy?.invert || data.action?.invert || data.invert || false
+					}
+				},
+				order: data.order !== undefined ? data.order : index
+			};
+		}
+
+		// Handle action triggers
+		const actionType = data.action?.type || data.actionType || 'animation';
 
 		// Handle values deserialization with deep copy
 		let values = null;
 		if (actionType === 'values') {
 			values = {};
-			const sourceValues = triggerData.values || {};
+			const sourceValues = data.action?.values || data.values || {};
 			for (const [key, value] of Object.entries(sourceValues)) {
 				if (typeof value === 'object' && value !== null) {
 					values[key] = { ...value };
@@ -138,22 +258,39 @@ export class TriggerLibrary extends Library {
 			}
 		}
 
+		// Determine input state (migrate from old triggerType)
+		let inputState = data.input?.state;
+		if (!inputState && data.triggerType) {
+			// Migrate old triggerType to input.state
+			if (data.triggerType === 'pressed') {
+				inputState = 'down';
+			} else if (data.triggerType === 'not-pressed') {
+				inputState = 'up';
+			}
+		}
+		inputState = inputState || 'down';
+
 		return {
-			id: triggerData.id || crypto.randomUUID(),
-			triggerType: triggerData.triggerType,
-			inputId: triggerData.inputId,
-			actionType,
-			deviceId: triggerData.deviceId,
-			// Animation properties (null for values triggers)
-			animation: actionType === 'animation' ? {
-				id: triggerData.animation?.id || triggerData.animationName || null, // Support old animationName
-				duration: triggerData.animation?.duration || triggerData.duration || 1000,
-				easing: triggerData.animation?.easing || triggerData.easing || 'linear',
-				iterations: triggerData.animation?.iterations || triggerData.iterations || 1
-			} : null,
-			// Values properties (null for animation triggers)
-			values,
-			order: triggerData.order !== undefined ? triggerData.order : index
+			id: data.id || crypto.randomUUID(),
+			type: 'action',
+			input: {
+				id: data.input?.id || data.inputId || null,
+				state: inputState
+			},
+			output: {
+				id: data.output?.id || data.output?.device?.id || data.deviceId || null
+			},
+			action: {
+				type: actionType,
+				animation: actionType === 'animation' ? {
+					id: data.action?.animation?.id || data.animation?.id || data.animationName || null,
+					duration: data.action?.animation?.duration || data.animation?.duration || data.duration || 1000,
+					easing: data.action?.animation?.easing || data.animation?.easing || data.easing || 'linear',
+					iterations: data.action?.animation?.iterations || data.animation?.iterations || data.iterations || 1
+				} : null,
+				values
+			},
+			order: data.order !== undefined ? data.order : index
 		};
 	}
 }

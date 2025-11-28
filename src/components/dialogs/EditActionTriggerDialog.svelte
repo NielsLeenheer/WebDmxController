@@ -32,7 +32,7 @@
 
 	// Form state
 	let selectedInput = $state(null);
-	let triggerType = $state('pressed');
+	let inputState = $state('down');
 	let actionType = $state('animation');
 	let selectedDevice = $state(null);
 	let selectedAnimation = $state(null);
@@ -53,11 +53,11 @@
 		'cubic-bezier(0.68, -0.55, 0.265, 1.55)' // Back easing
 	];
 
-	// Get trigger type options based on the selected input's button mode
-	function getTriggerTypeOptions() {
+	// Get input state options based on the selected input's button mode
+	function getInputStateOptions() {
 		if (!selectedInput) return [
-			{ value: 'pressed', label: 'Pressed' },
-			{ value: 'not-pressed', label: 'Not Pressed' }
+			{ value: 'down', label: 'Down' },
+			{ value: 'up', label: 'Up' }
 		];
 
 		const [deviceId, controlId] = selectedInput.split('_');
@@ -67,8 +67,8 @@
 
 		if (!input || !isButton(input)) {
 			return [
-				{ value: 'pressed', label: 'Pressed' },
-				{ value: 'not-pressed', label: 'Not Pressed' }
+				{ value: 'down', label: 'Down' },
+				{ value: 'up', label: 'Up' }
 			];
 		}
 
@@ -76,13 +76,13 @@
 
 		if (buttonMode === 'toggle') {
 			return [
-				{ value: 'pressed', label: 'On' },
-				{ value: 'not-pressed', label: 'Off' }
+				{ value: 'on', label: 'On' },
+				{ value: 'off', label: 'Off' }
 			];
 		} else {
 			return [
-				{ value: 'pressed', label: 'Down' },
-				{ value: 'not-pressed', label: 'Up' }
+				{ value: 'down', label: 'Down' },
+				{ value: 'up', label: 'Up' }
 			];
 		}
 	}
@@ -108,7 +108,7 @@
 	 * @param {Array} inputs - Available input mappings
 	 * @param {Array} animations - Available animations
 	 * @param {Array} devs - Available devices
-	 * @returns {Promise<{input, triggerType, actionType, device, animation, duration, looping, easing, values}|{delete: true}|null>}
+	 * @returns {Promise<{input, inputState, actionType, device, animation, duration, looping, easing, values}|{delete: true}|null>}
 	 */
 	export function open(trigger, inputs, animations, devs) {
 		return new Promise((resolve) => {
@@ -121,15 +121,15 @@
 			devices = devs;
 
 			// Initialize form state from trigger
-			// Find the input matching trigger.inputId
-			const input = inputs.find(i => i.id === trigger.inputId);
+			// Find the input matching trigger.input.id
+			const input = inputs.find(i => i.id === trigger.input?.id);
 			selectedInput = input ? `${input.deviceId}_${input.controlId}` : null;
-			triggerType = trigger.triggerType;
-			actionType = trigger.actionType === 'setValue' ? 'values' : trigger.actionType || 'animation';
+			inputState = trigger.input?.state || 'down';
+			actionType = trigger.action?.type === 'setValue' ? 'values' : trigger.action?.type || 'animation';
 
 			if (actionType === 'values') {
-				selectedDevice = trigger.deviceId;
-				controlValues = {...(trigger.values || {})};
+				selectedDevice = trigger.output?.id;
+				controlValues = {...(trigger.action?.values || {})};
 				enabledControls = Object.keys(controlValues);
 
 				// If enabledControls is empty, initialize with all controls
@@ -141,14 +141,14 @@
 					}
 				}
 			} else {
-				selectedDevice = trigger.deviceId;
-				selectedAnimation = trigger.animation?.id;
+				selectedDevice = trigger.output?.id;
+				selectedAnimation = trigger.action?.animation?.id;
 				enabledControls = [];
 			}
 
-			duration = trigger.animation?.duration || 1000;
-			looping = trigger.animation?.iterations === 'infinite';
-			easing = trigger.animation?.easing || 'linear';
+			duration = trigger.action?.animation?.duration || 1000;
+			looping = trigger.action?.animation?.iterations === 'infinite';
+			easing = trigger.action?.animation?.easing || 'linear';
 
 			requestAnimationFrame(() => {
 				dialogRef?.showModal();
@@ -180,7 +180,7 @@
 
 		const result = {
 			input: selectedInput,
-			triggerType,
+			inputState,
 			actionType,
 			device: selectedDevice,
 			animation: selectedAnimation,
@@ -232,10 +232,10 @@
 				</div>
 
 				<div class="dialog-input-group">
-					<label for="edit-trigger-type">Trigger Type:</label>
-					<select id="edit-trigger-type" bind:value={triggerType}>
-						{#each getTriggerTypeOptions() as type}
-							<option value={type.value}>{type.label}</option>
+					<label for="edit-trigger-state">Trigger State:</label>
+					<select id="edit-trigger-state" bind:value={inputState}>
+						{#each getInputStateOptions() as state}
+							<option value={state.value}>{state.label}</option>
 						{/each}
 					</select>
 				</div>
