@@ -1,21 +1,74 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
+    import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
+    import { controlValuesToDMX } from '../../lib/outputs/controls.js';
+    import { deviceLibrary } from '../../stores.svelte.js';
+    import TabBar from '../common/TabBar.svelte';
+    import Button from '../common/Button.svelte';
 
-    let { dmxController, isActive = false } = $props();
+    let { dmxController, isActive = false, mode = $bindable('view') } = $props();
 
-    let universe = $state(new Array(512).fill(0));
+    const modeTabs = [
+        { id: 'view', label: 'View' },
+        { id: 'edit', label: 'Edit' }
+    ];
+
+    // Universe values for display
+    let viewUniverse = $state(new Array(512).fill(0));
+    let editUniverse = $state(new Array(512).fill(0));
+
+    // Current display values based on mode
+    let universe = $derived(mode === 'view' ? viewUniverse : editUniverse);
+
     let updateInterval;
 
-    // Update local universe state when dmxController changes
-    function updateUniverse() {
+    // Update view universe from sampled values (read from DMX controller)
+    function updateViewUniverse() {
         if (dmxController) {
-            universe = Array.from(dmxController.getUniverse());
+            viewUniverse = Array.from(dmxController.getUniverse());
+        }
+    }
+
+    // Copy default values from devices to edit universe
+    function copyDefaultsToEditUniverse() {
+        // Start with zeros
+        const newEditUniverse = new Array(512).fill(0);
+
+        // Copy default values from each device
+        deviceLibrary.getAll().forEach(device => {
+            const deviceType = DEVICE_TYPES[device.type];
+            if (!deviceType) return;
+
+            // Convert device default values to DMX array
+            const dmxArray = controlValuesToDMX(deviceType, device.defaultValues);
+
+            // Copy to edit universe at device's start channel
+            dmxArray.forEach((value, index) => {
+                const channel = device.startChannel + index;
+                if (channel < 512) {
+                    newEditUniverse[channel] = value;
+                }
+            });
+        });
+
+        editUniverse = newEditUniverse;
+    }
+
+    // Clear all edit universe values to 0
+    function clearEditUniverse() {
+        editUniverse = new Array(512).fill(0);
+        
+        // Output zeros to DMX controller
+        if (dmxController) {
+            for (let channel = 0; channel < 512; channel++) {
+                dmxController.setChannel(channel, 0);
+            }
         }
     }
 
     onMount(() => {
-        // Periodically sync universe state
-        updateInterval = setInterval(updateUniverse, 100);
+        // Periodically update view universe with sampled values
+        updateInterval = setInterval(updateViewUniverse, 100);
     });
 
     onDestroy(() => {
@@ -24,38 +77,82 @@
         }
     });
 
-    // Re-output universe values when Universe tab becomes active
-    // This ensures universe values are restored when switching from other tabs
+    // When switching to edit mode, copy default values
     $effect(() => {
-        if (isActive && dmxController) {
-            universe.forEach((value, channel) => {
+        if (mode === 'edit') {
+            copyDefaultsToEditUniverse();
+        }
+    });
+
+    // Output DMX values when in edit mode and tab is active
+    $effect(() => {
+        if (isActive && dmxController && mode === 'edit') {
+            editUniverse.forEach((value, channel) => {
                 dmxController.setChannel(channel, value);
             });
         }
     });
 
     function handleChannelChange(channel, event) {
-        const value = parseInt(event.target.value) || 0;
+        if (mode !== 'edit') return;
+        
+        const value = Math.max(0, Math.min(255, parseInt(event.target.value) || 0));
         if (dmxController) {
             dmxController.setChannel(channel, value);
         }
-        universe[channel] = value;
+        editUniverse[channel] = value;
+    }
+
+    // Restore edit universe to current default values from devices
+    function restoreEditUniverse() {
+        copyDefaultsToEditUniverse();
+        
+        // Output restored values to DMX controller
+        if (dmxController) {
+            editUniverse.forEach((value, channel) => {
+                dmxController.setChannel(channel, value);
+            });
+        }
     }
 </script>
 
 <div class="universe-container">
+    <div class="universe-header">
+        <TabBar
+            tabs={modeTabs}
+            bind:activeTab={mode}
+        />
+        <Button 
+            onclick={restoreEditUniverse} 
+            variant="secondary"
+            disabled={mode !== 'edit'}
+        >
+            Restore
+        </Button>
+        <Button 
+            onclick={clearEditUniverse} 
+            variant="secondary"
+            disabled={mode !== 'edit'}
+        >
+            Clear
+        </Button>
+    </div>
     <div class="channels-grid">
         {#each universe as value, channel}
-            <div class="channel">
+            <div class="channel" class:readonly={mode === 'view'}>
                 <label for="ch-{channel}">{channel + 1}</label>
-                <input
-                    id="ch-{channel}"
-                    type="number"
-                    min="0"
-                    max="255"
-                    value={value}
-                    onchange={(e) => handleChannelChange(channel, e)}
-                />
+                {#if mode === 'view'}
+                    <span class="value">{value}</span>
+                {:else}
+                    <input
+                        id="ch-{channel}"
+                        type="number"
+                        min="0"
+                        max="255"
+                        value={value}
+                        onchange={(e) => handleChannelChange(channel, e)}
+                    />
+                {/if}
             </div>
         {/each}
     </div>
@@ -69,19 +166,11 @@
     }
 
     .universe-header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
         margin-bottom: 20px;
-    }
-
-    .universe-header h2 {
-        margin: 0 0 5px 0;
-        font-size: 16pt;
-        color: #333;
-    }
-
-    .universe-header p {
-        margin: 0;
-        color: #666;
-        font-size: 10pt;
     }
 
     .channels-grid {
@@ -119,5 +208,14 @@
         outline: none;
         border-color: #2196F3;
         box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+    }
+
+    .channel .value {
+        font-size: 10pt;
+        font-family: var(--font-stack-mono);
+        color: #888;
+        padding: 6px 0;
+        width: 7em;
+        margin-left: -6px;
     }
 </style>

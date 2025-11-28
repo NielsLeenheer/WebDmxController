@@ -20,6 +20,7 @@
     let connected = $state(false);
     let dmxController = $state(new DMXController());
     let devicesViewRef = $state(null);
+    let universeMode = $state('view'); // 'view' or 'edit'
 
     // Reactive systems
     let triggerManager = $state(new TriggerManager());
@@ -51,20 +52,12 @@
         connected = false;
     }
 
-    function handleClearUniverse() {
-        if (dmxController) {
-            dmxController.clearUniverse();
-        }
-        // Also clear device values
-        deviceLibrary.clearAllValues();
-    }
-
     // Handle sampled CSS values from CSSManager
     // This callback is called every frame with the latest sampled values
     function handleSampledValues(sampledValues) {
-        // Only update DMX hardware when NOT on Devices or Universe tab
-        // Those tabs handle their own DMX output
-        if (!dmxController || view === 'devices' || view === 'universe') {
+        // Only update DMX hardware when NOT on Devices tab
+        // Universe tab in view mode shows sampled values, edit mode handles its own output
+        if (!dmxController || view === 'devices' || (view === 'universe' && universeMode === 'edit')) {
             return;
         }
 
@@ -123,7 +116,6 @@
 <main bind:this={mainElement}>
     <Tabs
         bind:view
-        onClearUniverse={handleClearUniverse}
     />
 
     <div class="view-container" class:hidden={view !== 'devices'}>
@@ -135,7 +127,7 @@
     </div>
 
     <div class="view-container" class:hidden={view !== 'universe'}>
-        <UniverseView {dmxController} isActive={view === 'universe'} />
+        <UniverseView {dmxController} isActive={view === 'universe'} bind:mode={universeMode} />
     </div>
 
     <div class="view-container" class:hidden={view !== 'animations'}>
