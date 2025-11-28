@@ -60,7 +60,7 @@ export class TriggerLibrary extends Library {
 						id: config.action?.animation?.id || null,
 						duration: config.action?.animation?.duration || 1000,
 						easing: config.action?.animation?.easing || 'linear',
-						iterations: config.action?.animation?.iterations || 1
+						iterations: config.action?.animation?.iterations || 'infinite'
 					} : null,
 					values: actionType === 'values' ? (config.action?.values || {}) : null
 				},
@@ -109,7 +109,7 @@ export class TriggerLibrary extends Library {
 					id: config.action?.animation?.id || null,
 					duration: config.action?.animation?.duration || 1000,
 					easing: config.action?.animation?.easing || 'linear',
-					iterations: config.action?.animation?.iterations || 1
+					iterations: config.action?.animation?.iterations || 'infinite'
 				} : null,
 				values: actionType === 'values' ? (config.action?.values || {}) : null
 			},
@@ -209,7 +209,7 @@ export class TriggerLibrary extends Library {
 						id: data.action?.animation?.id || data.animation?.id || data.animationName || null,
 						duration: data.action?.animation?.duration || data.animation?.duration || data.duration || 1000,
 						easing: data.action?.animation?.easing || data.animation?.easing || data.easing || 'linear',
-						iterations: data.action?.animation?.iterations || data.animation?.iterations || data.iterations || 1
+						iterations: data.action?.animation?.iterations || data.animation?.iterations || data.iterations || 'infinite'
 					} : null,
 					values
 				},
@@ -286,7 +286,7 @@ export class TriggerLibrary extends Library {
 					id: data.action?.animation?.id || data.animation?.id || data.animationName || null,
 					duration: data.action?.animation?.duration || data.animation?.duration || data.duration || 1000,
 					easing: data.action?.animation?.easing || data.animation?.easing || data.easing || 'linear',
-					iterations: data.action?.animation?.iterations || data.animation?.iterations || data.iterations || 1
+					iterations: data.action?.animation?.iterations || data.animation?.iterations || data.iterations || 'infinite'
 				} : null,
 				values
 			},
