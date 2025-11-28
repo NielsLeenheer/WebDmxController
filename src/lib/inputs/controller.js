@@ -6,7 +6,6 @@
 
 import { InputDeviceManager } from './manager.js';
 import { isButton } from './utils.js';
-import { toCSSIdentifier } from '../css/utils.js';
 import { getInputType } from './types/index.js';
 
 export class InputController {
@@ -189,6 +188,7 @@ export class InputController {
 			if (isButton(input)) {
 				// Handle toggle vs momentary mode
 				const buttonMode = input.buttonMode || 'momentary';
+				const cssId = input.cssIdentifier;
 
 				if (buttonMode === 'toggle') {
 					// Toggle mode: flip state on each press
@@ -198,39 +198,39 @@ export class InputController {
 					this.toggleStates.set(toggleKey, newState);
 
 					// Apply on/off classes based on new state
-					const onClass = input.cssClassOn;
-					const offClass = input.cssClassOff;
+					const onClass = `${cssId}-on`;
+					const offClass = `${cssId}-off`;
 
 					if (newState) {
 						// Turned ON
-						if (onClass) this.triggerManager.addRawClass(onClass);
-						if (offClass) this.triggerManager.removeRawClass(offClass);
+						this.triggerManager.addRawClass(onClass);
+						this.triggerManager.removeRawClass(offClass);
 					} else {
 						// Turned OFF
-						if (offClass) this.triggerManager.addRawClass(offClass);
-						if (onClass) this.triggerManager.removeRawClass(onClass);
+						this.triggerManager.addRawClass(offClass);
+						this.triggerManager.removeRawClass(onClass);
 					}
 
 					// Emit event for toggle state change
 					this._emit('input-trigger', { mapping: input, velocity, toggleState: newState });
 				} else {
 					// Momentary mode: add down class, remove up class
-					const downClass = input.cssClassDown;
-					const upClass = input.cssClassUp;
+					const downClass = `${cssId}-down`;
+					const upClass = `${cssId}-up`;
 
-					if (downClass) this.triggerManager.addRawClass(downClass);
-					if (upClass) this.triggerManager.removeRawClass(upClass);
+					this.triggerManager.addRawClass(downClass);
+					this.triggerManager.removeRawClass(upClass);
 
 					// Emit event for momentary button press
 					this._emit('input-trigger', { mapping: input, velocity });
 				}
 
 				// Set velocity as custom property (for velocity-sensitive buttons)
-				if (input.name) {
+				if (cssId) {
 					// Velocity is already normalized to 0-1 by input devices
 					const normalizedVelocity = Math.max(0, Math.min(1, velocity));
 					const percentage = (normalizedVelocity * 100).toFixed(1);
-					this.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, `${percentage}%`);
+					this.customPropertyManager.setProperty(`${cssId}-pressure`, `${percentage}%`);
 				}
 			}
 		}
@@ -251,14 +251,15 @@ export class InputController {
 		if (input && isButton(input)) {
 			// Handle toggle vs momentary mode
 			const buttonMode = input.buttonMode || 'momentary';
+			const cssId = input.cssIdentifier;
 
 			if (buttonMode === 'momentary') {
 				// Momentary mode: remove down class and add up class on release
-				const downClass = input.cssClassDown;
-				const upClass = input.cssClassUp;
+				const downClass = `${cssId}-down`;
+				const upClass = `${cssId}-up`;
 
-				if (downClass) this.triggerManager.removeRawClass(downClass);
-				if (upClass) this.triggerManager.addRawClass(upClass);
+				this.triggerManager.removeRawClass(downClass);
+				this.triggerManager.addRawClass(upClass);
 
 				// Emit event for momentary button release
 				this._emit('input-release', { mapping: input });
@@ -266,8 +267,8 @@ export class InputController {
 			// Toggle mode: do nothing on release (state was toggled on press)
 
 			// Reset pressure custom property to 0%
-			if (input.name) {
-				this.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
+			if (cssId) {
+				this.customPropertyManager.setProperty(`${cssId}-pressure`, '0.0%');
 			}
 		}
 
@@ -281,11 +282,11 @@ export class InputController {
 		// Find the input for this control
 		const input = this.inputLibrary.findByDeviceControl(deviceId, controlId);
 
-		// Set a custom property based on the input name (for use in CSS)
-		if (input && input.name) {
+		// Set a custom property based on the input's cssIdentifier (for use in CSS)
+		if (input && input.cssIdentifier) {
 			// Convert value (0-1) to percentage
 			const percentage = Math.round(value * 100);
-			this.customPropertyManager.setProperty(toCSSIdentifier(input.name), `${percentage}%`);
+			this.customPropertyManager.setProperty(input.cssIdentifier, `${percentage}%`);
 
 			// Emit event for input value change
 			this._emit('input-valuechange', { mapping: input, value });
@@ -376,9 +377,9 @@ export class InputController {
 		const inputs = this.inputLibrary.getAll();
 
 		for (const input of inputs) {
-			if (input.name && isButton(input)) {
+			if (input.cssIdentifier && isButton(input)) {
 				// Initialize to 0%
-				this.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
+				this.customPropertyManager.setProperty(`${input.cssIdentifier}-pressure`, '0.0%');
 			}
 		}
 	}

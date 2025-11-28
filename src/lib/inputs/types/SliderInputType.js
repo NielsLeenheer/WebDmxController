@@ -16,7 +16,7 @@ export class SliderInputType extends InputType {
 			{
 				key: 'value',
 				label: 'Value',
-				cssProperty: input.cssProperty,
+				cssProperty: input.cssIdentifier ? `--${input.cssIdentifier}` : null,
 				type: 'range',
 				min: 0,
 				max: 100,

@@ -16,7 +16,7 @@ export class PadInputType extends InputType {
 			{
 				key: 'pressure',
 				label: 'Pressure',
-				cssProperty: input.cssProperty ? `${input.cssProperty}-pressure` : null,
+				cssProperty: input.cssIdentifier ? `--${input.cssIdentifier}-pressure` : null,
 				type: 'range',
 				min: 0,
 				max: 100,

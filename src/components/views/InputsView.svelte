@@ -3,7 +3,6 @@
     import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
     import { inputLibrary } from '../../stores.svelte.js';
     import { getUnusedFromPalette, getPalette } from '../../lib/inputs/colors.js';
-    import { toCSSIdentifier } from '../../lib/css/utils.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import InputCard from '../cards/InputCard.svelte';
     import Button from '../common/Button.svelte';
@@ -203,7 +202,7 @@
 
             // Initialize pressure property for button inputs
             if (isButton(input)) {
-                inputController.customPropertyManager.setProperty(`${toCSSIdentifier(input.name)}-pressure`, '0.0%');
+                inputController.customPropertyManager.setProperty(`${input.cssIdentifier}-pressure`, '0.0%');
             }
 
             if (colorSupport && colorSupport !== 'none') {
@@ -502,7 +501,7 @@
                     registerColorUsage(device.id, 'thingy', color);
 
                     // Initialize pressure property for thingy input (it has button functionality)
-                    inputController.customPropertyManager.setProperty(`${toCSSIdentifier(thingyInput.name)}-pressure`, '0.0%');
+                    inputController.customPropertyManager.setProperty(`${thingyInput.cssIdentifier}-pressure`, '0.0%');
                 }
             }
 
@@ -545,7 +544,7 @@
                     registerColorUsage(device.id, 'thingy', color);
 
                     // Initialize pressure property for thingy input (it has button functionality)
-                    inputController.customPropertyManager.setProperty(`${toCSSIdentifier(thingyInput.name)}-pressure`, '0.0%');
+                    inputController.customPropertyManager.setProperty(`${thingyInput.cssIdentifier}-pressure`, '0.0%');
                 }
             }
         }

@@ -59,5 +59,5 @@ export function hasValues(input) {
  * @returns {string}
  */
 export function getInputPropertyName(input) {
-	return input.cssProperty || `--${toCSSIdentifier(input.name)}`;
+	return `--${input.cssIdentifier || toCSSIdentifier(input.name)}`;
 }

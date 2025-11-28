@@ -3,7 +3,7 @@
     import { getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from '../../stores.svelte.js';
-    import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
+    import { isButton } from '../../lib/inputs/utils.js';
     import Preview from '../common/Preview.svelte';
 
     let {
@@ -134,16 +134,16 @@
                                 <!-- Buttons show classes based on mode -->
                                 {#if input.buttonMode === 'toggle'}
                                     <!-- Toggle buttons show on and off classes -->
-                                    <code class="css-identifier">.{input.cssClassOn}</code>
-                                    <code class="css-identifier">.{input.cssClassOff}</code>
+                                    <code class="css-identifier">.{input.cssIdentifier}-on</code>
+                                    <code class="css-identifier">.{input.cssIdentifier}-off</code>
                                 {:else}
                                     <!-- Momentary buttons show down and up classes -->
-                                    <code class="css-identifier">.{input.cssClassDown}</code>
-                                    <code class="css-identifier">.{input.cssClassUp}</code>
+                                    <code class="css-identifier">.{input.cssIdentifier}-down</code>
+                                    <code class="css-identifier">.{input.cssIdentifier}-up</code>
                                 {/if}
                             {:else}
                                 <!-- Sliders/Knobs show custom property -->
-                                <code class="css-identifier">{getInputPropertyName(input)}</code>
+                                <code class="css-identifier">--{input.cssIdentifier}</code>
                             {/if}
                         {/each}
                     </div>

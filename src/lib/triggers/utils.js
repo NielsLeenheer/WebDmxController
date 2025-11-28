@@ -55,12 +55,13 @@ export function getCSSClassName(trigger, inputLibrary) {
 		return `trigger-${trigger.id || 'unknown'}`;
 	}
 
-	// Use the input's CSS classes based on trigger type and button mode
+	// Derive CSS class names from input's cssIdentifier based on trigger type and button mode
+	const cssId = input.cssIdentifier;
 	const buttonMode = input.buttonMode || 'momentary';
 	
 	if (buttonMode === 'toggle') {
-		return trigger.triggerType === 'pressed' ? input.cssClassOn : input.cssClassOff;
+		return trigger.triggerType === 'pressed' ? `${cssId}-on` : `${cssId}-off`;
 	} else {
-		return trigger.triggerType === 'pressed' ? input.cssClassDown : input.cssClassUp;
+		return trigger.triggerType === 'pressed' ? `${cssId}-down` : `${cssId}-up`;
 	}
 }

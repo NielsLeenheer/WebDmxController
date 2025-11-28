@@ -12,7 +12,7 @@ export class ThingyInputType extends InputType {
 	}
 
 	getExportedValues(input) {
-		const base = input.cssProperty || '--thingy';
+		const base = input.cssIdentifier ? `--${input.cssIdentifier}` : '--thingy';
 
 		// A thingy input exposes all sensor values simultaneously
 		return [
