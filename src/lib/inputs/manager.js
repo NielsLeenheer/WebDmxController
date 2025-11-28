@@ -1,20 +1,22 @@
 /**
  * Input Device Manager
  *
- * Manages all input devices (MIDI, HID, Keyboard, Bluetooth) and exposes
+ * Manages all input devices (MIDI, HID, Keyboard, Bluetooth, Gamepad) and exposes
  * their controls as normalized values for mapping to DMX.
  */
 
 import { StreamDeckManager, isStreamDeck } from './streamdeck.js';
 import { MIDIDeviceProfileManager } from './midi.js';
 import { Thingy52Manager } from './thingy52.js';
+import { GamepadManager } from './gamepad.js';
 import { 
 	InputDevice,
 	KeyboardInputDevice, 
 	MIDIInputDevice, 
 	HIDInputDevice,
 	StreamDeckInputDevice,
-	ThingyInputDevice, 
+	ThingyInputDevice,
+	GamepadInputDevice,
 } from './devices.js';
 
 /**
@@ -28,8 +30,10 @@ export class InputDeviceManager {
 		this.streamDeckManager = new StreamDeckManager();
 		this.thingy52Manager = new Thingy52Manager();
 		this.midiProfileManager = new MIDIDeviceProfileManager();
+		this.gamepadManager = new GamepadManager();
 		this._setupStreamDeckListeners();
 		this._setupThingy52Listeners();
+		this._setupGamepadListeners();
 	}
 
 	/**
@@ -89,6 +93,63 @@ export class InputDeviceManager {
 			console.log(`Thingy:52 disconnected: ${device.name}`);
 			this.removeDevice(device.id);
 		});
+	}
+
+	/**
+	 * Setup Gamepad event listeners
+	 */
+	_setupGamepadListeners() {
+		this.gamepadManager.on('connected', ({ gamepad }) => {
+			// gamecontroller.js uses gamepad.id for the index
+			console.log(`Gamepad connected: index ${gamepad.id}`);
+
+			// Create GamepadInputDevice wrapper
+			const inputDevice = new GamepadInputDevice(gamepad);
+			this.devices.set(inputDevice.id, inputDevice);
+			this._emit('deviceadded', inputDevice);
+		});
+
+		this.gamepadManager.on('disconnected', ({ gamepadIndex }) => {
+			console.log(`Gamepad disconnected: index ${gamepadIndex}`);
+			const deviceId = `gamepad-${gamepadIndex}`;
+			this.removeDevice(deviceId);
+		});
+
+		this.gamepadManager.on('buttondown', ({ gamepadIndex, button, buttonName }) => {
+			const deviceId = `gamepad-${gamepadIndex}`;
+			const inputDevice = this.devices.get(deviceId);
+			console.log(`Manager received buttondown: gamepad ${gamepadIndex}, button ${button}, device found: ${!!inputDevice}`);
+
+			if (inputDevice) {
+				inputDevice.handleButtonDown(button, buttonName);
+			}
+		});
+
+		this.gamepadManager.on('buttonup', ({ gamepadIndex, button }) => {
+			const deviceId = `gamepad-${gamepadIndex}`;
+			const inputDevice = this.devices.get(deviceId);
+
+			if (inputDevice) {
+				inputDevice.handleButtonUp(button);
+			}
+		});
+
+		this.gamepadManager.on('axismove', ({ gamepadIndex, axis, axeName, value }) => {
+			const deviceId = `gamepad-${gamepadIndex}`;
+			const inputDevice = this.devices.get(deviceId);
+
+			if (inputDevice) {
+				inputDevice.handleAxisMove(axis, axeName, value);
+			}
+		});
+	}
+
+	/**
+	 * Initialize Gamepad support
+	 */
+	initGamepads() {
+		this.gamepadManager.init();
+		console.log('Gamepad support initialized');
 	}
 
 	/**

@@ -171,7 +171,7 @@
     function handleRawInput(event) {
         if (!isListening) return;
 
-        const { deviceId, controlId, device, type, colorSupport, friendlyName, orientation } = event;
+        const { deviceId, controlId, device, type, colorSupport, friendlyName, orientation, deviceBrand } = event;
 
         // Skip Thingy:52 inputs entirely - they are added via the connect dialog, not by listening
         if (device?.type === 'thingy') return;
@@ -197,6 +197,7 @@
                 type: type || 'button',
                 colorSupport: colorSupport || 'none',
                 orientation: orientation || null,
+                deviceBrand: deviceBrand || null,
                 color
             });
 
@@ -227,6 +228,7 @@
                 colorSupport: eventData.colorSupport, // Pass colorSupport from device event
                 friendlyName: eventData.friendlyName, // Pass friendlyName from device event
                 orientation: eventData.orientation, // Pass orientation from device event
+                deviceBrand: eventData.deviceBrand, // Pass deviceBrand from device event
                 device
             });
         };
@@ -362,9 +364,10 @@
                     // Note: Initial color will be set by applyColorsToDevices()
                 }
             } else {
-                // Initialize knobs/sliders to 0%
+                // Initialize knobs/sliders to 0%, axes to 50% (neutral)
                 if (!inputStates[input.id]) {
-                    inputStates[input.id] = { value: 0 };
+                    const defaultValue = input.type === 'axis' ? 50 : 0;
+                    inputStates[input.id] = { value: defaultValue };
                 }
             }
         }

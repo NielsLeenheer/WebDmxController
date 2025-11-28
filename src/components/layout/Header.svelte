@@ -20,9 +20,10 @@
     let hidDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && d.id !== 'keyboard'));
     let thingyDevices = $derived(connectedDevices.filter(d => d.type === 'thingy'));
     let midiDevices = $derived(connectedDevices.filter(d => d.type === 'midi'));
+    let gamepadDevices = $derived(connectedDevices.filter(d => d.type === 'gamepad'));
 
     // Unified list of all connected devices
-    let allConnectedDevices = $derived([...streamDeckDevices, ...hidDevices, ...thingyDevices, ...midiDevices]);
+    let allConnectedDevices = $derived([...streamDeckDevices, ...hidDevices, ...thingyDevices, ...midiDevices, ...gamepadDevices]);
 
     // MIDI button should be disabled if we already have MIDI access
     let hasMidiAccess = $derived(midiDevices.length > 0);

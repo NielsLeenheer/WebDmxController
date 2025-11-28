@@ -71,9 +71,10 @@ export class Library {
 			item.id = crypto.randomUUID();
 		}
 
-		// Auto-set order if not present
+		// Auto-set order to max + 1 if not present
 		if (item.order === undefined) {
-			item.order = this.items.length;
+			const maxOrder = this.items.reduce((max, i) => Math.max(max, i.order ?? -1), -1);
+			item.order = maxOrder + 1;
 		}
 
 		this.items.push(item);
@@ -83,12 +84,19 @@ export class Library {
 
 	/**
 	 * Remove item by ID
+	 * Renumbers remaining items to close order gaps
 	 * @param {string} id - Item ID to remove
 	 */
 	remove(id) {
 		const index = this.items.findIndex(item => item.id === id);
 		if (index !== -1) {
 			this.items.splice(index, 1);
+			// Renumber order to close gaps
+			this.items
+				.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+				.forEach((item, idx) => {
+					item.order = idx;
+				});
 			this.save();
 		}
 	}

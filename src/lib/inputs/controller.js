@@ -44,6 +44,9 @@ export class InputController {
 		// Initialize MIDI
 		await this.inputDeviceManager.initMIDI();
 
+		// Initialize Gamepad support
+		this.inputDeviceManager.initGamepads();
+
 		// Auto-reconnect Stream Deck devices
 		await this.inputDeviceManager.autoReconnectStreamDecks();
 
@@ -65,6 +68,26 @@ export class InputController {
 		// Special handling for Thingy:52 devices
 		if (device.type === 'thingy') {
 			this._setupThingyListeners(device);
+			return;
+		}
+
+		// Gamepad devices have their events routed through the manager
+		// No additional setup needed here - they use the standard trigger/change events
+		if (device.type === 'gamepad') {
+			// Handle triggers (buttons)
+			device.on('trigger', ({ controlId, velocity }) => {
+				this._handleTrigger(device.id, controlId, velocity);
+			});
+
+			// Handle releases (for button-hold animations)
+			device.on('release', ({ controlId }) => {
+				this._handleRelease(device.id, controlId);
+			});
+
+			// Handle value changes (axes)
+			device.on('change', ({ controlId, value }) => {
+				this._handleValueChange(device.id, controlId, value);
+			});
 			return;
 		}
 

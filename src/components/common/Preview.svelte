@@ -64,6 +64,65 @@
         return null;
     }
 
+    // Extract displayable symbol from gamepad button control ID based on brand
+    function extractGamepadSymbol(controlId, gamepadBrand) {
+        if (!controlId || !controlId.startsWith('button-')) return null;
+        
+        const buttonIndex = parseInt(controlId.replace('button-', ''), 10);
+        
+        // Face button symbols by brand (indices 0-3)
+        // Standard gamepad mapping: 0=bottom, 1=right, 2=left, 3=top
+        const faceButtonSymbols = {
+            // Sony: Cross (bottom), Circle (right), Square (left), Triangle (top)
+            sony: {
+                0: '✕',      // Cross
+                1: '○',      // Circle  
+                2: '□',      // Square
+                3: '△',      // Triangle
+            },
+            // Nintendo: B (bottom), A (right), Y (left), X (top)
+            nintendo: {
+                0: 'B',
+                1: 'A',
+                2: 'Y',
+                3: 'X',
+            },
+            // Xbox/Default: A (bottom), B (right), X (left), Y (top)
+            xbox: {
+                0: 'A',
+                1: 'B',
+                2: 'X',
+                3: 'Y',
+            },
+        };
+        
+        // Common button symbols (non-face buttons)
+        const commonButtonSymbols = {
+            4: 'L1',
+            5: 'R1',
+            6: 'L2',
+            7: 'R2',
+            8: '⊏',      // Select/Share
+            9: '⊐',      // Start/Options
+            10: 'L3',
+            11: 'R3',
+            12: '▲',     // D-Up
+            13: '▼',     // D-Down
+            14: '◀',     // D-Left
+            15: '▶',     // D-Right
+            16: '⌂',     // Home
+        };
+        
+        // Face buttons (0-3) use brand-specific symbols
+        if (buttonIndex >= 0 && buttonIndex <= 3) {
+            const brand = gamepadBrand || 'xbox';
+            return faceButtonSymbols[brand]?.[buttonIndex] || faceButtonSymbols.xbox[buttonIndex];
+        }
+        
+        // Other buttons use common symbols
+        return commonButtonSymbols[buttonIndex] ?? null;
+    }
+
     // Extract pan/tilt positions from animation keyframes
     function extractPanTiltKeyframes(animation) {
         if (!animation || !animation.keyframes || animation.keyframes.length === 0) {
@@ -194,9 +253,14 @@
         // Negate pitch for correct tilt direction, add 8 degrees to show bottom edge at rest
         return `rotateX(${-screenPitch + 20}deg) rotateY(${screenRoll}deg) rotateZ(${euler.yaw}deg)`;
     });
+
+    // Check if we need 3D overflow (for euler or axis inputs)
+    const needs3DOverflow = $derived(() => {
+        return euler !== null || (type === 'input' && data.type === 'axis');
+    });
 </script>
 
-<div class="preview {sizeClass} {className}" class:with-3d={euler !== null} style="{euler ? `transform: ${transform3D()};` : ''}">
+<div class="preview {sizeClass} {className}" class:with-3d={needs3DOverflow()} style="{euler ? `transform: ${transform3D()};` : ''}">
     {#if euler}
         <!-- 3D layered Thingy:52 -->
         {@const inputColor = (data.color && data.colorSupport && data.colorSupport !== 'none') ? paletteColorToHex(data.color) : '#888'}
@@ -318,10 +382,15 @@
         {@const inputType = data.type || 'button'}
         {@const inputColor = (data.color && data.colorSupport && data.colorSupport !== 'none') ? paletteColorToHex(data.color) : '#888'}
         {@const orientation = data.orientation || 'vertical'}
-        {@const value = stateValue ? parseFloat(stateValue) : 0}
+        {@const defaultValue = inputType === 'axis' ? 50 : 0}
+        {@const value = stateValue ? parseFloat(stateValue) : defaultValue}
         {@const knobAngle = 30 + (value * 2.7)} <!-- 7 o'clock to 5 o'clock = 30deg to 300deg = 270 degrees total (0deg = 6 o'clock, clockwise) -->
         {@const sliderPosition = value * 0.7} <!-- Adjust for 30% handle size: 0% -> 0%, 100% -> 70% -->
+        {@const axisTilt = (value - 50) * 1.1} <!-- 0% = -55deg, 50% = 0deg (flat), 100% = +55deg -->
+        {@const axisDotOffset = (value - 50) * 0.6} <!-- Dot moves from -30% to +30% based on value -->
         {@const keyChar = data.controlId?.startsWith('key-') ? extractKeyChar(data.controlId) : null}
+        {@const isGamepad = data.deviceId?.startsWith('gamepad-')}
+        {@const gamepadSymbol = isGamepad && data.controlId?.startsWith('button-') ? extractGamepadSymbol(data.controlId, data.deviceBrand) : null}
         
         {#if inputType === 'button' || inputType === 'pad' || inputType === 'thingy'}
             {#if !euler}
@@ -329,6 +398,8 @@
                 <div class="preview-input button-preview" style="background: {inputColor};">
                     {#if keyChar}
                         <div class="key-char">{keyChar}</div>
+                    {:else if gamepadSymbol}
+                        <div class="gamepad-symbol" class:small-text={gamepadSymbol.length > 1}>{gamepadSymbol}</div>
                     {/if}
                 </div>
                 
@@ -357,13 +428,33 @@
                     <div class="slider-handle" style="background: {inputColor}; bottom: {sliderPosition}%;"></div>
                 </div>
             {/if}
+            
+        {:else if inputType === 'axis'}
+            <!-- Axis: 3D tilting disc on a stick -->
+            {@const axisTransform = orientation === 'horizontal' ? `rotateY(${axisTilt}deg)` : `rotateX(${-axisTilt}deg)`}
+            <div class="preview-input axis-wrapper" style="transform: {axisTransform};">
+                <!-- 8 small depth layers (the stick) from -25px to -11px at 2px intervals -->
+                {#each Array(8) as _, i}
+                    {@const zOffset = -25 + (i * 2)}
+                    {@const brightness = 0.3 + ((i / 7) * 0.4)}
+                    <div 
+                        class="axis-stick-layer" 
+                        style="transform: translateZ({zOffset}px); background: {inputColor}; filter: brightness({brightness});"
+                    ></div>
+                {/each}
+                <!-- Top layer: the disc -->
+                <div 
+                    class="axis-disc-layer" 
+                    style="transform: translateZ(0px); background: {inputColor};"
+                ></div>
+            </div>
         {/if}
     {/if}
 
-    <!-- Top inset shadow layer (hidden for knobs, sliders, and Thingy with euler angles) -->
+    <!-- Top inset shadow layer (hidden for knobs, sliders, axes, and Thingy with euler angles) -->
     {#if type === 'input'}
         {@const inputType = data.type || 'button'}
-        {#if inputType !== 'knob' && inputType !== 'slider' && !euler}
+        {#if inputType !== 'knob' && inputType !== 'slider' && inputType !== 'axis' && !euler}
             <div class="preview-inset-shadow"></div>
         {/if}
     {:else if !euler}
@@ -483,6 +574,20 @@
         margin-top: -3px;
     }
 
+    /* Gamepad button symbol */
+    .gamepad-symbol {
+        font-size: 15px;
+        font-weight: 600;
+        color: rgba(255,255,255,0.5);
+        user-select: none;
+        margin-top: -3px;
+    }
+
+    .gamepad-symbol.small-text {
+        font-size: 12px;
+        font-weight: 700;
+    }
+
     /* Knob preview - circle with rotating dot */
     .knob-preview {
         border-radius: 50%;
@@ -499,6 +604,45 @@
         background: rgba(255, 255, 255, 0.5);
         border-radius: 50%;
         transform-origin: center center;
+    }
+
+    /* Axis preview - wrapper provides perspective and holds the transform */
+    .axis-wrapper {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        perspective: 80px;
+        transform-style: preserve-3d;
+        transform-origin: center center -20px;
+    }
+
+    /* Axis stick layers (small, behind the disc) */
+    .axis-stick-layer {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 15%;
+        height: 15%;
+        margin-left: -7.5%;
+        margin-top: -7.5%;
+        border-radius: 50%;
+        transform-style: preserve-3d;
+    }
+
+    /* Axis disc layer (full size, on top) */
+    .axis-disc-layer {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 100%;
+        height: 100%;
+        margin-left: -50%;
+        margin-top: -50%;
+        border-radius: 50%;
+        transform-style: preserve-3d;
+        box-shadow: inset 0 -2px 0px 0px rgba(0, 0, 0, 0.2);
     }
 
     /* Slider preview - track with handle */

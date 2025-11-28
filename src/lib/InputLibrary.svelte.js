@@ -35,6 +35,7 @@ export class InputLibrary extends Library {
 			type: config.type || 'knob',
 			colorSupport: config.colorSupport || 'none',
 			orientation: config.orientation || null,
+			deviceBrand: config.deviceBrand || null,
 			buttonMode,
 			cssIdentifier: config.cssIdentifier || toCSSIdentifier(name),
 			order: this.items.length
@@ -91,6 +92,26 @@ export class InputLibrary extends Library {
 	}
 
 	/**
+	 * Detect device brand from device name for backward compatibility
+	 * @param {string} deviceName - The device name
+	 * @returns {string|null} Detected brand or null
+	 */
+	_detectDeviceBrandFromName(deviceName) {
+		if (!deviceName) return null;
+		
+		// Sony patterns
+		if (/dualshock|dualsense|playstation|sony|ps[3-5]/i.test(deviceName)) {
+			return 'sony';
+		}
+		// Nintendo patterns
+		if (/nintendo|switch|pro\s*controller|joy-?con/i.test(deviceName)) {
+			return 'nintendo';
+		}
+		// Default to xbox for other gamepads
+		return 'xbox';
+	}
+
+	/**
 	 * Deserialize input data from storage
 	 * @param {Object} inputData - Serialized input data
 	 * @param {number} index - Array index for order
@@ -110,16 +131,26 @@ export class InputLibrary extends Library {
 			cssIdentifier = toCSSIdentifier(name);
 		}
 
+		// Detect device brand from device name if not stored (backward compatibility)
+		const deviceId = inputData.deviceId || inputData.inputDeviceId || null;
+		const deviceName = inputData.deviceName || inputData.inputDeviceName || null;
+		let deviceBrand = inputData.deviceBrand || inputData.gamepadBrand || null;
+		if (!deviceBrand && deviceId?.startsWith('gamepad-')) {
+			deviceBrand = this._detectDeviceBrandFromName(deviceName);
+		}
+
 		return {
 			id: inputData.id || crypto.randomUUID(),
 			name: name,
-			deviceId: inputData.deviceId || inputData.inputDeviceId || null,
-			deviceName: inputData.deviceName || inputData.inputDeviceName || null,
+			deviceId: deviceId,
+			deviceName: deviceName,
 			controlId: inputData.controlId || inputData.inputControlId || null,
 			controlName: inputData.controlName || inputData.inputControlName || inputData.friendlyName || null,
 			color: inputData.color || null,
 			type: inputType,
 			colorSupport: inputData.colorSupport || (inputData.supportsColor ? 'rgb' : 'none'),
+			orientation: inputData.orientation || null,
+			deviceBrand: deviceBrand,
 			buttonMode: inputData.buttonMode || 'momentary',
 			cssIdentifier,
 			order: inputData.order !== undefined ? inputData.order : index

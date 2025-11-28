@@ -57,6 +57,7 @@ Connect physical controllers to trigger animations and control DMX values in rea
 |------------|------------|
 | **MIDI Controllers** | Faders, knobs, pads, keys |
 | **Stream Deck** | Buttons with RGB feedback |
+| **Gamepads** | Xbox, PlayStation, generic USB controllers |
 | **Thingy:52** | Button and various motion sensors |
 | **Keyboard** | Use any key as trigger |
 
@@ -86,6 +87,25 @@ Stream Deck devices connect via WebHID. All Stream Deck models are supported:
 | **Stream Deck Neo** | 8 buttons |
 
 Each button can trigger animations and displays a colored background to indicate mapped inputs.
+
+### Gamepads
+
+Any standard gamepad (Xbox, PlayStation, Nintendo Switch, or generic USB/Bluetooth) is automatically detected when connected. 
+
+| Control | Description |
+|---------|-------------|
+| **Face buttons** | A/B/X/Y (Xbox), Cross/Circle/Square/Triangle (PlayStation), B/A/Y/X (Nintendo) |
+| **Shoulder buttons** | L1/R1, L2/R2 (triggers) |
+| **Stick buttons** | L3/R3 (press down on sticks) |
+| **D-pad** | Up, Down, Left, Right |
+| **System buttons** | Start, Select, Home |
+| **Analog sticks** | Left X/Y, Right X/Y (4 axes total) |
+
+**Buttons as triggers:** Use any button to trigger animations. The D-pad is great for switching between scenes, while face buttons can trigger one-shot effects.
+
+**Axes as value controls:** Map analog stick axes to value triggers for smooth, continuous control:
+- Control pan/tilt on a moving head with the left stick
+- Use the right stick for color mixing or effect parameters
 
 ### Nordic Thingy:52
 
