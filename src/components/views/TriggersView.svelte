@@ -10,6 +10,9 @@
     import EditAutomaticTriggerDialog from '../dialogs/EditAutomaticTriggerDialog.svelte';
     import EditValueTriggerDialog from '../dialogs/EditValueTriggerDialog.svelte';
 
+    import { Icon } from 'svelte-icon';
+    import newIcon from '../../assets/icons/new.svg?raw';
+
     // Get devices reactively from library
     let devices = $derived(deviceLibrary.getAll());
 
@@ -244,6 +247,7 @@
             variant="secondary"
             disabled={availableInputs.length === 0 || devices.length === 0}
         >
+            <Icon data={newIcon} />
             Add Action Trigger
         </Button>
         <Button
@@ -251,6 +255,7 @@
             variant="secondary"
             disabled={valueCapableInputs.length === 0 || devices.length === 0}
         >
+            <Icon data={newIcon} />
             Add Value Trigger
         </Button>
         <Button
@@ -258,6 +263,7 @@
             variant="secondary"
             disabled={availableAnimations.length === 0 || devices.length === 0}
         >
+            <Icon data={newIcon} />
             Add Automatic Trigger
         </Button>
     </div>

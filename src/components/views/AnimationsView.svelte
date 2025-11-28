@@ -8,6 +8,9 @@
     import AddAnimationDialog from '../dialogs/AddAnimationDialog.svelte';
     import EditAnimationDialog from '../dialogs/EditAnimationDialog.svelte';
 
+    import { Icon } from 'svelte-icon';
+    import newIcon from '../../assets/icons/new.svg?raw';
+
     // Get data reactively
     let devices = $derived(deviceLibrary.getAll());
     let animations = $derived(animationLibrary.getAll());
@@ -121,6 +124,7 @@
 <div class="animations-view">
     <div class="add-animation-section">
         <Button onclick={openNewAnimationDialog} variant="secondary">
+            <Icon data={newIcon} />
             Add Animation
         </Button>
     </div>

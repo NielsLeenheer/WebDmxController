@@ -6,6 +6,11 @@
     import TabBar from '../common/TabBar.svelte';
     import Button from '../common/Button.svelte';
 
+    import { Icon } from 'svelte-icon';
+    import clearIcon from '../../assets/icons/clear.svg?raw';
+    import restoreIcon from '../../assets/icons/restore.svg?raw';
+
+
     let { dmxController, isActive = false, mode = $bindable('view') } = $props();
 
     const modeTabs = [
@@ -127,6 +132,7 @@
             variant="secondary"
             disabled={mode !== 'edit'}
         >
+            <Icon data={restoreIcon} />
             Restore
         </Button>
         <Button 
@@ -134,6 +140,7 @@
             variant="secondary"
             disabled={mode !== 'edit'}
         >
+            <Icon data={clearIcon} />
             Clear
         </Button>
     </div>

@@ -7,6 +7,9 @@
     import Button from '../common/Button.svelte';
     import EditDeviceDialog from '../dialogs/EditDeviceDialog.svelte';
 
+    import { Icon } from 'svelte-icon';
+    import newIcon from '../../assets/icons/new.svg?raw';
+
     let { dmxController, isActive = false } = $props();
 
     // Get devices
@@ -114,6 +117,7 @@
             {/each}
         </select>
         <Button onclick={() => addDevice(selectedType)} variant="secondary">
+            <Icon data={newIcon} />
             Add Device
         </Button>
     </div>
