@@ -162,21 +162,3 @@ export function getValuesAtTime(animation, time) {
 	// Fallback - shouldn't reach here
 	return { ...sortedKeyframes[0].values };
 }
-
-/**
- * Get number of controls for animation
- *
- * NEW: Returns number of controls instead of channels
- *
- * @param {Object} animation - Plain animation object
- * @returns {number} Number of controls
- */
-export function getNumControls(animation) {
-	if (!animation.controls || animation.controls.length === 0) {
-		// Fallback to RGB (1 control: Color)
-		return 1;
-	}
-
-	return animation.controls.length;
-}
-

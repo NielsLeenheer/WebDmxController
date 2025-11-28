@@ -47,7 +47,7 @@ export class TriggerLibrary extends Library {
 				iterations: config.animation?.iterations || 1
 			} : null,
 			// Values properties (null for animation triggers)
-			// NEW: Control-based values object { "Color": { r, g, b }, "Dimmer": 255, ... }
+			// NEW: Control-based values object { "color": { red, green, blue }, "dimmer": 255, ... }
 			// Presence of a control in the object indicates it's enabled
 			values: actionType === 'values' ? (config.values || {}) : null,
 			order: this.items.length

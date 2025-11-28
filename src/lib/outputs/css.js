@@ -35,7 +35,7 @@ function dmxToCssValue(dmxValue, meta) {
 /**
  * Get CSS properties from control values
  *
- * @param {Object} controlValues - Control values object { "Color": { r, g, b }, "Dimmer": 255, ... }
+ * @param {Object} controlValues - Control values object { "color": { red, green, blue }, "dimmer": 255, ... }
  * @param {Array} controls - Array of control definitions from device type
  * @param {Object} options - Optional settings
  * @param {boolean} options.includeColorProperty - Include combined color property (only for device defaults)

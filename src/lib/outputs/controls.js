@@ -13,12 +13,12 @@
  * returns a DMX array ready for output.
  *
  * @param {DeviceType} deviceType - Device type definition (class instance)
- * @param {Object} controlValues - Control values object { "Color": { r, g, b }, "Dimmer": 255, ... }
+ * @param {Object} controlValues - Control values object { "color": { red, green, blue }, "dimmer": 255, ... }
  * @returns {Array<number>} DMX array (0-255 values)
  *
  * @example
  * const deviceType = DEVICE_TYPES.RGB;
- * const controlValues = { "color": { r: 255, g: 128, b: 64 } };
+ * const controlValues = { "color": { red: 255, green: 128, blue: 64 } };
  * const dmx = controlValuesToDMX(deviceType, controlValues);
  * // Returns: [255, 128, 64]
  */
@@ -55,13 +55,13 @@ export function controlValuesToDMX(deviceType, controlValues) {
  *
  * @param {DeviceType} deviceType - Device type definition (class instance)
  * @param {Array<number>} dmxArray - DMX array (0-255 values)
- * @returns {Object} Control values object { "Color": { r, g, b }, "Dimmer": 255, ... }
+ * @returns {Object} Control values object { "color": { red, green, blue }, "dimmer": 255, ... }
  *
  * @example
  * const deviceType = DEVICE_TYPES['rgb'];
  * const dmx = [255, 128, 64];
  * const controlValues = dmxToControlValues(deviceType, dmx);
- * // Returns: { "color": { r: 255, g: 128, b: 64 } }
+ * // Returns: { "color": { red: 255, green: 128, blue: 64 } }
  */
 export function dmxToControlValues(deviceType, dmxArray) {
 	const controlValues = {};
@@ -95,9 +95,9 @@ export function dmxToControlValues(deviceType, dmxArray) {
  * const deviceType = DEVICE_TYPES['moving-head'];
  * const defaults = createDefaultControlValues(deviceType);
  * // Returns: {
- * //   "pantilt": { x: 128, y: 128 },
+ * //   "pantilt": { pan: 128, tilt: 128 },
  * //   "dimmer": 255,
- * //   "color": { r: 0, g: 0, b: 0 },
+ * //   "color": { red: 0, green: 0, blue: 0 },
  * //   ...
  * // }
  */

@@ -1,6 +1,6 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-    import { getNumControls } from '../../lib/animations/utils.js';
+    import { getControlsForRendering } from '../../lib/animations/utils.js';
     import { animationLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import AnimationCard from '../cards/AnimationCard.svelte';
@@ -39,13 +39,25 @@
         // Create animation using library
         const animation = animationLibrary.create(result.name, controls, displayName);
 
-        // Determine number of channels based on control selection
-        const numChannels = getNumControls(animation);
-        const defaultValues = new Array(numChannels).fill(0);
+        // Create default values object keyed by control ID
+        const defaultValues = createDefaultKeyframeValues(animation);
 
         // Add default keyframes at start and end
         animationLibrary.addKeyframe(animation.id, 0, defaultValues);
         animationLibrary.addKeyframe(animation.id, 1, defaultValues);
+    }
+
+    // Create default keyframe values object for an animation
+    function createDefaultKeyframeValues(animation) {
+        const controls = getControlsForRendering(animation);
+        const values = {};
+        
+        for (const control of controls) {
+            // Get the default value from the control type
+            values[control.id] = control.type.getDefaultValue();
+        }
+        
+        return values;
     }
 
     // Parse selected target into controls array and displayName

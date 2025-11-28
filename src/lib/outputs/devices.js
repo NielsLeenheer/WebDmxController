@@ -65,7 +65,7 @@ export function getDevicePreviewData(deviceType, controlValues) {
  * NEW: Accepts control values object instead of channelValues/enabledControls
  *
  * @param {string} deviceType - The device type key (e.g., 'rgb', 'flamethrower')
- * @param {Object} triggerValues - Control values object { "Color": { r, g, b }, ... }
+ * @param {Object} triggerValues - Control values object { "color": { red, green, blue }, ... }
  * @returns {Object} Preview data with controls array and data object
  */
 export function getTriggerValuesPreviewData(deviceType, triggerValues) {

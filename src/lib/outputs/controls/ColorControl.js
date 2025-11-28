@@ -32,7 +32,7 @@ export class ColorControl extends RGBControlType {
 
 	/**
 	 * Get color for RGB or a specific component
-	 * @param {number|Object} value - Component value (0-255) or RGB object {r, g, b}
+	 * @param {number|Object} value - Component value (0-255) or RGB object {red, green, blue}
 	 * @param {string} [id] - Optional: 'red', 'green', or 'blue' for component color
 	 * @returns {string} CSS color string
 	 */

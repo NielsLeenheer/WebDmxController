@@ -54,7 +54,7 @@ export class AnimationLibrary extends Library {
 	 * Add a keyframe to an animation
 	 * @param {string} animationId - Animation ID
 	 * @param {number} time - Time (0-1)
-	 * @param {Object} values - Control values object { "color": { r, g, b }, ... }
+	 * @param {Object} values - Control values object { "color": { red, green, blue }, ... }
 	 */
 	addKeyframe(animationId, time, values) {
 		const animation = this.get(animationId);

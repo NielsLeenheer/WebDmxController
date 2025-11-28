@@ -4,7 +4,7 @@
 
     let {
         controls, // Array of control definitions
-        values = $bindable({}), // Control values object (e.g., { "rgb": { r, g, b }, "dimmer": 255 })
+        values = $bindable({}), // Control values object (e.g., { "color": { red, green, blue }, "dimmer": 255 })
         onChange = null, // Callback: (controlId, value) => void
         disabledControls = [], // Array of control ids that should be disabled
         enabledControls = $bindable(null), // Optional: array of enabled control ids, null = show all without checkboxes
@@ -47,7 +47,7 @@
     }
 
     function handleRGBComponentChange(controlId, component, value) {
-        const currentValue = values[controlId] || { r: 0, g: 0, b: 0 };
+        const currentValue = values[controlId] || { red: 0, green: 0, blue: 0 };
         const newValue = { ...currentValue, [component]: value };
         handleControlChange(controlId, newValue);
     }
