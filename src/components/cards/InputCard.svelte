@@ -28,9 +28,9 @@
 		<div class="input-name">{input.name}</div>
 		<div class="input-device-name">
 			{input.inputDeviceName || input.inputDeviceId}
-			{#if input.friendlyName}
+			{#if input.inputControlName}
 				<span class="separator">•</span>
-				{input.friendlyName}
+				{input.inputControlName}
 			{/if}
 		</div>
 	</div>

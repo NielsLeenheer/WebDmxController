@@ -191,11 +191,11 @@
             const input = inputLibrary.create({
                 name,
                 inputDeviceId: deviceId,
-                inputControlId: controlId,
                 inputDeviceName: device?.name || deviceId,
+                inputControlId: controlId,
+                inputControlName: friendlyName || null, // Store friendlyName as inputControlName
                 type: type || 'button', // Use type from device
                 colorSupport: colorSupport || 'none', // Use colorSupport from device
-                friendlyName: friendlyName || null, // Use friendlyName from device
                 orientation: orientation || null, // Use orientation from device
                 color
             });
