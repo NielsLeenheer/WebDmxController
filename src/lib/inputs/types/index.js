@@ -64,7 +64,7 @@ export function getInputTypeForInput(input) {
 	}
 
 	// Fallback for legacy inputs without type field - detect from controlId
-	const controlId = input.inputControlId || '';
+	const controlId = input.controlId || '';
 
 	// Keyboard keys
 	if (controlId.startsWith('key-')) {

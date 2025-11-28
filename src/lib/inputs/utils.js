@@ -21,11 +21,11 @@ export function isButton(input) {
 	}
 
 	// Fallback for inputs without type field - detect from controlId
-	if (!input.inputControlId) return false;
-	return input.inputControlId.startsWith('note-') ||
-	       input.inputControlId.startsWith('button-') ||
-	       input.inputControlId === 'button' ||
-	       input.inputControlId.startsWith('key-');
+	if (!input.controlId) return false;
+	return input.controlId.startsWith('note-') ||
+	       input.controlId.startsWith('button-') ||
+	       input.controlId === 'button' ||
+	       input.controlId.startsWith('key-');
 }
 
 /**
@@ -42,15 +42,15 @@ export function hasValues(input) {
 	}
 
 	// Fallback - CC controls and sensors have values
-	if (!input.inputControlId) return false;
-	return input.inputControlId.startsWith('cc-') ||
-	       input.inputControlId.startsWith('euler-') ||
-	       input.inputControlId.startsWith('quat-') ||
-	       input.inputControlId.startsWith('accel-') ||
-	       input.inputControlId.startsWith('gyro-') ||
-	       input.inputControlId.startsWith('compass-') ||
-	       input.inputControlId === 'pan' ||
-	       input.inputControlId === 'tilt';
+	if (!input.controlId) return false;
+	return input.controlId.startsWith('cc-') ||
+	       input.controlId.startsWith('euler-') ||
+	       input.controlId.startsWith('quat-') ||
+	       input.controlId.startsWith('accel-') ||
+	       input.controlId.startsWith('gyro-') ||
+	       input.controlId.startsWith('compass-') ||
+	       input.controlId === 'pan' ||
+	       input.controlId === 'tilt';
 }
 
 /**

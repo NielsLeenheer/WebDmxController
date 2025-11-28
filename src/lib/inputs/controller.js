@@ -97,12 +97,12 @@ export class InputController {
 			// Create thingy input - a single input with button + all sensors
 			thingyInput = this.inputLibrary.create({
 				name: device.name,
-				inputDeviceId: device.id,
-				inputControlId: 'thingy',
-				inputDeviceName: device.name,
+				deviceId: device.id,
+				controlId: 'thingy',
+				deviceName: device.name,
 				type: 'thingy',
 				colorSupport: 'rgb',
-				friendlyName: null,
+				controlName: null,
 				buttonMode: 'momentary'
 			});
 		} else {
@@ -348,8 +348,8 @@ export class InputController {
 	 */
 	async setButtonColorByInput(inputId, color) {
 		const input = this.inputLibrary.get(inputId);
-		if (input && input.inputDeviceId && input.inputControlId) {
-			await this.setButtonColor(input.inputDeviceId, input.inputControlId, color);
+		if (input && input.deviceId && input.controlId) {
+			await this.setButtonColor(input.deviceId, input.controlId, color);
 		}
 	}
 

@@ -21,16 +21,16 @@
 		size="medium"
 		data={input}
 		stateValue={stateDisplay}
-		euler={input.inputControlId === 'thingy' && eulerAngles ? eulerAngles : null}
+		euler={input.controlId === 'thingy' && eulerAngles ? eulerAngles : null}
 		class="input-preview"
 	/>
 	<div class="input-header">
 		<div class="input-name">{input.name}</div>
 		<div class="input-device-name">
-			{input.inputDeviceName || input.inputDeviceId}
-			{#if input.inputControlName}
+			{input.deviceName || input.deviceId}
+			{#if input.controlName}
 				<span class="separator">•</span>
-				{input.inputControlName}
+				{input.controlName}
 			{/if}
 		</div>
 	</div>

@@ -59,7 +59,7 @@
 		// Parse deviceId_controlId format
 		const [deviceId, controlId] = selectedInput.split('_');
 		const input = availableInputs.find(i =>
-			i.inputDeviceId === deviceId && i.inputControlId === controlId
+			i.deviceId === deviceId && i.controlId === controlId
 		);
 
 		if (!input || !isButton(input)) {
@@ -128,7 +128,7 @@
 
 			// Initialize form state
 			// Format: deviceId_controlId (needed for parsing in TriggersView)
-			selectedInput = inputs[0] ? `${inputs[0].inputDeviceId}_${inputs[0].inputControlId}` : null;
+			selectedInput = inputs[0] ? `${inputs[0].deviceId}_${inputs[0].controlId}` : null;
 			triggerType = 'pressed';
 			actionType = 'animation';
 			selectedDevice = devs[0]?.id || null;
@@ -204,7 +204,7 @@
 					<label for="trigger-input">Input:</label>
 					<select id="trigger-input" bind:value={selectedInput}>
 						{#each availableInputs as input}
-							<option value={`${input.inputDeviceId}_${input.inputControlId}`}>{input.name}</option>
+							<option value={`${input.deviceId}_${input.controlId}`}>{input.name}</option>
 						{/each}
 					</select>
 				</div>

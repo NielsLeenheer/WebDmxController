@@ -110,7 +110,7 @@
         deviceColorUsage.clear();
         deviceColorIndices.clear();
         for (const input of inputs) {
-            registerColorUsage(input.inputDeviceId, input.inputControlId, input.color);
+            registerColorUsage(input.deviceId, input.controlId, input.color);
         }
     }
 
@@ -178,7 +178,7 @@
 
         // Check if this input already exists
         const existing = inputs.find(
-            input => input.inputDeviceId === deviceId && input.inputControlId === controlId
+            input => input.deviceId === deviceId && input.controlId === controlId
         );
 
         if (!existing) {
@@ -190,13 +190,13 @@
 
             const input = inputLibrary.create({
                 name,
-                inputDeviceId: deviceId,
-                inputDeviceName: device?.name || deviceId,
-                inputControlId: controlId,
-                inputControlName: friendlyName || null, // Store friendlyName as inputControlName
-                type: type || 'button', // Use type from device
-                colorSupport: colorSupport || 'none', // Use colorSupport from device
-                orientation: orientation || null, // Use orientation from device
+                deviceId: deviceId,
+                deviceName: device?.name || deviceId,
+                controlId: controlId,
+                controlName: friendlyName || null,
+                type: type || 'button',
+                colorSupport: colorSupport || 'none',
+                orientation: orientation || null,
                 color
             });
 
@@ -302,7 +302,7 @@
             if (result.color !== oldColor && existingInput.colorSupport && existingInput.colorSupport !== 'none') {
                 // Release old color usage
                 if (oldColor) {
-                    releaseColorUsage(existingInput.inputDeviceId, existingInput.inputControlId, oldColor);
+                    releaseColorUsage(existingInput.deviceId, existingInput.controlId, oldColor);
                 }
 
                 // Update color
@@ -310,11 +310,11 @@
 
                 // Register new color usage
                 if (result.color) {
-                    registerColorUsage(existingInput.inputDeviceId, existingInput.inputControlId, result.color);
+                    registerColorUsage(existingInput.deviceId, existingInput.controlId, result.color);
                 }
 
                 // Update color on hardware (only if device is connected)
-                const inputDevice = inputController.getInputDevice(existingInput.inputDeviceId);
+                const inputDevice = inputController.getInputDevice(existingInput.deviceId);
                 if (inputDevice && result.color) {
                     // For toggle buttons, respect current state
                     let color = result.color;
@@ -324,7 +324,7 @@
                     }
 
                     // Use generic setColor method
-                    await inputDevice.setColor(existingInput.inputControlId, color);
+                    await inputDevice.setColor(existingInput.controlId, color);
 
                     // Update Thingy device LED color if it's a Thingy device
                     if (inputDevice.type === 'bluetooth' && inputDevice.thingyDevice) {
@@ -343,7 +343,7 @@
         if (!input) return;
 
         // Release color usage for this device
-        releaseColorUsage(input.inputDeviceId, input.inputControlId, input.color);
+        releaseColorUsage(input.deviceId, input.controlId, input.color);
 
         inputLibrary.remove(inputId);
 
@@ -385,8 +385,8 @@
                 // Build a map of assigned controls for this device
                 const assignedControls = new Map();
                 for (const input of inputs) {
-                    if (input.inputDeviceId === device.id && input.color) {
-                        assignedControls.set(input.inputControlId, input);
+                    if (input.deviceId === device.id && input.color) {
+                        assignedControls.set(input.controlId, input);
                     }
                 }
 
@@ -452,7 +452,7 @@
             } else {
                 // For other devices (HID, Bluetooth), apply colors only to saved inputs
                 for (const input of inputs) {
-                    if (input.inputDeviceId !== device.id) continue;
+                    if (input.deviceId !== device.id) continue;
                     if (!input.color || !input.colorSupport || input.colorSupport === 'none') continue;
 
                     // For toggle buttons, respect the current toggle state
@@ -462,7 +462,7 @@
                         color = (state?.state === 'on') ? input.color : 'black';
                     }
 
-                    await device.setColor(input.inputControlId, color);
+                    await device.setColor(input.controlId, color);
                 }
             }
         }
@@ -470,13 +470,13 @@
 
     async function updateButtonColorForToggleState(input, isOn) {
         // Update button color based on toggle state (on = full color, off = black)
-        const inputDevice = inputController.getInputDevice(input.inputDeviceId);
+        const inputDevice = inputController.getInputDevice(input.deviceId);
         if (!inputDevice || !input.color || !input.colorSupport || input.colorSupport === 'none') return;
 
         const color = isOn ? input.color : 'black';
 
         // Use generic setColor method for all device types
-        await inputDevice.setColor(input.inputControlId, color);
+        await inputDevice.setColor(input.controlId, color);
     }
 
     onMount(() => {
@@ -492,7 +492,7 @@
                 // Assign color to thingy input if it doesn't have one
                 // The input is created by the controller with controlId 'thingy'
                 const thingyInput = inputs.find(
-                    input => input.inputDeviceId === device.id && input.inputControlId === 'thingy'
+                    input => input.deviceId === device.id && input.controlId === 'thingy'
                 );
 
                 if (thingyInput && !thingyInput.color) {
@@ -535,7 +535,7 @@
 
                 // Assign color to thingy input if it doesn't have one
                 const thingyInput = inputs.find(
-                    input => input.inputDeviceId === device.id && input.inputControlId === 'thingy'
+                    input => input.deviceId === device.id && input.controlId === 'thingy'
                 );
 
                 if (thingyInput && !thingyInput.color) {
@@ -617,7 +617,7 @@
                     {input}
                     {dnd}
                     stateDisplay={getInputStateDisplay(input)}
-                    eulerAngles={thingyEulerAngles[input.inputDeviceId]}
+                    eulerAngles={thingyEulerAngles[input.deviceId]}
                     onEdit={startEditing}
                 />
             {/each}

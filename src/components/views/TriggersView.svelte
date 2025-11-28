@@ -45,7 +45,7 @@
 
         const [inputDeviceId, inputControlId] = result.input.split('_');
         const input = availableInputs.find(i =>
-            i.inputDeviceId === inputDeviceId && i.inputControlId === inputControlId
+            i.deviceId === inputDeviceId && i.controlId === inputControlId
         );
         if (!input) return;
 
@@ -163,8 +163,8 @@
             // Handle save - parse the selected input
             const [newInputDeviceId, newInputControlId] = result.input.split('_');
             const selectedInput = availableInputs.find(input =>
-                input.inputDeviceId === newInputDeviceId &&
-                input.inputControlId === newInputControlId
+                input.deviceId === newInputDeviceId &&
+                input.controlId === newInputControlId
             );
 
             if (!selectedInput) return;

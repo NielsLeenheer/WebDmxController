@@ -62,7 +62,7 @@
 
 		const [deviceId, controlId] = selectedInput.split('_');
 		const input = availableInputs.find(i =>
-			i.inputDeviceId === deviceId && i.inputControlId === controlId
+			i.deviceId === deviceId && i.controlId === controlId
 		);
 
 		if (!input || !isButton(input)) {
@@ -123,7 +123,7 @@
 			// Initialize form state from trigger
 			// Find the input matching trigger.inputId
 			const input = inputs.find(i => i.id === trigger.inputId);
-			selectedInput = input ? `${input.inputDeviceId}_${input.inputControlId}` : null;
+			selectedInput = input ? `${input.deviceId}_${input.controlId}` : null;
 			triggerType = trigger.triggerType;
 			actionType = trigger.actionType === 'setValue' ? 'values' : trigger.actionType || 'animation';
 
@@ -224,7 +224,7 @@
 					<label for="edit-trigger-input">Input:</label>
 					<select id="edit-trigger-input" bind:value={selectedInput}>
 						{#each availableInputs as input}
-							<option value={input.inputDeviceId + '_' + input.inputControlId}>
+							<option value={input.deviceId + '_' + input.controlId}>
 								{input.name}
 							</option>
 						{/each}
