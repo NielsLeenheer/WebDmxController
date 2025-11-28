@@ -34,10 +34,10 @@
 
         // Parse selected target
         const parsed = parseAnimationTarget(result.target);
-        const { controls, displayName } = parsed;
+        const { controls, targetLabel } = parsed;
 
         // Create animation using library
-        const animation = animationLibrary.create(result.name, controls, displayName);
+        const animation = animationLibrary.create(result.name, controls, targetLabel);
 
         // Create default values object keyed by control ID
         const defaultValues = createDefaultKeyframeValues(animation);
@@ -60,7 +60,7 @@
         return values;
     }
 
-    // Parse selected target into controls array and displayName
+    // Parse selected target into controls array and targetLabel
     function parseAnimationTarget(target) {
         const parts = target.split('|');
         const targetType = parts[0];
@@ -81,7 +81,7 @@
             
             return {
                 controls: [controlId],
-                displayName: friendlyName
+                targetLabel: friendlyName
             };
         } else if (targetType === 'device') {
             // All controls for this device type
@@ -90,14 +90,14 @@
             const controlIds = deviceDef.controls.map(c => c.id);
             return {
                 controls: controlIds,  // Array of all control ids from this device
-                displayName: deviceDef.name
+                targetLabel: deviceDef.name
             };
         }
 
         // Fallback
         return {
             controls: ['color'],
-            displayName: 'Color'
+            targetLabel: 'Color'
         };
     }
 

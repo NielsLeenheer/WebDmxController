@@ -19,14 +19,14 @@ export class AnimationLibrary extends Library {
 	 * Create and add a new animation
 	 * @param {string} name - Animation name
 	 * @param {Array<string>} controls - Control names to animate
-	 * @param {string} displayName - Display name for UI
+	 * @param {string} targetLabel - Label describing the animation target (control or device type name)
 	 * @returns {Object} Created animation object
 	 */
-	create(name, controls, displayName) {
+	create(name, controls, targetLabel) {
 		const animation = {
 			name,
 			controls: controls || [],
-			displayName: displayName || null,
+			targetLabel: targetLabel || null,
 			keyframes: [],
 			cssName: toCSSIdentifier(name),
 			order: this.items.length
@@ -38,7 +38,7 @@ export class AnimationLibrary extends Library {
 	/**
 	 * Update animation properties
 	 * @param {string} id - Animation ID
-	 * @param {Object} updates - Properties to update (name, controls, displayName, etc.)
+	 * @param {Object} updates - Properties to update (name, controls, targetLabel, etc.)
 	 * @returns {boolean} Success status
 	 */
 	update(id, updates) {
@@ -165,7 +165,7 @@ export class AnimationLibrary extends Library {
 			id: animData.id || crypto.randomUUID(),
 			name: animData.name,
 			controls: animData.controls || [],
-			displayName: animData.displayName || null,
+			targetLabel: animData.targetLabel || null,
 			keyframes,
 			cssName: animData.cssName || toCSSIdentifier(animData.name),
 			order: animData.order !== undefined ? animData.order : index
