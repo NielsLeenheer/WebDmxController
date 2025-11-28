@@ -28,7 +28,7 @@ export class AnimationLibrary extends Library {
 			controls: controls || [],
 			targetLabel: targetLabel || null,
 			keyframes: [],
-			cssName: toCSSIdentifier(name),
+			cssIdentifier: toCSSIdentifier(name),
 			order: this.items.length
 		};
 
@@ -42,9 +42,9 @@ export class AnimationLibrary extends Library {
 	 * @returns {boolean} Success status
 	 */
 	update(id, updates) {
-		// Update CSS name if name changed
+		// Update CSS identifier if name changed
 		if (updates.name) {
-			updates.cssName = toCSSIdentifier(updates.name);
+			updates.cssIdentifier = toCSSIdentifier(updates.name);
 		}
 
 		return super.update(id, updates);
@@ -167,7 +167,7 @@ export class AnimationLibrary extends Library {
 			controls: animData.controls || [],
 			targetLabel: animData.targetLabel || null,
 			keyframes,
-			cssName: animData.cssName || toCSSIdentifier(animData.name),
+			cssIdentifier: animData.cssIdentifier || toCSSIdentifier(animData.name),
 			order: animData.order !== undefined ? animData.order : index
 		};
 	}

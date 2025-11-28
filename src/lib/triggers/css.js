@@ -61,9 +61,9 @@ function _generateAutomaticTriggersCSS(device, automaticTriggers, animationLibra
 			: trigger.animation.iterations;
 		const durSec = (trigger.animation.duration / 1000).toFixed(3);
 		
-		// Look up animation to get cssName
+		// Look up animation to get cssIdentifier
 		const animation = animationLibrary?.get(trigger.animation.id);
-		const animName = animation?.cssName || trigger.animation.id;
+		const animName = animation?.cssIdentifier || trigger.animation.id;
 		
 		return `${animName} ${durSec}s ${trigger.animation.easing} ${iterVal}`;
 	});
@@ -100,9 +100,9 @@ function _generateManualAnimationCSS(device, trigger, automaticTriggers, animati
 		: trigger.animation.iterations;
 	const durationSec = (trigger.animation.duration / 1000).toFixed(3);
 	
-	// Look up animation to get cssName
+	// Look up animation to get cssIdentifier
 	const animation = animationLibrary?.get(trigger.animation.id);
-	const animName = animation?.cssName || trigger.animation.id;
+	const animName = animation?.cssIdentifier || trigger.animation.id;
 	
 	// Build the animation specification for this trigger
 	const thisAnimation = `${animName} ${durationSec}s ${trigger.animation.easing} ${iterationsValue}`;
@@ -114,7 +114,7 @@ function _generateManualAnimationCSS(device, trigger, automaticTriggers, animati
 			const iterVal = t.animation.iterations === 'infinite' ? 'infinite' : t.animation.iterations;
 			const durSec = (t.animation.duration / 1000).toFixed(3);
 			const anim = animationLibrary?.get(t.animation.id);
-			const animName = anim?.cssName || t.animation.id;
+			const animName = anim?.cssIdentifier || t.animation.id;
 			return `${animName} ${durSec}s ${t.animation.easing} ${iterVal}`;
 		});
 	

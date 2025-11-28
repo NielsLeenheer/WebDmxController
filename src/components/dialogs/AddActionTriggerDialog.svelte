@@ -132,7 +132,7 @@
 			triggerType = 'pressed';
 			actionType = 'animation';
 			selectedDevice = devs[0]?.id || null;
-			selectedAnimation = animations[0]?.cssName || null;
+			selectedAnimation = animations[0]?.cssIdentifier || null;
 			duration = 1000;
 			looping = false;
 			easing = 'linear';

@@ -86,7 +86,7 @@ export class TriggerLibrary extends Library {
 	/**
 	 * Generate CSS for all triggers
 	 * @param {Array} devices - Array of device objects
-	 * @param {Object} animationLibrary - AnimationLibrary instance to resolve animation cssNames
+	 * @param {Object} animationLibrary - AnimationLibrary instance to resolve animation cssIdentifiers
 	 * @param {Object} inputLibrary - InputLibrary instance to resolve input names
 	 * @returns {string} Combined CSS
 	 */

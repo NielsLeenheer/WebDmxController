@@ -118,7 +118,7 @@
                     <h4>Animations</h4>
                     <div class="css-identifiers">
                         {#each animations as animation (animation.name)}
-                            <code class="css-identifier">{animation.cssName}</code>
+                            <code class="css-identifier">{animation.cssIdentifier}</code>
                         {/each}
                     </div>
                 </div>
