@@ -14,7 +14,7 @@
     import AnimationsView from './components/views/AnimationsView.svelte';
     import InputsView from './components/views/InputsView.svelte';
     import TriggersView from './components/views/TriggersView.svelte';
-    import CSSView from './components/views/CSSView.svelte';
+    import EditorView from './components/views/EditorView.svelte';
 
     let view = $state('devices');
     let connected = $state(false);
@@ -153,7 +153,7 @@
     </div>
 
     <div class="view-container" class:hidden={view !== 'css'}>
-        <CSSView
+        <EditorView
             {cssManager}
         />
     </div>

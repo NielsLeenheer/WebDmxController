@@ -42,7 +42,7 @@
         <label>
             <input type="radio" name="view" value="css" bind:group={view}>
             <Icon data={cssIcon} />
-            CSS
+            Editor
         </label>
 
         <label>
