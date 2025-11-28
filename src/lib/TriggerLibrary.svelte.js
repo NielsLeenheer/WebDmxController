@@ -70,11 +70,6 @@ export class TriggerLibrary extends Library {
 			deviceId: config.deviceId || null,
 			controlId: config.controlId || null, // Target control type id (e.g., 'color', 'dimmer', 'pantilt')
 			controlValueId: config.controlValueId || null, // For multi-value controls: 'x', 'y', 'red', 'green', 'blue' (value id)
-			// Optional range overrides
-			inputMin: config.inputMin ?? null,
-			inputMax: config.inputMax ?? null,
-			outputMin: config.outputMin ?? null,
-			outputMax: config.outputMax ?? null,
 			invert: config.invert || false,
 			order: this.items.length
 		};
@@ -140,10 +135,6 @@ export class TriggerLibrary extends Library {
 				deviceId: triggerData.deviceId || null,
 				controlId: triggerData.controlId || triggerData.controlName || null, // Support old 'controlName' for migration
 				controlValueId: triggerData.controlValueId || triggerData.controlChannel || null, // Support old 'controlChannel' for migration
-				inputMin: triggerData.inputMin ?? null,
-				inputMax: triggerData.inputMax ?? null,
-				outputMin: triggerData.outputMin ?? null,
-				outputMax: triggerData.outputMax ?? null,
 				invert: triggerData.invert || false,
 				order: triggerData.order !== undefined ? triggerData.order : index
 			};

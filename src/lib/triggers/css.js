@@ -242,12 +242,11 @@ function _generateValueTriggerProperty(trigger, device, deviceType, inputLibrary
 		return null;
 	}
 
-	// Determine input and output ranges (use overrides if provided)
-	// inputValue now contains inline metadata (min, max, unit)
-	const inputMin = trigger.inputMin ?? inputValue.min;
-	const inputMax = trigger.inputMax ?? inputValue.max;
-	const outputMin = trigger.outputMin ?? controlMeta.min;
-	const outputMax = trigger.outputMax ?? controlMeta.max;
+	// Determine input and output ranges from metadata
+	const inputMin = inputValue.min;
+	const inputMax = inputValue.max;
+	const outputMin = controlMeta.min;
+	const outputMax = controlMeta.max;
 	const inputUnit = inputValue.unit || '';
 	const outputUnit = controlMeta.unit || '';
 
