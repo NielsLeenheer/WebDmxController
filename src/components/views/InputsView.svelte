@@ -449,8 +449,41 @@
                         }
                     }
                 }
+            } else if (typeof device.getControls === 'function') {
+                // For devices with getControls() method (StreamDeck, etc.)
+                const controls = device.getControls();
+                
+                // Build a map of assigned controls for this device
+                const assignedControls = new Map();
+                for (const input of inputs) {
+                    if (input.deviceId === device.id && input.color) {
+                        assignedControls.set(input.controlId, input);
+                    }
+                }
+
+                for (const control of controls) {
+                    if (!control.colorSupport || control.colorSupport === 'none') continue;
+
+                    const input = assignedControls.get(control.controlId);
+
+                    if (input) {
+                        // Set assigned color
+                        let color = input.color;
+
+                        // For toggle buttons, respect the current toggle state
+                        if (isButton(input) && input.buttonMode === 'toggle') {
+                            const state = inputStates[input.id];
+                            color = (state?.state === 'on') ? input.color : 'black';
+                        }
+
+                        await device.setColor(control.controlId, color);
+                    } else {
+                        // Set unassigned controls to black/off
+                        await device.setColor(control.controlId, 'black');
+                    }
+                }
             } else {
-                // For other devices (HID, Bluetooth), apply colors only to saved inputs
+                // For other devices (HID, Bluetooth) without getControls(), apply colors only to saved inputs
                 for (const input of inputs) {
                     if (input.deviceId !== device.id) continue;
                     if (!input.color || !input.colorSupport || input.colorSupport === 'none') continue;

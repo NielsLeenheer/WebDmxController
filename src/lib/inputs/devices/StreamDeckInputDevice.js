@@ -4,12 +4,13 @@ import { InputDevice } from './InputDevice.js';
  * Stream Deck Input Device (Elgato Stream Deck via WebHID)
  */
 export class StreamDeckInputDevice extends InputDevice {
-	constructor(streamDeck, serialNumber, model, streamDeckManager) {
+	constructor(streamDeck, serialNumber, model, streamDeckManager, buttonCount = 6) {
 		super(serialNumber, model || 'Stream Deck', 'hid');
 		this.streamDeck = streamDeck;
 		this.serialNumber = serialNumber;
 		this.model = model;
 		this.streamDeckManager = streamDeckManager;
+		this.buttonCount = buttonCount;
 	}
 
 	/**
@@ -26,6 +27,21 @@ export class StreamDeckInputDevice extends InputDevice {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Get all control IDs for this device
+	 * @returns {Array<{controlId: string, colorSupport: string}>}
+	 */
+	getControls() {
+		const controls = [];
+		for (let i = 0; i < this.buttonCount; i++) {
+			controls.push({
+				controlId: `button-${i}`,
+				colorSupport: 'rgb'
+			});
+		}
+		return controls;
 	}
 
 	/**
