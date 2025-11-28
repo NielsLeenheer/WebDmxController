@@ -1,8 +1,9 @@
 import { XYPad16ControlType } from './types/XYPad16ControlType.js';
 
 /**
- * Pan/Tilt Control (16-bit)
- * Controls position for moving head fixtures (high precision)
+ * Pan/Tilt Control (16-bit channel layout)
+ * Controls position for moving head fixtures with 16-bit channel layout.
+ * Uses 8-bit precision internally (same as PanTiltControl) with fine channels set to 0.
  */
 export class PanTilt16Control extends XYPad16ControlType {
 	constructor() {
@@ -23,7 +24,7 @@ export class PanTilt16Control extends XYPad16ControlType {
 			max: 50,
 			unit: '%',
 			dmxMin: 0,
-			dmxMax: 65535,
+			dmxMax: 255,
 			description: 'Pan position (-50% to +50%)'
 		};
 
@@ -37,7 +38,7 @@ export class PanTilt16Control extends XYPad16ControlType {
 			max: 100,
 			unit: '%',
 			dmxMin: 0,
-			dmxMax: 65535,
+			dmxMax: 255,
 			description: 'Tilt position (0% to 100%)'
 		};
 
