@@ -27,6 +27,31 @@
 		return getTriggerValuesPreviewData(device.type, trigger.action?.values);
 	});
 
+	// For values triggers: generate a label listing affected controls
+	let valuesLabel = $derived.by(() => {
+		if (trigger.action?.type !== 'values' || !device) return '';
+		const values = trigger.action?.values || {};
+		const controlIds = Object.keys(values);
+		if (controlIds.length === 0) return 'No values';
+
+		const deviceType = DEVICE_TYPES[device.type];
+		if (!deviceType) return `${controlIds.length} values`;
+
+		// Get control names
+		const controlNames = controlIds.map(id => {
+			const controlDef = deviceType.controls.find(c => c.id === id);
+			return controlDef?.type?.name || id;
+		});
+
+		if (controlNames.length <= 3) {
+			return controlNames.join(', ');
+		} else {
+			const first = controlNames.slice(0, 2).join(', ');
+			const remaining = controlNames.length - 2;
+			return `${first} and ${remaining} more`;
+		}
+	});
+
 	// Get input type label (On/Off/Up/Down) for button triggers
 	let inputTypeLabel = $derived.by(() => {
 		if (!input) return 'Down';
@@ -170,7 +195,7 @@
 				class="trigger-preview"
 			/>
 			<div class="trigger-text">
-				{Object.keys(trigger.values || {}).length} values
+				{valuesLabel}
 			</div>
 		{/if}
 	</div>
