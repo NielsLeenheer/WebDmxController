@@ -64,6 +64,8 @@
             // Close dialog on successful connection
             closeDevicesDialog();
         } catch (error) {
+            // Silently ignore user cancellation
+            if (error.name === 'NotFoundError') return;
             alert(`Failed to connect MIDI: ${error.message}`);
         }
     }
@@ -88,6 +90,8 @@
             // Close dialog on successful connection
             closeDevicesDialog();
         } catch (error) {
+            // Silently ignore user cancellation
+            if (error.name === 'NotFoundError') return;
             alert(`Failed to connect Thingy:52: ${error.message}\n\nMake sure your device is powered on and in range.`);
         }
     }

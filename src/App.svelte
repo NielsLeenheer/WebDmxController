@@ -40,6 +40,8 @@
             await dmxController.connect();
             connected = true;
         } catch (error) {
+            // Silently ignore user cancellation
+            if (error.name === 'NotFoundError') return;
             alert('Failed to connect: ' + error.message);
         }
     }
