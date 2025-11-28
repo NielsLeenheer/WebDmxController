@@ -70,14 +70,14 @@
         if (device.type === 'hid') {
             return device.id !== 'keyboard';
         }
-        // MIDI and Bluetooth (Thingy:52) support colors
-        return device.type === 'midi' || device.type === 'bluetooth';
+        // MIDI and Thingy:52 support colors
+        return device.type === 'midi' || device.type === 'thingy';
     }
 
     function shouldAssignColorSupport(device, controlId) {
         // For now, Thingy:52 buttons support RGB
         // Other devices will get colorSupport from profile/device definitions
-        if (device.type === 'bluetooth' && device.thingyDevice) {
+        if (device.type === 'thingy') {
             return 'rgb';
         }
         // For other devices, would need to query device profile
@@ -175,6 +175,9 @@
         if (!isListening) return;
 
         const { deviceId, controlId, device, type, colorSupport, friendlyName, orientation } = event;
+
+        // Skip Thingy:52 inputs entirely - they are added via the connect dialog, not by listening
+        if (device?.type === 'thingy') return;
 
         // Check if this input already exists
         const existing = inputs.find(
@@ -327,7 +330,7 @@
                     await inputDevice.setColor(existingInput.controlId, color);
 
                     // Update Thingy device LED color if it's a Thingy device
-                    if (inputDevice.type === 'bluetooth' && inputDevice.thingyDevice) {
+                    if (inputDevice.type === 'thingy' && inputDevice.thingyDevice) {
                         inputDevice.thingyDevice.setDeviceColor(result.color);
                     }
                 }
@@ -517,7 +520,7 @@
         // Apply colors when devices connect
         inputController.on('deviceadded', (device) => {
             // Track Euler angles for Thingy:52 devices
-            if (device.type === 'bluetooth' && device.thingyDevice) {
+            if (device.type === 'thingy' && device.thingyDevice) {
                 device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
                     thingyEulerAngles[device.id] = { roll, pitch, yaw };
                 });
@@ -551,7 +554,7 @@
 
         // Clear euler angles when Thingy devices disconnect
         inputController.on('deviceremoved', (device) => {
-            if (device.type === 'bluetooth' && thingyEulerAngles[device.id]) {
+            if (device.type === 'thingy' && thingyEulerAngles[device.id]) {
                 delete thingyEulerAngles[device.id];
             }
         });
@@ -560,7 +563,7 @@
         // Track Euler angles and assign colors for any already-connected Thingy:52 devices
         const devices = inputController.getInputDevices();
         for (const device of devices) {
-            if (device.type === 'bluetooth' && device.thingyDevice) {
+            if (device.type === 'thingy' && device.thingyDevice) {
                 // Track Euler angles
                 device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
                     thingyEulerAngles[device.id] = { roll, pitch, yaw };

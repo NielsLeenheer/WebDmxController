@@ -62,8 +62,8 @@ export class InputController {
 	 * Setup listeners for a specific device
 	 */
 	_setupDeviceListeners(device) {
-		// Special handling for Thingy:52 (Bluetooth) devices
-		if (device.type === 'bluetooth') {
+		// Special handling for Thingy:52 devices
+		if (device.type === 'thingy') {
 			this._setupThingyListeners(device);
 			return;
 		}

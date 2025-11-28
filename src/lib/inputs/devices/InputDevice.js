@@ -5,7 +5,7 @@ export class InputDevice {
 	constructor(id, name, type) {
 		this.id = id;
 		this.name = name;
-		this.type = type; // 'midi', 'hid', 'keyboard', 'virtual', 'bluetooth'
+		this.type = type; // 'midi', 'hid', 'keyboard', 'virtual', 'thingy'
 		this.controls = new Map(); // controlId -> { type, value, min, max }
 		this.listeners = new Map(); // event -> callback[]
 	}

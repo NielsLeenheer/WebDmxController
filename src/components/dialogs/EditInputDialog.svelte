@@ -65,8 +65,8 @@
 		if (device.type === 'hid') {
 			return device.id !== 'keyboard';
 		}
-		// MIDI and Bluetooth (Thingy:52) support colors
-		return device.type === 'midi' || device.type === 'bluetooth';
+		// MIDI and Thingy:52 support colors
+		return device.type === 'midi' || device.type === 'thingy';
 	}
 
 	function isColorCapableControl(controlId) {

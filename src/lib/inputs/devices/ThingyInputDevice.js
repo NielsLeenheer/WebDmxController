@@ -5,7 +5,7 @@ import { InputDevice } from './InputDevice.js';
  */
 export class ThingyInputDevice extends InputDevice {
 	constructor(thingyDevice) {
-		super(thingyDevice.id, thingyDevice.name, 'bluetooth');
+		super(thingyDevice.id, thingyDevice.name, 'thingy');
 		this.thingyDevice = thingyDevice;
 
 		// Set up button handlers
