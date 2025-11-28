@@ -127,22 +127,24 @@
             tabs={modeTabs}
             bind:activeTab={mode}
         />
-        <Button 
-            onclick={restoreEditUniverse} 
-            variant="secondary"
-            disabled={mode !== 'edit'}
-        >
-            <Icon data={restoreIcon} />
-            Restore
-        </Button>
-        <Button 
-            onclick={clearEditUniverse} 
-            variant="secondary"
-            disabled={mode !== 'edit'}
-        >
-            <Icon data={clearIcon} />
-            Clear
-        </Button>
+        <div class="header-buttons">
+            <Button 
+                onclick={restoreEditUniverse} 
+                variant="secondary"
+                disabled={mode !== 'edit'}
+            >
+                <Icon data={restoreIcon} />
+                Restore
+            </Button>
+            <Button 
+                onclick={clearEditUniverse} 
+                variant="secondary"
+                disabled={mode !== 'edit'}
+            >
+                <Icon data={clearIcon} />
+                Clear
+            </Button>
+        </div>
     </div>
     <div class="channels-grid">
         {#each universe as value, channel}
@@ -174,10 +176,14 @@
 
     .universe-header {
         display: flex;
-        justify-content: center;
+        justify-content: space-between;
         align-items: center;
-        gap: 16px;
         margin-bottom: 20px;
+    }
+
+    .header-buttons {
+        display: flex;
+        gap: 8px;
     }
 
     .channels-grid {
