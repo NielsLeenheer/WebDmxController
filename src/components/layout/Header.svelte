@@ -16,8 +16,8 @@
     let connectedDevices = $state([]);
 
     // Filter devices by type
-    let streamDeckDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && d.streamDeck));
-    let hidDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && !d.streamDeck && d.id !== 'keyboard'));
+    let streamDeckDevices = $derived(connectedDevices.filter(d => d.type === 'streamdeck'));
+    let hidDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && d.id !== 'keyboard'));
     let thingyDevices = $derived(connectedDevices.filter(d => d.type === 'thingy'));
     let midiDevices = $derived(connectedDevices.filter(d => d.type === 'midi'));
 

@@ -5,7 +5,7 @@ import { InputDevice } from './InputDevice.js';
  */
 export class StreamDeckInputDevice extends InputDevice {
 	constructor(streamDeck, serialNumber, model, streamDeckManager, buttonCount = 6) {
-		super(serialNumber, model || 'Stream Deck', 'hid');
+		super(serialNumber, model || 'Stream Deck', 'streamdeck');
 		this.streamDeck = streamDeck;
 		this.serialNumber = serialNumber;
 		this.model = model;

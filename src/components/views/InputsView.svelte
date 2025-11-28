@@ -67,11 +67,8 @@
 
     function deviceSupportsColors(device) {
         if (!device) return false;
-        if (device.type === 'hid') {
-            return device.id !== 'keyboard';
-        }
-        // MIDI and Thingy:52 support colors
-        return device.type === 'midi' || device.type === 'thingy';
+        // StreamDeck, MIDI and Thingy:52 support colors
+        return device.type === 'streamdeck' || device.type === 'midi' || device.type === 'thingy';
     }
 
     function shouldAssignColorSupport(device, controlId) {
