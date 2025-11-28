@@ -13,6 +13,22 @@ export class StreamDeckInputDevice extends InputDevice {
 	}
 
 	/**
+	 * Get friendly name for a button
+	 * @param {string} controlId - Control identifier (e.g., 'button-0')
+	 * @returns {string} Friendly name (e.g., 'Button 1')
+	 */
+	_getFriendlyName(controlId) {
+		if (controlId.startsWith('button-')) {
+			const buttonIndex = parseInt(controlId.replace('button-', ''));
+			if (!isNaN(buttonIndex)) {
+				// Display 1-based button numbers to users
+				return `Button ${buttonIndex + 1}`;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Override _trigger to include Stream Deck-specific metadata
 	 */
 	_trigger(controlId, velocity = 1) {
@@ -21,7 +37,7 @@ export class StreamDeckInputDevice extends InputDevice {
 			velocity,
 			type: 'button',
 			colorSupport: 'rgb',
-			friendlyName: null
+			friendlyName: this._getFriendlyName(controlId)
 		});
 	}
 
