@@ -160,7 +160,7 @@ export class CSSManager {
 	 */
 	loadCustomCSS() {
 		const saved = localStorage.getItem('dmx-custom-css');
-		return saved || '/* Add your custom CSS here to override device defaults and apply animations */\n';
+		return saved || '\n\n\n\n\n';
 	}
 
 	/**
