@@ -261,30 +261,9 @@
 </script>
 
 <div class="preview {sizeClass} {className}" class:with-3d={needs3DOverflow()} style="{euler ? `transform: ${transform3D()};` : ''}">
-    {#if euler}
-        <!-- 3D layered Thingy:52 -->
-        {@const inputColor = (data.color && data.colorSupport && data.colorSupport !== 'none') ? paletteColorToHex(data.color) : '#888'}
-        
-        <!-- Multiple layers with translateZ for depth -->
-        {#each Array(12) as _, i}
-            {@const zOffset = i * 1}
-            {@const brightness = i === 11 ? 1 : (0.5 + ((i / 10) * 0.2))}
-            <div class="layer-3d" style="transform: translateZ({zOffset}px); background: {inputColor}; filter: brightness({brightness});">
-                {#if i === 11}
-                    <!-- Top layer - add orientation indicator -->
-                    <div class="orientation-indicator"></div>
-                {/if}
-            </div>
-        {/each}
-    {:else}
-        <!-- Non-3D rendering (original code) -->
-        <!-- Dark gray background (for devices/controls, and buttons/pads/thingy - not for knobs/sliders) -->
-        {#if type !== 'input' || (type === 'input' && (data.type === 'button' || data.type === 'pad' || data.type === 'thingy' || !data.type))}
-            <div class="preview-base"></div>
-        {/if}
-
+    
     {#if type === 'device' || type === 'controls'}
-        <!-- Fixed layer order from bottom to top -->
+        <div class="preview-base"></div>
         
         <!-- Base color layer -->
         {#if hasControl('color')}
@@ -363,19 +342,25 @@
             </div>
         {/if}
 
+        <div class="preview-inset-shadow"></div>
+
     {:else if type === 'animation'}
+        <div class="preview-base"></div>
+
         <!-- Animation preview with gradient -->
         {@const animationPreview = generateAnimationPreview(data)}
         {@const panTiltPositions = extractPanTiltKeyframes(data)}
         <div 
             class="preview-animation" 
-            style="background: {animationPreview}; {euler ? `box-shadow: ${dynamicShadow()};` : ''}"
+            style="background: {animationPreview};"
         >
             <!-- Show pan/tilt keyframe positions -->
             {#each panTiltPositions as position}
                 <div class="pan-tilt-keyframe" style="left: {position.x}%; top: {position.y}%"></div>
             {/each}
         </div>
+
+        <div class="preview-inset-shadow"></div>
 
     {:else if type === 'input'}
         <!-- Input preview based on type -->
@@ -391,23 +376,58 @@
         {@const keyChar = data.controlId?.startsWith('key-') ? extractKeyChar(data.controlId) : null}
         {@const isGamepad = data.deviceId?.startsWith('gamepad-')}
         {@const gamepadSymbol = isGamepad && data.controlId?.startsWith('button-') ? extractGamepadSymbol(data.controlId, data.deviceBrand) : null}
+        {@const gamepadButtonClass = isGamepad && data.controlId?.startsWith('button-') ? `gamepad-${data.controlId}` : ''}
+        {@const inputNameClass = data.name ? `input-${data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}` : ''}
         
-        {#if inputType === 'button' || inputType === 'pad' || inputType === 'thingy'}
-            {#if !euler}
-                <!-- Non-3D Button/Pad: colored or gray square -->
-                <div class="preview-input button-preview" style="background: {inputColor};">
-                    {#if keyChar}
-                        <div class="key-char">{keyChar}</div>
-                    {:else if gamepadSymbol}
+        
+        {#if inputType === 'thingy'}
+            <!-- Thingy:52 input preview -->
+            {#if euler}
+                <!-- 3D layered -->
+                {@const inputColor = (data.color && data.colorSupport && data.colorSupport !== 'none') ? paletteColorToHex(data.color) : '#888'}
+                
+                <!-- Multiple layers with translateZ for depth -->
+                {#each Array(12) as _, i}
+                    {@const zOffset = i * 1}
+                    {@const brightness = i === 11 ? 1 : (0.5 + ((i / 10) * 0.2))}
+                    <div class="layer-3d" style="transform: translateZ({zOffset}px); background: {inputColor}; filter: brightness({brightness});">
+                        {#if i === 11}
+                            <!-- Top layer - add orientation indicator -->
+                            <div class="orientation-indicator"></div>
+                        {/if}
+                    </div>
+                {/each}
+            {:else}
+                <div class="preview-base"></div>
+
+                <!-- Flat -->
+                <div class="preview-input button-preview thingy-input" style="background: {inputColor};">
+                    <div class="orientation-indicator"></div>
+                </div>
+
+                <div class="preview-inset-shadow"></div>
+            {/if}
+
+        {:else if inputType === 'button' || inputType === 'pad'}
+            <div class="preview-base"></div>
+    
+            <!-- Button/Pad: square with character or gamepad symbol -->
+            {#if isGamepad}
+                <div class="preview-input button-preview {inputType}-input {inputNameClass} {gamepadButtonClass}" style="background: #555;">
+                    {#if gamepadSymbol}
                         <div class="gamepad-symbol" class:small-text={gamepadSymbol.length > 1}>{gamepadSymbol}</div>
                     {/if}
                 </div>
-                
-                <!-- Orientation indicator for Thingy:52 (when not in 3D mode) -->
-                {#if inputType === 'thingy'}
-                    <div class="orientation-indicator"></div>
-                {/if}
+            {:else}
+                <div class="preview-input button-preview {inputType}-input {inputNameClass}" style="background: {inputColor};">
+                    {#if keyChar}
+                        <div class="key-char">{keyChar}</div>
+                    {/if}
+                </div>
             {/if}
+
+            <div class="preview-inset-shadow"></div>
+
             
         {:else if inputType === 'knob'}
             <!-- Knob: circle with rotating dot -->
@@ -439,27 +459,22 @@
                     {@const brightness = 0.3 + ((i / 7) * 0.4)}
                     <div 
                         class="axis-stick-layer" 
-                        style="transform: translateZ({zOffset}px); background: {inputColor}; filter: brightness({brightness});"
+                        style="transform: translateZ({zOffset}px); background: #555; filter: brightness({brightness});"
                     ></div>
                 {/each}
                 <!-- Top layer: the disc -->
                 <div 
                     class="axis-disc-layer" 
-                    style="transform: translateZ(0px); background: {inputColor};"
+                    style="transform: translateZ(0px); background: #666;"
+                ></div>
+
+                <!-- Circle for indent in the disc -->
+                <div 
+                    class="axis-disc-indent" 
+                    style="transform: translateZ(1px);"
                 ></div>
             </div>
         {/if}
-    {/if}
-
-    <!-- Top inset shadow layer (hidden for knobs, sliders, axes, and Thingy with euler angles) -->
-    {#if type === 'input'}
-        {@const inputType = data.type || 'button'}
-        {#if inputType !== 'knob' && inputType !== 'slider' && inputType !== 'axis' && !euler}
-            <div class="preview-inset-shadow"></div>
-        {/if}
-    {:else if !euler}
-        <div class="preview-inset-shadow"></div>
-    {/if}
     {/if}
 </div>
 
@@ -470,6 +485,10 @@
         overflow: hidden;
         position: relative;
         transform-style: preserve-3d;
+
+        --shadow-size: 3px;
+        --adjust-symbol-y: 0px;
+        --adjust-symbol-x: 0px;
     }
 
     /* Enable 3D perspective for rotating previews */
@@ -487,6 +506,7 @@
         height: 100%;
         transform-style: preserve-3d;
         border-radius: inherit;
+        corner-shape: inherit;
     }
 
     /* Size variants */
@@ -517,6 +537,7 @@
         height: 100%;
         background: #1a1a1a;
         border-radius: inherit;
+        corner-shape: inherit;
     }
 
     /* Control layers stack on top of base */
@@ -527,11 +548,7 @@
         width: 100%;
         height: 100%;
         border-radius: inherit;
-    }
-
-    /* Color layer has outer shadow only */
-    .control-color {
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        corner-shape: inherit;
     }
 
     /* Animation and input previews */
@@ -543,6 +560,7 @@
         width: 100%;
         height: 100%;
         border-radius: inherit;
+        corner-shape: inherit;
     }
 
     /* Top inset shadow layer */
@@ -553,8 +571,9 @@
         width: 100%;
         height: 100%;
         border-radius: inherit;
+        corner-shape: inherit;
         pointer-events: none;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2);
+        box-shadow: inset 0 calc(var(--shadow-size) * -1) 0px 0px rgba(0, 0, 0, 0.2);
         z-index: 100;
     }
 
@@ -574,13 +593,75 @@
         margin-top: -3px;
     }
 
+    /* Custom gamepad button shapes */
+
+    .input-preview:has(.input-l1),
+    .input-preview:has(.input-r1) {
+        border-top-left-radius: 30%;
+        border-top-right-radius: 30%;
+    }
+
+    .input-preview:has(.input-l2),
+    .input-preview:has(.input-r2) {
+        border-bottom-left-radius: 40% 80%;
+        border-bottom-right-radius: 40% 80%;
+    }
+
+    .input-preview:has(.input-d-up),
+    .input-preview:has(.input-d-down),
+    .input-preview:has(.input-d-left),
+    .input-preview:has(.input-d-right) {
+        --corner-radius: 25%;
+    }
+
+    .input-preview:has(.input-d-up) {
+        corner-bottom-left-shape: bevel;
+        corner-bottom-right-shape: bevel;
+        border-bottom-left-radius: var(--corner-radius);
+        border-bottom-right-radius: var(--corner-radius);
+        --adjust-symbol-y: -3px;
+    }
+
+    .input-preview:has(.input-d-down) {
+        corner-top-left-shape: bevel;
+        corner-top-right-shape: bevel;
+        border-top-left-radius: var(--corner-radius);
+        border-top-right-radius: var(--corner-radius);
+        --adjust-symbol-y: 3px;
+    }
+
+    .input-preview:has(.input-d-left) {
+        corner-top-right-shape: bevel;
+        corner-bottom-right-shape: bevel;
+        border-top-right-radius: var(--corner-radius);
+        border-bottom-right-radius: var(--corner-radius);
+        --adjust-symbol-x: -3px;
+    }
+
+    .input-preview:has(.input-d-right) {
+        corner-top-left-shape: bevel;
+        corner-bottom-left-shape: bevel;
+        border-top-left-radius: var(--corner-radius);
+        border-bottom-left-radius: var(--corner-radius);
+        --adjust-symbol-x: 3px;
+    }
+
+    .input-preview:has(.input-cross),
+    .input-preview:has(.input-circle),
+    .input-preview:has(.input-square),
+    .input-preview:has(.input-triangle) {
+        border-radius: 50%;
+        --adjust-symbol-y: 2px;
+    }
+
     /* Gamepad button symbol */
     .gamepad-symbol {
         font-size: 15px;
         font-weight: 600;
-        color: rgba(255,255,255,0.5);
+        color: rgba(255,255,255,0.8);
         user-select: none;
-        margin-top: -3px;
+        margin-top: calc(var(--adjust-symbol-y, 0px) + -3px);
+        margin-left: var(--adjust-symbol-x, 0px);
     }
 
     .gamepad-symbol.small-text {
@@ -588,10 +669,16 @@
         font-weight: 700;
     }
 
+    .input-cross .gamepad-symbol { color: rgb(177, 177, 250); }
+    .input-circle .gamepad-symbol { color: rgb(245, 186, 150); }
+    .input-square .gamepad-symbol { color: rgb(215, 157, 215); }
+    .input-triangle .gamepad-symbol { color: rgb(134, 213, 203); }
+
+
     /* Knob preview - circle with rotating dot */
     .knob-preview {
         border-radius: 50%;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2);
+        box-shadow: inset 0 calc(var(--shadow-size) * -1) 0px 0px rgba(0, 0, 0, 0.2);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -642,7 +729,19 @@
         margin-top: -50%;
         border-radius: 50%;
         transform-style: preserve-3d;
-        box-shadow: inset 0 -2px 0px 0px rgba(0, 0, 0, 0.2);
+        box-shadow: inset 0 calc(var(--shadow-size) * -1) 0px 0px rgba(0, 0, 0, 0.2);
+    }
+
+    .axis-disc-indent {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 60%;
+        height: 60%;
+        margin-left: -30%;
+        margin-top: -30%;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.1);
     }
 
     /* Slider preview - track with handle */
@@ -683,7 +782,7 @@
     .slider-handle {
         position: absolute;
         border-radius: 6px;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2);
+        box-shadow: inset 0 calc(var(--shadow-size) * -1) 0px 0px rgba(0, 0, 0, 0.2);
     }
 
     .slider-preview.horizontal .slider-handle {
@@ -782,7 +881,7 @@
             radial-gradient(circle at 62% 22%, rgba(170, 170, 170, 0.5) 0%, rgba(170, 170, 170, 0.5) 29%, transparent 30%),
             radial-gradient(circle at 48% 68%, rgba(165, 165, 165, 0.6) 0%, rgba(165, 165, 165, 0.6) 36%, transparent 37%);
         border-radius: inherit;
-        box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+        corner-shape: inherit;
         pointer-events: none;
         transition: opacity 0.2s ease-out;
     }
