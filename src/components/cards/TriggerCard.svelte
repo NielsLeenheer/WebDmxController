@@ -6,17 +6,21 @@
 	import DraggableCard from '../common/DraggableCard.svelte';
 	import Preview from '../common/Preview.svelte';
 	import IconButton from '../common/IconButton.svelte';
+	import Checkbox from '../common/Checkbox.svelte';
 	import editIcon from '../../assets/glyphs/edit.svg?raw';
 
 	let {
 		trigger,          // Trigger plain object
 		dnd,              // Drag-and-drop helper
-		onEdit            // Callback when edit button clicked
+		onEdit,           // Callback when edit button clicked
+		onToggleEnabled   // Callback when enabled state toggled
 	} = $props();
 
 	let device = $derived(deviceLibrary.get(trigger.output?.id));
 	let animation = $derived(trigger.action?.animation?.id ? animationLibrary.get(trigger.action.animation.id) : null);
 	let input = $derived(trigger.input?.id ? inputLibrary.get(trigger.input.id) : null);
+
+	const isEnabled = $derived(trigger.enabled !== false);
 
 	// Check if this is a value trigger
 	let isValue = $derived(isValueTrigger(trigger));
@@ -129,6 +133,15 @@
 </script>
 
 <DraggableCard {dnd} item={trigger} class="trigger-card">
+	<!-- Column 0: Enable toggle -->
+	<div class="trigger-column trigger-enabled-column">
+		<Checkbox
+			checked={isEnabled}
+			onchange={(value) => onToggleEnabled?.(trigger, value)}
+			label={isEnabled ? 'Disable trigger' : 'Enable trigger'}
+		/>
+	</div>
+
 	<!-- Column 1: Input -->
 	<div class="trigger-column trigger-input-column">
 		{#if trigger.type === 'auto'}
@@ -226,6 +239,13 @@
 		gap: 10px;
 		flex: 1;
 		min-width: 0;
+	}
+
+	.trigger-enabled-column {
+		flex: 0;
+		align-items: center;
+		justify-content: center;
+		min-width: 60px;
 	}
 
 	.trigger-input-column {

@@ -238,6 +238,10 @@
         }
     }
 
+    function toggleTriggerEnabled(trigger, enabled) {
+        triggerLibrary.update(trigger.id, { enabled });
+    }
+
 </script>
 
 <div class="triggers-view">
@@ -288,6 +292,7 @@
                     {trigger}
                     {dnd}
                     onEdit={openEditDialog}
+                    onToggleEnabled={toggleTriggerEnabled}
                 />
             {/each}
         {/if}

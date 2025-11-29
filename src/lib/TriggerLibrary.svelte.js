@@ -12,6 +12,7 @@
  * Structure:
  * {
  *   type: 'auto' | 'action' | 'value',
+ *   enabled: boolean,
  *   input: {
  *     id,                           // input id from InputLibrary
  *     state,                        // for action: 'up' | 'down' | 'on' | 'off'
@@ -51,6 +52,7 @@ export class TriggerLibrary extends Library {
 			const actionType = config.action?.type || 'animation';
 			return this.add({
 				type: 'auto',
+				enabled: config.enabled ?? true,
 				output: {
 					id: config.output?.id || null
 				},
@@ -72,6 +74,7 @@ export class TriggerLibrary extends Library {
 		if (type === 'value') {
 			return this.add({
 				type: 'value',
+				enabled: config.enabled ?? true,
 				input: {
 					id: config.input?.id || null,
 					value: config.input?.value || 'value'
@@ -96,6 +99,7 @@ export class TriggerLibrary extends Library {
 
 		return this.add({
 			type: 'action',
+			enabled: config.enabled ?? true,
 			input: {
 				id: config.input?.id || null,
 				state: config.input?.state || 'down'
@@ -126,7 +130,7 @@ export class TriggerLibrary extends Library {
 	 * @returns {string} Combined CSS
 	 */
 	toCSS(devices = [], animationLibrary = null, inputLibrary = null) {
-		const allTriggers = this.getAll();
+		const allTriggers = this.getAll().filter(trigger => trigger.enabled !== false);
 
 		// Separate value triggers from other triggers
 		const valueTriggers = allTriggers.filter(t => t.type === 'value');
@@ -200,6 +204,7 @@ export class TriggerLibrary extends Library {
 			return {
 				id: data.id || crypto.randomUUID(),
 				type: 'auto',
+				enabled: data.enabled !== undefined ? data.enabled : true,
 				output: {
 					id: data.output?.id || data.output?.device?.id || data.deviceId || null
 				},
@@ -222,6 +227,7 @@ export class TriggerLibrary extends Library {
 			return {
 				id: data.id || crypto.randomUUID(),
 				type: 'value',
+				enabled: data.enabled !== undefined ? data.enabled : true,
 				input: {
 					id: data.input?.id || data.inputId || null,
 					value: data.input?.value || data.inputValueKey || 'value'
@@ -273,6 +279,7 @@ export class TriggerLibrary extends Library {
 		return {
 			id: data.id || crypto.randomUUID(),
 			type: 'action',
+			enabled: data.enabled !== undefined ? data.enabled : true,
 			input: {
 				id: data.input?.id || data.inputId || null,
 				state: inputState
