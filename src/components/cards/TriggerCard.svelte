@@ -228,13 +228,13 @@
 		align-items: center;
 		gap: 20px;
 		width: 100%;
-		max-width: 800px;
+		max-width: 80vw;
 		padding: 20px;
 	}
 
 	.trigger-column {
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
 		align-items: center;
 		gap: 10px;
 		flex: 1;
@@ -244,12 +244,12 @@
 	.trigger-enabled-column {
 		flex: 0;
 		align-items: center;
-		justify-content: center;
+		justify-content: start;
 		min-width: 60px;
 	}
 
 	.trigger-input-column {
-		flex: 1.2;
+		flex: 1;
 	}
 
 	.trigger-device-column {
@@ -263,7 +263,7 @@
 	.trigger-text {
 		font-size: 9pt;
 		color: #666;
-		text-align: center;
+		text-align: left;
 		word-wrap: break-word;
 		width: 100%;
 	}
