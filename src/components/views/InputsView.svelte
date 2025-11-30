@@ -583,29 +583,29 @@
         inputController.on('input-trigger', ({ mapping, velocity, toggleState }) => {
             // For toggle buttons, use the toggleState from the event
             if (mapping.buttonMode === 'toggle') {
-                inputStates[mapping.id] = { state: toggleState ? 'on' : 'off' };
+                inputStates[mapping.id] = { ...inputStates[mapping.id], state: toggleState ? 'on' : 'off' };
 
                 // Update button color based on toggle state
                 updateButtonColorForToggleState(mapping, toggleState);
             } else if (isButton(mapping)) {
                 // For momentary buttons, show pressed state
-                inputStates[mapping.id] = { state: 'pressed' };
+                inputStates[mapping.id] = { ...inputStates[mapping.id], state: 'pressed' };
             }
         });
 
         inputController.on('input-release', ({ mapping }) => {
             if (isButton(mapping) && mapping.buttonMode !== 'toggle') {
                 // For momentary buttons, clear pressed state
-                inputStates[mapping.id] = { state: 'released' };
+                inputStates[mapping.id] = { ...inputStates[mapping.id], state: 'released' };
             }
         });
 
         inputController.on('input-valuechange', ({ mapping, value, x, y }) => {
             if (mapping.type === 'stick' && x !== undefined && y !== undefined) {
-                inputStates[mapping.id] = { x, y };
+                inputStates[mapping.id] = { ...inputStates[mapping.id], x, y };
             } 
             else if (!isButton(mapping) && value !== undefined) {
-                inputStates[mapping.id] = { value: Math.round(value * 100) };
+                inputStates[mapping.id] = { ...inputStates[mapping.id], value: Math.round(value * 100) };
             }
         });
     });
