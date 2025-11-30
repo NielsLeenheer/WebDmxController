@@ -11,6 +11,7 @@ import { PadInputType } from './PadInputType.js';
 import { KnobInputType } from './KnobInputType.js';
 import { SliderInputType } from './SliderInputType.js';
 import { ThingyInputType } from './ThingyInputType.js';
+import { StickInputType } from './StickInputType.js';
 
 // Export classes
 export { InputType };
@@ -20,6 +21,7 @@ export { PadInputType };
 export { KnobInputType };
 export { SliderInputType };
 export { ThingyInputType };
+export { StickInputType };
 
 // Singleton instances for each type
 const buttonType = new ButtonInputType();
@@ -28,6 +30,7 @@ const padType = new PadInputType();
 const knobType = new KnobInputType();
 const sliderType = new SliderInputType();
 const thingyType = new ThingyInputType();
+const stickType = new StickInputType();
 
 /**
  * Input types registry
@@ -39,7 +42,8 @@ export const INPUT_TYPES = {
 	pad: padType,
 	knob: knobType,
 	slider: sliderType,
-	thingy: thingyType
+	thingy: thingyType,
+	stick: stickType
 };
 
 /**

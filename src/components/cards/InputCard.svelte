@@ -8,10 +8,41 @@
 	let {
 		input,           // Input plain object
 		dnd,             // Drag-and-drop helper
-		stateDisplay,    // Computed state display string
+		state = {},      // Raw state object: { value?, x?, y?, state? }
 		eulerAngles,     // Euler angles for Thingy:52 (optional)
 		onEdit           // Callback when edit button clicked
 	} = $props();
+
+	// Format state for UI display
+	const stateDisplay = $derived.by(() => {
+		if (!state) return '';
+
+		let parts = [];
+
+		// For sticks (have x and y values)
+		if (state.x !== undefined && state.y !== undefined) {
+			parts.push(`${state.x}% ${state.y}%`);
+		}
+
+		// For knobs/sliders/axis
+		if (state.value !== undefined) {
+			parts.push(`${state.value}%`);
+		}
+
+		// For buttons (toggle or momentary)
+		if (isButton(input)) {
+			if (input.buttonMode === 'toggle') {
+				parts.push(state.state === 'on' ? 'On' : 'Off');
+			} else {
+				// Momentary buttons - only show when pressed
+				if (state.state === 'pressed') {
+					parts.push('●');
+				}
+			}
+		}
+		
+		return parts.join(' ');
+	});
 
 </script>
 
@@ -20,7 +51,7 @@
 		type="input"
 		size="medium"
 		data={input}
-		stateValue={stateDisplay}
+		state={state}
 		euler={input.controlId === 'thingy' && eulerAngles ? eulerAngles : null}
 		class="input-preview"
 	/>
@@ -81,7 +112,7 @@
 	}
 
 	:global(.input-card) .input-device-name .separator {
-		margin: 0 4px;
+		margin: 0 1px;
 		opacity: 0.5;
 	}
 

@@ -170,19 +170,27 @@ export class GamepadInputDevice extends InputDevice {
 		const nativeGamepad = nativeGamepads[gamepadIndex];
 		const rawName = nativeGamepad?.id || '';
 		const name = getFriendlyGamepadName(rawName);
-		
+
 		super(id, name, 'gamepad');
-		
+
 		this.gamepad = gamepad;
 		this.gamepadIndex = gamepadIndex;
+		this.stableId = stableId || id;
 		this.rawName = rawName;
 		this.brand = detectGamepadBrand(rawName);
-		
+
 		// Track axis deadzone (to filter noise)
 		this.axisDeadzone = 0.1;
-		
+
 		// Track last axis values to avoid spamming events
 		this.lastAxisValues = new Map();
+
+		// Track stick state (for composite stick controls)
+		// Each stick has { x, y, pressed }
+		this.stickState = {
+			left: { x: 0, y: 0, pressed: false },
+			right: { x: 0, y: 0, pressed: false }
+		};
 	}
 
 	/**
@@ -205,9 +213,21 @@ export class GamepadInputDevice extends InputDevice {
 	 * @param {string} buttonName - Button name from gamecontroller.js
 	 */
 	handleButtonDown(button, buttonName) {
+		// L3 (button 10) and R3 (button 11) are handled as stick buttons
+		if (button === 10) {
+			this.stickState.left.pressed = true;
+			this._emitStickEvent('left-stick', 'trigger');
+			return;
+		} else if (button === 11) {
+			this.stickState.right.pressed = true;
+			this._emitStickEvent('right-stick', 'trigger');
+			return;
+		}
+
+		// Regular button handling
 		const controlId = `button-${button}`;
 		const friendlyName = this.getButtonName(button);
-		
+
 		this._emit('trigger', {
 			controlId,
 			velocity: 127,
@@ -223,6 +243,18 @@ export class GamepadInputDevice extends InputDevice {
 	 * @param {number} button - Button index
 	 */
 	handleButtonUp(button) {
+		// L3 (button 10) and R3 (button 11) are handled as stick buttons
+		if (button === 10) {
+			this.stickState.left.pressed = false;
+			this._emitStickEvent('left-stick', 'release');
+			return;
+		} else if (button === 11) {
+			this.stickState.right.pressed = false;
+			this._emitStickEvent('right-stick', 'release');
+			return;
+		}
+
+		// Regular button handling
 		const controlId = `button-${button}`;
 		this._emit('release', { controlId });
 	}
@@ -234,44 +266,85 @@ export class GamepadInputDevice extends InputDevice {
 	 * @param {number} value - Axis value (-1 to 1)
 	 */
 	handleAxisMove(axis, axeName, value) {
-		const controlId = `axis-${axis}`;
-		const friendlyName = AXIS_NAMES[axis] || `Axis ${axis}`;
-		// Even axes (0, 2) are X (horizontal), odd axes (1, 3) are Y (vertical)
-		const orientation = (axis % 2 === 0) ? 'horizontal' : 'vertical';
-		
 		// Apply deadzone
 		let processedValue = value;
 		if (Math.abs(value) < this.axisDeadzone) {
 			processedValue = 0;
 		}
-		
+
 		// Check if value has changed significantly
 		const lastValue = this.lastAxisValues.get(axis) || 0;
 		if (Math.abs(processedValue - lastValue) < 0.01) {
 			return; // Skip tiny changes
 		}
 		this.lastAxisValues.set(axis, processedValue);
-		
-		// Normalize from -1..1 to 0..1
-		const normalizedValue = (processedValue + 1) / 2;
-		
-		if (!this.controls.has(controlId)) {
-			this.controls.set(controlId, { type: 'value', value: 0, min: -1, max: 1, orientation });
+
+		// Map axes to sticks:
+		// Axis 0: Left X, Axis 1: Left Y
+		// Axis 2: Right X, Axis 3: Right Y
+		if (axis === 0) {
+			this.stickState.left.x = processedValue;
+			this._emitStickEvent('left-stick', 'change');
+		} else if (axis === 1) {
+			this.stickState.left.y = processedValue;
+			this._emitStickEvent('left-stick', 'change');
+		} else if (axis === 2) {
+			this.stickState.right.x = processedValue;
+			this._emitStickEvent('right-stick', 'change');
+		} else if (axis === 3) {
+			this.stickState.right.y = processedValue;
+			this._emitStickEvent('right-stick', 'change');
 		}
-		
+	}
+
+	/**
+	 * Emit a stick event (trigger, release, or change)
+	 * @param {string} stickId - 'left-stick' or 'right-stick'
+	 * @param {string} eventType - 'trigger', 'release', or 'change'
+	 */
+	_emitStickEvent(stickId, eventType) {
+		const stick = stickId === 'left-stick' ? this.stickState.left : this.stickState.right;
+		const friendlyName = stickId === 'left-stick' ? 'Left Stick' : 'Right Stick';
+
+		const controlId = stickId;
+
+		// Update control state
+		if (!this.controls.has(controlId)) {
+			this.controls.set(controlId, {
+				type: 'stick',
+				x: 0,
+				y: 0,
+				pressed: false
+			});
+		}
+
 		const control = this.controls.get(controlId);
-		control.value = normalizedValue;
-		
-		this._emit('change', {
-			controlId,
-			value: normalizedValue,
-			rawValue: processedValue,
-			control,
-			type: 'axis',
-			orientation,
-			colorSupport: 'none',
-			friendlyName,
-		});
+		control.x = stick.x;
+		control.y = stick.y;
+		control.pressed = stick.pressed;
+
+		if (eventType === 'trigger') {
+			this._emit('trigger', {
+				controlId,
+				velocity: 127,
+				type: 'stick',
+				colorSupport: 'none',
+				friendlyName,
+				deviceBrand: this.brand,
+			});
+		} else if (eventType === 'release') {
+			this._emit('release', { controlId });
+		} else if (eventType === 'change') {
+			this._emit('change', {
+				controlId,
+				x: stick.x,
+				y: stick.y,
+				control,
+				type: 'stick',
+				colorSupport: 'none',
+				friendlyName,
+			});
+		}
 	}
 
 	/**
@@ -280,25 +353,31 @@ export class GamepadInputDevice extends InputDevice {
 	 */
 	getAvailableControls() {
 		const controls = [];
-		
-		// Add buttons
+
+		// Add analog sticks (composite controls)
+		controls.push({
+			controlId: 'left-stick',
+			type: 'stick',
+			friendlyName: 'Left Stick',
+		});
+		controls.push({
+			controlId: 'right-stick',
+			type: 'stick',
+			friendlyName: 'Right Stick',
+		});
+
+		// Add buttons (excluding L3/R3 which are part of sticks)
 		GAMEPAD_BUTTONS.forEach((buttonName, index) => {
+			// Skip L3 (10) and R3 (11) as they're part of stick controls
+			if (index === 10 || index === 11) return;
+
 			controls.push({
 				controlId: `button-${index}`,
 				type: 'button',
 				friendlyName: this.getButtonName(index),
 			});
 		});
-		
-		// Add axes
-		GAMEPAD_AXES.forEach((axeName, index) => {
-			controls.push({
-				controlId: `axis-${index}`,
-				type: 'axis',
-				friendlyName: AXIS_NAMES[index] || `Axis ${index}`,
-			});
-		});
-		
+
 		return controls;
 	}
 

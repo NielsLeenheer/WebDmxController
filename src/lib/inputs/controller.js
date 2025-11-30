@@ -84,9 +84,10 @@ export class InputController {
 				this._handleRelease(device.id, controlId);
 			});
 
-			// Handle value changes (axes)
-			device.on('change', ({ controlId, value }) => {
-				this._handleValueChange(device.id, controlId, value);
+			// Handle value changes (axes, sticks)
+			device.on('change', (eventData) => {
+				const { controlId, value, x, y } = eventData;
+				this._handleValueChange(device.id, controlId, value, { x, y });
 			});
 			return;
 		}
@@ -101,9 +102,10 @@ export class InputController {
 			this._handleRelease(device.id, controlId);
 		});
 
-		// Handle value changes (knobs, sliders)
-		device.on('change', ({ controlId, value }) => {
-			this._handleValueChange(device.id, controlId, value);
+		// Handle value changes (knobs, sliders, sticks)
+		device.on('change', (eventData) => {
+			const { controlId, value, x, y } = eventData;
+			this._handleValueChange(device.id, controlId, value, { x, y });
 		});
 	}
 
@@ -299,20 +301,35 @@ export class InputController {
 	}
 
 	/**
-	 * Handle value change (knob/slider)
+	 * Handle value change (knob/slider/stick)
 	 */
-	_handleValueChange(deviceId, controlId, value) {
+	_handleValueChange(deviceId, controlId, value, extraData = {}) {
 		// Find the input for this control
 		const input = this.inputLibrary.findByDeviceControl(deviceId, controlId);
 
-		// Set a custom property based on the input's cssIdentifier (for use in CSS)
-		if (input && input.cssIdentifier) {
-			// Convert value (0-1) to percentage
-			const percentage = Math.round(value * 100);
-			this.customPropertyManager.setProperty(input.cssIdentifier, `${percentage}%`);
+		if (!input) return;
 
-			// Emit event for input value change
-			this._emit('input-valuechange', { mapping: input, value });
+		// Set custom properties based on the input's cssIdentifier (for use in CSS)
+		if (input.cssIdentifier) {
+			// For stick inputs (have x and y)
+			if (input.type === 'stick' && extraData.x !== undefined && extraData.y !== undefined) {
+				// Convert from -1..1 to 0..100 percentage
+				const xPercent = Math.round(((extraData.x + 1) / 2) * 100);
+				const yPercent = Math.round(((extraData.y + 1) / 2) * 100);
+				this.customPropertyManager.setProperty(`${input.cssIdentifier}-x`, `${xPercent}%`);
+				this.customPropertyManager.setProperty(`${input.cssIdentifier}-y`, `${yPercent}%`);
+
+				// Emit event for input value change with x and y
+				this._emit('input-valuechange', { mapping: input, x: xPercent, y: yPercent });
+			} else if (value !== undefined) {
+				// For regular value inputs (knobs, sliders, axes)
+				// Convert value (0-1) to percentage
+				const percentage = Math.round(value * 100);
+				this.customPropertyManager.setProperty(input.cssIdentifier, `${percentage}%`);
+
+				// Emit event for input value change
+				this._emit('input-valuechange', { mapping: input, value });
+			}
 		}
 	}
 

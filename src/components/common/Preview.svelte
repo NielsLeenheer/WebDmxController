@@ -21,7 +21,7 @@
         controls = [],
         data = {},
         euler = null,
-        stateValue = '',  // For input state values (e.g., "50%" for knob/slider)
+        state = {},       // Raw state object: { value?, x?, y?, state? }
         class: className = '',
     } = $props();
 
@@ -254,9 +254,9 @@
         return `rotateX(${-screenPitch + 20}deg) rotateY(${screenRoll}deg) rotateZ(${euler.yaw}deg)`;
     });
 
-    // Check if we need 3D overflow (for euler or axis inputs)
+    // Check if we need 3D overflow (for euler, axis, or stick inputs)
     const needs3DOverflow = $derived(() => {
-        return euler !== null || (type === 'input' && data.type === 'axis');
+        return euler !== null || (type === 'input' && (data.type === 'axis' || data.type === 'stick'));
     });
 </script>
 
@@ -368,11 +368,12 @@
         {@const inputColor = (data.color && data.colorSupport && data.colorSupport !== 'none') ? paletteColorToHex(data.color) : '#888'}
         {@const orientation = data.orientation || 'vertical'}
         {@const defaultValue = inputType === 'axis' ? 50 : 0}
-        {@const value = stateValue ? parseFloat(stateValue) : defaultValue}
+        {@const value = state.value !== undefined ? state.value : defaultValue}
+        {@const xValue = state.x !== undefined ? state.x : 50}
+        {@const yValue = state.y !== undefined ? state.y : 50}
         {@const knobAngle = 30 + (value * 2.7)} <!-- 7 o'clock to 5 o'clock = 30deg to 300deg = 270 degrees total (0deg = 6 o'clock, clockwise) -->
         {@const sliderPosition = value * 0.7} <!-- Adjust for 30% handle size: 0% -> 0%, 100% -> 70% -->
         {@const axisTilt = (value - 50) * 1.1} <!-- 0% = -55deg, 50% = 0deg (flat), 100% = +55deg -->
-        {@const axisDotOffset = (value - 50) * 0.6} <!-- Dot moves from -30% to +30% based on value -->
         {@const keyChar = data.controlId?.startsWith('key-') ? extractKeyChar(data.controlId) : null}
         {@const isGamepad = data.deviceId?.startsWith('gamepad-')}
         {@const gamepadSymbol = isGamepad && data.controlId?.startsWith('button-') ? extractGamepadSymbol(data.controlId, data.deviceBrand) : null}
@@ -457,20 +458,48 @@
                 {#each Array(8) as _, i}
                     {@const zOffset = -25 + (i * 2)}
                     {@const brightness = 0.3 + ((i / 7) * 0.4)}
-                    <div 
-                        class="axis-stick-layer" 
+                    <div
+                        class="axis-stick-layer"
                         style="transform: translateZ({zOffset}px); background: #555; filter: brightness({brightness});"
                     ></div>
                 {/each}
                 <!-- Top layer: the disc -->
-                <div 
-                    class="axis-disc-layer" 
+                <div
+                    class="axis-disc-layer"
                     style="transform: translateZ(0px); background: #666;"
                 ></div>
 
                 <!-- Circle for indent in the disc -->
-                <div 
-                    class="axis-disc-indent" 
+                <div
+                    class="axis-disc-indent"
+                    style="transform: translateZ(1px);"
+                ></div>
+            </div>
+
+        {:else if inputType === 'stick'}
+            <!-- Stick: 3D tilting disc on a stick with 2D position (combines X and Y) -->
+            {@const xTilt = (xValue - 50) * 1.1}  <!-- -55deg to +55deg based on X -->
+            {@const yTilt = (yValue - 50) * 1.1}  <!-- -55deg to +55deg based on Y -->
+            {@const stickTransform = `rotateY(${xTilt}deg) rotateX(${-yTilt}deg)`}
+            <div class="preview-input stick-wrapper" style="transform: {stickTransform};">
+                <!-- 8 small depth layers (the stick) from -25px to -11px at 2px intervals -->
+                {#each Array(8) as _, i}
+                    {@const zOffset = -25 + (i * 2)}
+                    {@const brightness = 0.3 + ((i / 7) * 0.4)}
+                    <div
+                        class="stick-stick-layer"
+                        style="transform: translateZ({zOffset}px); background: #555; filter: brightness({brightness});"
+                    ></div>
+                {/each}
+                <!-- Top layer: the disc -->
+                <div
+                    class="stick-disc-layer"
+                    style="transform: translateZ(0px); background: #666;"
+                ></div>
+
+                <!-- Circle for indent in the disc -->
+                <div
+                    class="stick-disc-indent"
                     style="transform: translateZ(1px);"
                 ></div>
             </div>
@@ -733,6 +762,57 @@
     }
 
     .axis-disc-indent {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 60%;
+        height: 60%;
+        margin-left: -30%;
+        margin-top: -30%;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Stick preview - wrapper provides perspective and holds the transform (same as axis) */
+    .stick-wrapper {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        perspective: 80px;
+        transform-style: preserve-3d;
+        transform-origin: center center -20px;
+    }
+
+    /* Stick stick layers (small, behind the disc) */
+    .stick-stick-layer {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 15%;
+        height: 15%;
+        margin-left: -7.5%;
+        margin-top: -7.5%;
+        border-radius: 50%;
+        transform-style: preserve-3d;
+    }
+
+    /* Stick disc layer (full size, on top) */
+    .stick-disc-layer {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 100%;
+        height: 100%;
+        margin-left: -50%;
+        margin-top: -50%;
+        border-radius: 50%;
+        transform-style: preserve-3d;
+        box-shadow: inset 0 calc(var(--shadow-size) * -1) 0px 0px rgba(0, 0, 0, 0.2);
+    }
+
+    .stick-disc-indent {
         position: absolute;
         top: 50%;
         left: 50%;

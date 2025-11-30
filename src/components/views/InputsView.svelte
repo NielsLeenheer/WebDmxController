@@ -36,28 +36,6 @@
         getItemId: (item) => item.id
     });
 
-    function getInputStateDisplay(input) {
-        const state = inputStates[input.id];
-        if (!state) return '';
-
-        // For buttons (toggle or momentary)
-        if (isButton(input)) {
-            if (input.buttonMode === 'toggle') {
-                return state.state === 'on' ? 'On' : 'Off';
-            } else {
-                // Momentary buttons - only show when pressed
-                return state.state === 'pressed' ? '●' : '';
-            }
-        }
-
-        // For knobs/sliders
-        if (state.value !== undefined) {
-            return `${state.value}%`;
-        }
-
-        return '';
-    }
-
     function isColorCapableControl(controlId) {
         if (!controlId || typeof controlId !== 'string') return false;
         // Thingy:52 uses 'thingy' controlId (single input with button + sensor functionality)
@@ -201,7 +179,7 @@
                 color
             });
 
-            // Initialize pressure property for button inputs
+            // Initialize state for the new input
             if (isButton(input)) {
                 inputController.customPropertyManager.setProperty(`${input.cssIdentifier}-pressure`, '0.0%');
             }
@@ -357,17 +335,24 @@
     $effect(() => {
         // Initialize input states for all inputs
         for (const input of inputs) {
-            if (isButton(input)) {
-                // Initialize toggle buttons to 'off', momentary buttons have no initial state
-                if (input.buttonMode === 'toggle' && !inputStates[input.id]) {
-                    inputStates[input.id] = { state: 'off' };
-                    // Note: Initial color will be set by applyColorsToDevices()
+            if (!inputStates[input.id]) {
+                inputStates[input.id] = {};
+
+                if (isButton(input) && input.buttonMode === 'toggle') {
+                    inputStates[input.id]['state'] = 'off';
                 }
-            } else {
-                // Initialize knobs/sliders to 0%, axes to 50% (neutral)
-                if (!inputStates[input.id]) {
-                    const defaultValue = input.type === 'axis' ? 50 : 0;
-                    inputStates[input.id] = { value: defaultValue };
+            
+                if (input.type === 'stick') {
+                    inputStates[input.id]['x'] = 50;
+                    inputStates[input.id]['y'] = 50;
+                }
+
+                if (input.type == 'axis') {
+                    inputStates[input.id]['value'] = 50;
+                } 
+                
+                if (input.type == 'knob' || input.type == 'slider') {
+                    inputStates[input.id]['value'] = 0;
                 }
             }
         }
@@ -614,9 +599,11 @@
             }
         });
 
-        inputController.on('input-valuechange', ({ mapping, value }) => {
-            if (!isButton(mapping)) {
-                // For knobs/sliders, store the value (0-1)
+        inputController.on('input-valuechange', ({ mapping, value, x, y }) => {
+            if (mapping.type === 'stick' && x !== undefined && y !== undefined) {
+                inputStates[mapping.id] = { x, y };
+            } 
+            else if (!isButton(mapping) && value !== undefined) {
                 inputStates[mapping.id] = { value: Math.round(value * 100) };
             }
         });
@@ -652,7 +639,7 @@
                 <InputCard
                     {input}
                     {dnd}
-                    stateDisplay={getInputStateDisplay(input)}
+                    state={inputStates[input.id] || {}}
                     eulerAngles={thingyEulerAngles[input.deviceId]}
                     onEdit={startEditing}
                 />
