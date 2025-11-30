@@ -164,12 +164,12 @@ const AXIS_NAMES = {
  * Wraps a gamecontroller.js gamepad instance
  */
 export class GamepadInputDevice extends InputDevice {
-	constructor(gamepad) {
-		// Use gamepad index as ID (prefixed to avoid conflicts)
+	constructor(gamepad, stableId = null) {
+		// Use stable ID if provided, otherwise fall back to index-based ID
 		// gamecontroller.js uses 'id' for the gamepad index
 		const gamepadIndex = gamepad.id;
-		const id = `gamepad-${gamepadIndex}`;
-		
+		const id = stableId || `gamepad-${gamepadIndex}`;
+
 		// Get the native gamepad name from the browser and make it friendly
 		const nativeGamepads = navigator.getGamepads ? navigator.getGamepads() : [];
 		const nativeGamepad = nativeGamepads[gamepadIndex];

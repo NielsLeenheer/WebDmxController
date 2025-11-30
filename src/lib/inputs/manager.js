@@ -99,24 +99,36 @@ export class InputDeviceManager {
 	 * Setup Gamepad event listeners
 	 */
 	_setupGamepadListeners() {
-		this.gamepadManager.on('connected', ({ gamepad }) => {
-			// gamecontroller.js uses gamepad.id for the index
-			console.log(`Gamepad connected: index ${gamepad.id}`);
+		// Track mapping from gamepad index to device ID (since index can change on reconnect)
+		this.gamepadIndexToDeviceId = new Map();
 
-			// Create GamepadInputDevice wrapper
-			const inputDevice = new GamepadInputDevice(gamepad);
+		this.gamepadManager.on('connected', ({ gamepad, gamepadId }) => {
+			// gamecontroller.js uses gamepad.id for the index
+			console.log(`Gamepad connected: index ${gamepad.id}, stable ID: ${gamepadId}`);
+
+			// Create GamepadInputDevice wrapper with stable ID
+			const inputDevice = new GamepadInputDevice(gamepad, gamepadId);
 			this.devices.set(inputDevice.id, inputDevice);
+
+			// Track the mapping from current index to stable device ID
+			this.gamepadIndexToDeviceId.set(gamepad.id, inputDevice.id);
+
 			this._emit('deviceadded', inputDevice);
 		});
 
-		this.gamepadManager.on('disconnected', ({ gamepadIndex }) => {
+		this.gamepadManager.on('disconnected', ({ gamepadIndex, gamepadId }) => {
 			console.log(`Gamepad disconnected: index ${gamepadIndex}`);
-			const deviceId = `gamepad-${gamepadIndex}`;
-			this.removeDevice(deviceId);
+
+			// Look up the device ID from the index mapping
+			const deviceId = this.gamepadIndexToDeviceId.get(gamepadIndex);
+			if (deviceId) {
+				this.gamepadIndexToDeviceId.delete(gamepadIndex);
+				this.removeDevice(deviceId);
+			}
 		});
 
 		this.gamepadManager.on('buttondown', ({ gamepadIndex, button, buttonName }) => {
-			const deviceId = `gamepad-${gamepadIndex}`;
+			const deviceId = this.gamepadIndexToDeviceId.get(gamepadIndex);
 			const inputDevice = this.devices.get(deviceId);
 			console.log(`Manager received buttondown: gamepad ${gamepadIndex}, button ${button}, device found: ${!!inputDevice}`);
 
@@ -126,7 +138,7 @@ export class InputDeviceManager {
 		});
 
 		this.gamepadManager.on('buttonup', ({ gamepadIndex, button }) => {
-			const deviceId = `gamepad-${gamepadIndex}`;
+			const deviceId = this.gamepadIndexToDeviceId.get(gamepadIndex);
 			const inputDevice = this.devices.get(deviceId);
 
 			if (inputDevice) {
@@ -135,7 +147,7 @@ export class InputDeviceManager {
 		});
 
 		this.gamepadManager.on('axismove', ({ gamepadIndex, axis, axeName, value }) => {
-			const deviceId = `gamepad-${gamepadIndex}`;
+			const deviceId = this.gamepadIndexToDeviceId.get(gamepadIndex);
 			const inputDevice = this.devices.get(deviceId);
 
 			if (inputDevice) {
