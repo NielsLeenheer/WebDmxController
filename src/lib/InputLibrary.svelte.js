@@ -107,8 +107,12 @@ export class InputLibrary extends Library {
 		if (/nintendo|switch|pro\s*controller|joy-?con/i.test(deviceName)) {
 			return 'nintendo';
 		}
-		// Default to xbox for other gamepads
-		return 'xbox';
+		// Xbox patterns
+		if (/xbox|microsoft|xinput/i.test(deviceName)) {
+			return 'xbox';
+		}
+		// Unknown brand
+		return null;
 	}
 
 	/**

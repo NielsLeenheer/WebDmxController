@@ -21,16 +21,21 @@ const GAMEPAD_BRANDS = {
 		/joy-?con/i,
 		/057e/i, // Nintendo vendor ID
 	],
-	// Xbox and others use default naming
+	xbox: [
+		/xbox/i,
+		/microsoft/i,
+		/xinput/i,
+		/045e/i, // Microsoft vendor ID
+	],
 };
 
 /**
  * Detect gamepad brand from raw ID string
  * @param {string} rawId - The raw gamepad ID from the browser
- * @returns {'sony'|'nintendo'|'xbox'} The detected brand
+ * @returns {'sony'|'nintendo'|'xbox'|null} The detected brand or null
  */
 function detectGamepadBrand(rawId) {
-	if (!rawId) return 'xbox';
+	if (!rawId) return null;
 	
 	for (const [brand, patterns] of Object.entries(GAMEPAD_BRANDS)) {
 		for (const pattern of patterns) {
@@ -40,7 +45,7 @@ function detectGamepadBrand(rawId) {
 		}
 	}
 	
-	return 'xbox'; // Default to Xbox-style naming
+	return null; // Unknown brand
 }
 
 /**
@@ -201,7 +206,12 @@ export class GamepadInputDevice extends InputDevice {
 	getButtonName(button) {
 		// Face buttons (0-3) have brand-specific names
 		if (button >= 0 && button <= 3) {
-			return FACE_BUTTON_NAMES[this.brand]?.[button] || FACE_BUTTON_NAMES.xbox[button];
+			// Only use brand-specific names if brand is known
+			if (this.brand && FACE_BUTTON_NAMES[this.brand]) {
+				return FACE_BUTTON_NAMES[this.brand][button];
+			}
+			// Generic names for unknown brands
+			return `Button ${button + 1}`;
 		}
 		// Other buttons use common names
 		return COMMON_BUTTON_NAMES[button] || `Button ${button}`;

@@ -113,10 +113,10 @@
             16: '⌂',     // Home
         };
         
-        // Face buttons (0-3) use brand-specific symbols
+        // Face buttons (0-3) use brand-specific symbols only if brand is known
         if (buttonIndex >= 0 && buttonIndex <= 3) {
-            const brand = gamepadBrand || 'xbox';
-            return faceButtonSymbols[brand]?.[buttonIndex] || faceButtonSymbols.xbox[buttonIndex];
+            if (!gamepadBrand) return null; // No symbol for unknown brand
+            return faceButtonSymbols[gamepadBrand]?.[buttonIndex] ?? null;
         }
         
         // Other buttons use common symbols
@@ -414,7 +414,8 @@
     
             <!-- Button/Pad: square with character or gamepad symbol -->
             {#if isGamepad}
-                <div class="preview-input button-preview {inputType}-input {inputNameClass} {gamepadButtonClass}" style="background: #555;">
+                {@const brandClass = data.deviceBrand ? `brand-${data.deviceBrand}` : ''}
+                <div class="preview-input button-preview {inputType}-input {inputNameClass} {gamepadButtonClass} {brandClass}" style="background: #555;">
                     {#if gamepadSymbol}
                         <div class="gamepad-symbol" class:small-text={gamepadSymbol.length > 1}>{gamepadSymbol}</div>
                     {/if}
@@ -678,7 +679,11 @@
     .input-preview:has(.input-cross),
     .input-preview:has(.input-circle),
     .input-preview:has(.input-square),
-    .input-preview:has(.input-triangle) {
+    .input-preview:has(.input-triangle),
+    .input-preview:has(.input-a),
+    .input-preview:has(.input-b),
+    .input-preview:has(.input-x),
+    .input-preview:has(.input-y) {
         border-radius: 50%;
         --adjust-symbol-y: 2px;
     }
@@ -698,11 +703,15 @@
         font-weight: 700;
     }
 
-    .input-cross .gamepad-symbol { color: rgb(177, 177, 250); }
-    .input-circle .gamepad-symbol { color: rgb(245, 186, 150); }
-    .input-square .gamepad-symbol { color: rgb(215, 157, 215); }
-    .input-triangle .gamepad-symbol { color: rgb(134, 213, 203); }
+    .brand-sony.input-cross .gamepad-symbol { color: rgb(177, 177, 250); }
+    .brand-sony.input-circle .gamepad-symbol { color: rgb(245, 186, 150); }
+    .brand-sony.input-square .gamepad-symbol { color: rgb(215, 157, 215); }
+    .brand-sony.input-triangle .gamepad-symbol { color: rgb(134, 213, 203); }
 
+    .brand-xbox.input-a .gamepad-symbol { color: rgb(115, 249, 115); }
+    .brand-xbox.input-b .gamepad-symbol { color: rgb(255, 133, 133); }
+    .brand-xbox.input-x .gamepad-symbol { color: rgb(96, 165, 255); }
+    .brand-xbox.input-y .gamepad-symbol { color: rgb(255, 255, 0); }
 
     /* Knob preview - circle with rotating dot */
     .knob-preview {

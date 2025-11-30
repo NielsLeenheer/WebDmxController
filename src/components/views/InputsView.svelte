@@ -132,6 +132,7 @@
                     colorSupport: eventData.colorSupport, // Pass colorSupport from device event
                     friendlyName: eventData.friendlyName, // Pass friendlyName from device event
                     orientation: eventData.orientation, // Pass orientation from device event
+                    deviceBrand: eventData.deviceBrand, // Pass deviceBrand from device event
                     device
                 });
             };
