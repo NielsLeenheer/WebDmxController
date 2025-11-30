@@ -50,9 +50,9 @@
 			editingButtonMode = input.buttonMode || 'momentary';
 			editingColor = input.color;
 
-			// Compute whether to show color picker
-			// Use the colorSupport field from the input
-			showColorPicker = input.colorSupport && input.colorSupport !== 'none';
+			// Only show color picker for RGB color support
+			// Single-color buttons (red, green) don't need a picker
+			showColorPicker = input.colorSupport === 'rgb';
 
 			requestAnimationFrame(() => {
 				dialogRef?.showModal();

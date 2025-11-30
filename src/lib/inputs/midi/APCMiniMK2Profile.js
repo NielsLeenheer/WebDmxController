@@ -113,14 +113,17 @@ export class APCMiniMK2Profile extends MIDIDeviceProfile {
 			{ controlId: 'note-105', type: 'button', colorSupport: 'red', friendlyName: 'Down' },
 			{ controlId: 'note-106', type: 'button', colorSupport: 'red', friendlyName: 'Left' },
 			{ controlId: 'note-107', type: 'button', colorSupport: 'red', friendlyName: 'Right' },
-			{ controlId: 'note-112', type: 'button', colorSupport: 'red', friendlyName: 'Clip Stop' },
-			{ controlId: 'note-113', type: 'button', colorSupport: 'red', friendlyName: 'Solo' },
-			{ controlId: 'note-114', type: 'button', colorSupport: 'red', friendlyName: 'Mute' },
-			{ controlId: 'note-115', type: 'button', colorSupport: 'red', friendlyName: 'Rec Arm' },
-			{ controlId: 'note-116', type: 'button', colorSupport: 'red', friendlyName: 'Select' },
-			{ controlId: 'note-117', type: 'button', colorSupport: 'red', friendlyName: 'Drum' },
-			{ controlId: 'note-118', type: 'button', colorSupport: 'red', friendlyName: 'Note' },
-			{ controlId: 'note-119', type: 'button', colorSupport: 'red', friendlyName: 'Stop All Clips' },
+
+			// Control buttons - green color only (send as Note On messages, not CC)
+			{ controlId: 'note-112', type: 'button', colorSupport: 'green', friendlyName: 'Clip Stop' },
+			{ controlId: 'note-113', type: 'button', colorSupport: 'green', friendlyName: 'Solo' },
+			{ controlId: 'note-114', type: 'button', colorSupport: 'green', friendlyName: 'Mute' },
+			{ controlId: 'note-115', type: 'button', colorSupport: 'green', friendlyName: 'Rec Arm' },
+			{ controlId: 'note-116', type: 'button', colorSupport: 'green', friendlyName: 'Select' },
+			{ controlId: 'note-117', type: 'button', colorSupport: 'green', friendlyName: 'Drum' },
+			{ controlId: 'note-118', type: 'button', colorSupport: 'green', friendlyName: 'Note' },
+			{ controlId: 'note-119', type: 'button', colorSupport: 'green', friendlyName: 'Stop All Clips' },
+			
 			{ controlId: 'note-122', type: 'button', colorSupport: 'none', friendlyName: 'Shift' }
 		];
 	}
