@@ -195,7 +195,7 @@
             // Wait for the DOM to update with double requestAnimationFrame to ensure render is complete
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    const keypointElement = document.getElementById(`keyframe-${animation.name}-${newKeyframeIndex}`);
+                    const keypointElement = document.getElementById(`keyframe-${animation.order}-${newKeyframeIndex}`);
                     if (keypointElement) {
                         selectKeyframe(newKeyframeIndex, keypointElement);
                     }
@@ -296,10 +296,10 @@
         <!-- Keyframe markers -->
         {#each displayKeyframes as keyframe, index (keyframe.time + '-' + index)}
             <div
-                id="keyframe-{animation.name}-{index}"
+                id="keyframe-{animation.order}-{index}"
                 class="timeline-keyframe-marker"
                 class:dragging={draggingKeyframe?.keyframe === keyframe}
-                style="left: {getKeyframePosition(keyframe)}px; --keyframe-color: {getKeyframeColor(keyframe)}; anchor-name: --keyframe-{animation.name}-{index}"
+                style="left: {getKeyframePosition(keyframe)}px; --keyframe-color: {getKeyframeColor(keyframe)}; anchor-name: --keyframe-{animation.order}-{index}"
                 onmousedown={(e) => handleKeyframeMouseDown(e, keyframe, index)}
                 onclick={(e) => {
                     e.stopPropagation();
@@ -322,7 +322,7 @@
 <Dialog
     bind:dialogRef={editDialog}
     anchored={true}
-    anchorId={`keyframe-${animation.name}-${selectedKeyframeIndex}`}
+    anchorId={`keyframe-${animation.order}-${selectedKeyframeIndex}`}
     showArrow={true}
     lightDismiss={true}
     onclose={closeEditDialog}
