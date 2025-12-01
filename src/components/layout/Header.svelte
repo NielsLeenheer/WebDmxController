@@ -228,7 +228,8 @@
 
     .device-connect-btn {
         width: 100px;
-        height: 100px;
+        height: 100%;
+        min-height: 100px;
         background: #eee;
         color: #333;
         border: none;
