@@ -231,6 +231,9 @@
     // Determine the CSS class based on size
     const sizeClass = $derived(`preview-${size}`);
 
+    // Determine the CSS class based on type
+    const typeClass = $derived(`type-${type}`);
+
     // Helper to check if a control is present
     const hasControl = $derived.by(() => {
         const ctls = effectiveControls();
@@ -254,15 +257,11 @@
         return `rotateX(${-screenPitch + 20}deg) rotateY(${screenRoll}deg) rotateZ(${euler.yaw}deg)`;
     });
 
-    // Check if we need 3D overflow (for euler, axis, or stick inputs)
-    const needs3DOverflow = $derived(() => {
-        return euler !== null || (type === 'input' && (data.type === 'axis' || data.type === 'stick'));
-    });
 </script>
 
-<div class="preview {sizeClass} {className}" class:with-3d={needs3DOverflow()} style="{euler ? `transform: ${transform3D()};` : ''}">
     
-    {#if type === 'device' || type === 'controls'}
+{#if type === 'device' || type === 'controls'}
+    <div class="preview {className} {sizeClass} {typeClass}">
         <div class="preview-base"></div>
         
         <!-- Base color layer -->
@@ -343,13 +342,16 @@
         {/if}
 
         <div class="preview-inset-shadow"></div>
+    </div>
 
-    {:else if type === 'animation'}
+{:else if type === 'animation'}
+    {@const animationPreview = generateAnimationPreview(data)}
+    {@const panTiltPositions = extractPanTiltKeyframes(data)}
+    
+    <div class="preview {className} {sizeClass} {typeClass}">
         <div class="preview-base"></div>
 
         <!-- Animation preview with gradient -->
-        {@const animationPreview = generateAnimationPreview(data)}
-        {@const panTiltPositions = extractPanTiltKeyframes(data)}
         <div 
             class="preview-animation" 
             style="background: {animationPreview};"
@@ -361,25 +363,19 @@
         </div>
 
         <div class="preview-inset-shadow"></div>
+    </div>
 
-    {:else if type === 'input'}
-        <!-- Input preview based on type -->
-        {@const inputType = data.type || 'button'}
-        {@const inputColor = (data.color && data.colorSupport && data.colorSupport !== 'none') ? paletteColorToHex(data.color) : '#888'}
-        {@const orientation = data.orientation || 'vertical'}
-        {@const defaultValue = inputType === 'axis' ? 50 : 0}
-        {@const value = state.value !== undefined ? state.value : defaultValue}
-        {@const xValue = state.x !== undefined ? state.x : 50}
-        {@const yValue = state.y !== undefined ? state.y : 50}
-        {@const knobAngle = 30 + (value * 2.7)} <!-- 7 o'clock to 5 o'clock = 30deg to 300deg = 270 degrees total (0deg = 6 o'clock, clockwise) -->
-        {@const sliderPosition = value * 0.7} <!-- Adjust for 30% handle size: 0% -> 0%, 100% -> 70% -->
-        {@const axisTilt = (value - 50) * 1.1} <!-- 0% = -55deg, 50% = 0deg (flat), 100% = +55deg -->
-        {@const keyChar = data.controlId?.startsWith('key-') ? extractKeyChar(data.controlId) : null}
-        {@const isGamepad = data.deviceId?.startsWith('gamepad-')}
-        {@const gamepadSymbol = isGamepad && data.controlId?.startsWith('button-') ? extractGamepadSymbol(data.controlId, data.deviceBrand) : null}
-        {@const gamepadButtonClass = isGamepad && data.controlId?.startsWith('button-') ? `gamepad-${data.controlId}` : ''}
-        {@const inputNameClass = data.name ? `input-${data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}` : ''}
+{:else if type === 'input'}
+    {@const inputType = data.type || 'button'}
+    {@const inputColor = (data.color && data.colorSupport && data.colorSupport !== 'none') ? paletteColorToHex(data.color) : '#888'}
+    {@const inputNameClass = data.name ? `input-${data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}` : ''}
+    {@const inputTypeClass = `input-type-${inputType}`}
+    {@const value = state.value !== undefined ? state.value : 0}
+    {@const stateClass = state.state ? `state-${state.state}` : ''}
+    {@const needs3DOverflow = inputType === 'stick' || euler !== null}
         
+    <div class="preview {className} {sizeClass} {typeClass} {inputTypeClass} {stateClass}" class:with-3d={needs3DOverflow} style="{euler ? `transform: ${transform3D()};` : ''}">
+        <!-- Input preview based on type -->
         
         {#if inputType === 'thingy'}
             <!-- Thingy:52 input preview -->
@@ -410,17 +406,24 @@
             {/if}
 
         {:else if inputType === 'button' || inputType === 'pad'}
+            {@const isGamepad = data.deviceId?.startsWith('gamepad-')}
+
             <div class="preview-base"></div>
     
             <!-- Button/Pad: square with character or gamepad symbol -->
             {#if isGamepad}
+                {@const gamepadSymbol = isGamepad && data.controlId?.startsWith('button-') ? extractGamepadSymbol(data.controlId, data.deviceBrand) : null}
+                {@const gamepadButtonClass = isGamepad && data.controlId?.startsWith('button-') ? `gamepad-${data.controlId}` : ''}
                 {@const brandClass = data.deviceBrand ? `brand-${data.deviceBrand}` : ''}
+                
                 <div class="preview-input button-preview {inputType}-input {inputNameClass} {gamepadButtonClass} {brandClass}" style="background: #555;">
                     {#if gamepadSymbol}
                         <div class="gamepad-symbol" class:small-text={gamepadSymbol.length > 1}>{gamepadSymbol}</div>
                     {/if}
                 </div>
             {:else}
+                {@const keyChar = data.controlId?.startsWith('key-') ? extractKeyChar(data.controlId) : null}
+
                 <div class="preview-input button-preview {inputType}-input {inputNameClass}" style="background: {inputColor};">
                     {#if keyChar}
                         <div class="key-char">{keyChar}</div>
@@ -432,12 +435,17 @@
 
             
         {:else if inputType === 'knob'}
+            {@const knobAngle = 30 + (value * 2.7)} <!-- 7 o'clock to 5 o'clock = 30deg to 300deg = 270 degrees total (0deg = 6 o'clock, clockwise) -->
+        
             <!-- Knob: circle with rotating dot -->
             <div class="preview-input knob-preview" style="background: {inputColor};">
                 <div class="knob-dot" style="transform: rotate({knobAngle}deg) translateY(100%);"></div>
             </div>
             
         {:else if inputType === 'slider'}
+            {@const orientation = data.orientation || 'vertical'}
+            {@const sliderPosition = value * 0.7} <!-- Adjust for 30% handle size: 0% -> 0%, 100% -> 70% -->
+
             <!-- Slider: track with handle -->
             {#if orientation === 'horizontal'}
                 <div class="preview-input slider-preview horizontal">
@@ -451,37 +459,14 @@
                 </div>
             {/if}
             
-        {:else if inputType === 'axis'}
-            <!-- Axis: 3D tilting disc on a stick -->
-            {@const axisTransform = orientation === 'horizontal' ? `rotateY(${axisTilt}deg)` : `rotateX(${-axisTilt}deg)`}
-            <div class="preview-input axis-wrapper" style="transform: {axisTransform};">
-                <!-- 8 small depth layers (the stick) from -25px to -11px at 2px intervals -->
-                {#each Array(8) as _, i}
-                    {@const zOffset = -25 + (i * 2)}
-                    {@const brightness = 0.3 + ((i / 7) * 0.4)}
-                    <div
-                        class="axis-stick-layer"
-                        style="transform: translateZ({zOffset}px); background: #555; filter: brightness({brightness});"
-                    ></div>
-                {/each}
-                <!-- Top layer: the disc -->
-                <div
-                    class="axis-disc-layer"
-                    style="transform: translateZ(0px); background: #666;"
-                ></div>
-
-                <!-- Circle for indent in the disc -->
-                <div
-                    class="axis-disc-indent"
-                    style="transform: translateZ(1px);"
-                ></div>
-            </div>
-
         {:else if inputType === 'stick'}
             <!-- Stick: 3D tilting disc on a stick with 2D position (combines X and Y) -->
+            {@const xValue = state.x !== undefined ? state.x : 50}
+            {@const yValue = state.y !== undefined ? state.y : 50}
             {@const xTilt = (xValue - 50) * 1.1}  <!-- -55deg to +55deg based on X -->
             {@const yTilt = (yValue - 50) * 1.1}  <!-- -55deg to +55deg based on Y -->
             {@const stickTransform = `rotateY(${xTilt}deg) rotateX(${-yTilt}deg)`}
+
             <div class="preview-input stick-wrapper" style="transform: {stickTransform};">
                 <!-- 8 small depth layers (the stick) from -25px to -11px at 2px intervals -->
                 {#each Array(8) as _, i}
@@ -493,20 +478,14 @@
                     ></div>
                 {/each}
                 <!-- Top layer: the disc -->
-                <div
-                    class="stick-disc-layer"
-                    style="transform: translateZ(0px); background: #666;"
-                ></div>
+                <div class="stick-disc-layer"></div>
 
                 <!-- Circle for indent in the disc -->
-                <div
-                    class="stick-disc-indent"
-                    style="transform: translateZ(1px);"
-                ></div>
+                <div class="stick-disc-indent"></div>
             </div>
         {/if}
-    {/if}
-</div>
+    </div>
+{/if}
 
 <style>
     /* Base preview container */
@@ -516,9 +495,24 @@
         position: relative;
         transform-style: preserve-3d;
 
-        --shadow-size: 3px;
+        --height: 32px;
+        --width: 32px;
+
+        --depth: 3px;
         --adjust-symbol-y: 0px;
         --adjust-symbol-x: 0px;
+
+        height: var(--height);
+        width: var(--width);
+    }
+
+    /* Pressed state for buttons and pads: simulate depth by shifting down and reducing height */
+
+    .preview.state-pressed.input-type-pad,
+    .preview.state-pressed.input-type-button {
+        --depth: 2px;
+        height: calc(var(--height) - var(--depth));
+        margin-top: var(--depth);
     }
 
     /* Enable 3D perspective for rotating previews */
@@ -541,20 +535,20 @@
 
     /* Size variants */
     .preview-small {
-        width: 20px;
-        height: 20px;
+        --height: 20px;
+        --width: 20px;
         border-radius: 3px;
     }
 
     .preview-medium {
-        width: 32px;
-        height: 32px;
+        --height: 32px;
+        --width: 32px;
         border-radius: 4px;
     }
 
     .preview-large {
-        width: 64px;
-        height: 64px;
+        --height: 64px;
+        --width: 64px;
         border-radius: 6px;
     }
 
@@ -603,7 +597,7 @@
         border-radius: inherit;
         corner-shape: inherit;
         pointer-events: none;
-        box-shadow: inset 0 calc(var(--shadow-size) * -1) 0px 0px rgba(0, 0, 0, 0.2);
+        box-shadow: inset 0 calc(var(--depth) * -1) 0px 0px rgba(0, 0, 0, 0.2);
         z-index: 100;
     }
 
@@ -620,7 +614,7 @@
         font-weight: 600;
         color: rgba(255,255,255,0.5);
         user-select: none;
-        margin-top: -3px;
+        margin-top: calc(var(--depth) * -1);
     }
 
     /* Custom gamepad button shapes */
@@ -694,7 +688,7 @@
         font-weight: 600;
         color: rgba(255,255,255,0.8);
         user-select: none;
-        margin-top: calc(var(--adjust-symbol-y, 0px) + -3px);
+        margin-top: calc(var(--adjust-symbol-y, 0px) - var(--depth));
         margin-left: var(--adjust-symbol-x, 0px);
     }
 
@@ -716,7 +710,7 @@
     /* Knob preview - circle with rotating dot */
     .knob-preview {
         border-radius: 50%;
-        box-shadow: inset 0 calc(var(--shadow-size) * -1) 0px 0px rgba(0, 0, 0, 0.2);
+        box-shadow: inset 0 calc(var(--depth) * -1) 0px 0px rgba(0, 0, 0, 0.2);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -731,58 +725,7 @@
         transform-origin: center center;
     }
 
-    /* Axis preview - wrapper provides perspective and holds the transform */
-    .axis-wrapper {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        perspective: 80px;
-        transform-style: preserve-3d;
-        transform-origin: center center -20px;
-    }
-
-    /* Axis stick layers (small, behind the disc) */
-    .axis-stick-layer {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 15%;
-        height: 15%;
-        margin-left: -7.5%;
-        margin-top: -7.5%;
-        border-radius: 50%;
-        transform-style: preserve-3d;
-    }
-
-    /* Axis disc layer (full size, on top) */
-    .axis-disc-layer {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 100%;
-        height: 100%;
-        margin-left: -50%;
-        margin-top: -50%;
-        border-radius: 50%;
-        transform-style: preserve-3d;
-        box-shadow: inset 0 calc(var(--shadow-size) * -1) 0px 0px rgba(0, 0, 0, 0.2);
-    }
-
-    .axis-disc-indent {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 60%;
-        height: 60%;
-        margin-left: -30%;
-        margin-top: -30%;
-        border-radius: 50%;
-        background: rgba(0, 0, 0, 0.1);
-    }
-
-    /* Stick preview - wrapper provides perspective and holds the transform (same as axis) */
+    /* Stick preview - wrapper provides perspective and holds the transform */
     .stick-wrapper {
         position: absolute;
         top: 0;
@@ -818,7 +761,14 @@
         margin-top: -50%;
         border-radius: 50%;
         transform-style: preserve-3d;
-        box-shadow: inset 0 calc(var(--shadow-size) * -1) 0px 0px rgba(0, 0, 0, 0.2);
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2);
+
+        transform: translateZ(0px); 
+        background: #666;
+    }
+
+    .state-pressed .stick-disc-layer {
+        transform: translateZ(-2px);
     }
 
     .stick-disc-indent {
@@ -831,6 +781,11 @@
         margin-top: -30%;
         border-radius: 50%;
         background: rgba(0, 0, 0, 0.1);
+        transform: translateZ(1px);
+    }
+
+    .state-pressed .stick-disc-indent {
+        transform: translateZ(-1px);
     }
 
     /* Slider preview - track with handle */
@@ -871,7 +826,7 @@
     .slider-handle {
         position: absolute;
         border-radius: 6px;
-        box-shadow: inset 0 calc(var(--shadow-size) * -1) 0px 0px rgba(0, 0, 0, 0.2);
+        box-shadow: inset 0 calc(var(--depth) * -1) 0px 0px rgba(0, 0, 0, 0.2);
     }
 
     .slider-preview.horizontal .slider-handle {
