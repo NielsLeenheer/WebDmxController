@@ -285,11 +285,11 @@ export class InputController {
 
 				this.triggerManager.removeRawClass(downClass);
 				this.triggerManager.addRawClass(upClass);
-
-				// Emit event for momentary button release
-				this._emit('input-release', { mapping: input });
 			}
-			// Toggle mode: do nothing on release (state was toggled on press)
+			// Toggle mode: CSS classes were already toggled on press
+
+			// Emit release event for all button types (for UI pressed state tracking)
+			this._emit('input-release', { mapping: input });
 
 			// Reset pressure custom property to 0%
 			if (cssId) {

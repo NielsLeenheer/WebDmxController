@@ -337,7 +337,7 @@
         // Initialize input states for all inputs
         for (const input of inputs) {
             if (!inputStates[input.id]) {
-                inputStates[input.id] = {};
+                inputStates[input.id] = { pressed: false };
 
                 if (isButton(input) && input.buttonMode === 'toggle') {
                     inputStates[input.id]['state'] = 'off';
@@ -583,20 +583,25 @@
         inputController.on('input-trigger', ({ mapping, velocity, toggleState }) => {
             // For toggle buttons, use the toggleState from the event
             if (mapping.buttonMode === 'toggle') {
-                inputStates[mapping.id] = { ...inputStates[mapping.id], state: toggleState ? 'on' : 'off' };
+                inputStates[mapping.id] = { ...inputStates[mapping.id], state: toggleState ? 'on' : 'off', pressed: true };
 
                 // Update button color based on toggle state
                 updateButtonColorForToggleState(mapping, toggleState);
             } else if (isButton(mapping)) {
                 // For momentary buttons, show pressed state
-                inputStates[mapping.id] = { ...inputStates[mapping.id], state: 'pressed' };
+                inputStates[mapping.id] = { ...inputStates[mapping.id], state: 'pressed', pressed: true };
             }
         });
 
         inputController.on('input-release', ({ mapping }) => {
-            if (isButton(mapping) && mapping.buttonMode !== 'toggle') {
-                // For momentary buttons, clear pressed state
-                inputStates[mapping.id] = { ...inputStates[mapping.id], state: 'released' };
+            if (isButton(mapping)) {
+                // Track physical release for all buttons (including toggle)
+                // For momentary buttons, also update state to 'released'
+                if (mapping.buttonMode !== 'toggle') {
+                    inputStates[mapping.id] = { ...inputStates[mapping.id], pressed: false, state: 'released' };
+                } else {
+                    inputStates[mapping.id] = { ...inputStates[mapping.id], pressed: false };
+                }
             }
         });
 

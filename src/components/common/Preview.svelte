@@ -372,9 +372,10 @@
     {@const inputTypeClass = `input-type-${inputType}`}
     {@const value = state.value !== undefined ? state.value : 0}
     {@const stateClass = state.state ? `state-${state.state}` : ''}
+    {@const pressedClass = state.pressed ? 'pressed' : ''}
     {@const needs3DOverflow = inputType === 'stick' || euler !== null}
         
-    <div class="preview {className} {sizeClass} {typeClass} {inputTypeClass} {stateClass}" class:with-3d={needs3DOverflow} style="{euler ? `transform: ${transform3D()};` : ''}">
+    <div class="preview {className} {sizeClass} {typeClass} {inputTypeClass} {stateClass} {pressedClass}" class:with-3d={needs3DOverflow} style="{euler ? `transform: ${transform3D()};` : ''}">
         <!-- Input preview based on type -->
         
         {#if inputType === 'thingy'}
@@ -498,12 +499,18 @@
 
         height: var(--height);
         width: var(--width);
+
+        transition: filter 0.3s ease;
+    }
+
+    .preview.state-off {
+        filter: grayscale(80%) brightness(90%);
     }
 
     /* Pressed state for buttons and pads: simulate depth by shifting down and reducing height */
 
-    .preview.state-pressed.input-type-pad,
-    .preview.state-pressed.input-type-button {
+    .preview.pressed.input-type-pad,
+    .preview.pressed.input-type-button {
         --depth: 2px;
         height: calc(var(--height) - var(--depth));
         margin-top: var(--depth);
@@ -761,7 +768,7 @@
         background: #666;
     }
 
-    .state-pressed .stick-disc-layer {
+    .pressed .stick-disc-layer {
         transform: translateZ(-2px);
     }
 
@@ -778,7 +785,7 @@
         transform: translateZ(1px);
     }
 
-    .state-pressed .stick-disc-indent {
+    .pressed .stick-disc-indent {
         transform: translateZ(-1px);
     }
 
