@@ -674,7 +674,7 @@
         overflow-y: auto;
         padding: 20px 40px;
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(15em, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(18em, 1fr));
         gap: 15px;
         align-content: start;
     }
