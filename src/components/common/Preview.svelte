@@ -381,7 +381,6 @@
             <!-- Thingy:52 input preview -->
             {#if euler}
                 <!-- 3D layered -->
-                {@const inputColor = (data.color && data.colorSupport && data.colorSupport !== 'none') ? paletteColorToHex(data.color) : '#888'}
                 
                 <!-- Multiple layers with translateZ for depth -->
                 {#each Array(12) as _, i}
