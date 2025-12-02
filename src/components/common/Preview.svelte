@@ -492,7 +492,7 @@
         --height: 32px;
         --width: 32px;
 
-        --depth: 3px;
+        --depth: 4px;
         --adjust-symbol-y: 0px;
         --adjust-symbol-x: 0px;
 
@@ -529,13 +529,13 @@
 
     /* Size variants */
     .preview-small {
-        --height: 20px;
+        --height: 21px;
         --width: 20px;
         border-radius: 3px;
     }
 
     .preview-medium {
-        --height: 32px;
+        --height: 33px;
         --width: 32px;
         border-radius: 4px;
     }
