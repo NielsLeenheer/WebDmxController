@@ -395,9 +395,6 @@
                     </div>
                 {/each}
             {:else}
-                <div class="preview-base"></div>
-
-                <!-- Flat -->
                 <div class="preview-input button-preview thingy-input" style="background: {inputColor};">
                     <div class="orientation-indicator"></div>
                 </div>
@@ -407,9 +404,7 @@
 
         {:else if inputType === 'button' || inputType === 'pad'}
             {@const isGamepad = data.deviceId?.startsWith('gamepad-')}
-
-            <div class="preview-base"></div>
-    
+   
             <!-- Button/Pad: square with character or gamepad symbol -->
             {#if isGamepad}
                 {@const gamepadSymbol = isGamepad && data.controlId?.startsWith('button-') ? extractGamepadSymbol(data.controlId, data.deviceBrand) : null}
