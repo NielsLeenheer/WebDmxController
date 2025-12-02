@@ -1,5 +1,5 @@
 import { MIDIDeviceProfile } from './MIDIDeviceProfile.js';
-import { paletteColorToRGB } from '../colors.js';
+import { paletteColorToDeviceRGB } from '../colors.js';
 
 /**
  * Akai LPD8 MK2
@@ -66,7 +66,7 @@ export class AkaiLPD8MK2Profile extends MIDIDeviceProfile {
 		const payload = [];
 		for (const padNote of this.padNotes) {
 			const padColor = this.padColors.get(padNote) || 'black';
-			const rgb = paletteColorToRGB(padColor);
+			const rgb = paletteColorToDeviceRGB(padColor);
 			const normalized = this._normalizeRGB(rgb);
 			const encoded = this._encodeColor(normalized);
 			payload.push(...encoded);

@@ -5,7 +5,7 @@
  */
 
 import { requestStreamDecks, getStreamDecks } from '@elgato-stream-deck/webhid';
-import { paletteColorToRGB } from './colors.js';
+import { paletteColorToDeviceRGB } from './colors.js';
 
 /**
  * Check if a HID device is a Stream Deck
@@ -249,7 +249,7 @@ export class StreamDeckManager {
 
 		try {
 			// Get RGB from palette color name
-			const rgb = paletteColorToRGB(color);
+			const rgb = paletteColorToDeviceRGB(color);
 
 			// Use the library's fillKeyColor method
 			await streamDeck.fillKeyColor(buttonIndex, rgb.r, rgb.g, rgb.b);

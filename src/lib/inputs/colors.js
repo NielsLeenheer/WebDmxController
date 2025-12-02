@@ -1,4 +1,5 @@
-const NAMED_INPUT_COLOR_MAP = {
+// UI colors - softer, more pleasant for on-screen display
+const UI_COLOR_MAP = {
     'red': '#ff4d4f',
     'orange': '#fa8c16',
     'yellow': '#fadb14',
@@ -15,17 +16,60 @@ const NAMED_INPUT_COLOR_MAP = {
     'pink': '#ff85c0'
 };
 
+// Device colors - harsh, saturated colors for hardware LEDs
+const DEVICE_COLOR_MAP = {
+    'red': '#ff0000',
+    'orange': '#ff6600',
+    'yellow': '#ffcc00',
+    'lime': '#80ff00',
+    'green': '#00ff00',
+    'spring': '#00ff80',
+    'turquoise': '#00ffff',
+    'cyan': '#00bfff',
+    'sky': '#0080ff',
+    'blue': '#0000ff',
+    'violet': '#8000ff',
+    'purple': '#4000ff',
+    'magenta': '#ff00ff',
+    'pink': '#ff0080'
+};
+
 export function paletteColorToHex(color) {
-    return NAMED_INPUT_COLOR_MAP[color] || 'transparent';
+    return UI_COLOR_MAP[color] || 'transparent';
+}
+
+export function paletteColorToDeviceHex(color) {
+    return DEVICE_COLOR_MAP[color] || '#000000';
 }
 
 /**
- * Get RGB color values from a named color
+ * Get RGB color values from a named color (UI colors)
  * @param {string} color - Color name from the palette
  * @returns {{r: number, g: number, b: number}} RGB object (0-255 per channel), or {r:0, g:0, b:0} if color not found
  */
 export function paletteColorToRGB(color) {
-    const hexColor = NAMED_INPUT_COLOR_MAP[color];
+    const hexColor = UI_COLOR_MAP[color];
+    
+    if (!hexColor) {
+        return { r: 0, g: 0, b: 0 };
+    }
+
+    // Parse hex color (#RRGGBB)
+    const hex = hexColor.replace('#', '');
+    return {
+        r: parseInt(hex.substring(0, 2), 16),
+        g: parseInt(hex.substring(2, 4), 16),
+        b: parseInt(hex.substring(4, 6), 16)
+    };
+}
+
+/**
+ * Get RGB color values from a named color (device colors - saturated for hardware LEDs)
+ * @param {string} color - Color name from the palette
+ * @returns {{r: number, g: number, b: number}} RGB object (0-255 per channel), or {r:0, g:0, b:0} if color not found
+ */
+export function paletteColorToDeviceRGB(color) {
+    const hexColor = DEVICE_COLOR_MAP[color];
     
     if (!hexColor) {
         return { r: 0, g: 0, b: 0 };
@@ -45,7 +89,7 @@ export function paletteColorToRGB(color) {
  * @returns {string[]} Array of color names
  */
 export function getPalette() {
-    return Object.keys(NAMED_INPUT_COLOR_MAP);
+    return Object.keys(UI_COLOR_MAP);
 }
 
 /**
@@ -54,7 +98,7 @@ export function getPalette() {
  * @returns {string|undefined} Next unused color, or undefined if palette is empty
  */
 export function getUnusedFromPalette(usedColors) {
-    const palette = Object.keys(NAMED_INPUT_COLOR_MAP);
+    const palette = Object.keys(UI_COLOR_MAP);
     if (!palette.length) return undefined;
 
     // If no colors are used, return the first one

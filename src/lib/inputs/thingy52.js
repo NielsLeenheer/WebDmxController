@@ -3,7 +3,7 @@
  * Provides access to Thingy:52 sensors for use as input controls
  */
 
-import { paletteColorToRGB } from './colors.js';
+import { paletteColorToDeviceRGB } from './colors.js';
 
 // Thingy:52 Service UUIDs
 const THINGY_UI_SERVICE = 'ef680300-9b35-4933-9b10-52ffa9740042';
@@ -310,7 +310,7 @@ export class Thingy52Device {
 			}
 
 			// Convert palette color name to RGB
-			const rgb = paletteColorToRGB(color);
+			const rgb = paletteColorToDeviceRGB(color);
 
 			// Compensate for LED brightness differences and blue plastic housing
 			const clamp = (val) => Math.max(0, Math.min(255, val));
