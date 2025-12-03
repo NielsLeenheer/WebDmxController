@@ -61,3 +61,30 @@ export function hasValues(input) {
 export function getInputPropertyName(input) {
 	return `--${input.cssIdentifier || toCSSIdentifier(input.name)}`;
 }
+
+/**
+ * Generate a human-readable name for an input based on device and control ID
+ * @param {string} deviceName - Name of the device
+ * @param {string} controlId - Control identifier (e.g., 'note-36', 'button-0', 'key-KeyQ')
+ * @returns {string} Formatted input name
+ */
+export function formatInputName(deviceName, controlId) {
+	if (controlId.startsWith('note-')) {
+		const noteNumber = controlId.replace('note-', '');
+		return `${deviceName} Note ${noteNumber}`;
+	} else if (controlId.startsWith('control-') || controlId.startsWith('cc-')) {
+		const controlNumber = controlId.replace('control-', '').replace('cc-', '');
+		return `${deviceName} Control ${controlNumber}`;
+	} else if (controlId.startsWith('button-')) {
+		const buttonNumber = controlId.replace('button-', '');
+		return `${deviceName} Button ${buttonNumber}`;
+	} else if (controlId.startsWith('key-')) {
+		// Extract just the key letter from KeyQ -> Q
+		const keyCode = controlId.replace('key-', '');
+		const key = keyCode.replace('Key', '').replace('Digit', '') || keyCode;
+		return `Keyboard ${key}`;
+	} else {
+		// Fallback for unknown control types
+		return `${deviceName} ${controlId}`;
+	}
+}

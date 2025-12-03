@@ -1,6 +1,7 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
     import { isButton } from '../../lib/inputs/utils.js';
+    import { InputListeningController } from '../../lib/inputs/InputListeningController.js';
     import { inputLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import InputCard from '../cards/InputCard.svelte';
@@ -20,13 +21,16 @@
     // Get inputs reactively from library
     let inputs = $derived(inputLibrary.getAll());
 
-    let isListening = $state(false);
     let editInputDialog; // Reference to EditInputDialog component
     let inputStates = $state({}); // Track state/value for each input: { inputId: { state: 'on'|'off', value: number } }
     let thingyEulerAngles = $state({}); // Track Euler angles for Thingy devices: { deviceId: { roll, pitch, yaw } }
 
     // Context menu state
     let contextMenuRef = $state(null);
+
+    // Input listening controller
+    let listeningController = $state(null);
+    let isListening = $state(false);
 
     // Drag and drop helper
     const dnd = createDragDrop({
@@ -38,124 +42,14 @@
         getItemId: (item) => item.id
     });
 
-    // Event handlers
-    let inputEventHandlers = [];
-
     function startListening() {
+        listeningController?.startListening();
         isListening = true;
-
-        // Listen to input controller for raw inputs
-        const devices = inputController.getInputDevices();
-        for (const device of devices) {
-            const handler = (eventData) => {
-                handleRawInput({
-                    deviceId: device.id,
-                    controlId: eventData.controlId,
-                    type: eventData.type, // Pass type from device event
-                    colorSupport: eventData.colorSupport, // Pass colorSupport from device event
-                    friendlyName: eventData.friendlyName, // Pass friendlyName from device event
-                    orientation: eventData.orientation, // Pass orientation from device event
-                    deviceBrand: eventData.deviceBrand, // Pass deviceBrand from device event
-                    device
-                });
-            };
-
-            device.on('trigger', handler);
-            device.on('change', handler);
-
-            inputEventHandlers.push({ device, event: 'trigger', handler });
-            inputEventHandlers.push({ device, event: 'change', handler });
-        }
-
-        inputController.on('deviceadded', handleDeviceAdded);
-    }
-
-    function handleRawInput(event) {
-        if (!isListening) return;
-
-        const { deviceId, controlId, device, type, colorSupport, friendlyName, orientation, deviceBrand } = event;
-
-        // Skip Thingy:52 inputs entirely - they are added via the connect dialog, not by listening
-        if (device?.type === 'thingy') return;
-
-        // Check if this input already exists
-        const existing = inputs.find(
-            input => input.deviceId === deviceId && input.controlId === controlId
-        );
-
-        if (!existing) {
-            // Auto-save new input (library emits event, controller syncs hardware)
-            const name = friendlyName || formatInputName(device?.name || deviceId, controlId);
-
-            inputLibrary.create({
-                name,
-                deviceId: deviceId,
-                deviceName: device?.name || deviceId,
-                controlId: controlId,
-                controlName: friendlyName || null,
-                type: type || 'button',
-                colorSupport: colorSupport || 'none',
-                orientation: orientation || null,
-                deviceBrand: deviceBrand || null
-            });
-        }
-    }
-
-    function handleDeviceAdded(device) {
-        if (!isListening) return;
-
-        const handler = (eventData) => {
-            handleRawInput({
-                deviceId: device.id,
-                controlId: eventData.controlId,
-                type: eventData.type, // Pass type from device event
-                colorSupport: eventData.colorSupport, // Pass colorSupport from device event
-                friendlyName: eventData.friendlyName, // Pass friendlyName from device event
-                orientation: eventData.orientation, // Pass orientation from device event
-                deviceBrand: eventData.deviceBrand, // Pass deviceBrand from device event
-                device
-            });
-        };
-
-        device.on('trigger', handler);
-        device.on('change', handler);
-
-        inputEventHandlers.push({ device, event: 'trigger', handler });
-        inputEventHandlers.push({ device, event: 'change', handler });
     }
 
     function stopListening() {
+        listeningController?.stopListening();
         isListening = false;
-
-        // Remove all event handlers
-        for (const { device, event, handler } of inputEventHandlers) {
-            device.off(event, handler);
-        }
-        inputEventHandlers = [];
-
-        inputController.off('deviceadded', handleDeviceAdded);
-    }
-
-    function formatInputName(deviceName, controlId) {
-        // Parse the controlId to determine the type
-        if (controlId.startsWith('note-')) {
-            const noteNumber = controlId.replace('note-', '');
-            return `${deviceName} Note ${noteNumber}`;
-        } else if (controlId.startsWith('control-') || controlId.startsWith('cc-')) {
-            const controlNumber = controlId.replace('control-', '').replace('cc-', '');
-            return `${deviceName} Control ${controlNumber}`;
-        } else if (controlId.startsWith('button-')) {
-            const buttonNumber = controlId.replace('button-', '');
-            return `${deviceName} Button ${buttonNumber}`;
-        } else if (controlId.startsWith('key-')) {
-            // Extract just the key letter from KeyQ -> Q
-            const keyCode = controlId.replace('key-', '');
-            const key = keyCode.replace('Key', '').replace('Digit', '') || keyCode;
-            return `Keyboard ${key}`;
-        } else {
-            // Fallback for unknown control types
-            return `${deviceName} ${controlId}`;
-        }
     }
 
     async function startEditing(input) {
@@ -223,6 +117,9 @@
     });
 
     onMount(() => {
+        // Create the listening controller
+        listeningController = new InputListeningController(inputController, inputLibrary);
+
         // Set up device event handlers FIRST, before processing existing devices
         // Apply colors when devices connect
         inputController.on('deviceadded', (device) => {
