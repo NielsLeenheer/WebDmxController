@@ -18,6 +18,53 @@ export class InputController {
 		this.listeners = new Map();
 		this.toggleStates = new Map(); // Track toggle button states: "deviceId:controlId" -> boolean
 		this._setupInputListeners();
+		this._setupLibraryListeners();
+	}
+
+	/**
+	 * Setup listeners for input library changes
+	 * Syncs hardware state when inputs are added/updated/removed
+	 */
+	_setupLibraryListeners() {
+		// When an input is added, initialize its CSS properties and update hardware colors
+		this.inputLibrary.on('added', (input) => {
+			if (isButton(input) && input.cssIdentifier) {
+				this.customPropertyManager.setProperty(`${input.cssIdentifier}-pressure`, '0.0%');
+			}
+			if (input.colorSupport && input.colorSupport !== 'none') {
+				this.applyColorsToDevices().catch(err => {
+					console.warn('Failed to apply colors after input added:', err);
+				});
+			}
+		});
+
+		// When an input is updated, sync color to hardware if it changed
+		this.inputLibrary.on('updated', ({ item, changes }) => {
+			// Check if color was changed
+			if (changes.color !== undefined && item.colorSupport && item.colorSupport !== 'none') {
+				const device = this.inputDeviceManager.getDevice(item.deviceId);
+				if (device && item.color) {
+					const effectiveColor = this._getEffectiveButtonColor(item);
+					device.setColor(item.controlId, effectiveColor).catch(err => {
+						console.warn('Failed to update button color:', err);
+					});
+
+					// Special handling for Thingy LED
+					if (device.type === 'thingy' && device.thingyDevice) {
+						device.thingyDevice.setDeviceColor(item.color);
+					}
+				}
+			}
+		});
+
+		// When an input is removed, update hardware to turn off the button
+		this.inputLibrary.on('removed', (input) => {
+			if (input.colorSupport && input.colorSupport !== 'none') {
+				this.applyColorsToDevices().catch(err => {
+					console.warn('Failed to apply colors after input removed:', err);
+				});
+			}
+		});
 	}
 
 	/**
@@ -406,6 +453,143 @@ export class InputController {
 					device.sendNoteOff(i);
 				}
 			}
+		}
+	}
+
+	/**
+	 * Get effective color for a button based on toggle state
+	 * @param {object} input - Input object
+	 * @returns {string} Color name or 'black' for off state
+	 */
+	_getEffectiveButtonColor(input) {
+		if (!input.color) return 'black';
+
+		// For toggle buttons, check toggle state
+		if (isButton(input) && input.buttonMode === 'toggle') {
+			const toggleKey = `${input.deviceId}:${input.controlId}`;
+			const isOn = this.toggleStates.get(toggleKey) || false;
+			return isOn ? input.color : 'black';
+		}
+
+		return input.color;
+	}
+
+	/**
+	 * Update button color based on toggle state
+	 * @param {object} input - Input object
+	 * @param {boolean} isOn - Toggle state (on = true, off = false)
+	 */
+	async updateButtonColorForToggleState(input, isOn) {
+		const device = this.inputDeviceManager.getDevice(input.deviceId);
+		if (!device || !input.color || !input.colorSupport || input.colorSupport === 'none') return;
+
+		const color = isOn ? input.color : 'black';
+		await device.setColor(input.controlId, color);
+	}
+
+	/**
+	 * Apply colors to all connected devices based on saved inputs
+	 * Updates assigned controls to their colors and unassigned controls to black
+	 */
+	async applyColorsToDevices() {
+		const devices = this.inputDeviceManager.getAllDevices();
+		const inputs = this.inputLibrary.getAll();
+
+		for (const device of devices) {
+			// For MIDI devices with profiles, handle color-capable controls
+			if (device.type === 'midi' && device.profile) {
+				await this._applyColorsToMIDIDevice(device, inputs);
+			} else if (typeof device.getControls === 'function') {
+				// For devices with getControls() method (StreamDeck, etc.)
+				await this._applyColorsToControlsDevice(device, inputs);
+			} else {
+				// For other devices (HID, Bluetooth) without getControls()
+				await this._applyColorsToGenericDevice(device, inputs);
+			}
+		}
+	}
+
+	/**
+	 * Apply colors to a MIDI device
+	 * @private
+	 */
+	async _applyColorsToMIDIDevice(device, inputs) {
+		// Build a map of assigned controls for this device
+		const assignedControls = new Map();
+		for (const input of inputs) {
+			if (input.deviceId === device.id && input.color) {
+				assignedControls.set(input.controlId, input);
+			}
+		}
+
+		// Get all color-capable controls from the profile
+		const colorCapableControls = device.profile.controls?.filter(
+			ctrl => ctrl.colorSupport && ctrl.colorSupport !== 'none'
+		) || [];
+
+		// Check if device supports batch color updates (Akai LPD8 MK2, etc.)
+		const supportsBatchUpdate = typeof device.profile.setPadColor === 'function' &&
+		                           typeof device.profile.flushColors === 'function';
+
+		if (supportsBatchUpdate && device.profile.padNotes) {
+			// Batch mode: update all pad states first, then send ONE message
+			for (const note of device.profile.padNotes) {
+				const controlId = `note-${note}`;
+				const input = assignedControls.get(controlId);
+				const color = input ? this._getEffectiveButtonColor(input) : 'black';
+				device.profile.setPadColor(note, color);
+			}
+
+			// Send single update with all pad colors
+			const command = device.profile.flushColors();
+			if (command && command.type === 'sysex' && device.midiOutput) {
+				device.midiOutput.send(command.value);
+			}
+		} else {
+			// Non-batch mode: send individual updates for all color-capable controls
+			for (const control of colorCapableControls) {
+				const input = assignedControls.get(control.controlId);
+				const color = input ? this._getEffectiveButtonColor(input) : 'black';
+				await device.setColor(control.controlId, color);
+			}
+		}
+	}
+
+	/**
+	 * Apply colors to a device with getControls() method (StreamDeck, etc.)
+	 * @private
+	 */
+	async _applyColorsToControlsDevice(device, inputs) {
+		const controls = device.getControls();
+		
+		// Build a map of assigned controls for this device
+		const assignedControls = new Map();
+		for (const input of inputs) {
+			if (input.deviceId === device.id && input.color) {
+				assignedControls.set(input.controlId, input);
+			}
+		}
+
+		for (const control of controls) {
+			if (!control.colorSupport || control.colorSupport === 'none') continue;
+
+			const input = assignedControls.get(control.controlId);
+			const color = input ? this._getEffectiveButtonColor(input) : 'black';
+			await device.setColor(control.controlId, color);
+		}
+	}
+
+	/**
+	 * Apply colors to a generic device without getControls()
+	 * @private
+	 */
+	async _applyColorsToGenericDevice(device, inputs) {
+		for (const input of inputs) {
+			if (input.deviceId !== device.id) continue;
+			if (!input.color || !input.colorSupport || input.colorSupport === 'none') continue;
+
+			const color = this._getEffectiveButtonColor(input);
+			await device.setColor(input.controlId, color);
 		}
 	}
 

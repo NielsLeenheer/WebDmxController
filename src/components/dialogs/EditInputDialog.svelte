@@ -59,24 +59,6 @@
 		});
 	}
 
-	function deviceSupportsColors(device) {
-		if (!device) return false;
-		// StreamDeck, MIDI and Thingy:52 support colors
-		return device.type === 'streamdeck' || device.type === 'midi' || device.type === 'thingy';
-	}
-
-	function isColorCapableControl(controlId) {
-		if (!controlId || typeof controlId !== 'string') return false;
-		// Thingy:52 uses 'thingy' controlId (single input with button + sensor functionality)
-		if (controlId === 'thingy') return true;
-		const COLOR_CAPABLE_PREFIXES = ['button-', 'note-'];
-		return COLOR_CAPABLE_PREFIXES.some(prefix => controlId.startsWith(prefix));
-	}
-
-	function shouldAssignColor(device, controlId) {
-		return deviceSupportsColors(device) && isColorCapableControl(controlId);
-	}
-
 	function handleSave() {
 		if (!editingInput || !editingName.trim()) {
 			resolvePromise(null);

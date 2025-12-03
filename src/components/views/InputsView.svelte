@@ -1,6 +1,6 @@
 <script>
     import { onMount, onDestroy } from 'svelte';
-    import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
+    import { isButton } from '../../lib/inputs/utils.js';
     import { inputLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import InputCard from '../cards/InputCard.svelte';
@@ -37,12 +37,6 @@
         orientation: 'horizontal',
         getItemId: (item) => item.id
     });
-
-    function deviceSupportsColors(device) {
-        if (!device) return false;
-        // StreamDeck, MIDI and Thingy:52 support colors
-        return device.type === 'streamdeck' || device.type === 'midi' || device.type === 'thingy';
-    }
 
     // Event handlers
     let inputEventHandlers = [];
@@ -90,10 +84,10 @@
         );
 
         if (!existing) {
-            // Auto-save new input (color is auto-assigned by library)
+            // Auto-save new input (library emits event, controller syncs hardware)
             const name = friendlyName || formatInputName(device?.name || deviceId, controlId);
 
-            const input = inputLibrary.create({
+            inputLibrary.create({
                 name,
                 deviceId: deviceId,
                 deviceName: device?.name || deviceId,
@@ -104,18 +98,6 @@
                 orientation: orientation || null,
                 deviceBrand: deviceBrand || null
             });
-
-            // Initialize state for the new input
-            if (isButton(input)) {
-                inputController.customPropertyManager.setProperty(`${input.cssIdentifier}-pressure`, '0.0%');
-            }
-
-            // Refresh all colors on the device to show assigned vs unassigned buttons
-            if (colorSupport && colorSupport !== 'none') {
-                applyColorsToDevices().catch(err => {
-                    console.warn(`Could not apply colors to devices:`, err);
-                });
-            }
         }
     }
 
@@ -181,12 +163,9 @@
 
         if (!result) return; // User cancelled
 
-        // Handle save
+        // Handle save - prepare updates object
         const existingInput = inputLibrary.get(input.id);
         if (existingInput) {
-            const oldColor = existingInput.color;
-            
-            // Prepare updates object
             const updates = {
                 name: result.name
             };
@@ -196,47 +175,24 @@
                 updates.buttonMode = result.buttonMode;
             }
 
-            // Update color if it changed and control supports color
-            if (result.color !== oldColor && existingInput.colorSupport && existingInput.colorSupport !== 'none') {
-                // Update color (library handles color tracking internally)
+            // Include color in updates if it changed
+            if (result.color !== existingInput.color) {
                 updates.color = result.color;
-
-                // Update color on hardware (only if device is connected)
-                const inputDevice = inputController.getInputDevice(existingInput.deviceId);
-                if (inputDevice && result.color) {
-                    // For toggle buttons, respect current state
-                    let color = result.color;
-                    if (isButton(existingInput) && existingInput.buttonMode === 'toggle') {
-                        const state = inputStates[existingInput.id];
-                        color = (state?.state === 'on') ? result.color : 'black';
-                    }
-
-                    // Use generic setColor method
-                    await inputDevice.setColor(existingInput.controlId, color);
-
-                    // Update Thingy device LED color if it's a Thingy device
-                    if (inputDevice.type === 'thingy' && inputDevice.thingyDevice) {
-                        inputDevice.thingyDevice.setDeviceColor(result.color);
-                    }
-                }
             }
 
-            // Apply updates (library handles CSS identifier and color tracking)
+            // Library emits event, controller syncs hardware
             inputLibrary.update(existingInput.id, updates);
         }
     }
 
-    async function deleteInput(inputId) {
+    function deleteInput(inputId) {
         const input = inputLibrary.get(inputId);
         if (!input) return;
 
-        if (!confirm(`Are you sure you want to delete "${input.name}"?`)) return;
+        if (!confirm(`Are you sure you want to delete "${input.name}"`)) return;
 
-        // Remove input (library handles color tracking internally)
+        // Library emits event, controller syncs hardware
         inputLibrary.remove(inputId);
-
-        // Refresh all colors on devices to update unassigned buttons
-        await applyColorsToDevices();
     }
 
     // Initialize input states when inputs change
@@ -266,146 +222,6 @@
         }
     });
 
-    async function applyColorsToDevices() {
-        // Get all connected devices
-        const devices = inputController.getInputDevices();
-
-        for (const device of devices) {
-            // Only apply to devices that support colors
-            if (!deviceSupportsColors(device)) continue;
-
-            // For MIDI devices with profiles, clear all color-capable controls
-            if (device.type === 'midi' && device.profile) {
-                // Build a map of assigned controls for this device
-                const assignedControls = new Map();
-                for (const input of inputs) {
-                    if (input.deviceId === device.id && input.color) {
-                        assignedControls.set(input.controlId, input);
-                    }
-                }
-
-                // Get all color-capable controls from the profile
-                const colorCapableControls = device.profile.controls?.filter(
-                    ctrl => ctrl.colorSupport && ctrl.colorSupport !== 'none'
-                ) || [];
-
-                // Check if device supports batch color updates (Akai LPD8 MK2, etc.)
-                const supportsBatchUpdate = typeof device.profile.setPadColor === 'function' &&
-                                           typeof device.profile.flushColors === 'function';
-
-                if (supportsBatchUpdate && device.profile.padNotes) {
-                    // Batch mode: update all pad states first, then send ONE message
-                    for (const note of device.profile.padNotes) {
-                        const controlId = `note-${note}`;
-                        const input = assignedControls.get(controlId);
-
-                        if (input) {
-                            // Set assigned color
-                            let color = input.color;
-
-                            // For toggle buttons, respect the current toggle state
-                            if (isButton(input) && input.buttonMode === 'toggle') {
-                                const state = inputStates[input.id];
-                                color = (state?.state === 'on') ? input.color : 'black';
-                            }
-
-                            device.profile.setPadColor(note, color);
-                        } else {
-                            // Set unassigned buttons to black
-                            device.profile.setPadColor(note, 'black');
-                        }
-                    }
-
-                    // Send single update with all pad colors
-                    const command = device.profile.flushColors();
-                    if (command && command.type === 'sysex' && device.midiOutput) {
-                        device.midiOutput.send(command.value);
-                    }
-                } else {
-                    // Non-batch mode: send individual updates for all color-capable controls
-                    for (const control of colorCapableControls) {
-                        const input = assignedControls.get(control.controlId);
-
-                        if (input) {
-                            // Set assigned color
-                            let color = input.color;
-
-                            // For toggle buttons, respect the current toggle state
-                            if (isButton(input) && input.buttonMode === 'toggle') {
-                                const state = inputStates[input.id];
-                                color = (state?.state === 'on') ? input.color : 'black';
-                            }
-
-                            await device.setColor(control.controlId, color);
-                        } else {
-                            // Set unassigned controls to black/off
-                            await device.setColor(control.controlId, 'black');
-                        }
-                    }
-                }
-            } else if (typeof device.getControls === 'function') {
-                // For devices with getControls() method (StreamDeck, etc.)
-                const controls = device.getControls();
-                
-                // Build a map of assigned controls for this device
-                const assignedControls = new Map();
-                for (const input of inputs) {
-                    if (input.deviceId === device.id && input.color) {
-                        assignedControls.set(input.controlId, input);
-                    }
-                }
-
-                for (const control of controls) {
-                    if (!control.colorSupport || control.colorSupport === 'none') continue;
-
-                    const input = assignedControls.get(control.controlId);
-
-                    if (input) {
-                        // Set assigned color
-                        let color = input.color;
-
-                        // For toggle buttons, respect the current toggle state
-                        if (isButton(input) && input.buttonMode === 'toggle') {
-                            const state = inputStates[input.id];
-                            color = (state?.state === 'on') ? input.color : 'black';
-                        }
-
-                        await device.setColor(control.controlId, color);
-                    } else {
-                        // Set unassigned controls to black/off
-                        await device.setColor(control.controlId, 'black');
-                    }
-                }
-            } else {
-                // For other devices (HID, Bluetooth) without getControls(), apply colors only to saved inputs
-                for (const input of inputs) {
-                    if (input.deviceId !== device.id) continue;
-                    if (!input.color || !input.colorSupport || input.colorSupport === 'none') continue;
-
-                    // For toggle buttons, respect the current toggle state
-                    let color = input.color;
-                    if (isButton(input) && input.buttonMode === 'toggle') {
-                        const state = inputStates[input.id];
-                        color = (state?.state === 'on') ? input.color : 'black';
-                    }
-
-                    await device.setColor(input.controlId, color);
-                }
-            }
-        }
-    }
-
-    async function updateButtonColorForToggleState(input, isOn) {
-        // Update button color based on toggle state (on = full color, off = black)
-        const inputDevice = inputController.getInputDevice(input.deviceId);
-        if (!inputDevice || !input.color || !input.colorSupport || input.colorSupport === 'none') return;
-
-        const color = isOn ? input.color : 'black';
-
-        // Use generic setColor method for all device types
-        await inputDevice.setColor(input.controlId, color);
-    }
-
     onMount(() => {
         // Set up device event handlers FIRST, before processing existing devices
         // Apply colors when devices connect
@@ -433,15 +249,13 @@
                 }
             }
 
-            // Apply colors to devices that support them (HID, MIDI, and Bluetooth)
-            if (deviceSupportsColors(device)) {
-                // Small delay to ensure device is fully initialized
-                setTimeout(() => {
-                    applyColorsToDevices().catch(err => {
-                        console.warn('Failed to apply colors on device added:', err);
-                    });
-                }, 500);
-            }
+            // Apply colors to the newly connected device
+            // Small delay to ensure device is fully initialized
+            setTimeout(() => {
+                inputController.applyColorsToDevices().catch(err => {
+                    console.warn('Failed to apply colors on device added:', err);
+                });
+            }, 500);
         });
 
         // Clear euler angles when Thingy devices disconnect
@@ -481,7 +295,7 @@
         // Apply colors immediately after inputs are loaded
         // Use a small delay to ensure devices are ready
         setTimeout(() => {
-            applyColorsToDevices().catch(err => {
+            inputController.applyColorsToDevices().catch(err => {
                 console.warn('Failed to apply colors on initial load:', err);
             });
         }, 100);
@@ -493,7 +307,7 @@
                 inputStates[mapping.id] = { ...inputStates[mapping.id], state: toggleState ? 'on' : 'off', pressed: true };
 
                 // Update button color based on toggle state
-                updateButtonColorForToggleState(mapping, toggleState);
+                inputController.updateButtonColorForToggleState(mapping, toggleState);
             } else if (isButton(mapping)) {
                 // For momentary buttons, show pressed state
                 inputStates[mapping.id] = { ...inputStates[mapping.id], state: 'pressed', pressed: true };

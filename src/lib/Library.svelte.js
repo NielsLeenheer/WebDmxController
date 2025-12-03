@@ -8,14 +8,17 @@
  * - Automatic UUID generation for new items
  * - Automatic order property management
  * - CRUD operations
+ * - Event emission (via EventEmitter base class)
  */
+
+import { EventEmitter } from './EventEmitter.js';
 
 const SAVE_DEBOUNCE_MS = 2000;
 
 /**
  * Base class for all libraries (Devices, Animations, Inputs, Triggers)
  */
-export class Library {
+export class Library extends EventEmitter {
 	/**
 	 * Reactive array of items
 	 * @type {Array}
@@ -38,6 +41,7 @@ export class Library {
 	 * @param {string} storageKey - Key for localStorage
 	 */
 	constructor(storageKey) {
+		super();
 		this.storageKey = storageKey;
 		this.load();
 	}
@@ -62,6 +66,7 @@ export class Library {
 	/**
 	 * Add item to library
 	 * Automatically assigns UUID if not present and sets order
+	 * Emits 'added' event with the added item
 	 * @param {Object} item - Item to add
 	 * @returns {Object} The added item
 	 */
@@ -79,30 +84,39 @@ export class Library {
 
 		this.items.push(item);
 		this.save();
+		this._emit('added', item);
 		return item;
 	}
 
 	/**
 	 * Remove item by ID
 	 * Renumbers remaining items to close order gaps
+	 * Emits 'removed' event with the removed item (before removal)
 	 * @param {string} id - Item ID to remove
+	 * @returns {boolean} Success status
 	 */
 	remove(id) {
 		const index = this.items.findIndex(item => item.id === id);
-		if (index !== -1) {
-			this.items.splice(index, 1);
-			// Renumber order to close gaps
-			this.items
-				.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-				.forEach((item, idx) => {
-					item.order = idx;
-				});
-			this.save();
-		}
+		if (index === -1) return false;
+
+		const removedItem = this.items[index];
+		this.items.splice(index, 1);
+		
+		// Renumber order to close gaps
+		this.items
+			.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+			.forEach((item, idx) => {
+				item.order = idx;
+			});
+		
+		this.save();
+		this._emit('removed', removedItem);
+		return true;
 	}
 
 	/**
 	 * Update item properties
+	 * Emits 'updated' event with { item, changes }
 	 * @param {string} id - Item ID
 	 * @param {Object} updates - Properties to update
 	 * @returns {boolean} Success status
@@ -115,6 +129,7 @@ export class Library {
 		Object.assign(item, updates);
 
 		this.save();
+		this._emit('updated', { item, changes: updates });
 		return true;
 	}
 
