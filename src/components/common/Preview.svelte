@@ -496,25 +496,43 @@
         --depth: 4px;
         --adjust-symbol-y: 0px;
         --adjust-symbol-x: 0px;
+        --pressed-speed: 0.1s;
 
         height: var(--height);
         width: var(--width);
 
-        transition: filter 0.3s ease;
+        transition: 
+            filter 0.3s ease, 
+            height var(--pressed-speed) linear, 
+            margin-top var(--pressed-speed) linear,
+            scale var(--pressed-speed) linear;
     }
 
-    .preview.state-off {
-        filter: grayscale(80%) brightness(90%);
-    }
 
     /* Pressed state for buttons and pads: simulate depth by shifting down and reducing height */
+
+    .preview.pressed.input-type-button,
+    .preview.pressed.input-type-pad {
+        --depth: 1px;
+        height: calc(var(--height) - var(--depth));
+        margin-top: calc(var(--depth) - 4px);
+    }
 
     .preview.pressed.input-type-pad,
     .preview.pressed.input-type-button {
         --depth: 2px;
-        height: calc(var(--height) - var(--depth));
         margin-top: var(--depth);
+        scale: 98% 100%;
     }
+
+    .preview.state-off {
+        filter: grayscale(90%) brightness(90%);
+    }
+
+    .preview.state-off:not(.pressed) {
+        --depth: 3px;
+    }
+
 
     /* Enable 3D perspective for rotating previews */
     .preview.with-3d {
@@ -600,6 +618,8 @@
         pointer-events: none;
         box-shadow: inset 0 calc(var(--depth) * -1) 0px 0px rgba(0, 0, 0, 0.2);
         z-index: 100;
+
+        transition: box-shadow var(--pressed-speed) linear;
     }
 
     /* Button preview - square */
