@@ -2,7 +2,6 @@
     import { onMount, onDestroy } from 'svelte';
     import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
     import { inputLibrary } from '../../stores.svelte.js';
-    import { getUnusedFromPalette, getPalette } from '../../lib/inputs/colors.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import InputCard from '../cards/InputCard.svelte';
     import Button from '../common/Button.svelte';
@@ -29,10 +28,6 @@
     // Context menu state
     let contextMenuRef = $state(null);
 
-    const deviceColorUsage = new Map(); // deviceId -> Set(colors)
-    const deviceColorIndices = new Map(); // deviceId -> last palette index used when cycling
-    const COLOR_CAPABLE_PREFIXES = ['button-', 'note-'];
-
     // Drag and drop helper
     const dnd = createDragDrop({
         items: () => inputs,
@@ -43,87 +38,14 @@
         getItemId: (item) => item.id
     });
 
-    function isColorCapableControl(controlId) {
-        if (!controlId || typeof controlId !== 'string') return false;
-        // Thingy:52 uses 'thingy' controlId (single input with button + sensor functionality)
-        if (controlId === 'thingy') return true;
-        return COLOR_CAPABLE_PREFIXES.some(prefix => controlId.startsWith(prefix));
-    }
-
     function deviceSupportsColors(device) {
         if (!device) return false;
         // StreamDeck, MIDI and Thingy:52 support colors
         return device.type === 'streamdeck' || device.type === 'midi' || device.type === 'thingy';
     }
 
-    function shouldAssignColorSupport(device, controlId) {
-        // For now, Thingy:52 buttons support RGB
-        // Other devices will get colorSupport from profile/device definitions
-        if (device.type === 'thingy') {
-            return 'rgb';
-        }
-        // For other devices, would need to query device profile
-        // Default to 'none' if no color support
-        return 'none';
-    }
-
-    function registerColorUsage(deviceId, controlId, color) {
-        if (!deviceId || !color || !isColorCapableControl(controlId)) return;
-
-        if (!deviceColorUsage.has(deviceId)) {
-            deviceColorUsage.set(deviceId, new Set());
-        }
-        deviceColorUsage.get(deviceId).add(color);
-    }
-
-    function releaseColorUsage(deviceId, controlId, color) {
-        if (!deviceId || !color || !isColorCapableControl(controlId)) return;
-
-        const usage = deviceColorUsage.get(deviceId);
-        if (!usage) return;
-        usage.delete(color);
-        if (usage.size === 0) {
-            deviceColorUsage.delete(deviceId);
-            deviceColorIndices.delete(deviceId);
-        }
-    }
-
-    function rebuildDeviceColorUsage() {
-        deviceColorUsage.clear();
-        deviceColorIndices.clear();
-        for (const input of inputs) {
-            registerColorUsage(input.deviceId, input.controlId, input.color);
-        }
-    }
-
     // Event handlers
     let inputEventHandlers = [];
-
-    function getNextAvailableColor(deviceId, colorSupport = 'rgb') {
-        // Get fixed color for single-color buttons
-        if (colorSupport === 'red') return 'red';
-        if (colorSupport === 'green') return 'green';
-        if (colorSupport === 'none') return null;
-        
-        // For RGB buttons, cycle through available colors
-        const usedColors = deviceColorUsage.get(deviceId);
-        const usedColorsArray = usedColors ? Array.from(usedColors) : [];
-        
-        // Try to get an unused color
-        const unusedColor = getUnusedFromPalette(usedColorsArray);
-        if (unusedColor) {
-            return unusedColor;
-        }
-
-        // All colors are used, cycle through the palette
-        const palette = getPalette();
-        if (!palette.length) return undefined;
-
-        const lastIndex = deviceColorIndices.get(deviceId) ?? -1;
-        const nextIndex = (lastIndex + 1) % palette.length;
-        deviceColorIndices.set(deviceId, nextIndex);
-        return palette[nextIndex];
-    }
 
     function startListening() {
         isListening = true;
@@ -168,11 +90,8 @@
         );
 
         if (!existing) {
-            // Auto-save new input
+            // Auto-save new input (color is auto-assigned by library)
             const name = friendlyName || formatInputName(device?.name || deviceId, controlId);
-            
-            // Get appropriate color based on colorSupport type
-            const color = getNextAvailableColor(deviceId, colorSupport);
 
             const input = inputLibrary.create({
                 name,
@@ -183,8 +102,7 @@
                 type: type || 'button',
                 colorSupport: colorSupport || 'none',
                 orientation: orientation || null,
-                deviceBrand: deviceBrand || null,
-                color
+                deviceBrand: deviceBrand || null
             });
 
             // Initialize state for the new input
@@ -192,10 +110,8 @@
                 inputController.customPropertyManager.setProperty(`${input.cssIdentifier}-pressure`, '0.0%');
             }
 
+            // Refresh all colors on the device to show assigned vs unassigned buttons
             if (colorSupport && colorSupport !== 'none') {
-                registerColorUsage(deviceId, controlId, input.color);
-
-                // Refresh all colors on the device to show assigned vs unassigned buttons
                 applyColorsToDevices().catch(err => {
                     console.warn(`Could not apply colors to devices:`, err);
                 });
@@ -282,18 +198,8 @@
 
             // Update color if it changed and control supports color
             if (result.color !== oldColor && existingInput.colorSupport && existingInput.colorSupport !== 'none') {
-                // Release old color usage
-                if (oldColor) {
-                    releaseColorUsage(existingInput.deviceId, existingInput.controlId, oldColor);
-                }
-
-                // Update color
+                // Update color (library handles color tracking internally)
                 updates.color = result.color;
-
-                // Register new color usage
-                if (result.color) {
-                    registerColorUsage(existingInput.deviceId, existingInput.controlId, result.color);
-                }
 
                 // Update color on hardware (only if device is connected)
                 const inputDevice = inputController.getInputDevice(existingInput.deviceId);
@@ -315,7 +221,7 @@
                 }
             }
 
-            // Apply updates (includes CSS identifier update if name/buttonMode changed)
+            // Apply updates (library handles CSS identifier and color tracking)
             inputLibrary.update(existingInput.id, updates);
         }
     }
@@ -326,9 +232,7 @@
 
         if (!confirm(`Are you sure you want to delete "${input.name}"?`)) return;
 
-        // Release color usage for this device
-        releaseColorUsage(input.deviceId, input.controlId, input.color);
-
+        // Remove input (library handles color tracking internally)
         inputLibrary.remove(inputId);
 
         // Refresh all colors on devices to update unassigned buttons
@@ -360,8 +264,6 @@
                 }
             }
         }
-
-        rebuildDeviceColorUsage();
     });
 
     async function applyColorsToDevices() {
@@ -521,9 +423,10 @@
                 );
 
                 if (thingyInput && !thingyInput.color) {
-                    const color = getNextAvailableColor(device.id, 'rgb');
-                    inputLibrary.update(thingyInput.id, { color });
-                    registerColorUsage(device.id, 'thingy', color);
+                    // Library will auto-assign a color
+                    inputLibrary.update(thingyInput.id, { 
+                        color: inputLibrary.getNextColor(device.id, 'rgb') 
+                    });
 
                     // Initialize pressure property for thingy input (it has button functionality)
                     inputController.customPropertyManager.setProperty(`${thingyInput.cssIdentifier}-pressure`, '0.0%');
@@ -564,9 +467,10 @@
                 );
 
                 if (thingyInput && !thingyInput.color) {
-                    const color = getNextAvailableColor(device.id, 'rgb');
-                    inputLibrary.update(thingyInput.id, { color });
-                    registerColorUsage(device.id, 'thingy', color);
+                    // Library will auto-assign a color
+                    inputLibrary.update(thingyInput.id, { 
+                        color: inputLibrary.getNextColor(device.id, 'rgb') 
+                    });
 
                     // Initialize pressure property for thingy input (it has button functionality)
                     inputController.customPropertyManager.setProperty(`${thingyInput.cssIdentifier}-pressure`, '0.0%');
