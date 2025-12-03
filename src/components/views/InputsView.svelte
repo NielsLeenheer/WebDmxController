@@ -6,9 +6,13 @@
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import InputCard from '../cards/InputCard.svelte';
     import Button from '../common/Button.svelte';
+    import ContextMenu from '../common/ContextMenu.svelte';
+    import ContextAction from '../common/ContextAction.svelte';
     import EditInputDialog from '../dialogs/EditInputDialog.svelte';
     import recordIcon from '../../assets/icons/record.svg?raw';
     import stopIcon from '../../assets/icons/stop.svg?raw';
+    import editIcon from '../../assets/icons/edit.svg?raw';
+    import removeIcon from '../../assets/icons/remove.svg?raw';
 
     let {
         inputController
@@ -21,6 +25,15 @@
     let editInputDialog; // Reference to EditInputDialog component
     let inputStates = $state({}); // Track state/value for each input: { inputId: { state: 'on'|'off', value: number } }
     let thingyEulerAngles = $state({}); // Track Euler angles for Thingy devices: { deviceId: { roll, pitch, yaw } }
+
+    // Context menu state
+    let contextMenuRef = $state(null);
+    let contextMenuInput = $state(null);
+
+    function showContextMenu(input, anchorElement) {
+        contextMenuInput = input;
+        contextMenuRef?.show(anchorElement);
+    }
 
     const deviceColorUsage = new Map(); // deviceId -> Set(colors)
     const deviceColorIndices = new Map(); // deviceId -> last palette index used when cycling
@@ -258,12 +271,6 @@
 
         if (!result) return; // User cancelled
 
-        if (result.delete) {
-            // Handle delete
-            await deleteInput(input.id);
-            return;
-        }
-
         // Handle save
         const existingInput = inputLibrary.get(input.id);
         if (existingInput) {
@@ -322,6 +329,8 @@
     async function deleteInput(inputId) {
         const input = inputLibrary.get(inputId);
         if (!input) return;
+
+        if (!confirm(`Are you sure you want to delete "${input.name}"?`)) return;
 
         // Release color usage for this device
         releaseColorUsage(input.deviceId, input.controlId, input.color);
@@ -647,7 +656,7 @@
                     {dnd}
                     inputState={inputStates[input.id] || {}}
                     eulerAngles={thingyEulerAngles[input.deviceId]}
-                    onEdit={startEditing}
+                    onEdit={showContextMenu}
                 />
             {/each}
         {/if}
@@ -659,6 +668,18 @@
     bind:this={editInputDialog}
     inputController={inputController}
 />
+
+<!-- Context Menu -->
+<ContextMenu bind:contextRef={contextMenuRef}>
+    <ContextAction onclick={() => startEditing(contextMenuInput)}>
+        {@html editIcon}
+        Edit
+    </ContextAction>
+    <ContextAction onclick={() => deleteInput(contextMenuInput?.id)} variant="danger">
+        {@html removeIcon}
+        Delete
+    </ContextAction>
+</ContextMenu>
 
 <style>
     .inputs-view {

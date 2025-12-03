@@ -14,6 +14,7 @@
 		onEdit           // Callback when edit button clicked
 	} = $props();
 
+	let menuButtonRef = $state(null);
 </script>
 
 <DraggableCard {dnd} item={input} class="input-card">
@@ -37,8 +38,9 @@
 	</div>
 	
 	<IconButton
+		bind:buttonRef={menuButtonRef}
 		icon={dotsIcon}
-		onclick={() => onEdit?.(input)}
+		onclick={() => onEdit?.(input, menuButtonRef)}
 		title="Input settings"
 		size="small"
 	/>

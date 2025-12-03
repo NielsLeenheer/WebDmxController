@@ -9,17 +9,20 @@
      * @prop {Function} onclick - Click handler
      * @prop {boolean} disabled - Whether button is disabled
      * @prop {string} size - Button size: 'small' | 'medium' | 'large'
+     * @prop {HTMLElement} buttonRef - Bindable reference to the button element
      */
     let {
         icon,
         label,
         onclick = null,
         disabled = false,
-        size = 'medium'
+        size = 'medium',
+        buttonRef = $bindable(null)
     } = $props();
 </script>
 
 <button
+    bind:this={buttonRef}
     class="icon-button {size}"
     {onclick}
     {disabled}
@@ -38,6 +41,7 @@
         background: none;
         padding: 0;
         cursor: pointer;
+        opacity: 0.8;
         transition: opacity 0.2s;
     }
 
@@ -55,8 +59,8 @@
     }
 
     .icon-button.small {
-        width: 20px;
-        height: 20px;
+        width: 14px;
+        height: 14px;
     }
 
     .icon-button.medium {

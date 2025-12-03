@@ -4,7 +4,6 @@
 	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
 	import { toCSSIdentifier } from '../../lib/css/utils.js';
 	import { getPalette, paletteColorToHex } from '../../lib/inputs/colors.js';
-	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
 	 * EditInputDialog - Promise-based dialog for editing inputs
@@ -101,16 +100,6 @@
 		closeDialog();
 	}
 
-	function confirmDelete() {
-		if (!editingInput) return;
-
-		if (confirm(`Are you sure you want to delete "${editingInput.name}"?`)) {
-			// Return special delete signal
-			resolvePromise({ delete: true });
-			closeDialog();
-		}
-	}
-
 	function closeDialog() {
 		dialogRef?.close();
 		editingInput = null;
@@ -183,13 +172,6 @@
 			</div>
 		{/if}
 	</form>
-
-	{#snippet tools()}
-		<Button onclick={confirmDelete} variant="secondary">
-			{@html removeIcon}
-			Delete
-		</Button>
-	{/snippet}
 
 	{#snippet buttons()}
 		<Button onclick={handleCancel} variant="secondary">Cancel</Button>
