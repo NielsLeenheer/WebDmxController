@@ -9,7 +9,7 @@
 	let {
 		input,           // Input plain object
 		dnd,             // Drag-and-drop helper
-		state = {},      // Raw state object: { value?, x?, y?, state? }
+		inputState = {}, // Raw state object: { value?, x?, y?, state? }
 		eulerAngles,     // Euler angles for Thingy:52 (optional)
 		onEdit           // Callback when edit button clicked
 	} = $props();
@@ -21,7 +21,7 @@
 		type="input"
 		size="medium"
 		data={input}
-		state={state}
+		state={inputState}
 		euler={input.controlId === 'thingy' && eulerAngles ? eulerAngles : null}
 		class="input-preview"
 	/>

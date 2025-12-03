@@ -645,7 +645,7 @@
                 <InputCard
                     {input}
                     {dnd}
-                    state={inputStates[input.id] || {}}
+                    inputState={inputStates[input.id] || {}}
                     eulerAngles={thingyEulerAngles[input.deviceId]}
                     onEdit={startEditing}
                 />
