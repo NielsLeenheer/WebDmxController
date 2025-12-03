@@ -1,7 +1,6 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
-	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
 	 * EditAutomaticTriggerDialog - Promise-based dialog for editing automatic triggers
@@ -88,15 +87,6 @@
 		closeDialog();
 	}
 
-	function confirmDelete() {
-		if (!editingTrigger) return;
-
-		if (confirm(`Are you sure you want to delete this trigger?`)) {
-			resolvePromise({ delete: true });
-			closeDialog();
-		}
-	}
-
 	function handleCancel() {
 		resolvePromise(null);
 		closeDialog();
@@ -172,13 +162,6 @@
 			</div>
 		</div>
 	</form>
-
-	{#snippet tools()}
-		<Button onclick={confirmDelete} variant="secondary">
-			{@html removeIcon}
-			Delete
-		</Button>
-	{/snippet}
 
 	{#snippet buttons()}
 		<Button onclick={handleCancel} variant="secondary">Cancel</Button>

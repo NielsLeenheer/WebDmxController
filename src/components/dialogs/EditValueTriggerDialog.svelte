@@ -3,7 +3,6 @@
 	import Button from '../common/Button.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { getInputExportedValues } from '../../lib/inputs/valueTypes.js';
-	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
 	 * EditValueTriggerDialog - Promise-based dialog for editing value-based triggers
@@ -95,13 +94,6 @@
 
 		resolvePromise(result);
 		closeDialog();
-	}
-
-	function confirmDelete() {
-		if (confirm('Are you sure you want to delete this trigger?')) {
-			resolvePromise({ action: 'delete' });
-			closeDialog();
-		}
 	}
 
 	function handleCancel() {
@@ -207,13 +199,6 @@
 			</div>
 		</div>
 	</form>
-
-	{#snippet tools()}
-		<Button onclick={confirmDelete} variant="secondary">
-			{@html removeIcon}
-			Delete
-		</Button>
-	{/snippet}
 
 	{#snippet buttons()}
 		<Button type="button" onclick={handleCancel} variant="secondary">Cancel</Button>

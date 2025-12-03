@@ -7,14 +7,16 @@
 	import Preview from '../common/Preview.svelte';
 	import IconButton from '../common/IconButton.svelte';
 	import Checkbox from '../common/Checkbox.svelte';
-	import editIcon from '../../assets/glyphs/edit.svg?raw';
+	import dotsIcon from '../../assets/glyphs/dots.svg?raw';
 
 	let {
 		trigger,          // Trigger plain object
 		dnd,              // Drag-and-drop helper
-		onEdit,           // Callback when edit button clicked
+		onEdit,           // Callback when menu button clicked (trigger, anchorElement)
 		onToggleEnabled   // Callback when enabled state toggled
 	} = $props();
+
+	let menuButtonRef = $state(null);
 
 	let device = $derived(deviceLibrary.get(trigger.output?.id));
 	let animation = $derived(trigger.action?.animation?.id ? animationLibrary.get(trigger.action.animation.id) : null);
@@ -214,9 +216,10 @@
 	</div>
 
 	<IconButton
-		icon={editIcon}
-		onclick={() => onEdit?.(trigger)}
-		title="Edit trigger"
+		bind:buttonRef={menuButtonRef}
+		icon={dotsIcon}
+		onclick={() => onEdit?.(trigger, menuButtonRef)}
+		title="Trigger options"
 		size="small"
 	/>
 </DraggableCard>

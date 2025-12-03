@@ -5,14 +5,16 @@
 	import Preview from '../common/Preview.svelte';
 	import TimelineEditor from '../animations/TimelineEditor.svelte';
 
-	import editIcon from '../../assets/glyphs/edit.svg?raw';
+	import dotsIcon from '../../assets/glyphs/dots.svg?raw';
 
 	let {
 		animation,       // Animation plain object
 		dnd,             // Drag-and-drop helper
 		animationLibrary, // Animation library reference
-		onSettings       // Callback when settings button clicked
+		onEdit           // Callback when edit button clicked
 	} = $props();
+
+	let menuButtonRef = $state(null);
 </script>
 
 <DraggableCard {dnd} item={animation} class="animation-card">
@@ -30,8 +32,9 @@
 		</div>
 
 		<IconButton
-			icon={editIcon}
-			onclick={() => onSettings?.(animation)}
+			bind:buttonRef={menuButtonRef}
+			icon={dotsIcon}
+			onclick={() => onEdit?.(animation, menuButtonRef)}
 			title="Edit animation"
 			size="small"
 		/>

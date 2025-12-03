@@ -2,7 +2,6 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import { toCSSIdentifier } from '../../lib/css/utils.js';
-	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
 	 * EditAnimationDialog - Promise-based dialog for editing animations
@@ -10,11 +9,7 @@
 	 * Usage:
 	 *   const result = await editAnimationDialog.open(animation);
 	 *   if (result) {
-	 *     if (result.delete) {
-	 *       // Handle delete
-	 *     } else {
-	 *       // Update animation with result.name
-	 *     }
+	 *     // Update animation with result.name
 	 *   }
 	 */
 
@@ -66,16 +61,6 @@
 		closeDialog();
 	}
 
-	function confirmDelete() {
-		if (!editingAnimation) return;
-
-		if (confirm(`Are you sure you want to delete "${editingAnimation.name}"?`)) {
-			// Return special delete signal
-			resolvePromise({ delete: true });
-			closeDialog();
-		}
-	}
-
 	function closeDialog() {
 		dialogRef?.close();
 		editingAnimation = null;
@@ -104,13 +89,6 @@
 			</div>
 		</div>
 	</form>
-
-	{#snippet tools()}
-		<Button onclick={confirmDelete} variant="secondary">
-			{@html removeIcon}
-			Delete
-		</Button>
-	{/snippet}
 
 	{#snippet buttons()}
 		<Button onclick={handleCancel} variant="secondary">Cancel</Button>

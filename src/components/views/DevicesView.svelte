@@ -5,10 +5,14 @@
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import DeviceCard from '../cards/DeviceCard.svelte';
     import Button from '../common/Button.svelte';
+    import ContextMenu from '../common/ContextMenu.svelte';
+    import ContextAction from '../common/ContextAction.svelte';
     import EditDeviceDialog from '../dialogs/EditDeviceDialog.svelte';
 
     import { Icon } from 'svelte-icon';
     import newIcon from '../../assets/icons/new.svg?raw';
+    import editIcon from '../../assets/icons/edit.svg?raw';
+    import removeIcon from '../../assets/icons/remove.svg?raw';
 
     let { dmxController, isActive = false } = $props();
 
@@ -21,6 +25,9 @@
     // Dialog reference
     let editDeviceDialog;
 
+    // Context menu state
+    let contextMenuRef = $state(null);
+
     // Drag and drop helper
     const dnd = createDragDrop({
         items: () => devices,
@@ -29,15 +36,10 @@
         dragByHeader: true
     });
 
-    async function openSettingsDialog(device) {
+    async function startEditing(device) {
         const result = await editDeviceDialog.open(device, devices);
 
         if (!result) return; // User cancelled
-
-        if (result.delete) {
-            removeDevice(device.id);
-            return;
-        }
 
         deviceLibrary.update(device.id, {
             startChannel: result.startChannel,
@@ -46,6 +48,15 @@
             syncedControls: result.syncedControls,
             mirrorPan: result.mirrorPan
         });
+    }
+
+    function deleteDevice(deviceId) {
+        const device = deviceLibrary.get(deviceId);
+        if (!device) return;
+
+        if (!confirm(`Are you sure you want to delete "${device.name}"?`)) return;
+
+        deviceLibrary.remove(deviceId);
     }
 
 
@@ -67,10 +78,6 @@
 
     export function addDevice(type = selectedType) {
         deviceLibrary.create(type, getNextFreeChannel());
-    }
-
-    function removeDevice(deviceId) {
-        deviceLibrary.remove(deviceId);
     }
 
     function handleDeviceValueChange(device, controlId, value) {
@@ -134,7 +141,7 @@
                 {device}
                 {dnd}
                 {devices}
-                onSettings={openSettingsDialog}
+                onEdit={(device, anchor) => contextMenuRef?.show(device, anchor)}
                 onValueChange={handleDeviceValueChange}
             />
         {/each}
@@ -144,6 +151,18 @@
     <EditDeviceDialog
         bind:this={editDeviceDialog}
     />
+
+    <!-- Context Menu -->
+    <ContextMenu bind:contextRef={contextMenuRef}>
+        <ContextAction onclick={(device) => startEditing(device)}>
+            {@html editIcon}
+            Edit
+        </ContextAction>
+        <ContextAction onclick={(device) => deleteDevice(device?.id)} variant="danger">
+            {@html removeIcon}
+            Delete
+        </ContextAction>
+    </ContextMenu>
 </div>
 
 <style>

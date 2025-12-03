@@ -3,6 +3,8 @@
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import TriggerCard from '../cards/TriggerCard.svelte';
     import Button from '../common/Button.svelte';
+    import ContextMenu from '../common/ContextMenu.svelte';
+    import ContextAction from '../common/ContextAction.svelte';
     import AddActionTriggerDialog from '../dialogs/AddActionTriggerDialog.svelte';
     import AddAutomaticTriggerDialog from '../dialogs/AddAutomaticTriggerDialog.svelte';
     import AddValueTriggerDialog from '../dialogs/AddValueTriggerDialog.svelte';
@@ -12,6 +14,8 @@
 
     import { Icon } from 'svelte-icon';
     import newIcon from '../../assets/icons/new.svg?raw';
+    import editIcon from '../../assets/icons/edit.svg?raw';
+    import removeIcon from '../../assets/icons/remove.svg?raw';
 
     // Get devices reactively from library
     let devices = $derived(deviceLibrary.getAll());
@@ -31,6 +35,9 @@
     let editActionTriggerDialog;
     let editAutomaticTriggerDialog;
     let editValueTriggerDialog;
+
+    // Context menu reference
+    let contextMenuRef = $state(null);
 
     // Drag and drop helper
     const dnd = createDragDrop({
@@ -124,117 +131,114 @@
         });
     }
 
-    async function openEditDialog(trigger) {
+    function startEditing(trigger) {
         if (trigger.type === 'value') {
-            // Value-based trigger
-            const result = await editValueTriggerDialog.open(trigger, valueCapableInputs, devices);
-
-            if (!result || result.action === 'cancel') return; // User cancelled
-
-            if (result.action === 'delete') {
-                // Handle delete
-                triggerLibrary.remove(trigger.id);
-                return;
-            }
-
-            // Handle save
-            triggerLibrary.update(trigger.id, {
-                input: {
-                    id: result.data.inputId,
-                    value: result.data.inputValueKey
-                },
-                output: {
-                    id: result.data.deviceId
-                },
-                action: {
-                    type: 'copy',
-                    copy: {
-                        control: result.data.controlId,
-                        component: result.data.controlValueId,
-                        invert: result.data.invert
-                    }
-                }
-            });
+            editValueTrigger(trigger);
         } else if (trigger.type === 'auto') {
-            // Automatic trigger
-            const result = await editAutomaticTriggerDialog.open(trigger, availableAnimations, devices);
-
-            if (!result) return; // User cancelled
-
-            if (result.delete) {
-                // Handle delete
-                triggerLibrary.remove(trigger.id);
-                return;
-            }
-
-            // Handle save using library update method
-            triggerLibrary.update(trigger.id, {
-                output: {
-                    id: result.device
-                },
-                action: {
-                    type: 'animation',
-                    animation: {
-                        id: result.animation,
-                        duration: result.duration,
-                        easing: result.easing,
-                        iterations: result.looping ? 'infinite' : 1
-                    }
-                }
-            });
+            editAutomaticTrigger(trigger);
         } else {
-            // Action trigger
-            const result = await editActionTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
+            editActionTrigger(trigger);
+        }
+    }
 
-            if (!result) return; // User cancelled
+    async function editValueTrigger(trigger) {
+        const result = await editValueTriggerDialog.open(trigger, valueCapableInputs, devices);
 
-            if (result.delete) {
-                // Handle delete
-                triggerLibrary.remove(trigger.id);
-                return;
-            }
+        if (!result || result.action === 'cancel') return; // User cancelled
 
-            // Handle save - parse the selected input
-            const [newInputDeviceId, newInputControlId] = result.input.split('_');
-            const selectedInput = availableInputs.find(input =>
-                input.deviceId === newInputDeviceId &&
-                input.controlId === newInputControlId
-            );
-
-            if (!selectedInput) return;
-
-            // Get button mode from the input
-            const buttonMode = selectedInput.buttonMode || 'momentary';
-
-            // Build updates object based on action type
-            const updates = {
-                input: {
-                    id: selectedInput.id,
-                    state: result.inputState
-                },
-                output: {
-                    id: result.device
-                },
-                action: {
-                    type: result.actionType,
-                    animation: null,
-                    values: null
+        // Handle save
+        triggerLibrary.update(trigger.id, {
+            input: {
+                id: result.data.inputId,
+                value: result.data.inputValueKey
+            },
+            output: {
+                id: result.data.deviceId
+            },
+            action: {
+                type: 'copy',
+                copy: {
+                    control: result.data.controlId,
+                    component: result.data.controlValueId,
+                    invert: result.data.invert
                 }
-            };
+            }
+        });
+    }
 
-            if (result.actionType === 'animation') {
-                updates.action.animation = {
+    async function editAutomaticTrigger(trigger) {
+        const result = await editAutomaticTriggerDialog.open(trigger, availableAnimations, devices);
+
+        if (!result) return; // User cancelled
+
+        // Handle save using library update method
+        triggerLibrary.update(trigger.id, {
+            output: {
+                id: result.device
+            },
+            action: {
+                type: 'animation',
+                animation: {
                     id: result.animation,
                     duration: result.duration,
                     easing: result.easing,
                     iterations: result.looping ? 'infinite' : 1
-                };
-            } else {
-                updates.action.values = result.values;
+                }
             }
+        });
+    }
 
-            // Update using library method
-            triggerLibrary.update(trigger.id, updates);
+    async function editActionTrigger(trigger) {
+        const result = await editActionTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
+
+        if (!result) return; // User cancelled
+
+        // Handle save - parse the selected input
+        const [newInputDeviceId, newInputControlId] = result.input.split('_');
+        const selectedInput = availableInputs.find(input =>
+            input.deviceId === newInputDeviceId &&
+            input.controlId === newInputControlId
+        );
+
+        if (!selectedInput) return;
+
+        // Get button mode from the input
+        const buttonMode = selectedInput.buttonMode || 'momentary';
+
+        // Build updates object based on action type
+        const updates = {
+            input: {
+                id: selectedInput.id,
+                state: result.inputState
+            },
+            output: {
+                id: result.device
+            },
+            action: {
+                type: result.actionType,
+                animation: null,
+                values: null
+            }
+        };
+
+        if (result.actionType === 'animation') {
+            updates.action.animation = {
+                id: result.animation,
+                duration: result.duration,
+                easing: result.easing,
+                iterations: result.looping ? 'infinite' : 1
+            };
+        } else {
+            updates.action.values = result.values;
+        }
+
+        // Update using library method
+        triggerLibrary.update(trigger.id, updates);
+    }
+
+    function deleteTrigger(trigger) {
+        if (confirm('Are you sure you want to delete this trigger?')) {
+            triggerLibrary.remove(trigger.id);
         }
     }
 
@@ -291,7 +295,7 @@
                 <TriggerCard
                     {trigger}
                     {dnd}
-                    onEdit={openEditDialog}
+                    onEdit={(item, anchor) => contextMenuRef?.show(item, anchor)}
                     onToggleEnabled={toggleTriggerEnabled}
                 />
             {/each}
@@ -324,6 +328,17 @@
 <EditValueTriggerDialog
     bind:this={editValueTriggerDialog}
 />
+
+<ContextMenu bind:contextRef={contextMenuRef}>
+    <ContextAction onclick={(trigger) => startEditing(trigger)}>
+        {@html editIcon}
+        Edit
+    </ContextAction>
+    <ContextAction onclick={(trigger) => deleteTrigger(trigger)} variant="danger">
+        {@html removeIcon}
+        Delete
+    </ContextAction>
+</ContextMenu>
 
 <style>
     .triggers-view {

@@ -8,16 +8,18 @@
 	import IconButton from '../common/IconButton.svelte';
 	import Preview from '../common/Preview.svelte';
 
-	import editIcon from '../../assets/glyphs/edit.svg?raw';
+	import dotsIcon from '../../assets/glyphs/dots.svg?raw';
 	import linkedIcon from '../../assets/icons/linked.svg?raw';
 
 	let {
 		device,       // Device object
 		dnd,          // Drag-and-drop helper
 		devices,      // All devices (for linked device lookup)
-		onSettings,   // Callback when settings button clicked
+		onEdit,       // Callback when edit button clicked
 		onValueChange // Callback when device value changes
 	} = $props();
+
+	let menuButtonRef = $state(null);
 
 	/**
 	 * Get disabled controls for this device based on linked device
@@ -46,8 +48,9 @@
 			<Icon data={linkedIcon} />
 		{/if}
 		<IconButton
-			icon={editIcon}
-			onclick={() => onSettings?.(device)}
+			bind:buttonRef={menuButtonRef}
+			icon={dotsIcon}
+			onclick={() => onEdit?.(device, menuButtonRef)}
 			title="Device settings"
 			size="small"
 		/>

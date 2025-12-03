@@ -5,11 +5,15 @@
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import AnimationCard from '../cards/AnimationCard.svelte';
     import Button from '../common/Button.svelte';
+    import ContextMenu from '../common/ContextMenu.svelte';
+    import ContextAction from '../common/ContextAction.svelte';
     import AddAnimationDialog from '../dialogs/AddAnimationDialog.svelte';
     import EditAnimationDialog from '../dialogs/EditAnimationDialog.svelte';
 
     import { Icon } from 'svelte-icon';
     import newIcon from '../../assets/icons/new.svg?raw';
+    import editIcon from '../../assets/icons/edit.svg?raw';
+    import removeIcon from '../../assets/icons/remove.svg?raw';
 
     // Get data reactively
     let devices = $derived(deviceLibrary.getAll());
@@ -18,6 +22,9 @@
     // Dialog references
     let addAnimationDialog;
     let editAnimationDialog;
+
+    // Context menu state
+    let contextMenuRef = $state(null);
 
     // Drag and drop helper
     const dnd = createDragDrop({
@@ -104,20 +111,24 @@
         };
     }
 
-    async function openEditDialog(animation) {
+    async function startEditing(animation) {
         const result = await editAnimationDialog.open(animation);
 
         if (!result) return; // User cancelled
-
-        if (result.delete) {
-            animationLibrary.remove(animation.id);
-            return;
-        }
 
         // Handle update - library method handles reactivity
         if (result.name !== animation.name) {
             animationLibrary.update(animation.id, { name: result.name });
         }
+    }
+
+    function deleteAnimation(animationId) {
+        const animation = animationLibrary.get(animationId);
+        if (!animation) return;
+
+        if (!confirm(`Are you sure you want to delete "${animation.name}"?`)) return;
+
+        animationLibrary.remove(animationId);
     }
 </script>
 
@@ -140,7 +151,7 @@
                     {animation}
                     {dnd}
                     {animationLibrary}
-                    onSettings={openEditDialog}
+                    onEdit={(animation, anchor) => contextMenuRef?.show(animation, anchor)}
                 />
             {/each}
         {/if}
@@ -156,6 +167,18 @@
 <EditAnimationDialog
     bind:this={editAnimationDialog}
 />
+
+<!-- Context Menu -->
+<ContextMenu bind:contextRef={contextMenuRef}>
+    <ContextAction onclick={(animation) => startEditing(animation)}>
+        {@html editIcon}
+        Edit
+    </ContextAction>
+    <ContextAction onclick={(animation) => deleteAnimation(animation?.id)} variant="danger">
+        {@html removeIcon}
+        Delete
+    </ContextAction>
+</ContextMenu>
 
 <style>
     .animations-view {

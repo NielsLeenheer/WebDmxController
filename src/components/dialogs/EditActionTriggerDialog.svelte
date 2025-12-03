@@ -4,7 +4,6 @@
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
-	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
 	 * EditActionTriggerDialog - Promise-based dialog for editing action triggers
@@ -194,15 +193,6 @@
 		closeDialog();
 	}
 
-	function confirmDelete() {
-		if (!editingTrigger) return;
-
-		if (confirm(`Are you sure you want to delete this trigger?`)) {
-			resolvePromise({ delete: true });
-			closeDialog();
-		}
-	}
-
 	function handleCancel() {
 		resolvePromise(null);
 		closeDialog();
@@ -325,13 +315,6 @@
 			</div>
 		</div>
 	</form>
-
-	{#snippet tools()}
-		<Button onclick={confirmDelete} variant="secondary">
-			{@html removeIcon}
-			Delete
-		</Button>
-	{/snippet}
 
 	{#snippet buttons()}
 		<Button onclick={handleCancel} variant="secondary">Cancel</Button>

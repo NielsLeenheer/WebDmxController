@@ -5,7 +5,6 @@
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { canLinkDevices, getAvailableSyncControls } from '../../lib/outputs/sync.js';
 	import { toCSSIdentifier } from '../../lib/css/utils.js';
-	import removeIcon from '../../assets/icons/remove.svg?raw';
 
 	/**
 	 * EditDeviceDialog - Promise-based dialog for editing DMX device settings
@@ -13,11 +12,7 @@
 	 * Usage:
 	 *   const result = await editDeviceDialog.open(device, allDevices);
 	 *   if (result) {
-	 *     if (result.delete) {
-	 *       // Handle delete
-	 *     } else {
-	 *       // Update device with result.name, result.startChannel, result.linkedTo, etc.
-	 *     }
+	 *     // Update device with result.name, result.startChannel, result.linkedTo, etc.
 	 *   }
 	 */
 
@@ -150,16 +145,6 @@
 		closeDialog();
 	}
 
-	function confirmDelete() {
-		if (!editingDevice) return;
-
-		if (confirm(`Are you sure you want to remove "${editingDevice.name}"?`)) {
-			// Return special delete signal
-			resolvePromise({ delete: true });
-			closeDialog();
-		}
-	}
-
 	function closeDialog() {
 		dialogRef?.close();
 		editingDevice = null;
@@ -235,13 +220,6 @@
 			{/if}
 		</div>
 	</form>
-
-	{#snippet tools()}
-		<Button onclick={confirmDelete} variant="secondary">
-			{@html removeIcon}
-			Delete
-		</Button>
-	{/snippet}
 
 	{#snippet buttons()}
 		<Button onclick={handleCancel} variant="secondary">Cancel</Button>
