@@ -387,15 +387,15 @@
                 {#each Array(12) as _, i}
                     {@const zOffset = i * 1}
                     {@const brightness = i === 11 ? 1 : (0.5 + ((i / 10) * 0.2))}
-                    <div class="layer-3d" style="transform: translateZ({zOffset}px); background: {inputColor}; filter: brightness({brightness});">
+                    <div class="layer-3d" style="transform: translateZ({zOffset}px); background: #666; filter: brightness({brightness});">
                         {#if i === 11}
                             <!-- Top layer - add orientation indicator -->
-                            <div class="orientation-indicator"></div>
+                            <div class="orientation-indicator" style="background: {inputColor}; filter:brightness(1.5); box-shadow: 0 0 5px {inputColor}, 0 0 2px {inputColor};"></div>
                         {/if}
                     </div>
                 {/each}
             {:else}
-                <div class="preview-input button-preview thingy-input" style="background: {inputColor};">
+                <div class="preview-input button-preview thingy-input" style="background: #666;">
                     <div class="orientation-indicator"></div>
                 </div>
 
