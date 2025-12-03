@@ -12,7 +12,7 @@
      * @prop {string} size - Size: 'small', 'medium', 'large' (default: 'medium')
      * @prop {Array<string>} controls - Array of control types to stack (for type='controls')
      * @prop {Object} data - Data for rendering (device object, animation object, input object, or control values)
-     * @prop {Object} euler - Euler angles for 3D rotation: { roll, pitch, yaw } (optional)
+     * @prop {Object} state - Raw state object for inputs: { value?, x?, y?, state?, roll?, pitch?, yaw? }
      */
 
     let {
@@ -20,8 +20,7 @@
         size = 'medium',
         controls = [],
         data = {},
-        euler = null,
-        state = {},       // Raw state object: { value?, x?, y?, state? }
+        state = {},       // Raw state object: { value?, x?, y?, state?, roll?, pitch?, yaw? }
         class: className = '',
     } = $props();
 
@@ -240,7 +239,14 @@
         return (controlName) => ctls.includes(controlName);
     });
 
-    // Calculate 3D transform from Euler angles
+    // Calculate 3D transform from Euler angles (derived from state for thingy inputs)
+    // null means device disconnected, actual numbers (including 0) mean connected
+    const euler = $derived(
+        state.roll !== null && state.roll !== undefined
+            ? { roll: state.roll, pitch: state.pitch, yaw: state.yaw }
+            : null
+    );
+
     const transform3D = $derived(() => {
         if (!euler) return '';
         

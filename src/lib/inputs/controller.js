@@ -230,6 +230,14 @@ export class InputController {
 			}
 		});
 
+		// Handle euler angle changes for UI display (like stick x/y)
+		if (device.thingyDevice) {
+			device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
+				// Emit as input-valuechange for unified state tracking
+				this._emit('input-valuechange', { mapping: thingyInput, roll, pitch, yaw });
+			});
+		}
+
 		// Handle all sensor value changes and expose as CSS properties
 		device.on('change', ({ controlId, value }) => {
 			// Look up metadata for this sensor

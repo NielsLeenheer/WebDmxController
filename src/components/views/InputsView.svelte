@@ -22,8 +22,7 @@
     let inputs = $derived(inputLibrary.getAll());
 
     let editInputDialog; // Reference to EditInputDialog component
-    let inputStates = $state({}); // Track state/value for each input: { inputId: { state: 'on'|'off', value: number } }
-    let thingyEulerAngles = $state({}); // Track Euler angles for Thingy devices: { deviceId: { roll, pitch, yaw } }
+    let inputStates = $state({}); // Track state/value for each input: { inputId: { state: 'on'|'off', value: number, roll?, pitch?, yaw? } }
 
     // Context menu state
     let contextMenuRef = $state(null);
@@ -112,6 +111,12 @@
                 if (input.type == 'knob' || input.type == 'slider') {
                     inputStates[input.id]['value'] = 0;
                 }
+
+                if (input.type === 'thingy') {
+                    inputStates[input.id]['roll'] = null;
+                    inputStates[input.id]['pitch'] = null;
+                    inputStates[input.id]['yaw'] = null;
+                }
             }
         }
     });
@@ -120,31 +125,23 @@
         // Create the listening controller
         listeningController = new InputListeningController(inputController, inputLibrary);
 
-        // Track Euler angles for Thingy:52 devices (UI display only)
-        inputController.on('deviceadded', (device) => {
-            if (device.type === 'thingy' && device.thingyDevice) {
-                device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
-                    thingyEulerAngles[device.id] = { roll, pitch, yaw };
-                });
-            }
-        });
-
-        // Clear euler angles when Thingy devices disconnect
+        // Reset euler values to null when Thingy devices disconnect
         inputController.on('deviceremoved', (device) => {
-            if (device.type === 'thingy' && thingyEulerAngles[device.id]) {
-                delete thingyEulerAngles[device.id];
+            if (device.type === 'thingy') {
+                // Find the thingy input for this device and reset euler to null
+                const thingyInput = inputs.find(
+                    input => input.deviceId === device.id && input.type === 'thingy'
+                );
+                if (thingyInput && inputStates[thingyInput.id]) {
+                    inputStates[thingyInput.id] = {
+                        ...inputStates[thingyInput.id],
+                        roll: null,
+                        pitch: null,
+                        yaw: null
+                    };
+                }
             }
         });
-
-        // Track Euler angles for any already-connected Thingy:52 devices
-        const devices = inputController.getInputDevices();
-        for (const device of devices) {
-            if (device.type === 'thingy' && device.thingyDevice) {
-                device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
-                    thingyEulerAngles[device.id] = { roll, pitch, yaw };
-                });
-            }
-        }
 
         // Track input state changes for display
         inputController.on('input-trigger', ({ mapping, velocity, toggleState }) => {
@@ -169,10 +166,14 @@
             }
         });
 
-        inputController.on('input-valuechange', ({ mapping, value, x, y }) => {
+        inputController.on('input-valuechange', ({ mapping, value, x, y, roll, pitch, yaw }) => {
             if (mapping.type === 'stick' && x !== undefined && y !== undefined) {
                 inputStates[mapping.id] = { ...inputStates[mapping.id], x, y };
             } 
+            else if (mapping.type === 'thingy' && roll !== undefined) {
+                // Euler angles for Thingy:52
+                inputStates[mapping.id] = { ...inputStates[mapping.id], roll, pitch, yaw };
+            }
             else if (!isButton(mapping) && value !== undefined) {
                 inputStates[mapping.id] = { ...inputStates[mapping.id], value: Math.round(value * 100) };
             }
@@ -210,7 +211,6 @@
                     {input}
                     {dnd}
                     inputState={inputStates[input.id] || {}}
-                    eulerAngles={thingyEulerAngles[input.deviceId]}
                     onEdit={(input, anchor) => contextMenuRef?.show(input, anchor)}
                 />
             {/each}
