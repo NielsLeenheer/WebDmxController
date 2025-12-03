@@ -43,6 +43,7 @@
         cursor: pointer;
         opacity: 0.8;
         transition: opacity 0.2s;
+        padding: 4px;
     }
 
     .icon-button:hover:not(:disabled) {
@@ -59,8 +60,8 @@
     }
 
     .icon-button.small {
-        width: 14px;
-        height: 14px;
+        width: 20px;
+        height: 20px;
     }
 
     .icon-button.medium {
