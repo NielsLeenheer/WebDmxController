@@ -29,10 +29,6 @@
     // Context menu state
     let contextMenuRef = $state(null);
 
-    function showContextMenu(input, anchorElement) {
-        contextMenuRef?.show(anchorElement, input);
-    }
-
     const deviceColorUsage = new Map(); // deviceId -> Set(colors)
     const deviceColorIndices = new Map(); // deviceId -> last palette index used when cycling
     const COLOR_CAPABLE_PREFIXES = ['button-', 'note-'];
@@ -654,7 +650,7 @@
                     {dnd}
                     inputState={inputStates[input.id] || {}}
                     eulerAngles={thingyEulerAngles[input.deviceId]}
-                    onEdit={showContextMenu}
+                    onEdit={(input, anchor) => contextMenuRef?.show(input, anchor)}
                 />
             {/each}
         {/if}

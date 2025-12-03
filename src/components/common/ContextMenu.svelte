@@ -11,7 +11,7 @@
      *     </ContextAction>
      *   </ContextMenu>
      *
-     *   contextRef.show(anchorElement, contextData)
+     *   contextRef.show(contextData, anchorElement)
      */
     let {
         contextRef = $bindable(null),
@@ -44,7 +44,7 @@
         }
     }
 
-    function show(anchorElement, context = null) {
+    function show(context, anchorElement = null) {
         // If already open with the same anchor, close it (toggle behavior)
         if (isOpen && currentAnchor === anchorElement) {
             popoverRef?.hidePopover();
