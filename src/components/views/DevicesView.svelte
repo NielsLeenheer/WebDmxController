@@ -59,9 +59,8 @@
         deviceLibrary.remove(deviceId);
     }
 
-    export function addDevice(type = selectedType) {
-        // Library auto-assigns the next free channel
-        deviceLibrary.create(type);
+    function addDevice() {
+        deviceLibrary.create(selectedType);
     }
 
     function handleDeviceValueChange(device, controlId, value) {
@@ -107,7 +106,7 @@
                 <option value={key}>{type.name}</option>
             {/each}
         </select>
-        <Button onclick={() => addDevice(selectedType)} variant="secondary">
+        <Button onclick={addDevice} variant="secondary">
             <Icon data={newIcon} />
             Add Device
         </Button>
