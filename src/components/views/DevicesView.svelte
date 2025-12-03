@@ -59,25 +59,9 @@
         deviceLibrary.remove(deviceId);
     }
 
-
-    function getNextFreeChannel() {
-        if (devices.length === 0) return 0; // Channel 1 (0-indexed)
-
-        // Find the highest used channel
-        let maxChannel = 0;
-        devices.forEach(device => {
-            const deviceEndChannel = device.startChannel + DEVICE_TYPES[device.type].channels;
-            if (deviceEndChannel > maxChannel) {
-                maxChannel = deviceEndChannel;
-            }
-        });
-
-        // Return next free channel, or wrap to 1 if over 512
-        return maxChannel >= 512 ? 0 : maxChannel;
-    }
-
     export function addDevice(type = selectedType) {
-        deviceLibrary.create(type, getNextFreeChannel());
+        // Library auto-assigns the next free channel
+        deviceLibrary.create(type);
     }
 
     function handleDeviceValueChange(device, controlId, value) {

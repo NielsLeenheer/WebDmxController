@@ -25,33 +25,49 @@ export class DeviceLibrary extends Library {
 
 	/**
 	 * Create a new device
-	 * @param {string} type - Device type (RGB, MOVING_HEAD, etc.)
-	 * @param {number} startChannel - Starting DMX channel
-	 * @param {string} name - Device name
-	 * @param {string|null} linkedTo - ID of device to link to
-	 * @param {string|null} cssIdentifier - CSS-safe ID
-	 * @param {Array<string>|null} syncedControls - Control names to sync when linked
-	 * @param {boolean} mirrorPan - Mirror pan values for linked devices
+	 * @param {string} type - Device type (rgb, moving-head, etc.)
 	 * @returns {Object} The created device
 	 */
-	create(type, startChannel, name = '', linkedTo = null, cssIdentifier = null, syncedControls = null, mirrorPan = false) {
+	create(type) {
 		const deviceType = DEVICE_TYPES[type];
-		const deviceName = name || this._generateUniqueName(deviceType.name);
+		const name = this._generateUniqueName(deviceType.name);
 
 		const device = {
 			// id and order will be auto-set by base class
 			type,
-			startChannel,
-			name: deviceName,
-			// NEW: Control-based values instead of DMX arrays
+			startChannel: this.getNextFreeChannel(),
+			name,
 			defaultValues: createDefaultControlValues(deviceType),
-			linkedTo,
-			syncedControls,
-			mirrorPan,
-			cssIdentifier: cssIdentifier || toCSSIdentifier(deviceName)
+			linkedTo: null,
+			syncedControls: null,
+			mirrorPan: false,
+			cssIdentifier: toCSSIdentifier(name)
 		};
 
 		return this.add(device);
+	}
+
+	/**
+	 * Get the next free DMX channel after all existing devices
+	 * @returns {number} Next available channel (0-indexed), or 0 if over 512
+	 */
+	getNextFreeChannel() {
+		if (this.items.length === 0) return 0;
+
+		// Find the highest used channel
+		let maxChannel = 0;
+		for (const device of this.items) {
+			const deviceType = DEVICE_TYPES[device.type];
+			if (deviceType) {
+				const deviceEndChannel = device.startChannel + deviceType.channels;
+				if (deviceEndChannel > maxChannel) {
+					maxChannel = deviceEndChannel;
+				}
+			}
+		}
+
+		// Return next free channel, or wrap to 0 if over 512
+		return maxChannel >= 512 ? 0 : maxChannel;
 	}
 
 	/**
