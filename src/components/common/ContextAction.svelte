@@ -1,13 +1,15 @@
 <script>
+    import { getContext } from 'svelte';
+
     /**
      * ContextAction - A menu item for ContextMenu
      *
      * Usage:
-     *   <ContextAction onclick={handleAction}>
+     *   <ContextAction onclick={(context) => handleAction(context)}>
      *     {@html icon} Action Label
      *   </ContextAction>
      *
-     * @prop {Function} onclick - Click handler
+     * @prop {Function} onclick - Click handler, receives context as first argument
      * @prop {boolean} disabled - Whether the action is disabled
      * @prop {string} variant - Style variant: 'default' | 'danger'
      */
@@ -18,11 +20,16 @@
         children
     } = $props();
 
+    const contextMenu = getContext('contextMenu');
+
     function handleClick(event) {
         if (disabled) {
             event.preventDefault();
             return;
         }
+
+        // Get context from parent ContextMenu
+        const context = contextMenu?.getContext();
 
         // Close the popover (find parent context menu)
         const popover = event.target.closest('[popover]');
@@ -31,7 +38,7 @@
         }
 
         if (onclick) {
-            onclick(event);
+            onclick(context);
         }
     }
 </script>

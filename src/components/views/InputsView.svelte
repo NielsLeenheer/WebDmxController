@@ -28,11 +28,9 @@
 
     // Context menu state
     let contextMenuRef = $state(null);
-    let contextMenuInput = $state(null);
 
     function showContextMenu(input, anchorElement) {
-        contextMenuInput = input;
-        contextMenuRef?.show(anchorElement);
+        contextMenuRef?.show(anchorElement, input);
     }
 
     const deviceColorUsage = new Map(); // deviceId -> Set(colors)
@@ -671,11 +669,11 @@
 
 <!-- Context Menu -->
 <ContextMenu bind:contextRef={contextMenuRef}>
-    <ContextAction onclick={() => startEditing(contextMenuInput)}>
+    <ContextAction onclick={(input) => startEditing(input)}>
         {@html editIcon}
         Edit
     </ContextAction>
-    <ContextAction onclick={() => deleteInput(contextMenuInput?.id)} variant="danger">
+    <ContextAction onclick={(input) => deleteInput(input?.id)} variant="danger">
         {@html removeIcon}
         Delete
     </ContextAction>

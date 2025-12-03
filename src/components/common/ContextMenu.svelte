@@ -1,15 +1,17 @@
 <script>
+    import { setContext } from 'svelte';
+
     /**
      * ContextMenu - A popover menu anchored to a trigger element
      *
      * Usage:
      *   <ContextMenu bind:contextRef={contextRef}>
-     *     <ContextAction onclick={handleDelete}>
+     *     <ContextAction onclick={(ctx) => handleDelete(ctx)}>
      *       {@html deleteIcon} Delete
      *     </ContextAction>
      *   </ContextMenu>
      *
-     *   contextRef.show(anchorElement)
+     *   contextRef.show(anchorElement, contextData)
      */
     let {
         contextRef = $bindable(null),
@@ -18,7 +20,13 @@
 
     let popoverRef = $state(null);
     let currentAnchor = $state(null);
+    let currentContext = $state(null);
     let isOpen = $state(false);
+
+    // Provide a getter function via context so children can access current context
+    setContext('contextMenu', {
+        getContext: () => currentContext
+    });
     const anchorName = '--context-menu-anchor';
     const animationDuration = 150;
 
@@ -36,7 +44,7 @@
         }
     }
 
-    function show(anchorElement) {
+    function show(anchorElement, context = null) {
         // If already open with the same anchor, close it (toggle behavior)
         if (isOpen && currentAnchor === anchorElement) {
             popoverRef?.hidePopover();
@@ -52,7 +60,12 @@
             anchorElement.style.anchorName = anchorName;
         }
 
+        currentContext = context;
         popoverRef?.showPopover();
+    }
+
+    function getContext() {
+        return currentContext;
     }
 
     // Expose methods via contextRef
