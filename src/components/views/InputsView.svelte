@@ -120,39 +120,13 @@
         // Create the listening controller
         listeningController = new InputListeningController(inputController, inputLibrary);
 
-        // Set up device event handlers FIRST, before processing existing devices
-        // Apply colors when devices connect
+        // Track Euler angles for Thingy:52 devices (UI display only)
         inputController.on('deviceadded', (device) => {
-            // Track Euler angles for Thingy:52 devices
             if (device.type === 'thingy' && device.thingyDevice) {
                 device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
                     thingyEulerAngles[device.id] = { roll, pitch, yaw };
                 });
-
-                // Assign color to thingy input if it doesn't have one
-                // The input is created by the controller with controlId 'thingy'
-                const thingyInput = inputs.find(
-                    input => input.deviceId === device.id && input.controlId === 'thingy'
-                );
-
-                if (thingyInput && !thingyInput.color) {
-                    // Library will auto-assign a color
-                    inputLibrary.update(thingyInput.id, { 
-                        color: inputLibrary.getNextColor(device.id, 'rgb') 
-                    });
-
-                    // Initialize pressure property for thingy input (it has button functionality)
-                    inputController.customPropertyManager.setProperty(`${thingyInput.cssIdentifier}-pressure`, '0.0%');
-                }
             }
-
-            // Apply colors to the newly connected device
-            // Small delay to ensure device is fully initialized
-            setTimeout(() => {
-                inputController.applyColorsToDevices().catch(err => {
-                    console.warn('Failed to apply colors on device added:', err);
-                });
-            }, 500);
         });
 
         // Clear euler angles when Thingy devices disconnect
@@ -162,49 +136,21 @@
             }
         });
 
-        // Now process already-connected devices
-        // Track Euler angles and assign colors for any already-connected Thingy:52 devices
+        // Track Euler angles for any already-connected Thingy:52 devices
         const devices = inputController.getInputDevices();
         for (const device of devices) {
             if (device.type === 'thingy' && device.thingyDevice) {
-                // Track Euler angles
                 device.thingyDevice.on('euler', ({ roll, pitch, yaw }) => {
                     thingyEulerAngles[device.id] = { roll, pitch, yaw };
                 });
-
-                // Assign color to thingy input if it doesn't have one
-                const thingyInput = inputs.find(
-                    input => input.deviceId === device.id && input.controlId === 'thingy'
-                );
-
-                if (thingyInput && !thingyInput.color) {
-                    // Library will auto-assign a color
-                    inputLibrary.update(thingyInput.id, { 
-                        color: inputLibrary.getNextColor(device.id, 'rgb') 
-                    });
-
-                    // Initialize pressure property for thingy input (it has button functionality)
-                    inputController.customPropertyManager.setProperty(`${thingyInput.cssIdentifier}-pressure`, '0.0%');
-                }
             }
         }
-
-        // Apply colors immediately after inputs are loaded
-        // Use a small delay to ensure devices are ready
-        setTimeout(() => {
-            inputController.applyColorsToDevices().catch(err => {
-                console.warn('Failed to apply colors on initial load:', err);
-            });
-        }, 100);
 
         // Track input state changes for display
         inputController.on('input-trigger', ({ mapping, velocity, toggleState }) => {
             // For toggle buttons, use the toggleState from the event
             if (mapping.buttonMode === 'toggle') {
                 inputStates[mapping.id] = { ...inputStates[mapping.id], state: toggleState ? 'on' : 'off', pressed: true };
-
-                // Update button color based on toggle state
-                inputController.updateButtonColorForToggleState(mapping, toggleState);
             } else if (isButton(mapping)) {
                 // For momentary buttons, show pressed state
                 inputStates[mapping.id] = { ...inputStates[mapping.id], state: 'pressed', pressed: true };

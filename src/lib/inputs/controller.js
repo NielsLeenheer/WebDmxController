@@ -82,6 +82,14 @@ export class InputController {
 		this.inputDeviceManager.on('deviceadded', (device) => {
 			this._setupDeviceListeners(device);
 			this._emit('deviceadded', device);
+
+			// Apply colors to the newly connected device after a small delay
+			// to ensure the device is fully initialized
+			setTimeout(() => {
+				this.applyColorsToDevices().catch(err => {
+					console.warn('Failed to apply colors on device added:', err);
+				});
+			}, 500);
 		});
 
 		this.inputDeviceManager.on('deviceremoved', (device) => {
@@ -99,6 +107,14 @@ export class InputController {
 
 		// Enable keyboard by default
 		this.inputDeviceManager.enableKeyboard();
+
+		// Apply colors to all devices after initialization
+		// Use a small delay to ensure devices are fully ready
+		setTimeout(() => {
+			this.applyColorsToDevices().catch(err => {
+				console.warn('Failed to apply colors on initial load:', err);
+			});
+		}, 100);
 	}
 
 	/**
@@ -177,11 +193,16 @@ export class InputController {
 				controlName: null,
 				buttonMode: 'momentary'
 			});
-		} else {
+		}
+
+		// Ensure thingy has a color assigned (auto-assign if missing)
+		if (!thingyInput.color) {
+			const color = this.inputLibrary.getNextColor(device.id, 'rgb');
+			this.inputLibrary.update(thingyInput.id, { color });
+			// Note: Library event will trigger hardware sync via _setupLibraryListeners
+		} else if (device.thingyDevice) {
 			// If input exists with a color, set the LED
-			if (thingyInput.color) {
-				device.thingyDevice.setDeviceColor(thingyInput.color);
-			}
+			device.thingyDevice.setDeviceColor(thingyInput.color);
 		}
 
 		// Get the InputType for value conversion metadata
@@ -282,6 +303,9 @@ export class InputController {
 						this.triggerManager.addRawClass(offClass);
 						this.triggerManager.removeRawClass(onClass);
 					}
+
+					// Update button color based on toggle state
+					this.updateButtonColorForToggleState(input, newState);
 
 					// Emit event for toggle state change
 					this._emit('input-trigger', { mapping: input, velocity, toggleState: newState });
