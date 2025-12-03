@@ -387,7 +387,7 @@
                 {#each Array(12) as _, i}
                     {@const zOffset = i * 1}
                     {@const brightness = i === 11 ? 1 : (0.5 + ((i / 10) * 0.2))}
-                    <div class="layer-3d" style="transform: translateZ({zOffset}px); background: #666; filter: brightness({brightness});">
+                    <div class="thingy-input-3d" style="transform: translateZ({zOffset}px); filter: brightness({brightness});">
                         {#if i === 11}
                             <!-- Top layer - add orientation indicator -->
                             <div class="orientation-indicator" style="background: {inputColor}; filter:brightness(1.5); box-shadow: 0 0 5px {inputColor}, 0 0 2px {inputColor};"></div>
@@ -395,7 +395,7 @@
                     </div>
                 {/each}
             {:else}
-                <div class="preview-input button-preview thingy-input" style="background: #666;">
+                <div class="preview-input button-preview thingy-input">
                     <div class="orientation-indicator"></div>
                 </div>
 
@@ -538,18 +538,6 @@
     .preview.with-3d {
         perspective: 200px;
         overflow: visible;
-    }
-
-    /* Individual 3D layers */
-    .layer-3d {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        transform-style: preserve-3d;
-        border-radius: inherit;
-        corner-shape: inherit;
     }
 
     /* Size variants */
@@ -782,7 +770,7 @@
         margin-top: -50%;
         border-radius: 50%;
         transform-style: preserve-3d;
-        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2);
+        box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), inset 0 1px 0px 0px rgba(255, 255, 255, 0.1);
 
         transform: translateZ(0px); 
         background: #666;
@@ -799,7 +787,7 @@
         width: 60%;
         height: 60%;
         margin-left: -30%;
-        margin-top: -30%;
+        margin-top: -32%;
         border-radius: 50%;
         background: rgba(0, 0, 0, 0.1);
         transform: translateZ(1px);
@@ -860,6 +848,36 @@
         width: 100%;
         height: 30%;
         left: 0;
+    }
+
+    /* Thingy:52 */
+    .thingy-input {
+        background: #666;
+    }
+
+    .thingy-input-3d {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        transform-style: preserve-3d;
+        border-radius: inherit;
+        corner-shape: inherit;
+
+        background: #666
+    }
+
+    .orientation-indicator {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        width: 6px;
+        height: 6px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 10;
     }
 
     /* Safety checkmark */
@@ -1017,16 +1035,4 @@
         height: 6px;
     }
 
-    /* Orientation indicator (Thingy:52 hole marker) */
-    .orientation-indicator {
-        position: absolute;
-        top: 4px;
-        left: 4px;
-        width: 6px;
-        height: 6px;
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 50%;
-        pointer-events: none;
-        z-index: 10;
-    }
 </style>
