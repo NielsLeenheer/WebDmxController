@@ -221,7 +221,8 @@
 <!-- Edit Input Dialog -->
 <EditInputDialog
     bind:this={editInputDialog}
-    inputController={inputController}
+    {inputController}
+    {inputLibrary}
 />
 
 <!-- Context Menu -->

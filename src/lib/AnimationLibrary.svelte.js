@@ -8,7 +8,7 @@
 
 import { Library } from './Library.svelte.js';
 import { generateCSSAnimation } from './animations/css.js';
-import { toCSSIdentifier } from './css/utils.js';
+import { toCSSIdentifier, toUniqueCSSIdentifier } from './css/utils.js';
 
 export class AnimationLibrary extends Library {
 	constructor() {
@@ -23,12 +23,15 @@ export class AnimationLibrary extends Library {
 	 * @returns {Object} Created animation object
 	 */
 	create(name, controls, targetLabel) {
+		// Get existing CSS identifiers for uniqueness check
+		const existingIdentifiers = this.items.map(a => a.cssIdentifier);
+
 		const animation = {
 			name,
 			controls: controls || [],
 			targetLabel: targetLabel || null,
 			keyframes: [],
-			cssIdentifier: toCSSIdentifier(name),
+			cssIdentifier: toUniqueCSSIdentifier(name, existingIdentifiers),
 			order: this.items.length
 		};
 
@@ -44,7 +47,10 @@ export class AnimationLibrary extends Library {
 	update(id, updates) {
 		// Update CSS identifier if name changed
 		if (updates.name) {
-			updates.cssIdentifier = toCSSIdentifier(updates.name);
+			// Get existing identifiers, excluding this animation's current identifier
+			const existingIdentifiers = this.items.map(a => a.cssIdentifier);
+			const getIdentifierForId = (animId) => this.get(animId)?.cssIdentifier;
+			updates.cssIdentifier = toUniqueCSSIdentifier(updates.name, existingIdentifiers, id, getIdentifierForId);
 		}
 
 		return super.update(id, updates);

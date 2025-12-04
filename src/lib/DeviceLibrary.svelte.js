@@ -12,7 +12,7 @@
 import { Library } from './Library.svelte.js';
 import { DEVICE_TYPES } from './outputs/devices.js';
 import { createDefaultControlValues, mirrorPanTilt } from './outputs/controls.js';
-import { toCSSIdentifier } from './css/utils.js';
+import { toCSSIdentifier, toUniqueCSSIdentifier } from './css/utils.js';
 import { generateCSSBlock } from './outputs/css.js';
 
 /**
@@ -32,6 +32,9 @@ export class DeviceLibrary extends Library {
 		const deviceType = DEVICE_TYPES[type];
 		const name = this._generateUniqueName(deviceType.name);
 
+		// Get existing CSS identifiers for uniqueness check
+		const existingIdentifiers = this.items.map(d => d.cssIdentifier);
+
 		const device = {
 			// id and order will be auto-set by base class
 			type,
@@ -41,7 +44,7 @@ export class DeviceLibrary extends Library {
 			linkedTo: null,
 			syncedControls: null,
 			mirrorPan: false,
-			cssIdentifier: toCSSIdentifier(name)
+			cssIdentifier: toUniqueCSSIdentifier(name, existingIdentifiers)
 		};
 
 		return this.add(device);
@@ -128,7 +131,10 @@ export class DeviceLibrary extends Library {
 	update(deviceId, updates) {
 		// Update CSS ID if name changed
 		if (updates.name) {
-			updates.cssIdentifier = toCSSIdentifier(updates.name);
+			// Get existing identifiers, excluding this device's current identifier
+			const existingIdentifiers = this.items.map(d => d.cssIdentifier);
+			const getIdentifierForId = (id) => this.get(id)?.cssIdentifier;
+			updates.cssIdentifier = toUniqueCSSIdentifier(updates.name, existingIdentifiers, deviceId, getIdentifierForId);
 		}
 
 		return super.update(deviceId, updates);

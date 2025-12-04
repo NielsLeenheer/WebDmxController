@@ -1,7 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
-	import { toCSSIdentifier } from '../../lib/css/utils.js';
+	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 
 	/**
@@ -13,6 +13,10 @@
 	 *     // Create animation with result.name and result.target
 	 *   }
 	 */
+
+	let {
+		animationLibrary
+	} = $props();
 
 	// Dialog state
 	let dialogRef = $state(null);
@@ -164,7 +168,10 @@
 				autofocus
 			/>
 			<div class="css-identifiers">
-				<code class="css-identifier">@keyframes {toCSSIdentifier(animationName)}</code>
+				<code class="css-identifier">@keyframes {toUniqueCSSIdentifier(
+					animationName,
+					new Set(animationLibrary.getAll().map(a => a.cssIdentifier))
+				)}</code>
 			</div>
 		</div>
 

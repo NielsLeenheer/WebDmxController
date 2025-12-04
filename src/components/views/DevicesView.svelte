@@ -111,6 +111,7 @@
     <!-- Edit Device Dialog -->
     <EditDeviceDialog
         bind:this={editDeviceDialog}
+        {deviceLibrary}
     />
 
     <!-- Context Menu -->

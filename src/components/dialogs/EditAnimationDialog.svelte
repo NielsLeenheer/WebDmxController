@@ -1,7 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
-	import { toCSSIdentifier } from '../../lib/css/utils.js';
+	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 
 	/**
 	 * EditAnimationDialog - Promise-based dialog for editing animations
@@ -12,6 +12,10 @@
 	 *     // Update animation with result.name
 	 *   }
 	 */
+
+	let {
+		animationLibrary
+	} = $props();
 
 	// Dialog state
 	let dialogRef = $state(null);
@@ -85,7 +89,10 @@
 				autofocus
 			/>
 			<div class="css-identifiers">
-				<code class="css-identifier">@keyframes {toCSSIdentifier(editingName)} &lbrace; &rbrace;</code>
+				<code class="css-identifier">@keyframes {toUniqueCSSIdentifier(
+					editingName,
+					new Set(animationLibrary.getAll().filter(a => a.id !== editingAnimation?.id).map(a => a.cssIdentifier))
+				)} &lbrace; &rbrace;</code>
 			</div>
 		</div>
 	</form>

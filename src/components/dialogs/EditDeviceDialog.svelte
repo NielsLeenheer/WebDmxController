@@ -4,7 +4,7 @@
 	import CustomizeControlsDialog from './CustomizeControlsDialog.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { canLinkDevices, getAvailableSyncControls } from '../../lib/outputs/sync.js';
-	import { toCSSIdentifier } from '../../lib/css/utils.js';
+	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 
 	/**
 	 * EditDeviceDialog - Promise-based dialog for editing DMX device settings
@@ -15,6 +15,10 @@
 	 *     // Update device with result.name, result.startChannel, result.linkedTo, etc.
 	 *   }
 	 */
+
+	let {
+		deviceLibrary
+	} = $props();
 
 	// Dialog state
 	let dialogRef = $state(null);
@@ -174,7 +178,10 @@
 			/>
 
 			<div class="css-identifiers">
-				<code class="css-identifier">#{toCSSIdentifier(dialogName || editingDevice?.name || '')}</code>
+				<code class="css-identifier">#{toUniqueCSSIdentifier(
+					dialogName || editingDevice?.name || '',
+					new Set(deviceLibrary.getAll().filter(d => d.id !== editingDevice?.id).map(d => d.cssIdentifier))
+				)}</code>
 			</div>
 		</div>
 

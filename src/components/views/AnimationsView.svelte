@@ -115,11 +115,13 @@
 <!-- Add Animation Dialog -->
 <AddAnimationDialog
     bind:this={addAnimationDialog}
+    {animationLibrary}
 />
 
 <!-- Edit Animation Dialog -->
 <EditAnimationDialog
     bind:this={editAnimationDialog}
+    {animationLibrary}
 />
 
 <!-- Context Menu -->

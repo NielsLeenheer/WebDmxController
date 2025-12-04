@@ -2,7 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
-	import { toCSSIdentifier } from '../../lib/css/utils.js';
+	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 	import { getPalette, paletteColorToHex } from '../../lib/inputs/colors.js';
 
 	/**
@@ -20,7 +20,8 @@
 	 */
 
 	let {
-		inputController
+		inputController,
+		inputLibrary
 	} = $props();
 
 	// Dialog state
@@ -110,19 +111,25 @@
 				}}
 				autofocus
 			/>
-			<div class="css-identifiers">
-				{#if isButton(editingInput)}
-					{#if editingButtonMode === 'toggle'}
-						<code class="css-identifier">.{toCSSIdentifier(editingName)}-on</code>
-						<code class="css-identifier">.{toCSSIdentifier(editingName)}-off</code>
+			{#if editingInput}
+				{@const uniqueId = toUniqueCSSIdentifier(
+					editingName,
+					new Set(inputLibrary.getAll().filter(i => i.id !== editingInput.id).map(i => i.cssIdentifier))
+				)}
+				<div class="css-identifiers">
+					{#if isButton(editingInput)}
+						{#if editingButtonMode === 'toggle'}
+							<code class="css-identifier">.{uniqueId}-on</code>
+							<code class="css-identifier">.{uniqueId}-off</code>
+						{:else}
+							<code class="css-identifier">.{uniqueId}-down</code>
+							<code class="css-identifier">.{uniqueId}-up</code>
+						{/if}
 					{:else}
-						<code class="css-identifier">.{toCSSIdentifier(editingName)}-down</code>
-						<code class="css-identifier">.{toCSSIdentifier(editingName)}-up</code>
+						<code class="css-identifier">--{uniqueId}</code>
 					{/if}
-				{:else}
-					<code class="css-identifier">--{toCSSIdentifier(editingName)}</code>
-				{/if}
-			</div>
+				</div>
+			{/if}
 		</div>
 
 		{#if isButton(editingInput)}
