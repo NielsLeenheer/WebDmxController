@@ -9,7 +9,6 @@
     import AddAnimationDialog from '../dialogs/AddAnimationDialog.svelte';
     import EditAnimationDialog from '../dialogs/EditAnimationDialog.svelte';
 
-    import { Icon } from 'svelte-icon';
     import newIcon from '../../assets/icons/new.svg?raw';
     import editIcon from '../../assets/icons/edit.svg?raw';
     import removeIcon from '../../assets/icons/remove.svg?raw';
@@ -89,7 +88,7 @@
 <div class="animations-view">
     <div class="add-animation-section">
         <Button onclick={openNewAnimationDialog} variant="secondary">
-            <Icon data={newIcon} />
+            {@html newIcon}
             Add Animation
         </Button>
     </div>

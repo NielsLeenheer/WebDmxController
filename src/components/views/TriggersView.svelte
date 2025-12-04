@@ -12,7 +12,6 @@
     import EditAutomaticTriggerDialog from '../dialogs/EditAutomaticTriggerDialog.svelte';
     import EditValueTriggerDialog from '../dialogs/EditValueTriggerDialog.svelte';
 
-    import { Icon } from 'svelte-icon';
     import newIcon from '../../assets/icons/new.svg?raw';
     import editIcon from '../../assets/icons/edit.svg?raw';
     import removeIcon from '../../assets/icons/remove.svg?raw';
@@ -255,7 +254,7 @@
             variant="secondary"
             disabled={availableInputs.length === 0 || devices.length === 0}
         >
-            <Icon data={newIcon} />
+            {@html newIcon}
             Add Action Trigger
         </Button>
         <Button
@@ -263,7 +262,7 @@
             variant="secondary"
             disabled={valueCapableInputs.length === 0 || devices.length === 0}
         >
-            <Icon data={newIcon} />
+            {@html newIcon}
             Add Value Trigger
         </Button>
         <Button
@@ -271,7 +270,7 @@
             variant="secondary"
             disabled={availableAnimations.length === 0 || devices.length === 0}
         >
-            <Icon data={newIcon} />
+            {@html newIcon}
             Add Automatic Trigger
         </Button>
     </div>

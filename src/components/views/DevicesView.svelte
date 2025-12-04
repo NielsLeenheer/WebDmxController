@@ -8,7 +8,6 @@
     import ContextAction from '../common/ContextAction.svelte';
     import EditDeviceDialog from '../dialogs/EditDeviceDialog.svelte';
 
-    import { Icon } from 'svelte-icon';
     import newIcon from '../../assets/icons/new.svg?raw';
     import editIcon from '../../assets/icons/edit.svg?raw';
     import removeIcon from '../../assets/icons/remove.svg?raw';
@@ -85,7 +84,7 @@
             {/each}
         </select>
         <Button onclick={addDevice} variant="secondary">
-            <Icon data={newIcon} />
+            {@html newIcon}
             Add Device
         </Button>
     </div>

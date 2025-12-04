@@ -6,7 +6,6 @@
     import TabBar from '../common/TabBar.svelte';
     import Button from '../common/Button.svelte';
 
-    import { Icon } from 'svelte-icon';
     import clearIcon from '../../assets/icons/clear.svg?raw';
     import restoreIcon from '../../assets/icons/restore.svg?raw';
 
@@ -133,7 +132,7 @@
                 variant="secondary"
                 disabled={mode !== 'edit'}
             >
-                <Icon data={restoreIcon} />
+                {@html restoreIcon}
                 Restore
             </Button>
             <Button 
@@ -141,7 +140,7 @@
                 variant="secondary"
                 disabled={mode !== 'edit'}
             >
-                <Icon data={clearIcon} />
+                {@html clearIcon}
                 Clear
             </Button>
         </div>
