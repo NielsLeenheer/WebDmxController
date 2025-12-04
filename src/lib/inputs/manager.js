@@ -10,7 +10,6 @@ import { MIDIDeviceProfileManager } from './midi.js';
 import { Thingy52Manager } from './thingy52.js';
 import { GamepadManager } from './gamepad.js';
 import { 
-	InputDevice,
 	KeyboardInputDevice, 
 	MIDIInputDevice, 
 	HIDInputDevice,

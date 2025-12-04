@@ -151,7 +151,7 @@ function _generateManualValuesCSS(device, trigger, inputLibrary) {
 
 	// Filter controls to only those present in output.values (implicit enabling)
 	const filteredControls = deviceType.controls.filter(control =>
-		values.hasOwnProperty(control.id)
+		Object.hasOwn(values, control.id)
 	);
 
 	// Generate CSS properties from control values

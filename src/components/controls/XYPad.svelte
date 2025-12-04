@@ -46,10 +46,6 @@
         }
     }
 
-    function handleMouseUp() {
-        isDragging = false;
-    }
-
     // Handle mouse move and mouse up anywhere in window during drag
     $effect(() => {
         const handleGlobalMouseMove = (e) => {

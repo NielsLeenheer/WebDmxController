@@ -3,7 +3,7 @@
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
+	import { isButton } from '../../lib/inputs/utils.js';
 
 	/**
 	 * AddActionTriggerDialog - Promise-based dialog for creating action triggers

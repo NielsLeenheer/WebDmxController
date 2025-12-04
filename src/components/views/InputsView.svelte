@@ -221,7 +221,6 @@
 <!-- Edit Input Dialog -->
 <EditInputDialog
     bind:this={editInputDialog}
-    {inputController}
     {inputLibrary}
 />
 

@@ -1,6 +1,6 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-    import { getControlsForRendering, getKeyframeColor } from '../../lib/animations/utils.js';
+    import { getKeyframeColor } from '../../lib/animations/utils.js';
     import { paletteColorToHex } from '../../lib/inputs/colors.js';
 
     /**

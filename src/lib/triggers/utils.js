@@ -4,7 +4,7 @@
  * Utility functions for working with triggers that map input events to actions
  */
 
-import { toCSSIdentifier } from '../css/utils.js';
+
 
 /**
  * Check if trigger is a value-based trigger (continuous input-to-control mapping)

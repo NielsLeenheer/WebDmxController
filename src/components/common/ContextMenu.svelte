@@ -64,10 +64,6 @@
         popoverRef?.showPopover();
     }
 
-    function getContext() {
-        return currentContext;
-    }
-
     // Expose methods via contextRef
     $effect(() => {
         contextRef = { show };

@@ -124,22 +124,6 @@
 	function closeDialog() {
 		dialogRef?.close();
 	}
-
-	// Get description of the selected input value
-	function getInputValueDescription() {
-		const value = exportedValues.find(v => v.key === selectedValueKey);
-		return value?.description || '';
-	}
-
-	// Get description of the selected control
-	function getControlDescription() {
-		if (!selectedControlDef) return '';
-		const meta = selectedControlDef.type.getValueMetadata(
-			selectedControlId,
-			needsValueSelection ? selectedValueId : null
-		);
-		return meta?.description || '';
-	}
 </script>
 
 <Dialog bind:dialogRef={dialogRef} title="Create Value Trigger" onclose={handleCancel}>

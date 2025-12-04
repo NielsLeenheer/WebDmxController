@@ -20,7 +20,6 @@
 	 */
 
 	let {
-		inputController,
 		inputLibrary
 	} = $props();
 

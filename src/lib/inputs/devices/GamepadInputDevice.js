@@ -1,5 +1,5 @@
 import { InputDevice } from './InputDevice.js';
-import { GAMEPAD_BUTTONS, GAMEPAD_AXES } from '../gamepad.js';
+import { GAMEPAD_BUTTONS } from '../gamepad.js';
 
 /**
  * Gamepad brand detection patterns
