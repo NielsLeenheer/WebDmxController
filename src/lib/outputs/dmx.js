@@ -9,6 +9,8 @@
 import { EnttecDMXUSBProDriver } from './dmx/EnttecDMXUSBProDriver.js';
 import { FT232RDriver } from './dmx/FT232RDriver.js';
 import { uDMXDriver } from './dmx/uDMXDriver.js';
+import { DEVICE_TYPES } from './devices.js';
+import { controlValuesToDMX } from './controls.js';
 
 /**
  * DMX Output Manager
@@ -262,6 +264,21 @@ export class DMXController {
 
 	clearUniverse() {
 		this.universe.fill(0);
+	}
+
+	/**
+	 * Update DMX channels from a device's control values
+	 * @param {Object} device - Device object with type, startChannel, and defaultValues
+	 */
+	updateDevice(device) {
+		const deviceType = DEVICE_TYPES[device.type];
+		if (!deviceType) return;
+
+		// Convert control values to DMX array
+		const dmxArray = controlValuesToDMX(deviceType, device.defaultValues);
+
+		// Write DMX array to universe
+		this.setChannels(device.startChannel, dmxArray);
 	}
 
 	/**

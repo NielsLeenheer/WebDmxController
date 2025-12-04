@@ -1,6 +1,5 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
-    import { controlValuesToDMX } from '../../lib/outputs/controls.js';
     import { deviceLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import DeviceCard from '../cards/DeviceCard.svelte';
@@ -67,34 +66,13 @@
         deviceLibrary.updateValue(device.id, controlId, value);
     }
 
-    /**
-     * Update DMX controller from device control values
-     * NEW: Converts control values to DMX array before output
-     */
-    function updateDeviceToDMX(device) {
-        if (!dmxController) return;
-
-        // Get device type definition
-        const deviceType = DEVICE_TYPES[device.type];
-        if (!deviceType) return;
-
-        // Convert control values to DMX array
-        const dmxArray = controlValuesToDMX(deviceType, device.defaultValues);
-
-        // Write DMX array to universe
-        dmxArray.forEach((value, index) => {
-            const channelIndex = device.startChannel + index;
-            dmxController.setChannel(channelIndex, value);
-        });
-    }
-
     // Reactively update DMX controller when device values change
     // This runs when: controller changes, tab becomes active, or device values change
     $effect(() => {
         if (dmxController && isActive) {
-            devices.forEach(device => {
-                updateDeviceToDMX(device);
-            });
+            for (const device of devices) {
+                dmxController.updateDevice(device);
+            }
         }
     });
 </script>
