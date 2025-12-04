@@ -126,7 +126,7 @@ export class MIDIInputDevice extends InputDevice {
 		const channel = status & 0x0f;
 
 		switch (command) {
-			case 0x90: // Note On
+			case 0x90: { // Note On
 				if (data2 > 0) {
 					const controlId = `note-${data1}`;
 					this._trigger(controlId, data2 / 127);
@@ -136,13 +136,15 @@ export class MIDIInputDevice extends InputDevice {
 					this._emit('release', { controlId });
 				}
 				break;
+			}
 
-			case 0x80: // Note Off
+			case 0x80: { // Note Off
 				const controlId = `note-${data1}`;
 				this._emit('release', { controlId });
 				break;
+			}
 
-			case 0xb0: // Control Change
+			case 0xb0: { // Control Change
 				const ccId = `cc-${data1}`;
 				// Check if this CC is a button (from profile)
 				const definition = this.profile ? this.profile.getControlDefinition(ccId) : null;
@@ -158,11 +160,13 @@ export class MIDIInputDevice extends InputDevice {
 					this._setValue(ccId, data2 / 127, 0, 1);
 				}
 				break;
+			}
 
-			case 0xe0: // Pitch Bend
+			case 0xe0: { // Pitch Bend
 				const bendValue = ((data2 << 7) | data1) - 8192;
 				this._setValue('pitchbend', bendValue / 8192, -1, 1);
 				break;
+			}
 		}
 	}
 
