@@ -24,7 +24,7 @@
 
 	/**
 	 * Open the dialog
-	 * @returns {Promise<{name: string, target: string}|null>}
+	 * @returns {Promise<{name: string, controls: string[], targetLabel: string}|null>}
 	 */
 	export function open() {
 		return new Promise((resolve) => {
@@ -81,6 +81,41 @@
 		return targets;
 	}
 
+	/**
+	 * Parse selected target value into controls array and label
+	 * @param {string} targetValue - Internal select value like 'control|color' or 'device|rgb'
+	 * @returns {{controls: string[], targetLabel: string}}
+	 */
+	function parseTarget(targetValue) {
+		const [targetType, targetId] = targetValue.split('|');
+
+		if (targetType === 'control') {
+			// Single control - find its friendly name
+			let friendlyName = targetId;
+			for (const deviceDef of Object.values(DEVICE_TYPES)) {
+				const control = deviceDef.controls.find(c => c.id === targetId);
+				if (control) {
+					friendlyName = control.type.name;
+					break;
+				}
+			}
+			return {
+				controls: [targetId],
+				targetLabel: friendlyName
+			};
+		} else if (targetType === 'device') {
+			// All controls from device type
+			const deviceDef = DEVICE_TYPES[targetId];
+			return {
+				controls: deviceDef.controls.map(c => c.id),
+				targetLabel: deviceDef.name
+			};
+		}
+
+		// Fallback
+		return { controls: ['color'], targetLabel: 'Color' };
+	}
+
 	function handleCreate() {
 		if (!animationName.trim()) {
 			resolvePromise(null);
@@ -88,10 +123,13 @@
 			return;
 		}
 
-		// Return animation data
+		// Parse target and return clean data
+		const { controls, targetLabel } = parseTarget(selectedTarget);
+
 		const result = {
 			name: animationName.trim(),
-			target: selectedTarget
+			controls,
+			targetLabel
 		};
 
 		resolvePromise(result);

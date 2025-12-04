@@ -1,5 +1,4 @@
 <script>
-    import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import { getControlsForRendering } from '../../lib/animations/utils.js';
     import { animationLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
@@ -42,12 +41,8 @@
 
         if (!result) return; // User cancelled
 
-        // Parse selected target
-        const parsed = parseAnimationTarget(result.target);
-        const { controls, targetLabel } = parsed;
-
         // Create animation using library
-        const animation = animationLibrary.create(result.name, controls, targetLabel);
+        const animation = animationLibrary.create(result.name, result.controls, result.targetLabel);
 
         // Create default values object keyed by control ID
         const defaultValues = createDefaultKeyframeValues(animation);
@@ -68,47 +63,6 @@
         }
         
         return values;
-    }
-
-    // Parse selected target into controls array and targetLabel
-    function parseAnimationTarget(target) {
-        const parts = target.split('|');
-        const targetType = parts[0];
-
-        if (targetType === 'control') {
-            // Single control (device-agnostic)
-            const controlId = parts[1];
-            
-            // Find the friendly name for this control
-            let friendlyName = controlId;
-            for (const deviceDef of Object.values(DEVICE_TYPES)) {
-                const control = deviceDef.controls.find(c => c.id === controlId);
-                if (control) {
-                    friendlyName = control.type.name;
-                    break;
-                }
-            }
-            
-            return {
-                controls: [controlId],
-                targetLabel: friendlyName
-            };
-        } else if (targetType === 'device') {
-            // All controls for this device type
-            const deviceType = parts[1];
-            const deviceDef = DEVICE_TYPES[deviceType];
-            const controlIds = deviceDef.controls.map(c => c.id);
-            return {
-                controls: controlIds,  // Array of all control ids from this device
-                targetLabel: deviceDef.name
-            };
-        }
-
-        // Fallback
-        return {
-            controls: ['color'],
-            targetLabel: 'Color'
-        };
     }
 
     async function startEditing(animation) {
