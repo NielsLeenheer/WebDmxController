@@ -117,7 +117,7 @@
                 <div class="reference-section">
                     <h4>Animations</h4>
                     <div class="css-identifiers">
-                        {#each animations as animation (animation.name)}
+                        {#each animations as animation (animation.id)}
                             <code class="css-identifier">{animation.cssIdentifier}</code>
                         {/each}
                     </div>
