@@ -38,31 +38,6 @@ export function paletteColorToHex(color) {
     return UI_COLOR_MAP[color] || 'transparent';
 }
 
-export function paletteColorToDeviceHex(color) {
-    return DEVICE_COLOR_MAP[color] || '#000000';
-}
-
-/**
- * Get RGB color values from a named color (UI colors)
- * @param {string} color - Color name from the palette
- * @returns {{r: number, g: number, b: number}} RGB object (0-255 per channel), or {r:0, g:0, b:0} if color not found
- */
-export function paletteColorToRGB(color) {
-    const hexColor = UI_COLOR_MAP[color];
-    
-    if (!hexColor) {
-        return { r: 0, g: 0, b: 0 };
-    }
-
-    // Parse hex color (#RRGGBB)
-    const hex = hexColor.replace('#', '');
-    return {
-        r: parseInt(hex.substring(0, 2), 16),
-        g: parseInt(hex.substring(2, 4), 16),
-        b: parseInt(hex.substring(4, 6), 16)
-    };
-}
-
 /**
  * Get RGB color values from a named color (device colors - saturated for hardware LEDs)
  * @param {string} color - Color name from the palette

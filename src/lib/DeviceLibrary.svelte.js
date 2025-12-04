@@ -143,6 +143,7 @@ export class DeviceLibrary extends Library {
 	/**
 	 * Remove a device and unlink any devices that were linked to it
 	 * @param {string} deviceId - Device ID to remove
+	 * @returns {boolean} Success status
 	 */
 	remove(deviceId) {
 		// Unlink any devices that were linked to this device
@@ -153,7 +154,7 @@ export class DeviceLibrary extends Library {
 		}
 
 		// Call parent remove method
-		super.remove(deviceId);
+		return super.remove(deviceId);
 	}
 
 	/**
@@ -190,18 +191,6 @@ export class DeviceLibrary extends Library {
 				}
 			}
 		}
-	}
-
-	/**
-	 * Clear all device values (reset to defaults)
-	 */
-	clearAllValues() {
-		for (const device of this.items) {
-			const deviceType = DEVICE_TYPES[device.type];
-			// Reset to default control values
-			device.defaultValues = createDefaultControlValues(deviceType);
-		}
-		this.save();
 	}
 
 	/**

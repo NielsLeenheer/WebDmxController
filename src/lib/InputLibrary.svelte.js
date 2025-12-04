@@ -8,7 +8,6 @@
 import { Library } from './Library.svelte.js';
 import { isButton, hasValues } from './inputs/utils.js';
 import { toCSSIdentifier, toUniqueCSSIdentifier } from './css/utils.js';
-import { getInputExportedValues } from './inputs/valueTypes.js';
 import { InputColorManager } from './inputs/InputColorManager.js';
 
 export class InputLibrary extends Library {
@@ -37,9 +36,6 @@ export class InputLibrary extends Library {
 		super.load();
 		const colorManager = this._getColorManager();
 		colorManager.rebuildFromInputs(this.items);
-		console.log('[InputLibrary] Loaded inputs:', this.items.length);
-		console.log('[InputLibrary] Colors after rebuild:', this.items.map(i => ({ name: i.name, deviceId: i.deviceId, color: i.color })));
-		console.log('[InputLibrary] Used colors per device:', colorManager.getUsedColorsDebug());
 	}
 
 	/**
@@ -152,18 +148,6 @@ export class InputLibrary extends Library {
 		return this.items.find(i =>
 			i.deviceId === deviceId && i.controlId === controlId
 		);
-	}
-
-	/**
-	 * Get exported values for an input
-	 * Returns array of value definitions that can be mapped to controls
-	 * @param {string} inputId - Input ID
-	 * @returns {Array} Array of exported value definitions
-	 */
-	getExportedValues(inputId) {
-		const input = this.get(inputId);
-		if (!input) return [];
-		return getInputExportedValues(input);
 	}
 
 	/**

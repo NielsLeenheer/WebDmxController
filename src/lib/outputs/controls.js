@@ -48,41 +48,6 @@ export function controlValuesToDMX(deviceType, controlValues) {
 }
 
 /**
- * Convert DMX array to device control values
- *
- * Takes a device type definition and a DMX array,
- * returns a control values object.
- *
- * @param {DeviceType} deviceType - Device type definition (class instance)
- * @param {Array<number>} dmxArray - DMX array (0-255 values)
- * @returns {Object} Control values object { "color": { red, green, blue }, "dimmer": 255, ... }
- *
- * @example
- * const deviceType = DEVICE_TYPES['rgb'];
- * const dmx = [255, 128, 64];
- * const controlValues = dmxToControlValues(deviceType, dmx);
- * // Returns: { "color": { red: 255, green: 128, blue: 64 } }
- */
-export function dmxToControlValues(deviceType, dmxArray) {
-	const controlValues = {};
-
-	// Process each control defined in the device type
-	for (const controlDef of deviceType.controls) {
-		// Extract DMX values for this control (plain array slice)
-		const controlDMX = dmxArray.slice(
-			controlDef.startChannel,
-			controlDef.startChannel + controlDef.type.getChannelCount()
-		);
-
-		// Convert to control value
-		// Input: plain array, Output: plain object/number
-		controlValues[controlDef.id] = controlDef.type.dmxToValue(controlDMX);
-	}
-
-	return controlValues;
-}
-
-/**
  * Create default control values for a device type
  *
  * Returns a control values object with all controls set to their defaults.

@@ -16,7 +16,7 @@ import { DEVICE_TYPES } from './devices.js';
  * NEW: Simplified - just checks if control ids match
  * (controls with same id are assumed compatible)
  */
-export function getControlMapping(sourceType, targetType) {
+function getControlMapping(sourceType, targetType) {
     const sourceDeviceType = DEVICE_TYPES[sourceType];
     const targetDeviceType = DEVICE_TYPES[targetType];
 
@@ -44,16 +44,6 @@ export function getControlMapping(sourceType, targetType) {
 export function canLinkDevices(sourceType, targetType) {
     const mapping = getControlMapping(sourceType, targetType);
     return Object.keys(mapping).length > 0;
-}
-
-
-/**
- * Get list of devices that can be linked to the given device type
- */
-export function getLinkableDeviceTypes(deviceType) {
-    return Object.keys(DEVICE_TYPES).filter(type =>
-        type !== deviceType && canLinkDevices(deviceType, type)
-    );
 }
 
 /**

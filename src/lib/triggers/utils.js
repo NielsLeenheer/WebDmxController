@@ -7,24 +7,6 @@
 import { toCSSIdentifier } from '../css/utils.js';
 
 /**
- * Check if trigger is automatic (always-running)
- * @param {Object} trigger - Trigger object
- * @returns {boolean}
- */
-export function isAutomatic(trigger) {
-	return trigger.type === 'auto';
-}
-
-/**
- * Check if trigger is manual (input-based action trigger)
- * @param {Object} trigger - Trigger object
- * @returns {boolean}
- */
-export function isManual(trigger) {
-	return trigger.type === 'action';
-}
-
-/**
  * Check if trigger is a value-based trigger (continuous input-to-control mapping)
  * @param {Object} trigger - Trigger object
  * @returns {boolean}

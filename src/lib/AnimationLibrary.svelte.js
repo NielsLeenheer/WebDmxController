@@ -177,12 +177,4 @@ export class AnimationLibrary extends Library {
 			order: animData.order !== undefined ? animData.order : index
 		};
 	}
-
-	/**
-	 * Clear all animations
-	 */
-	clear() {
-		this.items = [];
-		this.save();
-	}
 }

@@ -28,7 +28,7 @@ const THINGY_MOTION_GRAVITY = 'ef68040a-9b35-4933-9b10-52ffa9740042';
 /**
  * Represents a connected Thingy:52 device
  */
-export class Thingy52Device {
+class Thingy52Device {
 	constructor(bluetoothDevice) {
 		this.bluetoothDevice = bluetoothDevice;
 		this.server = null;
