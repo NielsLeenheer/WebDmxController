@@ -283,6 +283,10 @@
         bind:this={timelineElement}
         bind:clientWidth={timelineWidth}
         onclick={handleTimelineClick}
+        onkeydown={(e) => e.key === 'Enter' && handleTimelineClick(e)}
+        role="group"
+        aria-label="Animation timeline - click to add keyframe"
+        tabindex="0"
         draggable="false"
     >
         <!-- Gradient segments showing color transitions -->
@@ -308,6 +312,10 @@
                         selectKeyframe(index, e.currentTarget);
                     }
                 }}
+                onkeydown={(e) => e.key === 'Enter' && selectKeyframe(index, e.currentTarget)}
+                role="button"
+                aria-label="Keyframe at {getKeyframePercentage(keyframe)}%"
+                tabindex="0"
                 draggable="false"
                 title="{getKeyframePercentage(keyframe)}%"
             >

@@ -125,7 +125,7 @@
                             class="control-checkbox"
                         />
                     {/if}
-                    <label>{control.type.name}</label>
+                    <span class="control-label">{control.type.name}</span>
                 </div>
                 <div class="xypad-wrapper" class:disabled={controlDisabled}>
                     <XYPad
@@ -170,7 +170,7 @@
                         class="control-checkbox"
                     />
                 {/if}
-                <label class:disabled={controlDisabled}>Red</label>
+                <span class="control-label" class:disabled={controlDisabled}>Red</span>
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={colorValue.red}
                         oninput={(e) => !controlDisabled && handleRGBComponentChange(control.id, 'red', parseInt(e.target.value))}
@@ -183,7 +183,7 @@
             </div>
             <!-- Green -->
             <div class="control" class:no-checkbox={!showCheckboxes}>
-                <label class:disabled={controlDisabled} style={showCheckboxes ? 'grid-column-start: 2' : ''}>Green</label>
+                <span class="control-label" class:disabled={controlDisabled} style={showCheckboxes ? 'grid-column-start: 2' : ''}>Green</span>
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={colorValue.green}
                         oninput={(e) => !controlDisabled && handleRGBComponentChange(control.id, 'green', parseInt(e.target.value))}
@@ -196,7 +196,7 @@
             </div>
             <!-- Blue -->
             <div class="control" class:no-checkbox={!showCheckboxes}>
-                <label class:disabled={controlDisabled} style={showCheckboxes ? 'grid-column-start: 2' : ''}>Blue</label>
+                <span class="control-label" class:disabled={controlDisabled} style={showCheckboxes ? 'grid-column-start: 2' : ''}>Blue</span>
                 <div class="slider-wrapper">
                     <input type="range" min="0" max="255" value={colorValue.blue}
                         oninput={(e) => !controlDisabled && handleRGBComponentChange(control.id, 'blue', parseInt(e.target.value))}
@@ -220,7 +220,7 @@
                         class="control-checkbox"
                     />
                 {/if}
-                <label class:disabled={controlDisabled}>{control.type.name}</label>
+                <span class="control-label" class:disabled={controlDisabled}>{control.type.name}</span>
                 <div class="toggle-wrapper">
                     <ToggleSwitch
                         checked={isOn}
@@ -251,7 +251,7 @@
                         class="control-checkbox"
                     />
                 {/if}
-                <label class:disabled={controlDisabled}>{control.type.name}</label>
+                <span class="control-label" class:disabled={controlDisabled}>{control.type.name}</span>
                 <div class="slider-wrapper">
                     <input
                         type="range"
@@ -296,13 +296,13 @@
         grid-template-columns: 4em 1fr 3em;
     }
 
-    .control label {
+    .control .control-label {
         font-size: 9pt;
         font-weight: 500;
         color: #555;
     }
 
-    .control label.disabled {
+    .control .control-label.disabled {
         color: #999;
         opacity: 0.5;
     }
@@ -395,7 +395,7 @@
         align-items: start;
     }
 
-    .control-xypad label {
+    .control-xypad .control-label {
         font-size: 9pt;
         font-weight: 500;
         color: #555;

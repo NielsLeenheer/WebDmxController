@@ -38,6 +38,7 @@
 	class:drag-by-header={dnd.dragByHeader}
 	class:drag-by-card={!dnd.dragByHeader}
 	style:order={item.order}
+	role="listitem"
 	draggable="true"
 	onmousedown={dnd.handleMouseDown}
 	ondragstart={(e) => dnd.handleDragStart(e, item)}

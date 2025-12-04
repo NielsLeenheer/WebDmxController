@@ -81,8 +81,8 @@
     bind:this={padElement}
     onmousedown={handleMouseDown}
     onmousemove={handleMouseMove}
-    role="slider"
-    aria-label="Pan and Tilt Control"
+    role="application"
+    aria-label="Pan and Tilt Control - Pan: {panValue}, Tilt: {tiltValue}"
     tabindex="0"
 >
     <!-- Grid lines -->
