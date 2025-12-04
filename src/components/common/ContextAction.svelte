@@ -97,10 +97,6 @@
         cursor: not-allowed;
     }
 
-    .context-action.danger:hover:not(:disabled) {
-        /* background: #fef0f0; */
-    }
-
     .context-action :global(svg) {
         width: 24px;
         height: 24px;

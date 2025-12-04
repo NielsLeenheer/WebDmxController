@@ -1,7 +1,5 @@
 <script>
-    import { onMount } from 'svelte';
     import { getDevicePreviewData } from '../../lib/outputs/devices.js';
-    import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from '../../stores.svelte.js';
     import { isButton } from '../../lib/inputs/utils.js';
     import Preview from '../common/Preview.svelte';

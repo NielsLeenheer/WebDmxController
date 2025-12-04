@@ -194,11 +194,6 @@
 		width: 120px;
 	}
 
-	#trigger-animation {
-		min-width: 120px;
-		max-width: 200px;
-	}
-
 	.duration-with-loop {
 		display: flex;
 		gap: 10px;

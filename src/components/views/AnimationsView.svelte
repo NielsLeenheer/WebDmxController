@@ -13,8 +13,7 @@
     import editIcon from '../../assets/icons/edit.svg?raw';
     import removeIcon from '../../assets/icons/remove.svg?raw';
 
-    // Get data reactively
-    let devices = $derived(deviceLibrary.getAll());
+    // Get animations reactively
     let animations = $derived(animationLibrary.getAll());
 
     // Dialog references
