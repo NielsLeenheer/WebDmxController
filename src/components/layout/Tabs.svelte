@@ -1,6 +1,6 @@
 <script>
     import { Icon } from 'svelte-icon';
-    import listIcon from '../../assets/icons/list.svg?raw';
+    import spotlightIcon from '../../assets/icons/spotlight.svg?raw';
     import universeIcon from '../../assets/icons/universe.svg?raw';
     import animationsIcon from '../../assets/icons/animations.svg?raw';
     import inputsIcon from '../../assets/icons/inputs.svg?raw';
@@ -16,7 +16,7 @@
     <nav>
         <label>
             <input type="radio" name="view" value="devices" bind:group={view}>
-            <Icon data={listIcon} />
+            <Icon data={spotlightIcon} />
             Devices
         </label>
 
