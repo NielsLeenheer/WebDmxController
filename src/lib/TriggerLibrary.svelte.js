@@ -169,30 +169,17 @@ export class TriggerLibrary extends Library {
 	 * @param {number} index - Array index for order
 	 */
 	deserializeItem(data, index) {
-		// Determine trigger type (handle legacy triggerType migration)
-		let type = data.type;
-		if (!type && data.triggerType) {
-			// Migrate old triggerType to new type
-			if (data.triggerType === 'value') {
-				type = 'value';
-			} else if (data.triggerType === 'always') {
-				type = 'auto';
-			} else {
-				type = 'action';
-			}
-		}
-		type = type || 'action';
+		const type = data.type || 'action';
 
 		// Handle automatic triggers
 		if (type === 'auto') {
-			const actionType = data.action?.type || data.actionType || 'animation';
+			const actionType = data.action?.type || 'animation';
 
 			// Handle values deserialization with deep copy
 			let values = null;
-			if (actionType === 'values') {
+			if (actionType === 'values' && data.action?.values) {
 				values = {};
-				const sourceValues = data.action?.values || data.values || {};
-				for (const [key, value] of Object.entries(sourceValues)) {
+				for (const [key, value] of Object.entries(data.action.values)) {
 					if (typeof value === 'object' && value !== null) {
 						values[key] = { ...value };
 					} else {
@@ -202,19 +189,19 @@ export class TriggerLibrary extends Library {
 			}
 
 			return {
-				id: data.id || crypto.randomUUID(),
+				id: data.id,
 				type: 'auto',
 				enabled: data.enabled !== undefined ? data.enabled : true,
 				output: {
-					id: data.output?.id || data.output?.device?.id || data.deviceId || null
+					id: data.output?.id || null
 				},
 				action: {
 					type: actionType,
 					animation: actionType === 'animation' ? {
-						id: data.action?.animation?.id || data.animation?.id || data.animationName || null,
-						duration: data.action?.animation?.duration || data.animation?.duration || data.duration || 1000,
-						easing: data.action?.animation?.easing || data.animation?.easing || data.easing || 'linear',
-						iterations: data.action?.animation?.iterations || data.animation?.iterations || data.iterations || 'infinite'
+						id: data.action?.animation?.id || null,
+						duration: data.action?.animation?.duration || 1000,
+						easing: data.action?.animation?.easing || 'linear',
+						iterations: data.action?.animation?.iterations || 'infinite'
 					} : null,
 					values
 				},
@@ -225,22 +212,22 @@ export class TriggerLibrary extends Library {
 		// Handle value-based triggers
 		if (type === 'value') {
 			return {
-				id: data.id || crypto.randomUUID(),
+				id: data.id,
 				type: 'value',
 				enabled: data.enabled !== undefined ? data.enabled : true,
 				input: {
-					id: data.input?.id || data.inputId || null,
-					value: data.input?.value || data.inputValueKey || 'value'
+					id: data.input?.id || null,
+					value: data.input?.value || 'value'
 				},
 				output: {
-					id: data.output?.id || data.output?.device?.id || data.deviceId || null
+					id: data.output?.id || null
 				},
 				action: {
 					type: 'copy',
 					copy: {
-						control: data.action?.copy?.control || data.output?.control?.id || data.controlId || data.controlName || null,
-						component: data.action?.copy?.component || data.output?.control?.value || data.controlValueId || data.controlChannel || null,
-						invert: data.action?.copy?.invert || data.action?.invert || data.invert || false
+						control: data.action?.copy?.control || null,
+						component: data.action?.copy?.component || null,
+						invert: data.action?.copy?.invert || false
 					}
 				},
 				order: data.order !== undefined ? data.order : index
@@ -248,14 +235,13 @@ export class TriggerLibrary extends Library {
 		}
 
 		// Handle action triggers
-		const actionType = data.action?.type || data.actionType || 'animation';
+		const actionType = data.action?.type || 'animation';
 
 		// Handle values deserialization with deep copy
 		let values = null;
-		if (actionType === 'values') {
+		if (actionType === 'values' && data.action?.values) {
 			values = {};
-			const sourceValues = data.action?.values || data.values || {};
-			for (const [key, value] of Object.entries(sourceValues)) {
+			for (const [key, value] of Object.entries(data.action.values)) {
 				if (typeof value === 'object' && value !== null) {
 					values[key] = { ...value };
 				} else {
@@ -264,36 +250,24 @@ export class TriggerLibrary extends Library {
 			}
 		}
 
-		// Determine input state (migrate from old triggerType)
-		let inputState = data.input?.state;
-		if (!inputState && data.triggerType) {
-			// Migrate old triggerType to input.state
-			if (data.triggerType === 'pressed') {
-				inputState = 'down';
-			} else if (data.triggerType === 'not-pressed') {
-				inputState = 'up';
-			}
-		}
-		inputState = inputState || 'down';
-
 		return {
-			id: data.id || crypto.randomUUID(),
+			id: data.id,
 			type: 'action',
 			enabled: data.enabled !== undefined ? data.enabled : true,
 			input: {
-				id: data.input?.id || data.inputId || null,
-				state: inputState
+				id: data.input?.id || null,
+				state: data.input?.state || 'down'
 			},
 			output: {
-				id: data.output?.id || data.output?.device?.id || data.deviceId || null
+				id: data.output?.id || null
 			},
 			action: {
 				type: actionType,
 				animation: actionType === 'animation' ? {
-					id: data.action?.animation?.id || data.animation?.id || data.animationName || null,
-					duration: data.action?.animation?.duration || data.animation?.duration || data.duration || 1000,
-					easing: data.action?.animation?.easing || data.animation?.easing || data.easing || 'linear',
-					iterations: data.action?.animation?.iterations || data.animation?.iterations || data.iterations || 'infinite'
+					id: data.action?.animation?.id || null,
+					duration: data.action?.animation?.duration || 1000,
+					easing: data.action?.animation?.easing || 'linear',
+					iterations: data.action?.animation?.iterations || 'infinite'
 				} : null,
 				values
 			},

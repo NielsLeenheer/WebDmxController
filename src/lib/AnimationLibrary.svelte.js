@@ -8,7 +8,7 @@
 
 import { Library } from './Library.svelte.js';
 import { generateCSSAnimation } from './animations/css.js';
-import { toCSSIdentifier, toUniqueCSSIdentifier } from './css/utils.js';
+import { toUniqueCSSIdentifier } from './css/utils.js';
 
 export class AnimationLibrary extends Library {
 	constructor() {
@@ -168,12 +168,12 @@ export class AnimationLibrary extends Library {
 		}) || [];
 
 		return {
-			id: animData.id || crypto.randomUUID(),
+			id: animData.id,
 			name: animData.name,
 			controls: animData.controls || [],
 			targetLabel: animData.targetLabel || null,
 			keyframes,
-			cssIdentifier: animData.cssIdentifier || toCSSIdentifier(animData.name),
+			cssIdentifier: animData.cssIdentifier,
 			order: animData.order !== undefined ? animData.order : index
 		};
 	}

@@ -231,47 +231,8 @@ export class DeviceLibrary extends Library {
 			linkedTo: deviceData.linkedTo || null,
 			syncedControls: deviceData.syncedControls || null,
 			mirrorPan: deviceData.mirrorPan || false,
-			cssIdentifier: deviceData.cssIdentifier || deviceData.cssId,
+			cssIdentifier: deviceData.cssIdentifier,
 			order: deviceData.order !== undefined ? deviceData.order : index
 		};
-	}
-
-	/**
-	 * Migrate old device type IDs to new format
-	 * Call this manually to update devices stored with old UPPERCASE_WITH_UNDERSCORE IDs
-	 * to new lowercase-with-dash format
-	 * 
-	 * Usage: deviceLibrary.migrateDeviceTypeIds()
-	 */
-	migrateDeviceTypeIds() {
-		const typeIdMap = {
-			'RGB': 'rgb',
-			'RGBA': 'rgba',
-			'RGBW': 'rgbw',
-			'DIMMER': 'dimmer',
-			'SMOKE': 'smoke',
-			'MOVING_HEAD': 'moving-head',
-			'MOVING_HEAD_11CH': 'moving-head-11ch',
-			'FLAMETHROWER': 'flamethrower'
-		};
-
-		let migratedCount = 0;
-
-		for (const device of this.items) {
-			if (typeIdMap[device.type]) {
-				console.log(`Migrating device "${device.name}": ${device.type} → ${typeIdMap[device.type]}`);
-				device.type = typeIdMap[device.type];
-				migratedCount++;
-			}
-		}
-
-		if (migratedCount > 0) {
-			this.save();
-			console.log(`Migration complete. ${migratedCount} device(s) updated.`);
-		} else {
-			console.log('No devices needed migration.');
-		}
-
-		return migratedCount;
 	}
 }

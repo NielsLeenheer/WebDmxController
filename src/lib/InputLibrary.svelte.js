@@ -6,8 +6,8 @@
  */
 
 import { Library } from './Library.svelte.js';
-import { isButton, hasValues } from './inputs/utils.js';
-import { toCSSIdentifier, toUniqueCSSIdentifier } from './css/utils.js';
+import { hasValues } from './inputs/utils.js';
+import { toUniqueCSSIdentifier } from './css/utils.js';
 import { InputColorManager } from './inputs/InputColorManager.js';
 
 export class InputLibrary extends Library {
@@ -171,71 +171,25 @@ export class InputLibrary extends Library {
 	}
 
 	/**
-	 * Detect device brand from device name for backward compatibility
-	 * @param {string} deviceName - The device name
-	 * @returns {string|null} Detected brand or null
-	 */
-	_detectDeviceBrandFromName(deviceName) {
-		if (!deviceName) return null;
-		
-		// Sony patterns
-		if (/dualshock|dualsense|playstation|sony|ps[3-5]/i.test(deviceName)) {
-			return 'sony';
-		}
-		// Nintendo patterns
-		if (/nintendo|switch|pro\s*controller|joy-?con/i.test(deviceName)) {
-			return 'nintendo';
-		}
-		// Xbox patterns
-		if (/xbox|microsoft|xinput/i.test(deviceName)) {
-			return 'xbox';
-		}
-		// Unknown brand
-		return null;
-	}
-
-	/**
 	 * Deserialize input data from storage
 	 * @param {Object} inputData - Serialized input data
 	 * @param {number} index - Array index for order
 	 */
 	deserializeItem(inputData, index) {
-		// Handle backward compatibility
-		const inputType = inputData.type || (isButton({ controlId: inputData.controlId || inputData.inputControlId }) ? 'button' : 'knob');
-		const name = inputData.name || 'Untitled Input';
-
-		// Migrate from old cssProperty (--name) to cssIdentifier (name)
-		let cssIdentifier = inputData.cssIdentifier;
-		if (!cssIdentifier && inputData.cssProperty) {
-			// Remove leading -- from cssProperty
-			cssIdentifier = inputData.cssProperty.replace(/^--/, '');
-		}
-		if (!cssIdentifier) {
-			cssIdentifier = toCSSIdentifier(name);
-		}
-
-		// Detect device brand from device name if not stored (backward compatibility)
-		const deviceId = inputData.deviceId || inputData.inputDeviceId || null;
-		const deviceName = inputData.deviceName || inputData.inputDeviceName || null;
-		let deviceBrand = inputData.deviceBrand || inputData.gamepadBrand || null;
-		if (!deviceBrand && deviceId?.startsWith('gamepad-')) {
-			deviceBrand = this._detectDeviceBrandFromName(deviceName);
-		}
-
 		return {
-			id: inputData.id || crypto.randomUUID(),
-			name: name,
-			deviceId: deviceId,
-			deviceName: deviceName,
-			controlId: inputData.controlId || inputData.inputControlId || null,
-			controlName: inputData.controlName || inputData.inputControlName || inputData.friendlyName || null,
+			id: inputData.id,
+			name: inputData.name,
+			deviceId: inputData.deviceId || null,
+			deviceName: inputData.deviceName || null,
+			controlId: inputData.controlId || null,
+			controlName: inputData.controlName || null,
 			color: inputData.color || null,
-			type: inputType,
-			colorSupport: inputData.colorSupport || (inputData.supportsColor ? 'rgb' : 'none'),
+			type: inputData.type,
+			colorSupport: inputData.colorSupport || 'none',
 			orientation: inputData.orientation || null,
-			deviceBrand: deviceBrand,
+			deviceBrand: inputData.deviceBrand || null,
 			buttonMode: inputData.buttonMode || 'momentary',
-			cssIdentifier,
+			cssIdentifier: inputData.cssIdentifier,
 			order: inputData.order !== undefined ? inputData.order : index
 		};
 	}
