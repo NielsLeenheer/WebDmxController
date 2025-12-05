@@ -1,5 +1,6 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
+	import DialogColumns from '../common/DialogColumns.svelte';
 	import Button from '../common/Button.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { getInputExportedValues } from '../../lib/inputs/valueTypes.js';
@@ -128,9 +129,9 @@
 
 <Dialog bind:dialogRef={dialogRef} title="Create Value Trigger" onclose={handleCancel}>
 	<form id="value-trigger-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-		<div class="trigger-columns">
-			<!-- Column 1: Input Configuration -->
-			<div class="trigger-column">
+		<DialogColumns layout={['180px', 'line', '180px', '350px']}>
+			{#snippet column1()}
+				<!-- Column 1: Input Configuration -->
 				<div class="dialog-input-group">
 					<label for="value-trigger-input">Input:</label>
 					<select id="value-trigger-input" bind:value={selectedInputId}>
@@ -150,10 +151,10 @@
 						</select>
 					</div>
 				{/if}
-			</div>
+			{/snippet}
 
-			<!-- Column 2: Device Configuration -->
-			<div class="trigger-column with-divider">
+			{#snippet column2()}
+				<!-- Column 2: Device Configuration -->
 				<div class="dialog-input-group">
 					<label for="value-trigger-device">Device:</label>
 					<select id="value-trigger-device" bind:value={selectedDeviceId}>
@@ -184,10 +185,10 @@
 						</select>
 					</div>
 				{/if}
-			</div>
+			{/snippet}
 
-			<!-- Column 3: Options -->
-			<div class="trigger-column">
+			{#snippet column3()}
+				<!-- Column 3: Options -->
 				<div class="trigger-card">
 					<div class="checkbox-field">
 						<label>
@@ -200,8 +201,8 @@
 						<p class="description">Reverse the input-to-output direction</p>
 					</div>
 				</div>
-			</div>
-		</div>
+			{/snippet}
+		</DialogColumns>
 	</form>
 
 	{#snippet buttons()}
@@ -211,23 +212,6 @@
 </Dialog>
 
 <style>
-	.trigger-columns {
-		display: grid;
-		grid-template-columns: 180px 200px 350px;
-		gap: 20px;
-	}
-
-	.trigger-column {
-		display: flex;
-		flex-direction: column;
-		gap: 15px;
-	}
-
-	.trigger-column.with-divider {
-		border-left: 1px solid #ddd;
-		padding-left: 20px;
-	}
-
 	.trigger-card {
 		background: #f6f6f6;
 		padding: 15px;

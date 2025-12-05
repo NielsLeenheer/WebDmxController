@@ -1,5 +1,6 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
+	import DialogColumns from '../common/DialogColumns.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import Preview from '../common/Preview.svelte';
@@ -188,9 +189,9 @@
 {#if editingDevice}
 <Dialog bind:dialogRef={dialogRef} title="Edit Device in Scene" onclose={handleCancel}>
 	<form id="edit-scene-device-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-		<div class="scene-device-columns">
-			<!-- Column 1: Device Info -->
-			<div class="scene-device-column">
+		<DialogColumns layout={['180px', 'line', '350px']}>
+			{#snippet column1()}
+				<!-- Column 1: Device Info -->
 				<div class="device-info">
 					<Preview
 						type="device"
@@ -208,10 +209,10 @@
 						{/each}
 					</select>
 				</div>
-			</div>
+			{/snippet}
 
-			<!-- Column 2: Settings -->
-			<div class="scene-device-column with-divider">
+			{#snippet column2()}
+				<!-- Column 2: Settings -->
 				<div class="scene-device-card">
 					{#if actionType === 'animation'}
 						<div class="dialog-input-group">
@@ -268,8 +269,8 @@
 						{/if}
 					{/if}
 				</div>
-			</div>
-		</div>
+			{/snippet}
+		</DialogColumns>
 	</form>
 
 	{#snippet buttons()}
@@ -280,23 +281,6 @@
 {/if}
 
 <style>
-	.scene-device-columns {
-		display: grid;
-		grid-template-columns: 180px 400px;
-		gap: 20px;
-	}
-
-	.scene-device-column {
-		display: flex;
-		flex-direction: column;
-		gap: 15px;
-	}
-
-	.scene-device-column.with-divider {
-		border-left: 1px solid #ddd;
-		padding-left: 20px;
-	}
-
 	.device-info {
 		display: flex;
 		flex-direction: column;

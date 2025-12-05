@@ -1,5 +1,6 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
+	import DialogColumns from '../common/DialogColumns.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
@@ -238,9 +239,9 @@
 {#if editingTrigger}
 <Dialog bind:dialogRef={dialogRef} title="Edit Action Trigger" onclose={handleCancel}>
 	<form id="edit-action-trigger-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-		<div class="trigger-columns">
-			<!-- Column 1: Trigger Configuration -->
-			<div class="trigger-column">
+		<DialogColumns layout={['180px', 'line', '180px', '350px']}>
+			{#snippet column1()}
+				<!-- Column 1: Input Configuration -->
 				<div class="dialog-input-group">
 					<label for="edit-trigger-input">Input:</label>
 					<select id="edit-trigger-input" bind:value={selectedInput}>
@@ -260,10 +261,19 @@
 						{/each}
 					</select>
 				</div>
-			</div>
+			{/snippet}
 
-			<!-- Column 2: Device Configuration -->
-			<div class="trigger-column with-divider">
+			{#snippet column2()}
+				<!-- Column 2: Action & Device -->
+				<div class="dialog-input-group">
+					<label for="edit-trigger-action-type">Action:</label>
+					<select id="edit-trigger-action-type" bind:value={actionType}>
+						{#each actionTypes as type}
+							<option value={type.value}>{type.label}</option>
+						{/each}
+					</select>
+				</div>
+
 				{#if actionType !== 'scene'}
 					<div class="dialog-input-group">
 						<label for="edit-trigger-device">Device:</label>
@@ -274,19 +284,10 @@
 						</select>
 					</div>
 				{/if}
+			{/snippet}
 
-				<div class="dialog-input-group">
-					<label for="edit-trigger-action-type">Action:</label>
-					<select id="edit-trigger-action-type" bind:value={actionType}>
-						{#each actionTypes as type}
-							<option value={type.value}>{type.label}</option>
-						{/each}
-					</select>
-				</div>
-			</div>
-
-			<!-- Column 3: Action Configuration -->
-			<div class="trigger-column">
+			{#snippet column3()}
+				<!-- Column 3: Action Configuration -->
 				<div class="trigger-card">
 					{#if actionType === 'animation'}
 						<div class="dialog-input-group">
@@ -354,8 +355,8 @@
 						{/if}
 					{/if}
 				</div>
-			</div>
-		</div>
+			{/snippet}
+		</DialogColumns>
 	</form>
 
 	{#snippet buttons()}
@@ -366,23 +367,6 @@
 {/if}
 
 <style>
-	.trigger-columns {
-		display: grid;
-		grid-template-columns: 180px 200px 350px;
-		gap: 20px;
-	}
-
-	.trigger-column {
-		display: flex;
-		flex-direction: column;
-		gap: 15px;
-	}
-
-	.trigger-column.with-divider {
-		border-left: 1px solid #ddd;
-		padding-left: 20px;
-	}
-
 	.trigger-card {
 		background: #f6f6f6;
 		padding: 15px;

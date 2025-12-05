@@ -1,5 +1,6 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
+	import DialogColumns from '../common/DialogColumns.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
@@ -242,16 +243,13 @@
 	function closeDialog() {
 		dialogRef?.close();
 	}
-
-	// Check if we should show device column
-	let showDeviceColumn = $derived(actionType !== 'scene');
 </script>
 
 <Dialog bind:dialogRef={dialogRef} title="Create Action Trigger" onclose={handleCancel}>
 	<form id="action-trigger-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-		<div class="trigger-columns" class:scene-mode={!showDeviceColumn}>
-			<!-- Column 1: Trigger Configuration -->
-			<div class="trigger-column">
+		<DialogColumns layout={['180px', 'line', '180px', '350px']}>
+			{#snippet column1()}
+				<!-- Column 1: Input Configuration -->
 				<div class="dialog-input-group">
 					<label for="trigger-input">Input:</label>
 					<select id="trigger-input" bind:value={selectedInput}>
@@ -269,7 +267,10 @@
 						{/each}
 					</select>
 				</div>
+			{/snippet}
 
+			{#snippet column2()}
+				<!-- Column 2: Action & Device -->
 				<div class="dialog-input-group">
 					<label for="trigger-action-type">Action:</label>
 					<select id="trigger-action-type" bind:value={actionType}>
@@ -278,11 +279,8 @@
 						{/each}
 					</select>
 				</div>
-			</div>
 
-			<!-- Column 2: Device Configuration (hidden for scene action) -->
-			{#if showDeviceColumn}
-				<div class="trigger-column with-divider">
+				{#if actionType !== 'scene'}
 					<div class="dialog-input-group">
 						<label for="trigger-device">Device:</label>
 						<select id="trigger-device" bind:value={selectedDevice} onchange={handleDeviceChange}>
@@ -291,11 +289,11 @@
 							{/each}
 						</select>
 					</div>
-				</div>
-			{/if}
+				{/if}
+			{/snippet}
 
-			<!-- Column 3: Action Configuration -->
-			<div class="trigger-column" class:with-divider={!showDeviceColumn}>
+			{#snippet column3()}
+				<!-- Column 3: Action Configuration -->
 				<div class="trigger-card">
 					{#if actionType === 'animation'}
 						<div class="dialog-input-group">
@@ -364,8 +362,8 @@
 						<p class="scene-hint">When triggered, the scene will be activated.</p>
 					{/if}
 				</div>
-			</div>
-		</div>
+			{/snippet}
+		</DialogColumns>
 	</form>
 
 	{#snippet buttons()}
@@ -375,27 +373,6 @@
 </Dialog>
 
 <style>
-	.trigger-columns {
-		display: grid;
-		grid-template-columns: 180px 200px 350px;
-		gap: 20px;
-	}
-
-	.trigger-columns.scene-mode {
-		grid-template-columns: 180px 350px;
-	}
-
-	.trigger-column {
-		display: flex;
-		flex-direction: column;
-		gap: 15px;
-	}
-
-	.trigger-column.with-divider {
-		border-left: 1px solid #ddd;
-		padding-left: 20px;
-	}
-
 	.trigger-card {
 		background: #f6f6f6;
 		padding: 15px;
