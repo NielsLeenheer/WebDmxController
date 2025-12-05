@@ -1,6 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
+	import InputGroup from '../common/InputGroup.svelte';
 	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 	import { getPalette, paletteColorToHex } from '../../lib/inputs/colors.js';
@@ -97,8 +98,7 @@
 	onclose={handleCancel}
 >
 	<form id="edit-input-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-		<div class="dialog-input-group">
-			<label for="input-name">Name:</label>
+		<InputGroup label="Name:" for="input-name">
 			<input
 				id="input-name"
 				type="text"
@@ -129,21 +129,19 @@
 					{/if}
 				</div>
 			{/if}
-		</div>
+		</InputGroup>
 
 		{#if isButton(editingInput)}
-			<div class="dialog-input-group">
-				<label for="button-mode">Button Mode:</label>
+			<InputGroup label="Button Mode:" for="button-mode">
 				<select id="button-mode" bind:value={editingButtonMode}>
 					<option value="momentary">Down/Up</option>
 					<option value="toggle">On/Off</option>
 				</select>
-			</div>
+			</InputGroup>
 		{/if}
 
 		{#if showColorPicker}
-			<div class="dialog-input-group">
-				<label for="input-color">Color:</label>
+			<InputGroup label="Color:" for="input-color">
 				<div class="color-input-wrapper">
 					<div class="color-preview-wrapper">
 						<div
@@ -157,7 +155,7 @@
 						{/each}
 					</select>
 				</div>
-			</div>
+			</InputGroup>
 		{/if}
 	</form>
 

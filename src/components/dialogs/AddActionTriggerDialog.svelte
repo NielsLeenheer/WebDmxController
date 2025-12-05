@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import DialogColumns from '../common/DialogColumns.svelte';
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
+	import InputGroup from '../common/InputGroup.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
@@ -251,45 +252,41 @@
 		<DialogColumns layout={['180px', 'line', '180px', '350px']}>
 			{#snippet column1()}
 				<!-- Column 1: Input Configuration -->
-				<div class="dialog-input-group">
-					<label for="trigger-input">Input:</label>
+				<InputGroup label="Input:" for="trigger-input">
 					<select id="trigger-input" bind:value={selectedInput}>
 						{#each availableInputs as input}
 							<option value={`${input.deviceId}_${input.controlId}`}>{input.name}</option>
 						{/each}
 					</select>
-				</div>
+				</InputGroup>
 
-				<div class="dialog-input-group">
-					<label for="trigger-state">Trigger State:</label>
+				<InputGroup label="Trigger State:" for="trigger-state">
 					<select id="trigger-state" bind:value={inputState} onchange={handleInputStateChange}>
 						{#each getInputStateOptions() as state}
 							<option value={state.value}>{state.label}</option>
 						{/each}
 					</select>
-				</div>
+				</InputGroup>
 			{/snippet}
 
 			{#snippet column2()}
 				<!-- Column 2: Action & Device -->
-				<div class="dialog-input-group">
-					<label for="trigger-action-type">Action:</label>
+				<InputGroup label="Action:" for="trigger-action-type">
 					<select id="trigger-action-type" bind:value={actionType}>
 						{#each availableActionTypes as type}
 							<option value={type.value}>{type.label}</option>
 						{/each}
 					</select>
-				</div>
+				</InputGroup>
 
 				{#if actionType !== 'scene'}
-					<div class="dialog-input-group">
-						<label for="trigger-device">Device:</label>
+					<InputGroup label="Device:" for="trigger-device">
 						<select id="trigger-device" bind:value={selectedDevice} onchange={handleDeviceChange}>
 							{#each devices as device}
 								<option value={device.id}>{device.name}</option>
 							{/each}
 						</select>
-					</div>
+					</InputGroup>
 				{/if}
 			{/snippet}
 
@@ -297,17 +294,15 @@
 				<!-- Column 3: Action Configuration -->
 				<DialogColumnPanel>
 					{#if actionType === 'animation'}
-						<div class="dialog-input-group">
-							<label for="trigger-animation">Animation:</label>
+						<InputGroup label="Animation:" for="trigger-animation">
 							<select id="trigger-animation" bind:value={selectedAnimation}>
 								{#each availableAnimations as animation}
 									<option value={animation.id}>{animation.name}</option>
 								{/each}
 							</select>
-						</div>
+						</InputGroup>
 
-						<div class="dialog-input-group">
-							<label for="trigger-duration">Duration (ms):</label>
+						<InputGroup label="Duration (ms):" for="trigger-duration">
 							<div class="duration-with-loop">
 								<input
 									id="trigger-duration"
@@ -328,20 +323,19 @@
 									</label>
 								</div>
 							</div>
-						</div>
+						</InputGroup>
 
-						<div class="dialog-input-group">
-							<label for="animation-easing">Easing:</label>
+						<InputGroup label="Easing:" for="animation-easing">
 							<select id="animation-easing" bind:value={easing} disabled={!selectedAnimation}>
 								{#each EASING_FUNCTIONS as easingFn}
 									<option value={easingFn}>{easingFn}</option>
 								{/each}
 							</select>
-						</div>
+						</InputGroup>
 					{:else if actionType === 'values' && selectedDevice}
 						{@const device = devices.find(d => d.id === selectedDevice)}
 						{#if device}
-							<div class="dialog-input-group">
+							<InputGroup>
 								<Controls
 									controls={DEVICE_TYPES[device.type].controls}
 									bind:values={controlValues}
@@ -349,17 +343,16 @@
 									showCheckboxes={true}
 									bind:enabledControls={enabledControls}
 								/>
-							</div>
+							</InputGroup>
 						{/if}
 					{:else if actionType === 'scene'}
-						<div class="dialog-input-group">
-							<label for="trigger-scene">Scene:</label>
+						<InputGroup label="Scene:" for="trigger-scene">
 							<select id="trigger-scene" bind:value={selectedScene}>
 								{#each scenes as scene}
 									<option value={scene.id}>{scene.name}</option>
 								{/each}
 							</select>
-						</div>
+						</InputGroup>
 						<p class="scene-hint">When triggered, the scene will be activated.</p>
 					{/if}
 				</DialogColumnPanel>
@@ -374,16 +367,6 @@
 </Dialog>
 
 <style>
-	:global(.panel) .dialog-input-group {
-		display: flex;
-		align-items: baseline;
-		margin-bottom: 0;
-	}
-
-	:global(.panel) .dialog-input-group :global(> label) {
-		width: 120px;
-	}
-
 	#trigger-animation {
 		min-width: 120px;
 		max-width: 200px;
@@ -410,15 +393,6 @@
 		gap: 5px;
 		font-size: 10pt;
 		cursor: pointer;
-	}
-
-	:global(.panel) .dialog-input-group :global(.controls) {
-		margin: 8px 8px 0;
-		grid-template-columns: 20px 5em 1fr 3em;
-	}
-
-	:global(.panel) .dialog-input-group :global(.controls .control) {
-		margin-bottom: 8px;
 	}
 
 	.scene-hint {

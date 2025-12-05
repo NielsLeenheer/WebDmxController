@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import Preview from '../common/Preview.svelte';
+	import InputGroup from '../common/InputGroup.svelte';
 
 	/**
 	 * AddSceneDeviceDialog - Promise-based dialog for adding a device to a scene
@@ -82,8 +83,7 @@
 		<p class="no-devices">All devices have already been added to this scene.</p>
 	{:else}
 		<form id="add-scene-device-form" onsubmit={(e) => { e.preventDefault(); handleAdd(); }}>
-			<div class="dialog-input-group">
-				<label for="device-select">Device:</label>
+			<InputGroup label="Device:" for="device-select">
 				<div class="device-select-row">
 					{#if selectedDevice}
 						<Preview
@@ -98,7 +98,7 @@
 						{/each}
 					</select>
 				</div>
-			</div>
+			</InputGroup>
 		</form>
 	{/if}
 

@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import DialogColumns from '../common/DialogColumns.svelte';
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
+	import InputGroup from '../common/InputGroup.svelte';
 	import Button from '../common/Button.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { getInputExportedValues } from '../../lib/inputs/valueTypes.js';
@@ -129,58 +130,53 @@
 		<DialogColumns layout={['180px', 'line', '180px', '350px']}>
 			{#snippet column1()}
 				<!-- Column 1: Input Configuration -->
-				<div class="dialog-input-group">
-					<label for="edit-value-trigger-input">Input:</label>
+				<InputGroup label="Input:" for="edit-value-trigger-input">
 					<select id="edit-value-trigger-input" bind:value={selectedInputId}>
 						{#each availableInputs as input}
 							<option value={input.id}>{input.name}</option>
 						{/each}
 					</select>
-				</div>
+				</InputGroup>
 
 				{#if exportedValues.length > 0}
-					<div class="dialog-input-group">
-						<label for="edit-value-trigger-value">Value:</label>
+					<InputGroup label="Value:" for="edit-value-trigger-value">
 						<select id="edit-value-trigger-value" bind:value={selectedValueKey}>
 							{#each exportedValues as value}
 								<option value={value.key}>{value.label}</option>
 							{/each}
 						</select>
-					</div>
+					</InputGroup>
 				{/if}
 			{/snippet}
 
 			{#snippet column2()}
 				<!-- Column 2: Device Configuration -->
-				<div class="dialog-input-group">
-					<label for="edit-value-trigger-device">Device:</label>
+				<InputGroup label="Device:" for="edit-value-trigger-device">
 					<select id="edit-value-trigger-device" bind:value={selectedDeviceId}>
 						{#each devices as device}
 							<option value={device.id}>{device.name || device.cssIdentifier}</option>
 						{/each}
 					</select>
-				</div>
+				</InputGroup>
 
 				{#if controls.length > 0}
-					<div class="dialog-input-group">
-						<label for="edit-value-trigger-control">Control:</label>
+					<InputGroup label="Control:" for="edit-value-trigger-control">
 						<select id="edit-value-trigger-control" bind:value={selectedControlId}>
 							{#each controls as control}
 								<option value={control.id}>{control.type.name}</option>
 							{/each}
 						</select>
-					</div>
+					</InputGroup>
 				{/if}
 
 				{#if needsValueSelection}
-					<div class="dialog-input-group">
-						<label for="edit-value-trigger-value-id">Component:</label>
+					<InputGroup label="Component:" for="edit-value-trigger-value-id">
 						<select id="edit-value-trigger-value-id" bind:value={selectedValueId}>
 							{#each controlValues as value}
 								<option value={value.id}>{value.label}</option>
 							{/each}
 						</select>
-					</div>
+					</InputGroup>
 				{/if}
 			{/snippet}
 

@@ -1,6 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
+	import InputGroup from '../common/InputGroup.svelte';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 
@@ -158,8 +159,7 @@
 	onclose={handleCancel}
 >
 	<form id="new-animation-form" onsubmit={(e) => { e.preventDefault(); handleCreate(); }}>
-		<div class="dialog-input-group">
-			<label for="animation-name">Animation Name:</label>
+		<InputGroup label="Animation Name:" for="animation-name">
 			<input
 				id="animation-name"
 				type="text"
@@ -173,10 +173,9 @@
 					new Set(animationLibrary.getAll().map(a => a.cssIdentifier))
 				)}</code>
 			</div>
-		</div>
+		</InputGroup>
 
-		<div class="dialog-input-group">
-			<label for="animation-target">Target:</label>
+		<InputGroup label="Target:" for="animation-target">
 			<select id="animation-target" bind:value={selectedTarget} class="animation-target-select">
 				{#each getAllAnimationTargets() as target}
 					{#if target.type === 'separator'}
@@ -187,7 +186,7 @@
 				{/each}
 			</select>
 			<small class="help-text">Select a specific control or entire device type</small>
-		</div>
+		</InputGroup>
 	</form>
 
 	{#snippet buttons()}

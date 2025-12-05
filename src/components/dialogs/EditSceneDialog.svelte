@@ -1,6 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
+	import InputGroup from '../common/InputGroup.svelte';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 
 	/**
@@ -81,8 +82,7 @@
 	onclose={handleCancel}
 >
 	<form id="edit-scene-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-		<div class="dialog-input-group">
-			<label for="scene-name">Scene Name:</label>
+		<InputGroup label="Scene Name:" for="scene-name">
 			<input
 				id="scene-name"
 				type="text"
@@ -101,7 +101,7 @@
 					)}"]</code>
 				</div>
 			{/if}
-		</div>
+		</InputGroup>
 	</form>
 
 	{#snippet buttons()}

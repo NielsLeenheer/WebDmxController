@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import DialogColumns from '../common/DialogColumns.svelte';
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
+	import InputGroup from '../common/InputGroup.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import Preview from '../common/Preview.svelte';
@@ -202,31 +203,28 @@
 					<div class="device-name">{editingDevice.name}</div>
 				</div>
 
-				<div class="dialog-input-group">
-					<label for="scene-device-action-type">Mode:</label>
+				<InputGroup label="Mode:" for="scene-device-action-type">
 					<select id="scene-device-action-type" bind:value={actionType}>
 						{#each ACTION_TYPES as type}
 							<option value={type.value}>{type.label}</option>
 						{/each}
 					</select>
-				</div>
+				</InputGroup>
 			{/snippet}
 
 			{#snippet column2()}
 				<!-- Column 2: Settings -->
 				<DialogColumnPanel>
 					{#if actionType === 'animation'}
-						<div class="dialog-input-group">
-							<label for="scene-device-animation">Animation:</label>
+						<InputGroup label="Animation:" for="scene-device-animation">
 							<select id="scene-device-animation" bind:value={selectedAnimation}>
 								{#each availableAnimations as animation}
 									<option value={animation.id}>{animation.name}</option>
 								{/each}
 							</select>
-						</div>
+						</InputGroup>
 
-						<div class="dialog-input-group">
-							<label for="scene-device-duration">Duration (ms):</label>
+						<InputGroup label="Duration (ms):" for="scene-device-duration">
 							<div class="duration-with-loop">
 								<input
 									id="scene-device-duration"
@@ -247,16 +245,15 @@
 									</label>
 								</div>
 							</div>
-						</div>
+						</InputGroup>
 
-						<div class="dialog-input-group">
-							<label for="scene-device-easing">Easing:</label>
+						<InputGroup label="Easing:" for="scene-device-easing">
 							<select id="scene-device-easing" bind:value={easing} disabled={!selectedAnimation}>
 								{#each EASING_FUNCTIONS as easingFn}
 									<option value={easingFn}>{easingFn}</option>
 								{/each}
 							</select>
-						</div>
+						</InputGroup>
 					{:else}
 						{@const deviceType = DEVICE_TYPES[editingDevice.type]}
 						{#if deviceType}
@@ -297,16 +294,6 @@
 		font-size: 11pt;
 	}
 
-	:global(.panel) .dialog-input-group {
-		display: flex;
-		align-items: baseline;
-		margin-bottom: 10px;
-	}
-
-	:global(.panel) .dialog-input-group > :global(label) {
-		width: 120px;
-	}
-
 	.duration-with-loop {
 		display: flex;
 		gap: 10px;
@@ -324,14 +311,5 @@
 		gap: 5px;
 		font-size: 10pt;
 		cursor: pointer;
-	}
-
-	:global(.panel) :global(.controls) {
-		margin: 0;
-		grid-template-columns: 20px 5em 1fr 3em;
-	}
-
-	:global(.panel) :global(.controls .control) {
-		margin-bottom: 8px;
 	}
 </style>
