@@ -29,6 +29,7 @@
  * @param {Function} [options.getItemId] - Function to get unique ID from item (default: item => item.id)
  * @param {boolean} [options.dragByHeader] - If true, only allow drag from CardHeader component
  * @param {string} [options.orientation] - Drag orientation: 'vertical' (default) or 'horizontal'
+ * @param {string} [options.type] - Unique type identifier to prevent cross-list drops
  * @returns {Object} Drag-and-drop controller with handlers and state
  */
 export function createDragDrop(options) {
@@ -37,7 +38,8 @@ export function createDragDrop(options) {
 		onReorder,
 		getItemId = (item) => item.id,
 		dragByHeader = false,
-		orientation = 'vertical'
+		orientation = 'vertical',
+		type = 'default'
 	} = options;
 
 	// Track where mouse was pressed down (for checking if drag should be allowed)
@@ -101,12 +103,19 @@ export function createDragDrop(options) {
 
 		draggedItem = item;
 		event.dataTransfer.effectAllowed = 'move';
+		event.dataTransfer.setData('application/x-dnd-type', type);
 	}
 
 	/**
 	 * Handle drag over a target item
 	 */
 	function handleDragOver(event, item) {
+		// Only show drop indicator if this is our own drag operation
+		// (draggedItem is only set for items dragged from this dnd instance)
+		if (!draggedItem) {
+			return;
+		}
+
 		event.preventDefault();
 		event.dataTransfer.dropEffect = 'move';
 		dragOverItem = item;
@@ -135,6 +144,13 @@ export function createDragDrop(options) {
 	 */
 	function handleDrop(event, targetItem) {
 		event.preventDefault();
+
+		// Check if the drag type matches this drop zone
+		const dragType = event.dataTransfer.getData('application/x-dnd-type');
+		if (dragType !== type) {
+			resetDragState();
+			return;
+		}
 
 		if (!draggedItem) return;
 

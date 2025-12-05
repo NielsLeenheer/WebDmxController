@@ -5,6 +5,7 @@
     import animationsIcon from '../../assets/icons/animations.svg?raw';
     import inputsIcon from '../../assets/icons/inputs.svg?raw';
     import triggersIcon from '../../assets/icons/triggers.svg?raw';
+    import scenesIcon from '../../assets/icons/list.svg?raw';
     import cssIcon from '../../assets/icons/css.svg?raw';
 
     let {
@@ -24,6 +25,12 @@
             <input type="radio" name="view" value="animations" bind:group={view}>
             <Icon data={animationsIcon} />
             Animations
+        </label>
+
+        <label>
+            <input type="radio" name="view" value="scenes" bind:group={view}>
+            <Icon data={scenesIcon} />
+            Scenes
         </label>
 
         <label>

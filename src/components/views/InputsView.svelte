@@ -256,7 +256,7 @@
         padding: 20px 40px;
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(18em, 1fr));
-        gap: 15px;
+        gap: 16px;
         align-content: start;
     }
 

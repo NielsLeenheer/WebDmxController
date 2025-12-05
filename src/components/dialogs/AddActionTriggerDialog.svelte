@@ -9,7 +9,7 @@
 	 * AddActionTriggerDialog - Promise-based dialog for creating action triggers
 	 *
 	 * Usage:
-	 *   const result = await addActionTriggerDialog.open(availableInputs, availableAnimations, devices);
+	 *   const result = await addActionTriggerDialog.open(availableInputs, availableAnimations, devices, scenes);
 	 *   if (result) {
 	 *     // Create trigger with result data
 	 *   }
@@ -23,6 +23,7 @@
 	let availableInputs = $state([]);
 	let availableAnimations = $state([]);
 	let devices = $state([]);
+	let scenes = $state([]);
 
 	// Form state
 	let selectedInput = $state(null);
@@ -30,16 +31,27 @@
 	let actionType = $state('animation');
 	let selectedDevice = $state(null);
 	let selectedAnimation = $state(null);
+	let selectedScene = $state(null);
 	let duration = $state(1000);
 	let looping = $state(true);
 	let easing = $state('linear');
 	let controlValues = $state({});
 	let enabledControls = $state([]);
 
-	const ACTION_TYPES = [
-		{ value: 'animation', label: 'Run Animation' },
-		{ value: 'values', label: 'Set values' }
-	];
+	// Action types - scene only available for 'down' state
+	let availableActionTypes = $derived.by(() => {
+		const types = [
+			{ value: 'animation', label: 'Run Animation' },
+			{ value: 'values', label: 'Set values' }
+		];
+
+		// Only allow scene change on 'down' state
+		if (inputState === 'down') {
+			types.push({ value: 'scene', label: 'Change Scene' });
+		}
+
+		return types;
+	});
 
 	const EASING_FUNCTIONS = [
 		'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out',
@@ -84,6 +96,13 @@
 		}
 	}
 
+	// Handle input state change - reset action type if scene is selected but state changed
+	function handleInputStateChange() {
+		if (actionType === 'scene' && inputState !== 'down') {
+			actionType = 'animation';
+		}
+	}
+
 	// Handle device control changes for setValue triggers
 	function handleControlValueChange(controlId, value) {
 		if (typeof value === 'object' && value !== null) {
@@ -115,9 +134,10 @@
 	 * @param {Array} inputs - Available input mappings
 	 * @param {Array} animations - Available animations
 	 * @param {Array} devs - Available devices
-	 * @returns {Promise<{input, inputState, actionType, device, animation, duration, looping, easing, values}|null>}
+	 * @param {Array} scns - Available scenes
+	 * @returns {Promise<{input, inputState, actionType, device, animation, duration, looping, easing, values, scene}|null>}
 	 */
-	export function open(inputs, animations, devs) {
+	export function open(inputs, animations, devs, scns = []) {
 		return new Promise((resolve) => {
 			resolvePromise = resolve;
 
@@ -125,6 +145,7 @@
 			availableInputs = inputs;
 			availableAnimations = animations;
 			devices = devs;
+			scenes = scns;
 
 			// Initialize form state
 			// Format: deviceId_controlId (needed for parsing in TriggersView)
@@ -133,6 +154,7 @@
 			actionType = 'animation';
 			selectedDevice = devs[0]?.id || null;
 			selectedAnimation = animations[0]?.cssIdentifier || null;
+			selectedScene = scns[0]?.id || null;
 			duration = 1000;
 			looping = true;
 			easing = 'linear';
@@ -148,7 +170,34 @@
 	}
 
 	function handleSave() {
-		if (!selectedInput || !selectedDevice) {
+		if (!selectedInput) {
+			resolvePromise(null);
+			closeDialog();
+			return;
+		}
+
+		// Scene action doesn't require device
+		if (actionType === 'scene') {
+			if (!selectedScene) {
+				resolvePromise(null);
+				closeDialog();
+				return;
+			}
+
+			const result = {
+				input: selectedInput,
+				inputState,
+				actionType: 'scene',
+				scene: selectedScene
+			};
+
+			resolvePromise(result);
+			closeDialog();
+			return;
+		}
+
+		// Other action types require device
+		if (!selectedDevice) {
 			resolvePromise(null);
 			closeDialog();
 			return;
@@ -193,11 +242,14 @@
 	function closeDialog() {
 		dialogRef?.close();
 	}
+
+	// Check if we should show device column
+	let showDeviceColumn = $derived(actionType !== 'scene');
 </script>
 
 <Dialog bind:dialogRef={dialogRef} title="Create Action Trigger" onclose={handleCancel}>
 	<form id="action-trigger-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-		<div class="trigger-columns">
+		<div class="trigger-columns" class:scene-mode={!showDeviceColumn}>
 			<!-- Column 1: Trigger Configuration -->
 			<div class="trigger-column">
 				<div class="dialog-input-group">
@@ -211,21 +263,9 @@
 
 				<div class="dialog-input-group">
 					<label for="trigger-state">Trigger State:</label>
-					<select id="trigger-state" bind:value={inputState}>
+					<select id="trigger-state" bind:value={inputState} onchange={handleInputStateChange}>
 						{#each getInputStateOptions() as state}
 							<option value={state.value}>{state.label}</option>
-						{/each}
-					</select>
-				</div>
-			</div>
-
-			<!-- Column 2: Device Configuration -->
-			<div class="trigger-column with-divider">
-				<div class="dialog-input-group">
-					<label for="trigger-device">Device:</label>
-					<select id="trigger-device" bind:value={selectedDevice} onchange={handleDeviceChange}>
-						{#each devices as device}
-							<option value={device.id}>{device.name}</option>
 						{/each}
 					</select>
 				</div>
@@ -233,15 +273,29 @@
 				<div class="dialog-input-group">
 					<label for="trigger-action-type">Action:</label>
 					<select id="trigger-action-type" bind:value={actionType}>
-						{#each ACTION_TYPES as type}
+						{#each availableActionTypes as type}
 							<option value={type.value}>{type.label}</option>
 						{/each}
 					</select>
 				</div>
 			</div>
 
+			<!-- Column 2: Device Configuration (hidden for scene action) -->
+			{#if showDeviceColumn}
+				<div class="trigger-column with-divider">
+					<div class="dialog-input-group">
+						<label for="trigger-device">Device:</label>
+						<select id="trigger-device" bind:value={selectedDevice} onchange={handleDeviceChange}>
+							{#each devices as device}
+								<option value={device.id}>{device.name}</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+			{/if}
+
 			<!-- Column 3: Action Configuration -->
-			<div class="trigger-column">
+			<div class="trigger-column" class:with-divider={!showDeviceColumn}>
 				<div class="trigger-card">
 					{#if actionType === 'animation'}
 						<div class="dialog-input-group">
@@ -298,6 +352,16 @@
 								/>
 							</div>
 						{/if}
+					{:else if actionType === 'scene'}
+						<div class="dialog-input-group">
+							<label for="trigger-scene">Scene:</label>
+							<select id="trigger-scene" bind:value={selectedScene}>
+								{#each scenes as scene}
+									<option value={scene.id}>{scene.name}</option>
+								{/each}
+							</select>
+						</div>
+						<p class="scene-hint">When triggered, the scene will be activated.</p>
 					{/if}
 				</div>
 			</div>
@@ -315,6 +379,10 @@
 		display: grid;
 		grid-template-columns: 180px 200px 350px;
 		gap: 20px;
+	}
+
+	.trigger-columns.scene-mode {
+		grid-template-columns: 180px 350px;
 	}
 
 	.trigger-column {
@@ -386,4 +454,9 @@
 		margin-bottom: 8px;
 	}
 
+	.scene-hint {
+		color: #666;
+		font-size: 9pt;
+		margin: 10px 0 0;
+	}
 </style>

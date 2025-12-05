@@ -22,11 +22,6 @@ export function isValueTrigger(trigger) {
  * @returns {string} CSS class name
  */
 export function getCSSClassName(trigger, inputLibrary) {
-	// For automatic (always) triggers
-	if (trigger.type === 'auto') {
-		return 'always';
-	}
-
 	// For action triggers - get input from library
 	if (!inputLibrary || !trigger.input?.id) {
 		return `trigger-${trigger.id || 'unknown'}`;

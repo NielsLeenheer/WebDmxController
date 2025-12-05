@@ -3,6 +3,7 @@
 	 * DraggableCard - Reusable wrapper component for drag-and-drop cards
 	 *
 	 * Handles all drag event bindings and class states automatically.
+	 * If dnd is null, the card is rendered as non-draggable.
 	 *
 	 * Usage:
 	 *   <DraggableCard {dnd} {item} class="device-card">
@@ -11,41 +12,47 @@
 	 */
 
 	let {
-		dnd,              // Drag-and-drop helper from createDragDrop()
+		dnd = null,   // Drag-and-drop helper from createDragDrop(), or null for non-draggable
 		item,             // The item being rendered
 		class: className = '',  // Additional CSS classes
+		onclick,          // Optional click handler
 		children
 	} = $props();
 
 	// Helper to check if this is the drag-after position
 	function isDragAfter() {
-		return dnd.dragOverItem === item && dnd.isAfterMidpoint;
+		return dnd?.dragOverItem === item && dnd?.isAfterMidpoint;
 	}
 
 	// Helper to check if this is the drag-before position
 	function isDragBefore() {
-		return dnd.dragOverItem === item && !dnd.isAfterMidpoint;
+		return dnd?.dragOverItem === item && !dnd?.isAfterMidpoint;
 	}
+
+	// Check if dragging is enabled
+	let isDraggable = $derived(dnd !== null);
 </script>
 
 <div
 	class="draggable-card {className}"
-	class:dragging={dnd.draggedItem === item}
+	class:dragging={dnd?.draggedItem === item}
 	class:drag-over={isDragBefore()}
 	class:drag-after={isDragAfter()}
-	class:horizontal={dnd.orientation === 'horizontal'}
-	class:vertical={dnd.orientation === 'vertical'}
-	class:drag-by-header={dnd.dragByHeader}
-	class:drag-by-card={!dnd.dragByHeader}
+	class:horizontal={dnd?.orientation === 'horizontal'}
+	class:vertical={dnd?.orientation === 'vertical'}
+	class:drag-by-header={dnd?.dragByHeader}
+	class:drag-by-card={dnd && !dnd.dragByHeader}
+	class:non-draggable={!isDraggable}
 	style:order={item.order}
 	role="listitem"
-	draggable="true"
-	onmousedown={dnd.handleMouseDown}
-	ondragstart={(e) => dnd.handleDragStart(e, item)}
-	ondragover={(e) => dnd.handleDragOver(e, item)}
-	ondragleave={dnd.handleDragLeave}
-	ondrop={(e) => dnd.handleDrop(e, item)}
-	ondragend={dnd.handleDragEnd}
+	draggable={isDraggable}
+	onmousedown={dnd?.handleMouseDown}
+	ondragstart={isDraggable ? (e) => dnd.handleDragStart(e, item) : undefined}
+	ondragover={isDraggable ? (e) => dnd.handleDragOver(e, item) : undefined}
+	ondragleave={dnd?.handleDragLeave}
+	ondrop={isDraggable ? (e) => dnd.handleDrop(e, item) : undefined}
+	ondragend={dnd?.handleDragEnd}
+	{onclick}
 >
 	{@render children()}
 </div>

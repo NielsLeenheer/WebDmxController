@@ -10,7 +10,7 @@
      *   </ContextAction>
      *
      * @prop {Function} onclick - Click handler, receives context as first argument
-     * @prop {boolean} disabled - Whether the action is disabled
+     * @prop {boolean|Function} disabled - Whether the action is disabled (can be a function that receives context)
      * @prop {string} variant - Style variant: 'default' | 'danger'
      */
     let {
@@ -22,8 +22,19 @@
 
     const contextMenu = getContext('contextMenu');
 
+    // Evaluate disabled - can be a boolean or a function that takes context
+    let isDisabled = $derived.by(() => {
+        if (typeof disabled === 'function') {
+            const context = contextMenu?.getContext();
+            // If context is null (menu not shown yet), default to false
+            if (context == null) return false;
+            return disabled(context);
+        }
+        return disabled;
+    });
+
     function handleClick(event) {
-        if (disabled) {
+        if (isDisabled) {
             event.preventDefault();
             return;
         }
@@ -45,9 +56,9 @@
 
 <button
     class="context-action {variant}"
-    class:disabled
+    class:disabled={isDisabled}
     onclick={handleClick}
-    {disabled}
+    disabled={isDisabled}
 >
     {@render children()}
 </button>

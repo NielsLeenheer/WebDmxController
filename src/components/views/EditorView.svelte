@@ -1,11 +1,12 @@
 <script>
     import { getDevicePreviewData } from '../../lib/outputs/devices.js';
-    import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from '../../stores.svelte.js';
+    import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, sceneLibrary } from '../../stores.svelte.js';
     import { isButton } from '../../lib/inputs/utils.js';
     import Preview from '../common/Preview.svelte';
 
     let {
-        cssManager
+        cssManager,
+        sceneController
     } = $props();
 
     // Get devices reactively from library
@@ -29,6 +30,16 @@
         triggerLibrary ? triggerLibrary.getAll() : []
     );
 
+    // Get scenes for tracking changes (reactive)
+    let scenes = $derived(
+        sceneLibrary ? sceneLibrary.getAll() : []
+    );
+
+    // Get active scene name from controller
+    let activeScene = $derived(
+        sceneController?.getActiveScene()
+    );
+
     // Get CSS from manager (re-evaluated when library data changes)
     let generatedCSS = $derived.by(() => {
         // Access library arrays to subscribe to changes
@@ -36,6 +47,7 @@
         inputs.length;
         triggers.length;
         devices.length;
+        scenes.length;
         return cssManager?.generatedCSS || '';
     });
     let customCSS = $derived(cssManager?.customCSS || '');
@@ -117,6 +129,18 @@
                     <div class="css-identifiers">
                         {#each animations as animation (animation.id)}
                             <code class="css-identifier">{animation.cssIdentifier}</code>
+                        {/each}
+                    </div>
+                </div>
+            {/if}
+
+            <!-- Scenes Section -->
+            {#if scenes.length > 0}
+                <div class="reference-section">
+                    <h4>Scenes</h4>
+                    <div class="css-identifiers">
+                        {#each scenes as scene (scene.id)}
+                            <code class="css-identifier" class:active={activeScene?.id === scene.id}>[scene="{scene.cssIdentifier}"]</code>
                         {/each}
                     </div>
                 </div>
@@ -204,6 +228,11 @@
         color: #666;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+    }
+
+    .css-identifier.active {
+        font-weight: 700;
+        color: #1565c0;
     }
 
     .device-previews {

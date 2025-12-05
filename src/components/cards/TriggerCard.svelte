@@ -1,5 +1,5 @@
 <script>
-	import { deviceLibrary, animationLibrary, inputLibrary } from '../../stores.svelte.js';
+	import { deviceLibrary, animationLibrary, inputLibrary, sceneLibrary } from '../../stores.svelte.js';
 	import { getTriggerValuesPreviewData, DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { getInputExportedValues } from '../../lib/inputs/valueTypes.js';
 	import { isValueTrigger } from '../../lib/triggers/utils.js';
@@ -8,6 +8,7 @@
 	import IconButton from '../common/IconButton.svelte';
 	import Checkbox from '../common/Checkbox.svelte';
 	import dotsIcon from '../../assets/glyphs/dots.svg?raw';
+	import activeIcon from '../../assets/icons/active.svg?raw';
 
 	let {
 		trigger,          // Trigger plain object
@@ -21,11 +22,15 @@
 	let device = $derived(deviceLibrary.get(trigger.output?.id));
 	let animation = $derived(trigger.action?.animation?.id ? animationLibrary.get(trigger.action.animation.id) : null);
 	let input = $derived(trigger.input?.id ? inputLibrary.get(trigger.input.id) : null);
+	let scene = $derived(trigger.action?.scene?.id ? sceneLibrary.get(trigger.action.scene.id) : null);
 
 	const isEnabled = $derived(trigger.enabled !== false);
 
 	// Check if this is a value trigger
 	let isValue = $derived(isValueTrigger(trigger));
+
+	// Check if this is a scene trigger
+	let isScene = $derived(trigger.action?.type === 'scene');
 
 	// For values triggers (actionType='values'), compute preview data from trigger values
 	let valuesPreview = $derived.by(() => {
@@ -146,24 +151,25 @@
 
 	<!-- Column 1: Input -->
 	<div class="trigger-column trigger-input-column">
-		{#if trigger.type === 'auto'}
-			<div class="trigger-text">Always</div>
-		{:else}
-			<Preview
-				type="input"
-				size="medium"
-				data={input}
-				class="trigger-preview"
-			/>
-			<div class="trigger-text">
-				{input?.name || 'Unknown Input'} → {#if isValue}{inputValueLabel}{:else}{inputTypeLabel}{/if}
-			</div>
-		{/if}
+		<Preview
+			type="input"
+			size="medium"
+			data={input}
+			class="trigger-preview"
+		/>
+		<div class="trigger-text">
+			{input?.name || 'Unknown Input'} → {#if isValue}{inputValueLabel}{:else}{inputTypeLabel}{/if}
+		</div>
 	</div>
 
-	<!-- Column 2: Device -->
+	<!-- Column 2: Device (or Scene) -->
 	<div class="trigger-column trigger-device-column">
-		{#if device}
+		{#if isScene}
+			<span class="scene-icon">{@html activeIcon}</span>
+			<div class="trigger-text">
+				{scene?.name || 'Unknown Scene'}
+			</div>
+		{:else if device}
 			<Preview
 				type="device"
 				size="medium"
@@ -178,7 +184,9 @@
 
 	<!-- Column 3: Action / Mapping -->
 	<div class="trigger-column trigger-action-column">
-		{#if isValue && controlPreview}
+		{#if isScene}
+			<!-- Empty for scene triggers -->
+		{:else if isValue && controlPreview}
 			<!-- Value trigger: show control preview -->
 			<Preview
 				type="controls"
@@ -191,7 +199,6 @@
 				{controlLabel}{#if trigger.action?.copy?.invert} <span class="invert-indicator" title="Inverted">⇄</span>{/if}
 			</div>
 		{:else if trigger.action?.type === 'animation'}
-			<Preview
 			<Preview
 				type="animation"
 				size="medium"
@@ -269,6 +276,17 @@
 		text-align: left;
 		word-wrap: break-word;
 		width: 100%;
+	}
+
+	.scene-icon {
+		display: flex;
+		align-items: center;
+		flex-shrink: 0;
+	}
+
+	.scene-icon :global(svg) {
+		width: 32px;
+		height: 32px;
 	}
 
 	.invert-indicator {

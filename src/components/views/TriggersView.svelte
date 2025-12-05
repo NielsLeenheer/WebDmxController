@@ -1,15 +1,13 @@
 <script>
-    import { triggerLibrary, inputLibrary, animationLibrary, deviceLibrary } from '../../stores.svelte.js';
+    import { triggerLibrary, inputLibrary, animationLibrary, deviceLibrary, sceneLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import TriggerCard from '../cards/TriggerCard.svelte';
     import Button from '../common/Button.svelte';
     import ContextMenu from '../common/ContextMenu.svelte';
     import ContextAction from '../common/ContextAction.svelte';
     import AddActionTriggerDialog from '../dialogs/AddActionTriggerDialog.svelte';
-    import AddAutomaticTriggerDialog from '../dialogs/AddAutomaticTriggerDialog.svelte';
     import AddValueTriggerDialog from '../dialogs/AddValueTriggerDialog.svelte';
     import EditActionTriggerDialog from '../dialogs/EditActionTriggerDialog.svelte';
-    import EditAutomaticTriggerDialog from '../dialogs/EditAutomaticTriggerDialog.svelte';
     import EditValueTriggerDialog from '../dialogs/EditValueTriggerDialog.svelte';
 
     import newIcon from '../../assets/icons/new.svg?raw';
@@ -19,20 +17,19 @@
     // Get devices reactively from library
     let devices = $derived(deviceLibrary.getAll());
 
-    // Get inputs, animations, and triggers reactively from libraries
+    // Get inputs, animations, triggers, and scenes reactively from libraries
     let availableInputs = $derived(inputLibrary.getAll());
     let availableAnimations = $derived(animationLibrary.getAll());
     let triggers = $derived(triggerLibrary.getAll());
+    let scenes = $derived(sceneLibrary.getAll());
 
     // Get inputs that can be used for value triggers (those with continuous values)
     let valueCapableInputs = $derived(inputLibrary.getValueInputs());
 
     // Dialog references
     let addActionTriggerDialog;
-    let addAutomaticTriggerDialog;
     let addValueTriggerDialog;
     let editActionTriggerDialog;
-    let editAutomaticTriggerDialog;
     let editValueTriggerDialog;
 
     // Context menu reference
@@ -48,7 +45,7 @@
     });
 
     async function openActionTriggerDialog() {
-        const result = await addActionTriggerDialog.open(availableInputs, availableAnimations, devices);
+        const result = await addActionTriggerDialog.open(availableInputs, availableAnimations, devices, scenes);
 
         if (!result) return; // User cancelled
 
@@ -57,6 +54,24 @@
             i.deviceId === inputDeviceId && i.controlId === inputControlId
         );
         if (!input) return;
+
+        // Handle scene action trigger
+        if (result.actionType === 'scene') {
+            triggerLibrary.create({
+                type: 'action',
+                input: {
+                    id: input.id,
+                    state: result.inputState
+                },
+                action: {
+                    type: 'scene',
+                    scene: {
+                        id: result.scene
+                    }
+                }
+            });
+            return;
+        }
 
         // Create trigger using library method
         triggerLibrary.create({
@@ -77,29 +92,6 @@
                     iterations: result.looping ? 'infinite' : 1
                 } : null,
                 values: result.actionType === 'values' ? result.values : null
-            }
-        });
-    }
-
-    async function openAutomaticTriggerDialog() {
-        const result = await addAutomaticTriggerDialog.open(availableAnimations, devices);
-
-        if (!result) return; // User cancelled
-
-        // Create trigger using library method
-        triggerLibrary.create({
-            type: 'auto',
-            output: {
-                id: result.device
-            },
-            action: {
-                type: 'animation',
-                animation: {
-                    id: result.animation,
-                    duration: result.duration,
-                    easing: result.easing,
-                    iterations: result.looping ? 'infinite' : 1
-                }
             }
         });
     }
@@ -133,8 +125,6 @@
     function startEditing(trigger) {
         if (trigger.type === 'value') {
             editValueTrigger(trigger);
-        } else if (trigger.type === 'auto') {
-            editAutomaticTrigger(trigger);
         } else {
             editActionTrigger(trigger);
         }
@@ -165,30 +155,8 @@
         });
     }
 
-    async function editAutomaticTrigger(trigger) {
-        const result = await editAutomaticTriggerDialog.open(trigger, availableAnimations, devices);
-
-        if (!result) return; // User cancelled
-
-        // Handle save using library update method
-        triggerLibrary.update(trigger.id, {
-            output: {
-                id: result.device
-            },
-            action: {
-                type: 'animation',
-                animation: {
-                    id: result.animation,
-                    duration: result.duration,
-                    easing: result.easing,
-                    iterations: result.looping ? 'infinite' : 1
-                }
-            }
-        });
-    }
-
     async function editActionTrigger(trigger) {
-        const result = await editActionTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
+        const result = await editActionTriggerDialog.open(trigger, availableInputs, availableAnimations, devices, scenes);
 
         if (!result) return; // User cancelled
 
@@ -210,13 +178,14 @@
                 id: selectedInput.id,
                 state: result.inputState
             },
-            output: {
+            output: result.actionType === 'scene' ? null : {
                 id: result.device
             },
             action: {
                 type: result.actionType,
                 animation: null,
-                values: null
+                values: null,
+                scene: null
             }
         };
 
@@ -226,6 +195,10 @@
                 duration: result.duration,
                 easing: result.easing,
                 iterations: result.looping ? 'infinite' : 1
+            };
+        } else if (result.actionType === 'scene') {
+            updates.action.scene = {
+                id: result.scene
             };
         } else {
             updates.action.values = result.values;
@@ -265,14 +238,6 @@
             {@html newIcon}
             Add Value Trigger
         </Button>
-        <Button
-            onclick={openAutomaticTriggerDialog}
-            variant="secondary"
-            disabled={availableAnimations.length === 0 || devices.length === 0}
-        >
-            {@html newIcon}
-            Add Automatic Trigger
-        </Button>
     </div>
 
     <div class="triggers-list">
@@ -308,20 +273,12 @@
     bind:this={addActionTriggerDialog}
 />
 
-<AddAutomaticTriggerDialog
-    bind:this={addAutomaticTriggerDialog}
-/>
-
 <AddValueTriggerDialog
     bind:this={addValueTriggerDialog}
 />
 
 <EditActionTriggerDialog
     bind:this={editActionTriggerDialog}
-/>
-
-<EditAutomaticTriggerDialog
-    bind:this={editAutomaticTriggerDialog}
 />
 
 <EditValueTriggerDialog
@@ -362,7 +319,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 20px;
+        gap: 16px;
     }
 
     .empty-state {

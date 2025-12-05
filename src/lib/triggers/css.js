@@ -20,22 +20,12 @@ import { getInputExportedValues } from '../inputs/valueTypes.js';
 export function generateCSSTriggers(device, allTriggers, animationLibrary, inputLibrary) {
 	const cssRules = [];
 	
-	// Get all triggers for this device
-	const deviceTriggers = allTriggers.filter(t => t.output?.id === device.id);
+	// Get all action triggers for this device (value triggers handled separately)
+	const deviceTriggers = allTriggers.filter(t => t.output?.id === device.id && t.type === 'action');
 	
-	// Separate automatic and manual triggers
-	const automaticTriggers = deviceTriggers.filter(t => t.type === 'auto');
-	const manualTriggers = deviceTriggers.filter(t => t.type !== 'auto');
-	
-	// Generate CSS for automatic triggers (combined)
-	if (automaticTriggers.length > 0) {
-		const css = _generateAutomaticTriggersCSS(device, automaticTriggers, animationLibrary);
-		if (css) cssRules.push(css);
-	}
-	
-	// Generate CSS for each manual trigger
-	for (const trigger of manualTriggers) {
-		const css = _generateManualTriggerCSS(device, trigger, automaticTriggers, animationLibrary, inputLibrary);
+	// Generate CSS for each trigger
+	for (const trigger of deviceTriggers) {
+		const css = _generateTriggerCSS(device, trigger, animationLibrary, inputLibrary);
 		if (css) cssRules.push(css);
 	}
 	
@@ -43,57 +33,23 @@ export function generateCSSTriggers(device, allTriggers, animationLibrary, input
 }
 
 /**
- * Generate CSS for automatic (always-running) triggers on a device
+ * Generate CSS for a trigger on a device
  * @private
  */
-function _generateAutomaticTriggersCSS(device, automaticTriggers, animationLibrary) {
-	// Only handle animation triggers for automatic
-	const animationTriggers = automaticTriggers.filter(t => 
-		t.action?.type === 'animation' && t.action?.animation?.id
-	);
-	
-	if (animationTriggers.length === 0) return '';
-	
-	// Combine all automatic animations for this device
-	const animationSpecs = animationTriggers.map(trigger => {
-		const anim = trigger.action.animation;
-		const iterVal = anim.iterations === 'infinite' 
-			? 'infinite' 
-			: anim.iterations;
-		const durSec = (anim.duration / 1000).toFixed(3);
-		
-		// Look up animation to get cssIdentifier
-		const animation = animationLibrary?.get(anim.id);
-		const animName = animation?.cssIdentifier || anim.id;
-		
-		return `${animName} ${durSec}s ${anim.easing} ${iterVal}`;
-	});
-	
-	const animationValue = animationSpecs.join(', ');
-	
-	return `#${device.cssIdentifier} {
-  animation: ${animationValue};
-}`;
-}
-
-/**
- * Generate CSS for a manual (input-triggered) trigger on a device
- * @private
- */
-function _generateManualTriggerCSS(device, trigger, automaticTriggers, animationLibrary, inputLibrary) {
+function _generateTriggerCSS(device, trigger, animationLibrary, inputLibrary) {
 	if (trigger.action?.type === 'animation') {
-		return _generateManualAnimationCSS(device, trigger, automaticTriggers, animationLibrary, inputLibrary);
+		return _generateAnimationCSS(device, trigger, animationLibrary, inputLibrary);
 	} else if (trigger.action?.type === 'values') {
-		return _generateManualValuesCSS(device, trigger, inputLibrary);
+		return _generateValuesCSS(device, trigger, inputLibrary);
 	}
 	return '';
 }
 
 /**
- * Generate CSS for manual animation trigger
+ * Generate CSS for animation trigger
  * @private
  */
-function _generateManualAnimationCSS(device, trigger, automaticTriggers, animationLibrary, inputLibrary) {
+function _generateAnimationCSS(device, trigger, animationLibrary, inputLibrary) {
 	if (!trigger.action?.animation?.id) return '';
 	
 	const anim = trigger.action.animation;
@@ -107,24 +63,7 @@ function _generateManualAnimationCSS(device, trigger, automaticTriggers, animati
 	const animName = animation?.cssIdentifier || anim.id;
 	
 	// Build the animation specification for this trigger
-	const thisAnimation = `${animName} ${durationSec}s ${anim.easing} ${iterationsValue}`;
-	
-	// Get automatic animations for this device to preserve them
-	const automaticAnimationSpecs = automaticTriggers
-		.filter(t => t.action?.type === 'animation' && t.action?.animation?.id)
-		.map(t => {
-			const a = t.action.animation;
-			const iterVal = a.iterations === 'infinite' ? 'infinite' : a.iterations;
-			const durSec = (a.duration / 1000).toFixed(3);
-			const anim = animationLibrary?.get(a.id);
-			const animName = anim?.cssIdentifier || a.id;
-			return `${animName} ${durSec}s ${a.easing} ${iterVal}`;
-		});
-	
-	// Combine automatic animations with this animation
-	const animationValue = automaticAnimationSpecs.length > 0
-		? [...automaticAnimationSpecs, thisAnimation].join(', ')
-		: thisAnimation;
+	const animationValue = `${animName} ${durationSec}s ${anim.easing} ${iterationsValue}`;
 	
 	const cssClassName = getCSSClassName(trigger, inputLibrary);
 	const selector = `.${cssClassName} #${device.cssIdentifier}`;
@@ -135,13 +74,13 @@ function _generateManualAnimationCSS(device, trigger, automaticTriggers, animati
 }
 
 /**
- * Generate CSS for manual values trigger
+ * Generate CSS for values trigger
  *
- * NEW: Works with control-based values
+ * Works with control-based values
  *
  * @private
  */
-function _generateManualValuesCSS(device, trigger, inputLibrary) {
+function _generateValuesCSS(device, trigger, inputLibrary) {
 	const values = trigger.action?.values;
 	if (!values) return '';
 

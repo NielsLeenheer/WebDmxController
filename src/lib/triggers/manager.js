@@ -1,17 +1,20 @@
 /**
  * Trigger Manager
  *
- * Manages CSS classes for input triggers
+ * Manages CSS classes for input triggers and scene changes
  */
+
+import { EventEmitter } from '../EventEmitter.js';
 
 /**
  * Manages active CSS classes for trigger mappings
+ * Emits 'sceneChange' events when scene triggers are activated
  */
-export class TriggerManager {
+export class TriggerManager extends EventEmitter {
 	constructor() {
+		super();
 		this.activeClasses = new Set();
 		this.upClasses = new Set(); // Track up/off state triggers
-		this.alwaysClasses = new Set(); // Track always/auto triggers
 		this.container = null; // Will be set to the container element
 	}
 
@@ -21,11 +24,8 @@ export class TriggerManager {
 	setContainer(element) {
 		this.container = element;
 
-		// Apply all up/off and always classes to the container
+		// Apply all up/off classes to the container
 		for (const className of this.upClasses) {
-			element.classList.add(className);
-		}
-		for (const className of this.alwaysClasses) {
 			element.classList.add(className);
 		}
 	}
@@ -36,16 +36,10 @@ export class TriggerManager {
 	register(mapping) {
 		if (mapping.mode !== 'trigger') return;
 
-		// Both animation and setValue actions use CSS classes
-		// For up/off and auto types, add to permanent sets
+		// For up/off types, add to permanent sets
 		const state = mapping.input?.state;
 		if (state === 'up' || state === 'off') {
 			this.upClasses.add(mapping.cssClassName);
-			if (this.container) {
-				this.container.classList.add(mapping.cssClassName);
-			}
-		} else if (mapping.type === 'auto') {
-			this.alwaysClasses.add(mapping.cssClassName);
 			if (this.container) {
 				this.container.classList.add(mapping.cssClassName);
 			}
@@ -58,9 +52,7 @@ export class TriggerManager {
 	unregister(mapping) {
 		if (mapping.mode !== 'trigger') return;
 
-		// Both animation and setValue actions use CSS classes
 		this.upClasses.delete(mapping.cssClassName);
-		this.alwaysClasses.delete(mapping.cssClassName);
 
 		if (this.container) {
 			this.container.classList.remove(mapping.cssClassName);
@@ -74,6 +66,16 @@ export class TriggerManager {
 		if (mapping.mode !== 'trigger') return;
 		if (!this.container) return;
 
+		// Handle scene change actions
+		if (mapping.action?.type === 'scene' && mapping.action?.scene?.id) {
+			// Only trigger scene change on 'down' state
+			const state = mapping.input?.state;
+			if (state === 'down' || state === 'on') {
+				this._emit('sceneChange', { sceneId: mapping.action.scene.id });
+			}
+			return;
+		}
+
 		// Both animation and setValue actions use CSS classes
 		const className = mapping.cssClassName;
 		const state = mapping.input?.state;
@@ -86,7 +88,6 @@ export class TriggerManager {
 			// Up/Off: Remove class when triggered (pressed)
 			this.container.classList.remove(className);
 		}
-		// 'auto' type is always on, no action needed on trigger
 	}
 
 	/**
@@ -108,7 +109,6 @@ export class TriggerManager {
 			// Up/Off: Add class back when released
 			this.container.classList.add(className);
 		}
-		// 'auto' type is always on, no action needed on release
 	}
 
 	/**

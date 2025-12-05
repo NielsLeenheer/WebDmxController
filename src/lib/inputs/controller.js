@@ -9,11 +9,12 @@ import { isButton } from './utils.js';
 import { getInputType } from './types/index.js';
 
 export class InputController {
-	constructor(inputLibrary, customPropertyManager, triggerManager) {
+	constructor(inputLibrary, customPropertyManager, triggerManager, triggerLibrary = null) {
 		this.inputDeviceManager = new InputDeviceManager();
 		this.inputLibrary = inputLibrary;
 		this.customPropertyManager = customPropertyManager;
 		this.triggerManager = triggerManager;
+		this.triggerLibrary = triggerLibrary;
 
 		this.listeners = new Map();
 		this.toggleStates = new Map(); // Track toggle button states: "deviceId:controlId" -> boolean
@@ -336,12 +337,11 @@ export class InputController {
 					const percentage = (normalizedVelocity * 100).toFixed(1);
 					this.customPropertyManager.setProperty(`${cssId}-pressure`, `${percentage}%`);
 				}
+
+				// Execute action triggers for this input
+				this._executeActionTriggers(input, buttonMode);
 			}
 		}
-
-		// Find and execute triggers for this input
-		// Note: The TriggerManager will handle trigger execution based on CSS classes
-		// So we don't need to manually trigger them here - they are handled by the CSS system
 	}
 
 	/**
@@ -364,6 +364,9 @@ export class InputController {
 
 				this.triggerManager.removeRawClass(downClass);
 				this.triggerManager.addRawClass(upClass);
+
+				// Execute 'up' state action triggers on release
+				this._executeActionTriggers(input, buttonMode, 'up');
 			}
 			// Toggle mode: CSS classes were already toggled on press
 
@@ -375,8 +378,48 @@ export class InputController {
 				this.customPropertyManager.setProperty(`${cssId}-pressure`, '0.0%');
 			}
 		}
+	}
 
-		// Trigger releases are handled by the CSS system via TriggerManager
+	/**
+	 * Execute action triggers for an input
+	 * @param {Object} input - The input that was triggered
+	 * @param {string} buttonMode - 'momentary' or 'toggle'
+	 * @param {string} [overrideState] - Override the state to match (for release events)
+	 */
+	_executeActionTriggers(input, buttonMode, overrideState = null) {
+		if (!this.triggerLibrary) return;
+
+		// Get all action triggers
+		const triggers = this.triggerLibrary.getAll().filter(t => t.type === 'action');
+
+		// Determine the current state to match
+		let stateToMatch;
+		if (overrideState) {
+			stateToMatch = overrideState;
+		} else if (buttonMode === 'toggle') {
+			// For toggle, we need to know current toggle state
+			const toggleKey = `${input.deviceId}:${input.controlId}`;
+			const toggleState = this.toggleStates.get(toggleKey) || false;
+			stateToMatch = toggleState ? 'on' : 'off';
+		} else {
+			// Momentary mode: trigger fires on press (down)
+			stateToMatch = 'down';
+		}
+
+		// Find and execute matching triggers
+		for (const trigger of triggers) {
+			if (!trigger.enabled) continue;
+			if (trigger.input?.id !== input.id) continue;
+			if (trigger.input?.state !== stateToMatch) continue;
+
+			// Execute the trigger via TriggerManager
+			this.triggerManager.trigger({
+				mode: 'trigger',
+				input: trigger.input,
+				action: trigger.action,
+				cssClassName: trigger.cssClassName
+			});
+		}
 	}
 
 	/**

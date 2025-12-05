@@ -3,8 +3,9 @@
     import { DMXController } from './lib/outputs/dmx.js';
     import { DEVICE_TYPES } from './lib/outputs/devices.js';
     import { controlValuesToDMX } from './lib/outputs/controls.js';
-    import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary } from './stores.svelte.js';
+    import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, sceneLibrary } from './stores.svelte.js';
     import { TriggerManager } from './lib/triggers/manager.js';
+    import { SceneController } from './lib/scenes/manager.svelte.js';
     import { CustomPropertyManager, CSSManager } from './lib/css/index.js';
     import { InputController } from './lib/inputs/controller.js';
     import Header from './components/layout/Header.svelte';
@@ -14,6 +15,7 @@
     import AnimationsView from './components/views/AnimationsView.svelte';
     import InputsView from './components/views/InputsView.svelte';
     import TriggersView from './components/views/TriggersView.svelte';
+    import ScenesView from './components/views/ScenesView.svelte';
     import EditorView from './components/views/EditorView.svelte';
 
     let view = $state('devices');
@@ -24,8 +26,9 @@
 
     // Reactive systems
     let triggerManager = $state(new TriggerManager());
+    let sceneController = $state(new SceneController(sceneLibrary));
     let customPropertyManager = $state(new CustomPropertyManager());
-    let inputController = $state(new InputController(inputLibrary, customPropertyManager, triggerManager));
+    let inputController = $state(new InputController(inputLibrary, customPropertyManager, triggerManager, triggerLibrary));
 
     // CSS Manager - handles all CSS sampling and DOM management
     let cssManager = $state(null);
@@ -82,8 +85,18 @@
 
     onMount(() => {
         // Create CSS Manager
-        cssManager = new CSSManager(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager);
+        cssManager = new CSSManager(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager, sceneLibrary);
         cssManager.initialize(mainElement);
+
+        // Wire up scene controller to CSS manager
+        sceneController.setOnSceneChange((cssIdentifier) => {
+            cssManager.setScene(cssIdentifier);
+        });
+
+        // Listen for scene change events from triggers
+        triggerManager.on('sceneChange', ({ sceneId }) => {
+            sceneController.setScene(sceneId);
+        });
 
         // Subscribe to sampled values for DMX output
         const unsubscribe = cssManager.subscribe(handleSampledValues);
@@ -94,6 +107,7 @@
             animationLibrary.flush();
             inputLibrary.flush();
             triggerLibrary.flush();
+            sceneLibrary.flush();
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
 
@@ -144,9 +158,14 @@
         <TriggersView />
     </div>
 
+    <div class="view-container" class:hidden={view !== 'scenes'}>
+        <ScenesView {sceneController} />
+    </div>
+
     <div class="view-container" class:hidden={view !== 'css'}>
         <EditorView
             {cssManager}
+            {sceneController}
         />
     </div>
 </main>

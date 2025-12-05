@@ -16,14 +16,15 @@ export class CSSManager {
 	// Reactive devices array
 	devices = $state.raw([]);
 
-	constructor(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager) {
+	constructor(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager, sceneLibrary) {
 		this.deviceLibrary = deviceLibrary;
 		this.animationLibrary = animationLibrary;
 		this.inputLibrary = inputLibrary;
 		this.triggerLibrary = triggerLibrary;
 		this.triggerManager = triggerManager;
+		this.sceneLibrary = sceneLibrary;
 
-		this.cssGenerator = new CSSGenerator(animationLibrary, inputLibrary, triggerLibrary, deviceLibrary);
+		this.cssGenerator = new CSSGenerator(animationLibrary, inputLibrary, triggerLibrary, deviceLibrary, sceneLibrary);
 		this.cssSampler = new CSSSampler();
 
 		// DOM elements
@@ -78,6 +79,9 @@ export class CSSManager {
 		this.styleElement.id = 'css-animation-styles';
 		document.head.appendChild(this.styleElement);
 
+		// Set default scene attribute on trigger classes container
+		this.triggerClassesContainer.setAttribute('scene', 'default');
+
 		// Watch device library changes
 		$effect(() => {
 			const devices = this.deviceLibrary.getAll();
@@ -105,6 +109,15 @@ export class CSSManager {
 			this.updateStyleElement();
 		});
 
+		// Watch scene library changes
+		$effect(() => {
+			if (this.sceneLibrary) {
+				this.sceneLibrary.getAll(); // Track reactivity
+				this.regenerateCSS();
+				this.updateStyleElement();
+			}
+		});
+
 		// Start sampling loop
 		this.startSampling();
 	}
@@ -126,6 +139,17 @@ export class CSSManager {
 		this._customCSS = css;
 		localStorage.setItem('dmx-custom-css', css);
 		this.updateStyleElement();
+	}
+
+	/**
+	 * Set the active scene
+	 * Updates the scene attribute on the trigger classes container
+	 * @param {string} sceneCssIdentifier - CSS identifier of the scene to activate
+	 */
+	setScene(sceneCssIdentifier) {
+		if (this.triggerClassesContainer) {
+			this.triggerClassesContainer.setAttribute('scene', sceneCssIdentifier || 'default');
+		}
 	}
 
 	/**

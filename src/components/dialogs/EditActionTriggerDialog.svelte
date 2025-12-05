@@ -9,7 +9,7 @@
 	 * EditActionTriggerDialog - Promise-based dialog for editing action triggers
 	 *
 	 * Usage:
-	 *   const result = await editActionTriggerDialog.open(trigger, availableInputs, availableAnimations, devices);
+	 *   const result = await editActionTriggerDialog.open(trigger, availableInputs, availableAnimations, devices, scenes);
 	 *   if (result) {
 	 *     if (result.delete) {
 	 *       // Handle delete
@@ -27,6 +27,7 @@
 	let editingTrigger = $state(null);
 	let availableInputs = $state([]);
 	let availableAnimations = $state([]);
+	let availableScenes = $state([]);
 	let devices = $state([]);
 
 	// Form state
@@ -35,16 +36,26 @@
 	let actionType = $state('animation');
 	let selectedDevice = $state(null);
 	let selectedAnimation = $state(null);
+	let selectedScene = $state(null);
 	let duration = $state(1000);
 	let looping = $state(false);
 	let easing = $state('linear');
 	let controlValues = $state({});
 	let enabledControls = $state([]);
 
-	const ACTION_TYPES = [
-		{ value: 'animation', label: 'Run Animation' },
-		{ value: 'values', label: 'Set values' }
-	];
+	// Dynamic action types based on input state (scene only available for 'down')
+	let actionTypes = $derived(
+		inputState === 'down'
+			? [
+				{ value: 'animation', label: 'Run Animation' },
+				{ value: 'values', label: 'Set values' },
+				{ value: 'scene', label: 'Change Scene' }
+			]
+			: [
+				{ value: 'animation', label: 'Run Animation' },
+				{ value: 'values', label: 'Set values' }
+			]
+	);
 
 	const EASING_FUNCTIONS = [
 		'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out',
@@ -107,9 +118,10 @@
 	 * @param {Array} inputs - Available input mappings
 	 * @param {Array} animations - Available animations
 	 * @param {Array} devs - Available devices
-	 * @returns {Promise<{input, inputState, actionType, device, animation, duration, looping, easing, values}|{delete: true}|null>}
+	 * @param {Array} scenes - Available scenes
+	 * @returns {Promise<{input, inputState, actionType, device, animation, duration, looping, easing, values, scene}|{delete: true}|null>}
 	 */
-	export function open(trigger, inputs, animations, devs) {
+	export function open(trigger, inputs, animations, devs, scenes = []) {
 		return new Promise((resolve) => {
 			resolvePromise = resolve;
 
@@ -117,6 +129,7 @@
 			editingTrigger = trigger;
 			availableInputs = inputs;
 			availableAnimations = animations;
+			availableScenes = scenes;
 			devices = devs;
 
 			// Initialize form state from trigger
@@ -139,6 +152,10 @@
 						enabledControls = deviceType.controls.map(c => c.name);
 					}
 				}
+			} else if (actionType === 'scene') {
+				selectedScene = trigger.action?.scene?.id || null;
+				selectedDevice = null;
+				enabledControls = [];
 			} else {
 				selectedDevice = trigger.output?.id;
 				selectedAnimation = trigger.action?.animation?.id;
@@ -156,7 +173,20 @@
 	}
 
 	function handleSave() {
-		if (!selectedInput || !selectedDevice) {
+		if (!selectedInput) {
+			resolvePromise(null);
+			closeDialog();
+			return;
+		}
+
+		// Scene action doesn't require device
+		if (actionType === 'scene') {
+			if (!selectedScene) {
+				resolvePromise(null);
+				closeDialog();
+				return;
+			}
+		} else if (!selectedDevice) {
 			resolvePromise(null);
 			closeDialog();
 			return;
@@ -186,7 +216,8 @@
 			duration,
 			looping,
 			easing,
-			values: filteredValues
+			values: filteredValues,
+			scene: selectedScene
 		};
 
 		resolvePromise(result);
@@ -233,19 +264,21 @@
 
 			<!-- Column 2: Device Configuration -->
 			<div class="trigger-column with-divider">
-				<div class="dialog-input-group">
-					<label for="edit-trigger-device">Device:</label>
-					<select id="edit-trigger-device" bind:value={selectedDevice}>
-						{#each devices as device}
-							<option value={device.id}>{device.name}</option>
-						{/each}
-					</select>
-				</div>
+				{#if actionType !== 'scene'}
+					<div class="dialog-input-group">
+						<label for="edit-trigger-device">Device:</label>
+						<select id="edit-trigger-device" bind:value={selectedDevice}>
+							{#each devices as device}
+								<option value={device.id}>{device.name}</option>
+							{/each}
+						</select>
+					</div>
+				{/if}
 
 				<div class="dialog-input-group">
 					<label for="edit-trigger-action-type">Action:</label>
 					<select id="edit-trigger-action-type" bind:value={actionType}>
-						{#each ACTION_TYPES as type}
+						{#each actionTypes as type}
 							<option value={type.value}>{type.label}</option>
 						{/each}
 					</select>
@@ -294,6 +327,15 @@
 							<select id="animation-easing" bind:value={easing} disabled={!selectedAnimation}>
 								{#each EASING_FUNCTIONS as easingFn}
 									<option value={easingFn}>{easingFn}</option>
+								{/each}
+							</select>
+						</div>
+					{:else if actionType === 'scene'}
+						<div class="dialog-input-group">
+							<label for="edit-trigger-scene">Scene:</label>
+							<select id="edit-trigger-scene" bind:value={selectedScene}>
+								{#each availableScenes as scene}
+									<option value={scene.id}>{scene.name}</option>
 								{/each}
 							</select>
 						</div>

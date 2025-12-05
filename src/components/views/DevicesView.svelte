@@ -158,7 +158,7 @@
         padding: 20px 40px;
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(16em, 1fr));
-        gap: 15px;
+        gap: 16px;
     }
 
     .empty-state {
