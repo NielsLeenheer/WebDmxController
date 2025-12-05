@@ -106,23 +106,41 @@ export function getProperties(controlValues, controls, options = {}) {
 /**
  * Generate CSS block for a single device's default values
  *
- * NEW: Works with control-based values
+ * Works with control-based values. For linked devices, only generates CSS
+ * for controls that are NOT synced from the source device.
  *
- * @param {Object} device - Device object with type, defaultValues (control values), cssIdentifier, linkedTo
+ * @param {Object} device - Device object with type, defaultValues (control values), cssIdentifier, linkedTo, syncedControls
  * @returns {string|null} CSS block string or null if no CSS should be generated
  */
 export function generateCSSBlock(device) {
 	const deviceType = DEVICE_TYPES[device.type];
 	if (!deviceType) return null;
 
-	// Skip default values for linked devices
-	if (device.linkedTo !== null) return null;
-
-	// Get control values from device (NEW: control values object, not DMX array)
+	// Get control values from device
 	const controlValues = device.defaultValues || {};
 
+	// Filter controls to exclude synced controls for linked devices
+	let controls = deviceType.controls;
+	if (device.linkedTo !== null) {
+		// Get the set of synced control IDs
+		const syncedControlIds = new Set(device.syncedControls || []);
+		
+		// If no specific controls are synced but device is linked, assume all common controls are synced
+		// In this case, we need to determine which controls are shared with the source device
+		if (syncedControlIds.size === 0 && device.syncedControls === null) {
+			// All controls are potentially synced, skip CSS generation entirely
+			return null;
+		}
+		
+		// Filter out synced controls
+		controls = deviceType.controls.filter(control => !syncedControlIds.has(control.id));
+		
+		// If all controls are synced, skip CSS generation
+		if (controls.length === 0) return null;
+	}
+
 	// Generate CSS properties from control values (include color property for device defaults)
-	const properties = getProperties(controlValues, deviceType.controls, { includeColorProperty: true });
+	const properties = getProperties(controlValues, controls, { includeColorProperty: true });
 
 	if (Object.keys(properties).length === 0) return null;
 
