@@ -1,6 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import DialogColumns from '../common/DialogColumns.svelte';
+	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
@@ -288,7 +289,7 @@
 
 			{#snippet column3()}
 				<!-- Column 3: Action Configuration -->
-				<div class="trigger-card">
+				<DialogColumnPanel>
 					{#if actionType === 'animation'}
 						<div class="dialog-input-group">
 							<label for="edit-trigger-animation">Animation:</label>
@@ -354,7 +355,7 @@
 							</div>
 						{/if}
 					{/if}
-				</div>
+				</DialogColumnPanel>
 			{/snippet}
 		</DialogColumns>
 	</form>
@@ -367,24 +368,13 @@
 {/if}
 
 <style>
-	.trigger-card {
-		background: #f6f6f6;
-		padding: 15px;
-		border-radius: 6px;
-		min-height: 200px;
-
+	:global(.panel) .dialog-input-group {
 		display: flex;
-		flex-direction: column;
-		align-items: start;
-	}
-
-	.trigger-card .dialog-input-group {
-		display: flex;
-	    align-items: baseline;
+		align-items: baseline;
 		margin-bottom: 0;
 	}
 
-	.trigger-card .dialog-input-group :global(> label) {
+	:global(.panel) .dialog-input-group :global(> label) {
 		width: 120px;
 	}
 
@@ -416,12 +406,12 @@
 		cursor: pointer;
 	}
 
-	.trigger-card .dialog-input-group :global(.controls) {
+	:global(.panel) .dialog-input-group :global(.controls) {
 		margin: 8px 8px 0;
 		grid-template-columns: 20px 5em 1fr 3em;
 	}
 
-	.trigger-card .dialog-input-group :global(.controls .control) {
+	:global(.panel) .dialog-input-group :global(.controls .control) {
 		margin-bottom: 8px;
 	}
 

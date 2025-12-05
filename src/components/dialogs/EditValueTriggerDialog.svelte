@@ -1,6 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import DialogColumns from '../common/DialogColumns.svelte';
+	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
 	import Button from '../common/Button.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { getInputExportedValues } from '../../lib/inputs/valueTypes.js';
@@ -185,7 +186,7 @@
 
 			{#snippet column3()}
 				<!-- Column 3: Options -->
-				<div class="trigger-card">
+				<DialogColumnPanel>
 					<div class="checkbox-field">
 						<label>
 							<input
@@ -196,7 +197,7 @@
 						</label>
 						<p class="description">Reverse the input-to-output direction</p>
 					</div>
-				</div>
+				</DialogColumnPanel>
 			{/snippet}
 		</DialogColumns>
 	</form>
@@ -208,13 +209,6 @@
 </Dialog>
 
 <style>
-	.trigger-card {
-		background: #f6f6f6;
-		padding: 15px;
-		border-radius: 6px;
-		min-height: 100px;
-	}
-
 	.description {
 		font-size: 9pt;
 		color: #888;

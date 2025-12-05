@@ -1,6 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import DialogColumns from '../common/DialogColumns.svelte';
+	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import Preview from '../common/Preview.svelte';
@@ -213,7 +214,7 @@
 
 			{#snippet column2()}
 				<!-- Column 2: Settings -->
-				<div class="scene-device-card">
+				<DialogColumnPanel>
 					{#if actionType === 'animation'}
 						<div class="dialog-input-group">
 							<label for="scene-device-animation">Animation:</label>
@@ -268,7 +269,7 @@
 							/>
 						{/if}
 					{/if}
-				</div>
+				</DialogColumnPanel>
 			{/snippet}
 		</DialogColumns>
 	</form>
@@ -296,24 +297,13 @@
 		font-size: 11pt;
 	}
 
-	.scene-device-card {
-		background: #f6f6f6;
-		padding: 15px;
-		border-radius: 6px;
-		min-height: 200px;
-
-		display: flex;
-		flex-direction: column;
-		align-items: start;
-	}
-
-	.scene-device-card .dialog-input-group {
+	:global(.panel) .dialog-input-group {
 		display: flex;
 		align-items: baseline;
 		margin-bottom: 10px;
 	}
 
-	.scene-device-card .dialog-input-group > :global(label) {
+	:global(.panel) .dialog-input-group > :global(label) {
 		width: 120px;
 	}
 
@@ -336,12 +326,12 @@
 		cursor: pointer;
 	}
 
-	.scene-device-card :global(.controls) {
+	:global(.panel) :global(.controls) {
 		margin: 0;
 		grid-template-columns: 20px 5em 1fr 3em;
 	}
 
-	.scene-device-card :global(.controls .control) {
+	:global(.panel) :global(.controls .control) {
 		margin-bottom: 8px;
 	}
 </style>
