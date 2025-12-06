@@ -350,7 +350,7 @@
 
 	{#snippet buttons()}
 		<Button onclick={handleCancel} variant="secondary">Cancel</Button>
-		<Button type="submit" form="edit-action-trigger-form" variant="primary">Save</Button>
+		<Button onclick={handleSave} variant="primary">Save</Button>
 	{/snippet}
 </Dialog>
 {/if}

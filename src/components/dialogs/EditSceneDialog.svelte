@@ -106,8 +106,8 @@
 	</form>
 
 	{#snippet buttons()}
-		<Button type="button" onclick={handleCancel} variant="secondary">Cancel</Button>
-		<Button type="submit" form="edit-scene-form" variant="primary" disabled={isDefault}>Save</Button>
+		<Button onclick={handleCancel} variant="secondary">Cancel</Button>
+		<Button onclick={handleSave} variant="primary" disabled={isDefault}>Save</Button>
 	{/snippet}
 </Dialog>
 {/if}

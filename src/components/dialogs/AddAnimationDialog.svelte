@@ -191,8 +191,8 @@
 	</form>
 
 	{#snippet buttons()}
-		<Button type="button" onclick={handleCancel} variant="secondary">Cancel</Button>
-		<Button type="submit" form="new-animation-form" variant="primary">Create</Button>
+		<Button onclick={handleCancel} variant="secondary">Cancel</Button>
+		<Button onclick={handleCreate} variant="primary">Create</Button>
 	{/snippet}
 </Dialog>
 

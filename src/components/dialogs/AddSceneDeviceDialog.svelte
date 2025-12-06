@@ -104,10 +104,9 @@
 	{/if}
 
 	{#snippet buttons()}
-		<Button type="button" onclick={handleCancel} variant="secondary">Cancel</Button>
+		<Button onclick={handleCancel} variant="secondary">Cancel</Button>
 		<Button
-			type="submit"
-			form="add-scene-device-form"
+			onclick={handleAdd}
 			variant="primary"
 			disabled={availableDevices.length === 0}
 		>Add</Button>

@@ -358,8 +358,8 @@
 	</form>
 
 	{#snippet buttons()}
-		<Button type="button" onclick={handleCancel} variant="secondary">Cancel</Button>
-		<Button type="submit" form="action-trigger-form" variant="primary">Create</Button>
+		<Button onclick={handleCancel} variant="secondary">Cancel</Button>
+		<Button onclick={handleSave} variant="primary">Create</Button>
 	{/snippet}
 </Dialog>
 

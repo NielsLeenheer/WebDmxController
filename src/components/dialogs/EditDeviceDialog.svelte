@@ -227,8 +227,7 @@
 	{#snippet buttons()}
 		<Button onclick={handleCancel} variant="secondary">Cancel</Button>
 		<Button
-			type="submit"
-			form="device-settings-form"
+			onclick={handleSave}
 			variant="primary"
 			disabled={!isChannelValid(editingDevice, dialogChannel - 1)}
 		>
