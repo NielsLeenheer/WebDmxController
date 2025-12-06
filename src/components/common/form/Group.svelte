@@ -1,16 +1,16 @@
 <script>
 	/**
-	 * InputGroup - A labeled input group for dialog forms
+	 * Group - A labeled input group for forms
 	 *
 	 * Usage:
-	 *   <InputGroup label="Name:" for="name-input">
+	 *   <Group label="Name:" for="name-input">
 	 *     <input id="name-input" type="text" bind:value={name} />
-	 *   </InputGroup>
+	 *   </Group>
 	 *
 	 * Or without a label:
-	 *   <InputGroup>
+	 *   <Group>
 	 *     <Controls ... />
-	 *   </InputGroup>
+	 *   </Group>
 	 *
 	 * Wraps form controls with a consistent label and spacing.
 	 * Children are wrapped in a div to allow multiple elements.
@@ -25,7 +25,7 @@
 	} = $props();
 </script>
 
-<div class="dialog-input-group">
+<div class="input-group">
 	{#if label}
 		<label for={forId}>{label}</label>
 	{/if}
@@ -36,17 +36,24 @@
 
 <style>
 
-	.dialog-input-group {
+	.input-group {
 		margin-bottom: 20px;
 		max-width: -webkit-fill-available;
 	}
 
-	.dialog-input-group > label {
+	.input-group > label {
 		display: block;
 		margin-bottom: 8px;
 		font-size: 10pt;
 		font-weight: 400;
 		color: #555;
+	}
+
+	.input-group :global(small) {
+		display: block;
+		margin-top: 8px;
+		font-size: 8pt;
+		color: #888;
 	}
 
 </style>

@@ -30,3 +30,19 @@
 	{autofocus}
 	{onkeydown}
 />
+
+<style>
+	input {
+		width: 100%;
+		padding: 8px 12px;
+		font-size: 11pt;
+		border: 2px solid #ccc;
+		border-radius: 4px;
+		box-sizing: border-box;
+	}
+
+	input:focus {
+		outline: none;
+		border-color: #2196F3;
+	}
+</style>

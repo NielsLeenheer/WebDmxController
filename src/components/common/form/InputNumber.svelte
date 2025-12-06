@@ -34,3 +34,29 @@
 	class:valid
 	class:invalid={!valid}
 />
+
+<style>
+	input {
+		width: 100%;
+		padding: 8px 12px;
+		font-size: 11pt;
+		border: 2px solid #ccc;
+		border-radius: 4px;
+		box-sizing: border-box;
+	}
+
+	input:focus {
+		outline: none;
+		border-color: #2196F3;
+	}
+
+	input.valid {
+		border-color: #4caf50;
+		background: #f0fdf0;
+	}
+
+	input.invalid {
+		border-color: #ff4444;
+		background: #fff5f5;
+	}
+</style>
