@@ -3,6 +3,7 @@
 	import DialogColumns from '../common/DialogColumns.svelte';
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
 	import InputGroup from '../common/form/InputGroup.svelte';
+	import InputCheckbox from '../common/form/InputCheckbox.svelte';
 	import SelectField from '../common/form/SelectField.svelte';
 	import Button from '../common/Button.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
@@ -188,16 +189,11 @@
 			{#snippet column3()}
 				<!-- Column 3: Options -->
 				<DialogColumnPanel>
-					<div class="checkbox-field">
-						<label>
-							<input
-								type="checkbox"
-								bind:checked={invert}
-							/>
-							Invert mapping
-						</label>
-						<p class="description">Reverse the input-to-output direction</p>
-					</div>
+					<InputCheckbox
+						bind:checked={invert}
+						label="Invert mapping"
+						description="Reverse the input-to-output direction"
+					/>
 				</DialogColumnPanel>
 			{/snippet}
 		</DialogColumns>
@@ -208,25 +204,3 @@
 		<Button type="submit" form="value-trigger-form" variant="primary">Create</Button>
 	{/snippet}
 </Dialog>
-
-<style>
-	.description {
-		font-size: 9pt;
-		color: #888;
-		margin: 0;
-		padding: 0;
-	}
-
-	.checkbox-field label {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 10pt;
-		cursor: pointer;
-	}
-
-	.checkbox-field .description {
-		margin-top: 4px;
-		margin-left: 24px;
-	}
-</style>

@@ -4,6 +4,7 @@
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
 	import InputGroup from '../common/form/InputGroup.svelte';
 	import InputNumber from '../common/form/InputNumber.svelte';
+	import InputCheckbox from '../common/form/InputCheckbox.svelte';
 	import SelectField from '../common/form/SelectField.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
@@ -235,16 +236,11 @@
 									step={100}
 									disabled={!selectedAnimation}
 								/>
-								<div class="checkbox-field">
-									<label>
-										<input
-											type="checkbox"
-											bind:checked={looping}
-											disabled={!selectedAnimation}
-										/>
-										Loop
-									</label>
-								</div>
+								<InputCheckbox
+									bind:checked={looping}
+									label="Loop"
+									disabled={!selectedAnimation}
+								/>
 							</div>
 						</InputGroup>
 
@@ -304,13 +300,5 @@
 	.duration-with-loop input[type="number"] {
 		flex: 1;
 		max-width: 120px;
-	}
-
-	.checkbox-field label {
-		display: flex;
-		align-items: center;
-		gap: 5px;
-		font-size: 10pt;
-		cursor: pointer;
 	}
 </style>
