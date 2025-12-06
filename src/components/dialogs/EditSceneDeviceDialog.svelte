@@ -3,9 +3,8 @@
 	import DialogColumns from '../common/DialogColumns.svelte';
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
 	import Group from '../common/form/Group.svelte';
-	import InputNumber from '../common/form/InputNumber.svelte';
-	import InputCheckbox from '../common/form/InputCheckbox.svelte';
 	import SelectField from '../common/form/SelectField.svelte';
+	import AnimationPicker from '../common/form/AnimationPicker.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import Preview from '../common/Preview.svelte';
@@ -42,12 +41,6 @@
 	const ACTION_TYPES = [
 		{ value: 'values', label: 'Set Values' },
 		{ value: 'animation', label: 'Run Animation' }
-	];
-
-	const EASING_FUNCTIONS = [
-		'linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out',
-		'cubic-bezier(0.4, 0.0, 0.2, 1)',
-		'cubic-bezier(0.68, -0.55, 0.265, 1.55)'
 	];
 
 	/**
@@ -219,38 +212,13 @@
 				<!-- Column 2: Settings -->
 				<DialogColumnPanel>
 					{#if actionType === 'animation'}
-						<Group label="Animation:" for="scene-device-animation">
-							<SelectField id="scene-device-animation" bind:value={selectedAnimation}>
-								{#each availableAnimations as animation}
-									<option value={animation.id}>{animation.name}</option>
-								{/each}
-							</SelectField>
-						</Group>
-
-						<Group label="Duration (ms):" for="scene-device-duration">
-							<div class="duration-with-loop">
-								<InputNumber
-									id="scene-device-duration"
-									bind:value={duration}
-									min={100}
-									step={100}
-									disabled={!selectedAnimation}
-								/>
-								<InputCheckbox
-									bind:checked={looping}
-									label="Loop"
-									disabled={!selectedAnimation}
-								/>
-							</div>
-						</Group>
-
-						<Group label="Easing:" for="scene-device-easing">
-							<SelectField id="scene-device-easing" bind:value={easing} disabled={!selectedAnimation}>
-								{#each EASING_FUNCTIONS as easingFn}
-									<option value={easingFn}>{easingFn}</option>
-								{/each}
-							</SelectField>
-						</Group>
+						<AnimationPicker
+							animations={availableAnimations}
+							bind:animation={selectedAnimation}
+							bind:duration={duration}
+							bind:looping={looping}
+							bind:easing={easing}
+						/>
 					{:else}
 						{@const deviceType = DEVICE_TYPES[editingDevice.type]}
 						{#if deviceType}
@@ -291,14 +259,4 @@
 		font-size: 11pt;
 	}
 
-	.duration-with-loop {
-		display: flex;
-		gap: 10px;
-		align-items: center;
-	}
-
-	.duration-with-loop input[type="number"] {
-		flex: 1;
-		max-width: 120px;
-	}
-</style>
+	</style>
