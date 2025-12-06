@@ -1,7 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
-	import InputGroup from '../common/InputGroup.svelte';
+	import InputGroup from '../common/form/InputGroup.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 

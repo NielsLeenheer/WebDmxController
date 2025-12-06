@@ -2,8 +2,8 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import Preview from '../common/Preview.svelte';
-	import InputGroup from '../common/InputGroup.svelte';
-	import SelectField from '../common/SelectField.svelte';
+	import InputGroup from '../common/form/InputGroup.svelte';
+	import SelectField from '../common/form/SelectField.svelte';
 
 	/**
 	 * AddSceneDeviceDialog - Promise-based dialog for adding a device to a scene

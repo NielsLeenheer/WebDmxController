@@ -2,8 +2,8 @@
 	import Dialog from '../common/Dialog.svelte';
 	import DialogColumns from '../common/DialogColumns.svelte';
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
-	import InputGroup from '../common/InputGroup.svelte';
-	import SelectField from '../common/SelectField.svelte';
+	import InputGroup from '../common/form/InputGroup.svelte';
+	import SelectField from '../common/form/SelectField.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import Preview from '../common/Preview.svelte';
