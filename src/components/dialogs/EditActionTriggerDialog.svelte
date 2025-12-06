@@ -3,6 +3,7 @@
 	import DialogColumns from '../common/DialogColumns.svelte';
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
 	import InputGroup from '../common/form/InputGroup.svelte';
+	import InputNumber from '../common/form/InputNumber.svelte';
 	import SelectField from '../common/form/SelectField.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
@@ -297,12 +298,11 @@
 
 						<InputGroup label="Duration (ms):" for="edit-trigger-duration">
 							<div class="duration-with-loop">
-								<input
+								<InputNumber
 									id="edit-trigger-duration"
-									type="number"
 									bind:value={duration}
-									min="100"
-									step="100"
+									min={100}
+									step={100}
 									disabled={!selectedAnimation}
 								/>
 								<div class="checkbox-field">

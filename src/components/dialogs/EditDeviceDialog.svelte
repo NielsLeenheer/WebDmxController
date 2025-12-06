@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/form/InputGroup.svelte';
+	import InputNumber from '../common/form/InputNumber.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import CustomizeControlsDialog from './CustomizeControlsDialog.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
@@ -187,14 +188,12 @@
 		</InputGroup>
 
 		<InputGroup label="Starting channel (1-512):" for="channel-input">
-			<input
+			<InputNumber
 				id="channel-input"
-				type="number"
-				min="1"
-				max="512"
+				min={1}
+				max={512}
 				bind:value={dialogChannel}
-				class:valid={isChannelValid(editingDevice, dialogChannel - 1)}
-				class:invalid={!isChannelValid(editingDevice, dialogChannel - 1)}
+				valid={isChannelValid(editingDevice, dialogChannel - 1)}
 			/>
 			<small class="channel-range">
 				Device uses {DEVICE_TYPES[editingDevice.type].channels} channels:
