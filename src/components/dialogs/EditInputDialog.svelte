@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/InputGroup.svelte';
+	import SelectField from '../common/SelectField.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
@@ -129,10 +130,10 @@
 
 		{#if isButton(editingInput)}
 			<InputGroup label="Button Mode:" for="button-mode">
-				<select id="button-mode" bind:value={editingButtonMode}>
+				<SelectField id="button-mode" bind:value={editingButtonMode}>
 					<option value="momentary">Down/Up</option>
 					<option value="toggle">On/Off</option>
-				</select>
+				</SelectField>
 			</InputGroup>
 		{/if}
 

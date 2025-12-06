@@ -3,6 +3,7 @@
 	import DialogColumns from '../common/DialogColumns.svelte';
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
 	import InputGroup from '../common/InputGroup.svelte';
+	import SelectField from '../common/SelectField.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import Preview from '../common/Preview.svelte';
@@ -204,11 +205,11 @@
 				</div>
 
 				<InputGroup label="Mode:" for="scene-device-action-type">
-					<select id="scene-device-action-type" bind:value={actionType}>
+					<SelectField id="scene-device-action-type" bind:value={actionType}>
 						{#each ACTION_TYPES as type}
 							<option value={type.value}>{type.label}</option>
 						{/each}
-					</select>
+					</SelectField>
 				</InputGroup>
 			{/snippet}
 
@@ -217,11 +218,11 @@
 				<DialogColumnPanel>
 					{#if actionType === 'animation'}
 						<InputGroup label="Animation:" for="scene-device-animation">
-							<select id="scene-device-animation" bind:value={selectedAnimation}>
+							<SelectField id="scene-device-animation" bind:value={selectedAnimation}>
 								{#each availableAnimations as animation}
 									<option value={animation.id}>{animation.name}</option>
 								{/each}
-							</select>
+							</SelectField>
 						</InputGroup>
 
 						<InputGroup label="Duration (ms):" for="scene-device-duration">
@@ -248,11 +249,11 @@
 						</InputGroup>
 
 						<InputGroup label="Easing:" for="scene-device-easing">
-							<select id="scene-device-easing" bind:value={easing} disabled={!selectedAnimation}>
+							<SelectField id="scene-device-easing" bind:value={easing} disabled={!selectedAnimation}>
 								{#each EASING_FUNCTIONS as easingFn}
 									<option value={easingFn}>{easingFn}</option>
 								{/each}
-							</select>
+							</SelectField>
 						</InputGroup>
 					{:else}
 						{@const deviceType = DEVICE_TYPES[editingDevice.type]}

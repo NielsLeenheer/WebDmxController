@@ -3,6 +3,7 @@
 	import Button from '../common/Button.svelte';
 	import Preview from '../common/Preview.svelte';
 	import InputGroup from '../common/InputGroup.svelte';
+	import SelectField from '../common/SelectField.svelte';
 
 	/**
 	 * AddSceneDeviceDialog - Promise-based dialog for adding a device to a scene
@@ -92,11 +93,11 @@
 							data={selectedDevice}
 						/>
 					{/if}
-					<select id="device-select" bind:value={selectedDeviceId}>
+					<SelectField id="device-select" bind:value={selectedDeviceId}>
 						{#each availableDevices as device}
 							<option value={device.id}>{device.name}</option>
 						{/each}
-					</select>
+					</SelectField>
 				</div>
 			</InputGroup>
 		</form>

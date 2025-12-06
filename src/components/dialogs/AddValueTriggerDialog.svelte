@@ -3,6 +3,7 @@
 	import DialogColumns from '../common/DialogColumns.svelte';
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
 	import InputGroup from '../common/InputGroup.svelte';
+	import SelectField from '../common/SelectField.svelte';
 	import Button from '../common/Button.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { getInputExportedValues } from '../../lib/inputs/valueTypes.js';
@@ -135,20 +136,20 @@
 			{#snippet column1()}
 				<!-- Column 1: Input Configuration -->
 				<InputGroup label="Input:" for="value-trigger-input">
-					<select id="value-trigger-input" bind:value={selectedInputId}>
+					<SelectField id="value-trigger-input" bind:value={selectedInputId}>
 						{#each availableInputs as input}
 							<option value={input.id}>{input.name}</option>
 						{/each}
-					</select>
+					</SelectField>
 				</InputGroup>
 
 				{#if exportedValues.length > 0}
 					<InputGroup label="Value:" for="value-trigger-value">
-						<select id="value-trigger-value" bind:value={selectedValueKey}>
+						<SelectField id="value-trigger-value" bind:value={selectedValueKey}>
 							{#each exportedValues as value}
 								<option value={value.key}>{value.label}</option>
 							{/each}
-						</select>
+						</SelectField>
 					</InputGroup>
 				{/if}
 			{/snippet}
@@ -156,30 +157,30 @@
 			{#snippet column2()}
 				<!-- Column 2: Device Configuration -->
 				<InputGroup label="Device:" for="value-trigger-device">
-					<select id="value-trigger-device" bind:value={selectedDeviceId}>
+					<SelectField id="value-trigger-device" bind:value={selectedDeviceId}>
 						{#each devices as device}
 							<option value={device.id}>{device.name || device.cssIdentifier}</option>
 						{/each}
-					</select>
+					</SelectField>
 				</InputGroup>
 
 				{#if controls.length > 0}
 					<InputGroup label="Control:" for="value-trigger-control">
-						<select id="value-trigger-control" bind:value={selectedControlId}>
+						<SelectField id="value-trigger-control" bind:value={selectedControlId}>
 							{#each controls as control}
 								<option value={control.id}>{control.type.name}</option>
 							{/each}
-						</select>
+						</SelectField>
 					</InputGroup>
 				{/if}
 
 				{#if needsValueSelection}
 					<InputGroup label="Component:" for="value-trigger-value-id">
-						<select id="value-trigger-value-id" bind:value={selectedValueId}>
+						<SelectField id="value-trigger-value-id" bind:value={selectedValueId}>
 							{#each controlValues as value}
 								<option value={value.id}>{value.label}</option>
 							{/each}
-						</select>
+						</SelectField>
 					</InputGroup>
 				{/if}
 			{/snippet}

@@ -3,6 +3,7 @@
 	import DialogColumns from '../common/DialogColumns.svelte';
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
 	import InputGroup from '../common/InputGroup.svelte';
+	import SelectField from '../common/SelectField.svelte';
 	import Button from '../common/Button.svelte';
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
@@ -253,39 +254,39 @@
 			{#snippet column1()}
 				<!-- Column 1: Input Configuration -->
 				<InputGroup label="Input:" for="trigger-input">
-					<select id="trigger-input" bind:value={selectedInput}>
+					<SelectField id="trigger-input" bind:value={selectedInput}>
 						{#each availableInputs as input}
 							<option value={`${input.deviceId}_${input.controlId}`}>{input.name}</option>
 						{/each}
-					</select>
+					</SelectField>
 				</InputGroup>
 
 				<InputGroup label="Trigger State:" for="trigger-state">
-					<select id="trigger-state" bind:value={inputState} onchange={handleInputStateChange}>
+					<SelectField id="trigger-state" bind:value={inputState} onchange={handleInputStateChange}>
 						{#each getInputStateOptions() as state}
 							<option value={state.value}>{state.label}</option>
 						{/each}
-					</select>
+					</SelectField>
 				</InputGroup>
 			{/snippet}
 
 			{#snippet column2()}
 				<!-- Column 2: Action & Device -->
 				<InputGroup label="Action:" for="trigger-action-type">
-					<select id="trigger-action-type" bind:value={actionType}>
+					<SelectField id="trigger-action-type" bind:value={actionType}>
 						{#each availableActionTypes as type}
 							<option value={type.value}>{type.label}</option>
 						{/each}
-					</select>
+					</SelectField>
 				</InputGroup>
 
 				{#if actionType !== 'scene'}
 					<InputGroup label="Device:" for="trigger-device">
-						<select id="trigger-device" bind:value={selectedDevice} onchange={handleDeviceChange}>
+						<SelectField id="trigger-device" bind:value={selectedDevice} onchange={handleDeviceChange}>
 							{#each devices as device}
 								<option value={device.id}>{device.name}</option>
 							{/each}
-						</select>
+						</SelectField>
 					</InputGroup>
 				{/if}
 			{/snippet}
@@ -295,11 +296,11 @@
 				<DialogColumnPanel>
 					{#if actionType === 'animation'}
 						<InputGroup label="Animation:" for="trigger-animation">
-							<select id="trigger-animation" bind:value={selectedAnimation}>
+							<SelectField id="trigger-animation" bind:value={selectedAnimation}>
 								{#each availableAnimations as animation}
 									<option value={animation.id}>{animation.name}</option>
 								{/each}
-							</select>
+							</SelectField>
 						</InputGroup>
 
 						<InputGroup label="Duration (ms):" for="trigger-duration">
@@ -326,11 +327,11 @@
 						</InputGroup>
 
 						<InputGroup label="Easing:" for="animation-easing">
-							<select id="animation-easing" bind:value={easing} disabled={!selectedAnimation}>
+							<SelectField id="animation-easing" bind:value={easing} disabled={!selectedAnimation}>
 								{#each EASING_FUNCTIONS as easingFn}
 									<option value={easingFn}>{easingFn}</option>
 								{/each}
-							</select>
+							</SelectField>
 						</InputGroup>
 					{:else if actionType === 'values' && selectedDevice}
 						{@const device = devices.find(d => d.id === selectedDevice)}
@@ -347,11 +348,11 @@
 						{/if}
 					{:else if actionType === 'scene'}
 						<InputGroup label="Scene:" for="trigger-scene">
-							<select id="trigger-scene" bind:value={selectedScene}>
+							<SelectField id="trigger-scene" bind:value={selectedScene}>
 								{#each scenes as scene}
 									<option value={scene.id}>{scene.name}</option>
 								{/each}
-							</select>
+							</SelectField>
 						</InputGroup>
 						<p class="scene-hint">When triggered, the scene will be activated.</p>
 					{/if}
