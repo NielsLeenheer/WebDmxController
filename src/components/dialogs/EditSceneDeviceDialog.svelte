@@ -2,7 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import DialogColumns from '../common/DialogColumns.svelte';
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
-	import InputGroup from '../common/form/InputGroup.svelte';
+	import Group from '../common/form/Group.svelte';
 	import InputNumber from '../common/form/InputNumber.svelte';
 	import InputCheckbox from '../common/form/InputCheckbox.svelte';
 	import SelectField from '../common/form/SelectField.svelte';
@@ -206,28 +206,28 @@
 					<div class="device-name">{editingDevice.name}</div>
 				</div>
 
-				<InputGroup label="Mode:" for="scene-device-action-type">
+				<Group label="Mode:" for="scene-device-action-type">
 					<SelectField id="scene-device-action-type" bind:value={actionType}>
 						{#each ACTION_TYPES as type}
 							<option value={type.value}>{type.label}</option>
 						{/each}
 					</SelectField>
-				</InputGroup>
+				</Group>
 			{/snippet}
 
 			{#snippet column2()}
 				<!-- Column 2: Settings -->
 				<DialogColumnPanel>
 					{#if actionType === 'animation'}
-						<InputGroup label="Animation:" for="scene-device-animation">
+						<Group label="Animation:" for="scene-device-animation">
 							<SelectField id="scene-device-animation" bind:value={selectedAnimation}>
 								{#each availableAnimations as animation}
 									<option value={animation.id}>{animation.name}</option>
 								{/each}
 							</SelectField>
-						</InputGroup>
+						</Group>
 
-						<InputGroup label="Duration (ms):" for="scene-device-duration">
+						<Group label="Duration (ms):" for="scene-device-duration">
 							<div class="duration-with-loop">
 								<InputNumber
 									id="scene-device-duration"
@@ -242,15 +242,15 @@
 									disabled={!selectedAnimation}
 								/>
 							</div>
-						</InputGroup>
+						</Group>
 
-						<InputGroup label="Easing:" for="scene-device-easing">
+						<Group label="Easing:" for="scene-device-easing">
 							<SelectField id="scene-device-easing" bind:value={easing} disabled={!selectedAnimation}>
 								{#each EASING_FUNCTIONS as easingFn}
 									<option value={easingFn}>{easingFn}</option>
 								{/each}
 							</SelectField>
-						</InputGroup>
+						</Group>
 					{:else}
 						{@const deviceType = DEVICE_TYPES[editingDevice.type]}
 						{#if deviceType}

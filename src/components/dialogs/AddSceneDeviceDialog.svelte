@@ -2,7 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import Preview from '../common/Preview.svelte';
-	import InputGroup from '../common/form/InputGroup.svelte';
+	import Group from '../common/form/Group.svelte';
 	import SelectField from '../common/form/SelectField.svelte';
 
 	/**
@@ -84,7 +84,7 @@
 		<p class="no-devices">All devices have already been added to this scene.</p>
 	{:else}
 		<form id="add-scene-device-form" onsubmit={(e) => { e.preventDefault(); handleAdd(); }}>
-			<InputGroup label="Device:" for="device-select">
+			<Group label="Device:" for="device-select">
 				<div class="device-select-row">
 					{#if selectedDevice}
 						<Preview
@@ -99,7 +99,7 @@
 						{/each}
 					</SelectField>
 				</div>
-			</InputGroup>
+			</Group>
 		</form>
 	{/if}
 

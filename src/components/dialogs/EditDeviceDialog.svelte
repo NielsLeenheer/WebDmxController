@@ -1,7 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
-	import InputGroup from '../common/form/InputGroup.svelte';
+	import Group from '../common/form/Group.svelte';
 	import InputNumber from '../common/form/InputNumber.svelte';
 	import InputText from '../common/form/InputText.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
@@ -171,7 +171,7 @@
 	onclose={handleCancel}
 >
 	<form id="device-settings-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-		<InputGroup label="Name:" for="name-input">
+		<Group label="Name:" for="name-input">
 			<InputText
 				id="name-input"
 				bind:value={dialogName}
@@ -185,9 +185,9 @@
 					new Set(deviceLibrary.getAll().filter(d => d.id !== editingDevice?.id).map(d => d.cssIdentifier))
 				)}`]}
 			/>
-		</InputGroup>
+		</Group>
 
-		<InputGroup label="Starting channel (1-512):" for="channel-input">
+		<Group label="Starting channel (1-512):" for="channel-input">
 			<InputNumber
 				id="channel-input"
 				min={1}
@@ -199,9 +199,9 @@
 				Device uses {DEVICE_TYPES[editingDevice.type].channels} channels:
 				{dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1}
 			</small>
-		</InputGroup>
+		</Group>
 
-		<InputGroup label="Link to device:" for="link-select">
+		<Group label="Link to device:" for="link-select">
 			{#if getLinkableDevices(editingDevice).length > 0 || editingDevice.linkedTo !== null}
 				<div class="link-select-row">
 					<select id="link-select" bind:value={selectedLinkTarget}>
@@ -221,7 +221,7 @@
 			{:else}
 				<p class="no-devices">No compatible devices available to link</p>
 			{/if}
-		</InputGroup>
+		</Group>
 	</form>
 
 	{#snippet buttons()}

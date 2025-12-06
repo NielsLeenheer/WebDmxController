@@ -1,7 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
-	import InputGroup from '../common/form/InputGroup.svelte';
+	import Group from '../common/form/Group.svelte';
 	import InputText from '../common/form/InputText.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
@@ -82,7 +82,7 @@
 	onclose={handleCancel}
 >
 	<form id="edit-animation-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-		<InputGroup label="Name:" for="edit-animation-name">
+		<Group label="Name:" for="edit-animation-name">
 			<InputText
 				id="edit-animation-name"
 				bind:value={editingName}
@@ -95,7 +95,7 @@
 					new Set(animationLibrary.getAll().filter(a => a.id !== editingAnimation?.id).map(a => a.cssIdentifier))
 				)} { }`]}
 			/>
-		</InputGroup>
+		</Group>
 	</form>
 
 	{#snippet buttons()}

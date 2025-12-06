@@ -2,7 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import DialogColumns from '../common/DialogColumns.svelte';
 	import DialogColumnPanel from '../common/DialogColumnPanel.svelte';
-	import InputGroup from '../common/form/InputGroup.svelte';
+	import Group from '../common/form/Group.svelte';
 	import InputCheckbox from '../common/form/InputCheckbox.svelte';
 	import SelectField from '../common/form/SelectField.svelte';
 	import Button from '../common/Button.svelte';
@@ -136,53 +136,53 @@
 		<DialogColumns layout={['180px', 'line', '180px', '350px']}>
 			{#snippet column1()}
 				<!-- Column 1: Input Configuration -->
-				<InputGroup label="Input:" for="value-trigger-input">
+				<Group label="Input:" for="value-trigger-input">
 					<SelectField id="value-trigger-input" bind:value={selectedInputId}>
 						{#each availableInputs as input}
 							<option value={input.id}>{input.name}</option>
 						{/each}
 					</SelectField>
-				</InputGroup>
+				</Group>
 
 				{#if exportedValues.length > 0}
-					<InputGroup label="Value:" for="value-trigger-value">
+					<Group label="Value:" for="value-trigger-value">
 						<SelectField id="value-trigger-value" bind:value={selectedValueKey}>
 							{#each exportedValues as value}
 								<option value={value.key}>{value.label}</option>
 							{/each}
 						</SelectField>
-					</InputGroup>
+					</Group>
 				{/if}
 			{/snippet}
 
 			{#snippet column2()}
 				<!-- Column 2: Device Configuration -->
-				<InputGroup label="Device:" for="value-trigger-device">
+				<Group label="Device:" for="value-trigger-device">
 					<SelectField id="value-trigger-device" bind:value={selectedDeviceId}>
 						{#each devices as device}
 							<option value={device.id}>{device.name || device.cssIdentifier}</option>
 						{/each}
 					</SelectField>
-				</InputGroup>
+				</Group>
 
 				{#if controls.length > 0}
-					<InputGroup label="Control:" for="value-trigger-control">
+					<Group label="Control:" for="value-trigger-control">
 						<SelectField id="value-trigger-control" bind:value={selectedControlId}>
 							{#each controls as control}
 								<option value={control.id}>{control.type.name}</option>
 							{/each}
 						</SelectField>
-					</InputGroup>
+					</Group>
 				{/if}
 
 				{#if needsValueSelection}
-					<InputGroup label="Component:" for="value-trigger-value-id">
+					<Group label="Component:" for="value-trigger-value-id">
 						<SelectField id="value-trigger-value-id" bind:value={selectedValueId}>
 							{#each controlValues as value}
 								<option value={value.id}>{value.label}</option>
 							{/each}
 						</SelectField>
-					</InputGroup>
+					</Group>
 				{/if}
 			{/snippet}
 

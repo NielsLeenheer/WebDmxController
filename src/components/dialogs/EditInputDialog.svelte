@@ -1,7 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
-	import InputGroup from '../common/form/InputGroup.svelte';
+	import Group from '../common/form/Group.svelte';
 	import InputText from '../common/form/InputText.svelte';
 	import SelectField from '../common/form/SelectField.svelte';
 	import SelectColorField from '../common/form/SelectColorField.svelte';
@@ -101,7 +101,7 @@
 	onclose={handleCancel}
 >
 	<form id="edit-input-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-		<InputGroup label="Name:" for="input-name">
+		<Group label="Name:" for="input-name">
 			<InputText
 				id="input-name"
 				bind:value={editingName}
@@ -126,21 +126,21 @@
 					}
 				/>
 			{/if}
-		</InputGroup>
+		</Group>
 
 		{#if isButton(editingInput)}
-			<InputGroup label="Button Mode:" for="button-mode">
+			<Group label="Button Mode:" for="button-mode">
 				<SelectField id="button-mode" bind:value={editingButtonMode}>
 					<option value="momentary">Down/Up</option>
 					<option value="toggle">On/Off</option>
 				</SelectField>
-			</InputGroup>
+			</Group>
 		{/if}
 
 		{#if showColorPicker}
-			<InputGroup label="Color:" for="input-color">
+			<Group label="Color:" for="input-color">
 				<SelectColorField id="input-color" bind:value={editingColor} />
-			</InputGroup>
+			</Group>
 		{/if}
 	</form>
 

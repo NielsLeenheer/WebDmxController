@@ -1,7 +1,7 @@
 <script>
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
-	import InputGroup from '../common/form/InputGroup.svelte';
+	import Group from '../common/form/Group.svelte';
 	import InputText from '../common/form/InputText.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
@@ -76,7 +76,7 @@
 	onclose={handleCancel}
 >
 	<form id="new-scene-form" onsubmit={(e) => { e.preventDefault(); handleCreate(); }}>
-		<InputGroup label="Scene Name:" for="scene-name">
+		<Group label="Scene Name:" for="scene-name">
 			<InputText
 				id="scene-name"
 				bind:value={sceneName}
@@ -89,7 +89,7 @@
 					new Set(sceneLibrary.getAll().map(s => s.cssIdentifier))
 				)}"]`]}
 			/>
-		</InputGroup>
+		</Group>
 	</form>
 
 	{#snippet buttons()}
