@@ -36,11 +36,12 @@
 	.color-select-wrapper {
 		display: flex;
 		gap: 8px;
+		align-items: stretch;
 	}
 
 	.color-preview {
 		width: 48px;
-		height: 100%;
+		min-height: 32px;
 		border-radius: 4px;
 		box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
 	}
