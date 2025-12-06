@@ -33,3 +33,20 @@
 		{@render children()}
 	</div>
 </div>
+
+<style>
+
+	.dialog-input-group {
+		margin-bottom: 20px;
+		max-width: -webkit-fill-available;
+	}
+
+	.dialog-input-group > label {
+		display: block;
+		margin-bottom: 8px;
+		font-size: 10pt;
+		font-weight: 400;
+		color: #555;
+	}
+
+</style>
