@@ -3,6 +3,7 @@
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/form/InputGroup.svelte';
 	import InputNumber from '../common/form/InputNumber.svelte';
+	import InputText from '../common/form/InputText.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import CustomizeControlsDialog from './CustomizeControlsDialog.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
@@ -171,9 +172,8 @@
 >
 	<form id="device-settings-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
 		<InputGroup label="Name:" for="name-input">
-			<input
+			<InputText
 				id="name-input"
-				type="text"
 				bind:value={dialogName}
 				placeholder="Device name"
 				autofocus

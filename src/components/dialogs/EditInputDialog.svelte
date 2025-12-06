@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/form/InputGroup.svelte';
+	import InputText from '../common/form/InputText.svelte';
 	import SelectField from '../common/form/SelectField.svelte';
 	import SelectColorField from '../common/form/SelectColorField.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
@@ -101,9 +102,8 @@
 >
 	<form id="edit-input-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
 		<InputGroup label="Name:" for="input-name">
-			<input
+			<InputText
 				id="input-name"
-				type="text"
 				bind:value={editingName}
 				placeholder="Input name"
 				onkeydown={(e) => {

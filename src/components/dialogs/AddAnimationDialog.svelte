@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/form/InputGroup.svelte';
+	import InputText from '../common/form/InputText.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
@@ -161,9 +162,8 @@
 >
 	<form id="new-animation-form" onsubmit={(e) => { e.preventDefault(); handleCreate(); }}>
 		<InputGroup label="Animation Name:" for="animation-name">
-			<input
+			<InputText
 				id="animation-name"
-				type="text"
 				bind:value={animationName}
 				placeholder="e.g., rainbow, pulse, sweep"
 				autofocus

@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/form/InputGroup.svelte';
+	import InputText from '../common/form/InputText.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 
@@ -82,9 +83,8 @@
 >
 	<form id="edit-animation-form" onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
 		<InputGroup label="Name:" for="edit-animation-name">
-			<input
+			<InputText
 				id="edit-animation-name"
-				type="text"
 				bind:value={editingName}
 				placeholder="Animation name"
 				autofocus

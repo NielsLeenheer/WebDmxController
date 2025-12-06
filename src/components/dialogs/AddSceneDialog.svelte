@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/form/InputGroup.svelte';
+	import InputText from '../common/form/InputText.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 
@@ -76,9 +77,8 @@
 >
 	<form id="new-scene-form" onsubmit={(e) => { e.preventDefault(); handleCreate(); }}>
 		<InputGroup label="Scene Name:" for="scene-name">
-			<input
+			<InputText
 				id="scene-name"
-				type="text"
 				bind:value={sceneName}
 				placeholder="e.g., Warm, Party, Chill"
 				autofocus
