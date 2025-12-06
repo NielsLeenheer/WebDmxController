@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/InputGroup.svelte';
+	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 	import { getPalette, paletteColorToHex } from '../../lib/inputs/colors.js';
@@ -115,19 +116,14 @@
 					editingName,
 					new Set(inputLibrary.getAll().filter(i => i.id !== editingInput.id).map(i => i.cssIdentifier))
 				)}
-				<div class="css-identifiers">
-					{#if isButton(editingInput)}
-						{#if editingButtonMode === 'toggle'}
-							<code class="css-identifier">.{uniqueId}-on</code>
-							<code class="css-identifier">.{uniqueId}-off</code>
-						{:else}
-							<code class="css-identifier">.{uniqueId}-down</code>
-							<code class="css-identifier">.{uniqueId}-up</code>
-						{/if}
-					{:else}
-						<code class="css-identifier">--{uniqueId}</code>
-					{/if}
-				</div>
+				<IdentifierPreview
+					identifiers={isButton(editingInput)
+						? editingButtonMode === 'toggle'
+							? [`.${uniqueId}-on`, `.${uniqueId}-off`]
+							: [`.${uniqueId}-down`, `.${uniqueId}-up`]
+						: [`--${uniqueId}`]
+					}
+				/>
 			{/if}
 		</InputGroup>
 

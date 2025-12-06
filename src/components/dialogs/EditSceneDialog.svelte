@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/InputGroup.svelte';
+	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 
 	/**
@@ -94,12 +95,12 @@
 			{#if isDefault}
 				<small class="help-text">The default scene cannot be renamed</small>
 			{:else}
-				<div class="css-identifiers">
-					<code class="css-identifier">[scene="{toUniqueCSSIdentifier(
+				<IdentifierPreview
+					identifiers={[`[scene="${toUniqueCSSIdentifier(
 						sceneName,
 						new Set(sceneLibrary.getAll().filter(s => s.id !== editingScene?.id).map(s => s.cssIdentifier))
-					)}"]</code>
-				</div>
+					)}"]`]}
+				/>
 			{/if}
 		</InputGroup>
 	</form>

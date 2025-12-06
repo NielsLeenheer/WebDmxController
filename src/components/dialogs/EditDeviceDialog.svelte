@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/InputGroup.svelte';
+	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import CustomizeControlsDialog from './CustomizeControlsDialog.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { canLinkDevices, getAvailableSyncControls } from '../../lib/outputs/sync.js';
@@ -177,12 +178,12 @@
 				autofocus
 			/>
 
-			<div class="css-identifiers">
-				<code class="css-identifier">#{toUniqueCSSIdentifier(
+			<IdentifierPreview
+				identifiers={[`#${toUniqueCSSIdentifier(
 					dialogName || editingDevice?.name || '',
 					new Set(deviceLibrary.getAll().filter(d => d.id !== editingDevice?.id).map(d => d.cssIdentifier))
-				)}</code>
-			</div>
+				)}`]}
+			/>
 		</InputGroup>
 
 		<InputGroup label="Starting channel (1-512):" for="channel-input">

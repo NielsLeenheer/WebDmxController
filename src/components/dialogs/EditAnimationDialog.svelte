@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/InputGroup.svelte';
+	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 
 	/**
@@ -88,12 +89,12 @@
 				placeholder="Animation name"
 				autofocus
 			/>
-			<div class="css-identifiers">
-				<code class="css-identifier">@keyframes {toUniqueCSSIdentifier(
+			<IdentifierPreview
+				identifiers={[`@keyframes ${toUniqueCSSIdentifier(
 					editingName,
 					new Set(animationLibrary.getAll().filter(a => a.id !== editingAnimation?.id).map(a => a.cssIdentifier))
-				)} &lbrace; &rbrace;</code>
-			</div>
+				)} { }`]}
+			/>
 		</InputGroup>
 	</form>
 

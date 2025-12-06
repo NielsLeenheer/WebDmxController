@@ -2,6 +2,7 @@
 	import Dialog from '../common/Dialog.svelte';
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/InputGroup.svelte';
+	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 
@@ -167,12 +168,12 @@
 				placeholder="e.g., rainbow, pulse, sweep"
 				autofocus
 			/>
-			<div class="css-identifiers">
-				<code class="css-identifier">@keyframes {toUniqueCSSIdentifier(
+			<IdentifierPreview
+				identifiers={[`@keyframes ${toUniqueCSSIdentifier(
 					animationName,
 					new Set(animationLibrary.getAll().map(a => a.cssIdentifier))
-				)}</code>
-			</div>
+				)} { }`]}
+			/>
 		</InputGroup>
 
 		<InputGroup label="Target:" for="animation-target">
