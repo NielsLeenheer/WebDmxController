@@ -3,10 +3,10 @@
 	import Button from '../common/Button.svelte';
 	import InputGroup from '../common/InputGroup.svelte';
 	import SelectField from '../common/SelectField.svelte';
+	import SelectColorField from '../common/SelectColorField.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
 	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
-	import { getPalette, paletteColorToHex } from '../../lib/inputs/colors.js';
 
 	/**
 	 * EditInputDialog - Promise-based dialog for editing inputs
@@ -139,19 +139,7 @@
 
 		{#if showColorPicker}
 			<InputGroup label="Color:" for="input-color">
-				<div class="color-input-wrapper">
-					<div class="color-preview-wrapper">
-						<div
-							class="color-preview-large"
-							style="background-color: {paletteColorToHex(editingColor)}"
-						></div>
-					</div>
-					<select id="input-color" bind:value={editingColor}>
-						{#each getPalette() as color}
-							<option value={color}>{color.charAt(0).toUpperCase() + color.slice(1)}</option>
-						{/each}
-					</select>
-				</div>
+				<SelectColorField id="input-color" bind:value={editingColor} />
 			</InputGroup>
 		{/if}
 	</form>
@@ -164,15 +152,4 @@
 {/if}
 
 <style>
-	.color-input-wrapper {
-		display: flex;
-		gap: 8px;
-	}
-
-	.color-preview-large {
-		width: 48px;
-		height: 100%;
-		border-radius: 4px;
-		box-shadow: inset 0 -3px 0px 0px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
-	}
 </style>
