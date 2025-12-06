@@ -13,7 +13,7 @@
 	 * @prop {function} [onchange] - Change event handler
 	 */
 	import SelectField from './SelectField.svelte';
-	import { getPalette, paletteColorToHex } from '../../lib/inputs/colors.js';
+	import { getPalette, paletteColorToHex } from '../../../lib/inputs/colors.js';
 
 	let {
 		id,
