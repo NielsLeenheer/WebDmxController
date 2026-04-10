@@ -11,11 +11,18 @@
     import joyconIcon from '../../assets/icons/joycon.svg?raw';
     import audioIcon from '../../assets/icons/audio.svg?raw';
     import Dialog from '../common/Dialog.svelte';
+    import ContextMenu from '../common/ContextMenu.svelte';
+    import ContextAction from '../common/ContextAction.svelte';
+    import settingsIcon from '../../assets/icons/settings.svg?raw';
+    import openIcon from '../../assets/icons/open.svg?raw';
+    import saveIcon from '../../assets/icons/save.svg?raw';
 
     let { onconnect, ondisconnect, connected, inputController } = $props();
 
     let devicesDialog = $state(null);
+    let settingsMenuRef = $state(null);
     let anchorButtonRef = $state(null);
+    let settingsButtonRef = $state(null);
     let connectedDevices = $state([]);
 
     // Filter devices by type
@@ -92,12 +99,9 @@
     async function connectThingy52() {
         try {
             await inputController?.requestThingy52();
-            // Update device list
             connectedDevices = inputController?.getInputDevices() || [];
-            // Close dialog on successful connection
             closeDevicesDialog();
         } catch (error) {
-            // Silently ignore user cancellation
             if (error.name === 'NotFoundError') return;
             alert(`Failed to connect Thingy:52: ${error.message}\n\nMake sure your device is powered on and in range.`);
         }
@@ -136,6 +140,83 @@
         }
     }
 
+
+    function openSettingsMenu() {
+        settingsMenuRef?.show(null, settingsButtonRef);
+    }
+
+    // --- Project Export/Import ---
+
+    function exportProject() {
+        const data = {
+            version: 1,
+            devices: JSON.parse(localStorage.getItem('dmx-devices') || '[]'),
+            animations: JSON.parse(localStorage.getItem('dmx-animations') || '[]'),
+            inputs: JSON.parse(localStorage.getItem('dmx-inputs') || '[]'),
+            triggers: JSON.parse(localStorage.getItem('dmx-triggers') || '[]'),
+            scenes: JSON.parse(localStorage.getItem('dmx-scenes') || '[]'),
+            customCSS: localStorage.getItem('dmx-custom-css') || '',
+            drawings: JSON.parse(localStorage.getItem('dmx-drawings') || '[]')
+        };
+
+        downloadJSON(data, 'dmx-project.json');
+    }
+
+    function importProject() {
+        pickFile('.json', (content) => {
+            try {
+                const data = JSON.parse(content);
+                if (!data.version) throw new Error('Invalid project file');
+
+                if (data.devices) localStorage.setItem('dmx-devices', JSON.stringify(data.devices));
+                if (data.animations) localStorage.setItem('dmx-animations', JSON.stringify(data.animations));
+                if (data.inputs) localStorage.setItem('dmx-inputs', JSON.stringify(data.inputs));
+                if (data.triggers) localStorage.setItem('dmx-triggers', JSON.stringify(data.triggers));
+                if (data.scenes) localStorage.setItem('dmx-scenes', JSON.stringify(data.scenes));
+                if (data.customCSS !== undefined) localStorage.setItem('dmx-custom-css', data.customCSS);
+                if (data.drawings) localStorage.setItem('dmx-drawings', JSON.stringify(data.drawings));
+
+                        location.reload();
+            } catch (e) {
+                alert('Failed to import project: ' + e.message);
+            }
+        });
+    }
+
+    // --- Helpers ---
+
+    function downloadJSON(data, filename) {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        downloadBlob(blob, filename);
+    }
+
+    function downloadText(text, filename) {
+        const blob = new Blob([text], { type: 'text/plain' });
+        downloadBlob(blob, filename);
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function pickFile(accept, callback) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = accept;
+        input.onchange = () => {
+            const file = input.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => callback(reader.result);
+            reader.readAsText(file);
+        };
+        input.click();
+    }
 </script>
 
 <header>
@@ -159,6 +240,18 @@
         title="Connect input devices"
     >
         <Icon data={addIcon} />
+    </button>
+
+    <div style="flex: 1;"></div>
+
+    <button
+        id="settings-button"
+        bind:this={settingsButtonRef}
+        style="anchor-name: --settings-button"
+        onclick={openSettingsMenu}
+        title="Settings"
+    >
+        <Icon data={settingsIcon} />
     </button>
 </header>
 
@@ -221,11 +314,18 @@
 </Dialog>
 {/if}
 
+<!-- Settings Menu -->
+<ContextMenu bind:contextRef={settingsMenuRef}>
+    <ContextAction onclick={exportProject}>{@html saveIcon} Export Project</ContextAction>
+    <ContextAction onclick={importProject}>{@html openIcon} Import Project</ContextAction>
+</ContextMenu>
+
 <style>
     header {
         display: flex;
         align-items: center;
         gap: 10px;
+        padding-right: 20px;
     }
 
     button :global(svg) {
@@ -243,18 +343,21 @@
         color: #000;
     }
 
-    button#devices-button {
+    button#devices-button,
+    button#settings-button {
         background-color: #fff;
         color: #666;
         padding: 0 10px;
         min-width: auto;
     }
 
-    button#devices-button :global(svg) {
+    button#devices-button :global(svg),
+    button#settings-button :global(svg) {
         margin: 0;
     }
 
-    button#devices-button:hover {
+    button#devices-button:hover,
+    button#settings-button:hover {
         background-color: #f0f0f0;
         color: #333;
     }
