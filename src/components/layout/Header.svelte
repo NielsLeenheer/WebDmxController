@@ -171,10 +171,6 @@
                 <Icon data={midiIcon} />
                 <span>MIDI</span>
             </button>
-            <button class="device-connect-btn" onclick={connectHID}>
-                <Icon data={inputsIcon} />
-                <span>HID</span>
-            </button>
             <button class="device-connect-btn" onclick={connectThingy52}>
                 <Icon data={thingyIcon} />
                 <span>Thingy:52</span>
