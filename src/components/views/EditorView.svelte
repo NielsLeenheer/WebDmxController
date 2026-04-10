@@ -1,70 +1,73 @@
 <script>
     import { getDevicePreviewData } from '../../lib/outputs/devices.js';
     import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, sceneLibrary } from '../../stores.svelte.js';
-    import { isButton } from '../../lib/inputs/utils.js';
+    import { isButton, hasValues } from '../../lib/inputs/utils.js';
+    import { getInputTypeForInput } from '../../lib/inputs/types/index.js';
+    import { AUDIO_BANDS } from '../../lib/inputs/devices/AudioInputDevice.js';
     import Preview from '../common/Preview.svelte';
+    import CodeEditor from '../common/CodeEditor.svelte';
+    import TabBar from '../common/TabBar.svelte';
+    import IconButton from '../common/IconButton.svelte';
+    import ContextMenu from '../common/ContextMenu.svelte';
+    import ContextAction from '../common/ContextAction.svelte';
+    import { css } from '@codemirror/lang-css';
+
+    import dotsIcon from '../../assets/glyphs/dots.svg?raw';
+    import openIcon from '../../assets/icons/open.svg?raw';
+    import saveIcon from '../../assets/icons/save.svg?raw';
 
     let {
         cssManager,
-        sceneController
+        sceneController,
+        laserManager = null
     } = $props();
 
-    // Get devices reactively from library
-    let devices = $derived(deviceLibrary.getAll());
+    // Tab state
+    let activeTab = $state('custom');
+    let menuRef = $state(null);
+    let menuButtonRef = $state(null);
 
-    // Store sampled device data (Map of deviceId -> channels object)
+    // Get data reactively
+    let devices = $derived(deviceLibrary.getAll());
     let sampledDeviceData = $state(new Map());
 
-    // Get animations for display (reactive)
-    let animations = $derived(
-        animationLibrary ? animationLibrary.getAll() : []
-    );
+    let animations = $derived(animationLibrary ? animationLibrary.getAll() : []);
+    let inputs = $derived(inputLibrary ? inputLibrary.getAll() : []);
+    let scenes = $derived(sceneLibrary ? sceneLibrary.getAll() : []);
+    let activeScene = $derived(sceneController?.getActiveScene());
 
-    // Get inputs for display (reactive)
-    let inputs = $derived(
-        inputLibrary ? inputLibrary.getAll() : []
-    );
+    let generatedCSS = $derived(cssManager?.generatedCSSReactive || '');
+    let customCSS = $state(cssManager?.customCSS || '');
 
-    // Get triggers for tracking changes (reactive)
-    let triggers = $derived(
-        triggerLibrary ? triggerLibrary.getAll() : []
-    );
-
-    // Get scenes for tracking changes (reactive)
-    let scenes = $derived(
-        sceneLibrary ? sceneLibrary.getAll() : []
-    );
-
-    // Get active scene name from controller
-    let activeScene = $derived(
-        sceneController?.getActiveScene()
-    );
-
-    // Get CSS from manager (re-evaluated when library data changes)
-    let generatedCSS = $derived.by(() => {
-        // Access library arrays to subscribe to changes
-        animations.length;
-        inputs.length;
-        triggers.length;
-        devices.length;
-        scenes.length;
-        return cssManager?.generatedCSS || '';
+    // Sync customCSS when cssManager becomes available
+    $effect(() => {
+        if (cssManager?.customCSS !== undefined) {
+            customCSS = cssManager.customCSS;
+        }
     });
-    let customCSS = $derived(cssManager?.customCSS || '');
 
-    // Filter devices to only show those with independent controls
-    // A device has independent controls if:
-    // - It's not linked to another device (linkedTo === null), OR
-    // - It's linked but not all controls are synced (syncedControls !== null)
     let independentDevices = $derived(
         devices.filter(device => !device.linkedTo || device.syncedControls !== null)
     );
 
-    function handleCustomCSSInput(event) {
-        // Read the content from the contenteditable element
-        const newContent = event.target.textContent;
+    // Group inputs by device for the reference panel
+    let inputGroups = $derived(() => {
+        const groups = [];
+        const deviceMap = new Map();
+        for (const input of inputs) {
+            const key = input.deviceId || '_ungrouped';
+            if (!deviceMap.has(key)) {
+                const group = { deviceName: input.deviceName || null, inputs: [] };
+                deviceMap.set(key, group);
+                groups.push(group);
+            }
+            deviceMap.get(key).inputs.push(input);
+        }
+        return groups;
+    });
 
-        // Update custom CSS via manager
+    function handleCustomCSSInput(newContent) {
+        customCSS = newContent;
         if (cssManager) {
             cssManager.updateCustomCSS(newContent);
         }
@@ -73,34 +76,92 @@
     // Subscribe to CSS sampling updates
     $effect(() => {
         if (!cssManager) return;
-
-        // Subscribe to sampled values and store them directly
         const unsubscribe = cssManager.subscribe((sampledValues) => {
             sampledDeviceData = sampledValues;
         });
-
-        // Cleanup subscription on destroy or when cssManager changes
         return unsubscribe;
     });
 
-    // Get preview data for a device
     function getPreviewData(device) {
         const controlValues = sampledDeviceData.get(device.id);
-        
-        // Use default values if no sampled data or sampled data is empty
         if (!controlValues || Object.keys(controlValues).length === 0) {
             return getDevicePreviewData(device.type, device.defaultValues);
         }
-
-        // Sampled values are already in the correct format (keyed by device control id)
         return getDevicePreviewData(device.type, controlValues);
+    }
+
+    // Save/Load custom CSS
+    function saveCSS() {
+        const blob = new Blob([customCSS], { type: 'text/css' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'custom.css';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function loadCSS() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.css';
+        input.onchange = () => {
+            const file = input.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                customCSS = reader.result;
+                if (cssManager) cssManager.updateCustomCSS(customCSS);
+            };
+            reader.readAsText(file);
+        };
+        input.click();
     }
 </script>
 
-<div class="css-view">
-    <div class="left-column">
+<div class="editor-view">
+    <!-- Editor (full width, with right padding for preview overlap) -->
+    <div class="editor-column">
+        <div class="column-header">
+            <TabBar
+                tabs={[
+                    { id: 'default', label: 'Default' },
+                    { id: 'custom', label: 'Custom' }
+                ]}
+                bind:activeTab
+            />
+
+            <div class="header-kebab">
+                <IconButton
+                    bind:buttonRef={menuButtonRef}
+                    icon={dotsIcon}
+                    onclick={() => menuRef?.show(null, menuButtonRef)}
+                    title="Options"
+                    size="small"
+                />
+            </div>
+        </div>
+
+        <div class="editor-area">
+            {#if activeTab === 'default'}
+                <CodeEditor
+                    value={generatedCSS}
+                    language={css()}
+                    readonly={true}
+                />
+            {:else}
+                <CodeEditor
+                    bind:value={customCSS}
+                    language={css()}
+                    oninput={handleCustomCSSInput}
+                />
+            {/if}
+        </div>
+    </div>
+
+    <!-- Reference panel (overlapping, positioned absolutely) -->
+    <div class="reference-panel">
         <div class="reference-card">
-            <!-- Devices Section -->
             {#if independentDevices.length > 0}
                 <div class="reference-section">
                     <h4>Devices</h4>
@@ -114,6 +175,7 @@
                                     controls={previewData.controls}
                                     data={previewData.data}
                                     title={device.name}
+                                    {laserManager}
                                 />
                                 <code class="device-id">#{device.cssIdentifier}</code>
                             </div>
@@ -122,7 +184,6 @@
                 </div>
             {/if}
 
-            <!-- Animations Section -->
             {#if animations.length > 0}
                 <div class="reference-section">
                     <h4>Animations</h4>
@@ -134,7 +195,6 @@
                 </div>
             {/if}
 
-            <!-- Scenes Section -->
             {#if scenes.length > 0}
                 <div class="reference-section">
                     <h4>Scenes</h4>
@@ -146,70 +206,116 @@
                 </div>
             {/if}
 
-            <!-- Inputs Section -->
-            {#if inputs.length > 0}
+            {#each inputGroups() as group}
                 <div class="reference-section">
-                    <h4>Inputs</h4>
+                    <h4>{group.deviceName || 'Inputs'}</h4>
                     <div class="css-identifiers">
-                        {#each inputs as input (input.id)}
-                            {#if isButton(input)}
-                                <!-- Buttons show classes based on mode -->
+                        {#each group.inputs as input (input.id)}
+                            {#if input.type === 'audio'}
+                                {#each AUDIO_BANDS as band}
+                                    <code class="css-identifier">.{input.cssIdentifier}-{band.id}</code>
+                                {/each}
+                                {#each AUDIO_BANDS as band}
+                                    <code class="css-identifier">--{input.cssIdentifier}-{band.id}</code>
+                                {/each}
+                                <code class="css-identifier">--{input.cssIdentifier}-volume</code>
+                            {:else if isButton(input)}
                                 {#if input.buttonMode === 'toggle'}
-                                    <!-- Toggle buttons show on and off classes -->
                                     <code class="css-identifier">.{input.cssIdentifier}-on</code>
                                     <code class="css-identifier">.{input.cssIdentifier}-off</code>
+                                {:else if input.buttonMode === 'beat'}
+                                    <code class="css-identifier">.{input.cssIdentifier}-beat</code>
                                 {:else}
-                                    <!-- Momentary buttons show down and up classes -->
                                     <code class="css-identifier">.{input.cssIdentifier}-down</code>
                                     <code class="css-identifier">.{input.cssIdentifier}-up</code>
                                 {/if}
+                                {#if hasValues(input)}
+                                    {#each getInputTypeForInput(input).getExportedValues(input) as val}
+                                        <code class="css-identifier">{val.cssProperty}</code>
+                                    {/each}
+                                {/if}
+                            {:else if hasValues(input)}
+                                {#each getInputTypeForInput(input).getExportedValues(input) as val}
+                                    <code class="css-identifier">{val.cssProperty}</code>
+                                {/each}
                             {:else}
-                                <!-- Sliders/Knobs show custom property -->
                                 <code class="css-identifier">--{input.cssIdentifier}</code>
                             {/if}
                         {/each}
                     </div>
                 </div>
-            {/if}
-        </div>
-    </div>
-
-    <div class="right-column">
-        <div class="css-scroll-container">
-            <pre class="css-editor readonly">{generatedCSS}</pre>
-            <pre
-                class="css-editor editable"
-                contenteditable="plaintext-only"
-                oninput={handleCustomCSSInput}
-                spellcheck="false"
-            >{customCSS}</pre>
+            {/each}
         </div>
     </div>
 </div>
 
+<ContextMenu bind:contextRef={menuRef}>
+    <ContextAction onclick={loadCSS} disabled={activeTab !== 'custom'}>{@html openIcon} Load CSS</ContextAction>
+    <ContextAction onclick={saveCSS} disabled={activeTab !== 'custom'}>{@html saveIcon} Save CSS</ContextAction>
+</ContextMenu>
+
 <style>
-    .css-view {
-        display: flex;
+    .editor-view {
+        position: relative;
         height: 100%;
         overflow: hidden;
-        gap: 20px;
-        padding: 0 0 0 20px;
     }
 
-    .left-column {
-        width: 280px;
-        flex-shrink: 0;
-        padding: 20px 0;
+    .editor-column {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .column-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px 40px;
+        padding-right: 364px;
+        position: relative;
+    }
+
+    .header-kebab {
+        position: absolute;
+        right: 40px;
+    }
+
+    .editor-area {
+        flex: 1;
+        overflow: hidden;
+        padding: 0 0 0 40px;
+    }
+
+    /* Right padding inside CodeMirror so text doesn't go under the preview panel */
+    .editor-area :global(.cm-content) {
+        padding-right: 324px !important;
+    }
+
+    /* Reference panel - overlapping, positioned on the right */
+    .reference-panel {
+        position: absolute;
+        top: 68px;
+        right: 40px;
+        bottom: 40px;
+        width: 264px;
+        padding: 0;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
     }
 
     .reference-card {
-        background: #f5f5f5;
+        background: #f0f0f0;
+        backdrop-filter: blur(8px);
         border-radius: 8px;
         overflow: hidden;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        height: 100%;
+        flex: 1;
+        pointer-events: auto;
     }
 
     .reference-section {
@@ -230,6 +336,15 @@
         letter-spacing: 0.5px;
     }
 
+    .reference-section .css-identifiers {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .reference-section .css-identifiers code {
+        font-size: 8pt;
+    }
+
     .css-identifier.active {
         font-weight: 700;
         color: #1565c0;
@@ -248,72 +363,10 @@
         gap: 12px;
     }
 
-
     .device-id {
         font-family: var(--font-stack-mono);
         font-size: 8pt;
         color: #007acc;
         text-align: center;
-    }
-
-    .right-column {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        height: 100%;
-    }
-
-    .css-scroll-container {
-        flex: 1;
-        overflow-y: auto;
-        overflow-x: hidden;
-        height: 100%;
-    }
-
-    .css-editor {
-        display: block;
-        margin: 0;
-        padding: 20px;
-        background: white;
-        color: #333;
-        font-family: var(--font-stack-mono);
-        font-size: 9pt;
-        line-height: 1.6;
-        border: none;
-        outline: none;
-        white-space: pre;
-        tab-size: 4;
-        min-height: auto;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .css-editor.readonly {
-        background: #fafafa;
-        color: #666;
-        cursor: default;
-        user-select: text;
-        padding-bottom: 10px;
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-        box-shadow: none;
-    }
-
-    .css-editor.editable {
-        background: transparent;
-        padding-top: 10px;
-        min-height: 200px;
-        border-top-left-radius: 0;
-        border-top-right-radius: 0;
-    }
-
-    .css-editor.editable:focus {
-        outline: none;
-    }
-
-    .css-editor::selection {
-        background: #264f78;
-        color: white;
     }
 </style>

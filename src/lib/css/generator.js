@@ -69,8 +69,6 @@ export class CSSGenerator {
 			parts.push('');
 		}
 
-		// User customization section
-		parts.push('/* Add your custom CSS below to override device defaults and apply animations */');
 		return parts.join('\n');
 	}
 }
