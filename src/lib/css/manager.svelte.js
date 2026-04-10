@@ -11,6 +11,7 @@
 import './properties.css';
 import { CSSGenerator } from './generator.js';
 import { CSSSampler } from './sampler.js';
+import { resolveEnv } from '../env.js';
 
 export class CSSManager {
 	// Reactive devices array
@@ -222,7 +223,7 @@ export class CSSManager {
 	updateStyleElement() {
 		if (this.styleElement) {
 			const combinedCSS = this._generatedCSS + '\n\n' + this._customCSS;
-			this.styleElement.textContent = `@scope (.animation-targets) {\n${combinedCSS}\n}`;
+			this.styleElement.textContent = `@scope (.animation-targets) {\n${resolveEnv(combinedCSS)}\n}`;
 		}
 	}
 
