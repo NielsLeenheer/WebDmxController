@@ -14,6 +14,7 @@ export default defineConfig({
   },
   server: {
     port: 5183,
+    strictPort: false,
     watch: {
       ignored: ['**/tmp/**', '**/old/**']
     }
