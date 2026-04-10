@@ -92,6 +92,14 @@
 				{ value: 'on', label: 'On' },
 				{ value: 'off', label: 'Off' }
 			];
+		} else if (buttonMode === 'beat') {
+			const inputType = getInputType(input.type);
+			if (inputType?.getBeatStates) {
+				return inputType.getBeatStates();
+			}
+			return [
+				{ value: 'beat', label: 'Beat' }
+			];
 		} else {
 			return [
 				{ value: 'down', label: 'Down' },

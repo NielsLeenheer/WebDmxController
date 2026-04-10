@@ -10,4 +10,5 @@ export { StreamDeckInputDevice } from './devices/StreamDeckInputDevice.js';
 export { ThingyInputDevice } from './devices/ThingyInputDevice.js';
 export { KeyboardInputDevice } from './devices/KeyboardInputDevice.js';
 export { GamepadInputDevice } from './devices/GamepadInputDevice.js';
+export { HeartRateInputDevice } from './devices/HeartRateInputDevice.js';
 export { JoyConInputDevice } from './devices/JoyConInputDevice.js';

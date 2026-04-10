@@ -125,6 +125,11 @@
                     inputStates[input.id]['pitch'] = null;
                     inputStates[input.id]['yaw'] = null;
                 }
+
+                if (input.type === 'heartrate') {
+                    inputStates[input.id]['heartrate'] = 0;
+                    inputStates[input.id]['beat'] = 0;
+                }
             }
         }
     });
@@ -174,13 +179,19 @@
             }
         });
 
-        inputController.on('input-valuechange', ({ mapping, value, x, y, roll, pitch, yaw }) => {
+        inputController.on('input-valuechange', ({ mapping, value, x, y, roll, pitch, yaw, heartrate, beat }) => {
             if (mapping.type === 'stick' && x !== undefined && y !== undefined) {
                 inputStates[mapping.id] = { ...inputStates[mapping.id], x, y };
-            } 
+            }
             else if (mapping.type === 'thingy' && roll !== undefined) {
                 // Euler angles for Thingy:52
                 inputStates[mapping.id] = { ...inputStates[mapping.id], roll, pitch, yaw };
+            }
+            else if (mapping.type === 'heartrate' && (heartrate !== undefined || beat !== undefined)) {
+                const updates = { ...inputStates[mapping.id] };
+                if (heartrate !== undefined) updates.heartrate = heartrate;
+                if (beat !== undefined) updates.beat = beat;
+                inputStates[mapping.id] = updates;
             }
             else if (!isButton(mapping) && value !== undefined) {
                 inputStates[mapping.id] = { ...inputStates[mapping.id], value: Math.round(value * 100) };
@@ -219,7 +230,7 @@
                     {input}
                     {dnd}
                     inputState={inputStates[input.id] || {}}
-                    onEdit={(input, anchor) => contextMenuRef?.show(input, anchor)}
+                    onEdit={(input, anchor) => { contextInput = input; contextMenuRef?.show(input, anchor); }}
                 />
             {/each}
         {/if}

@@ -12,6 +12,7 @@ import { KnobInputType } from './KnobInputType.js';
 import { SliderInputType } from './SliderInputType.js';
 import { ThingyInputType } from './ThingyInputType.js';
 import { StickInputType } from './StickInputType.js';
+import { HeartRateInputType } from './HeartRateInputType.js';
 import { JoyConInputType } from './JoyConInputType.js';
 
 // Export classes
@@ -23,6 +24,7 @@ export { KnobInputType };
 export { SliderInputType };
 export { ThingyInputType };
 export { StickInputType };
+export { HeartRateInputType };
 export { JoyConInputType };
 
 // Singleton instances for each type
@@ -33,6 +35,7 @@ const knobType = new KnobInputType();
 const sliderType = new SliderInputType();
 const thingyType = new ThingyInputType();
 const stickType = new StickInputType();
+const heartRateType = new HeartRateInputType();
 const joyConType = new JoyConInputType();
 
 /**
@@ -47,6 +50,7 @@ export const INPUT_TYPES = {
 	slider: sliderType,
 	thingy: thingyType,
 	stick: stickType,
+	heartrate: heartRateType,
 	joycon: joyConType,
 };
 

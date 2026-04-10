@@ -8,6 +8,7 @@
 import { StreamDeckManager, isStreamDeck } from './streamdeck.js';
 import { MIDIDeviceProfileManager } from './midi.js';
 import { Thingy52Manager } from './thingy52.js';
+import { HeartRateManager } from './heartrate.js';
 import { JoyConManager } from './joycon.js';
 import { GamepadManager } from './gamepad.js';
 import {
@@ -17,6 +18,7 @@ import {
 	StreamDeckInputDevice,
 	ThingyInputDevice,
 	GamepadInputDevice,
+	HeartRateInputDevice,
 	JoyConInputDevice,
 } from './devices.js';
 
@@ -30,11 +32,13 @@ export class InputDeviceManager {
 		this.keyboardDevice = null;
 		this.streamDeckManager = new StreamDeckManager();
 		this.thingy52Manager = new Thingy52Manager();
+		this.heartRateManager = new HeartRateManager();
 		this.joyConManager = new JoyConManager();
 		this.midiProfileManager = new MIDIDeviceProfileManager();
 		this.gamepadManager = new GamepadManager();
 		this._setupStreamDeckListeners();
 		this._setupThingy52Listeners();
+		this._setupHeartRateListeners();
 		this._setupJoyConListeners();
 		this._setupGamepadListeners();
 	}
@@ -97,6 +101,25 @@ export class InputDeviceManager {
 			this.removeDevice(device.id);
 		});
 	}
+
+	/**
+	 * Setup Heart Rate Monitor event listeners
+	 */
+	_setupHeartRateListeners() {
+		this.heartRateManager.on('connected', ({ device }) => {
+			console.log(`Heart Rate Monitor connected: ${device.name}`);
+
+			const inputDevice = new HeartRateInputDevice(device);
+			this.devices.set(device.id, inputDevice);
+			this._emit('deviceadded', inputDevice);
+		});
+
+		this.heartRateManager.on('disconnected', ({ device }) => {
+			console.log(`Heart Rate Monitor disconnected: ${device.name}`);
+			this.removeDevice(device.id);
+		});
+	}
+
 	/**
 	 * Setup Joy-Con event listeners
 	 */
@@ -304,6 +327,18 @@ export class InputDeviceManager {
 		} catch (error) {
 			console.error('Failed to auto-reconnect Thingy:52 devices:', error);
 			return [];
+		}
+	}
+
+	/**
+	 * Request Heart Rate Monitor device
+	 */
+	async requestHeartRate() {
+		try {
+			return await this.heartRateManager.requestDevice();
+		} catch (error) {
+			console.error('Failed to request Heart Rate Monitor:', error);
+			throw error;
 		}
 	}
 

@@ -7,6 +7,7 @@
     import midiIcon from '../../assets/icons/midi.svg?raw';
     import inputsIcon from '../../assets/icons/inputs.svg?raw';
     import thingyIcon from '../../assets/icons/thingy.svg?raw';
+    import heartrateIcon from '../../assets/icons/heartrate.svg?raw';
     import joyconIcon from '../../assets/icons/joycon.svg?raw';
     import Dialog from '../common/Dialog.svelte';
 
@@ -20,12 +21,13 @@
     let streamDeckDevices = $derived(connectedDevices.filter(d => d.type === 'streamdeck'));
     let hidDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && d.id !== 'keyboard'));
     let thingyDevices = $derived(connectedDevices.filter(d => d.type === 'thingy'));
+    let heartRateDevices = $derived(connectedDevices.filter(d => d.type === 'heartrate'));
     let joyConDevices = $derived(connectedDevices.filter(d => d.type === 'joycon'));
     let midiDevices = $derived(connectedDevices.filter(d => d.type === 'midi'));
     let gamepadDevices = $derived(connectedDevices.filter(d => d.type === 'gamepad'));
 
     // Unified list of all connected devices
-    let allConnectedDevices = $derived([...streamDeckDevices, ...hidDevices, ...thingyDevices, ...joyConDevices, ...midiDevices, ...gamepadDevices]);
+    let allConnectedDevices = $derived([...streamDeckDevices, ...hidDevices, ...thingyDevices, ...heartRateDevices, ...joyConDevices, ...midiDevices, ...gamepadDevices]);
 
     // MIDI button should be disabled if we already have MIDI access
     let hasMidiAccess = $derived(midiDevices.length > 0);
@@ -98,6 +100,18 @@
             alert(`Failed to connect Thingy:52: ${error.message}\n\nMake sure your device is powered on and in range.`);
         }
     }
+
+    async function connectHeartRate() {
+        try {
+            await inputController?.requestHeartRate();
+            connectedDevices = inputController?.getInputDevices() || [];
+            closeDevicesDialog();
+        } catch (error) {
+            if (error.name === 'NotFoundError') return;
+            alert(`Failed to connect Heart Rate Monitor: ${error.message}\n\nMake sure your device is powered on and in range.`);
+        }
+    }
+
     async function connectJoyCon() {
         try {
             await inputController?.requestJoyCon();
@@ -164,6 +178,10 @@
             <button class="device-connect-btn" onclick={connectThingy52}>
                 <Icon data={thingyIcon} />
                 <span>Thingy:52</span>
+            </button>
+            <button class="device-connect-btn" onclick={connectHeartRate}>
+                <Icon data={heartrateIcon} />
+                <span>Heart Rate</span>
             </button>
             <button class="device-connect-btn" onclick={connectJoyCon}>
                 <Icon data={joyconIcon} />

@@ -80,7 +80,8 @@
 			'down': 'Down',
 			'up': 'Up',
 			'on': 'On',
-			'off': 'Off'
+			'off': 'Off',
+			'beat': 'Beat',
 		};
 		return stateLabels[state] || state;
 	});

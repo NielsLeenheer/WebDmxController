@@ -466,6 +466,40 @@
                 <div class="preview-inset-shadow"></div>
             {/if}
 
+        {:else if inputType === 'heartrate'}
+            {@const beatValue = state.beat !== undefined ? state.beat : 0}
+            {@const heartScale = 1 + beatValue * 0.15}
+            {@const heartBpm = state.heartrate > 0 ? Math.round(state.heartrate) : ''}
+            {@const filterId = `heart-shadow-${Math.random().toString(36).slice(2, 8)}`}
+
+            <!-- Heart Rate Monitor: heart-shaped preview -->
+            <div class="preview-input heartrate-preview">
+                <svg viewBox="0 4 48 44" class="heart-shape" style="transform: scale({heartScale});">
+                    <defs>
+                        <filter id={filterId} x="-10%" y="-10%" width="120%" height="120%">
+                            <!-- Invert the shape to get the area outside -->
+                            <feComponentTransfer in="SourceAlpha">
+                                <feFuncA type="table" tableValues="1 0"/>
+                            </feComponentTransfer>
+                            <!-- Offset downward -->
+                            <feOffset dy="-5" result="offsetInverse"/>
+                            <!-- Color it black -->
+                            <feFlood flood-color="rgba(0,0,0,0.3)" result="shadowColor"/>
+                            <feComposite in="shadowColor" in2="offsetInverse" operator="in" result="shadow"/>
+                            <!-- Clip to original shape -->
+                            <feComposite in="shadow" in2="SourceAlpha" operator="in" result="clippedShadow"/>
+                            <!-- Merge with original -->
+                            <feMerge>
+                                <feMergeNode in="SourceGraphic"/>
+                                <feMergeNode in="clippedShadow"/>
+                            </feMerge>
+                        </filter>
+                    </defs>
+                    <path d="M34,6c-4.176,0-7.852,2.137-10,5.371C21.851,8.137,18.176,6,14,6C7.373,6,2,11.373,2,18c0,11.943,22,24,22,24s22-11.955,22-24C46,11.373,40.627,6,34,6" fill="#e53935" filter="url(#{filterId})"/>
+                </svg>
+                <span class="heart-bpm">{heartBpm}</span>
+            </div>
+
         {:else if inputType === 'button' || inputType === 'pad'}
             {@const hasBrand = data.deviceId?.startsWith('gamepad-') || data.deviceId?.startsWith('joycon-')}
    
@@ -967,6 +1001,11 @@
         height: 30%;
         left: 0;
     }
+
+    /* Heart Rate Monitor */
+    .preview.input-type-heartrate {
+        overflow: visible;
+    }
     /* Joy-Con input */
     .joycon-preview {
         background: transparent;
@@ -978,6 +1017,33 @@
     .joycon-icon {
         width: 100%;
         height: 100%;
+    }
+
+    .heartrate-preview {
+        background: transparent;
+    }
+
+    .heart-shape {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        transition: transform 0.05s ease-out;
+    }
+
+    .heart-bpm {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -70%);
+        font-size: 8pt;
+        font-weight: 700;
+        color: #fff;
+        font-family: var(--font-stack-mono);
+        line-height: 1;
+        z-index: 1;
+        pointer-events: none;
     }
 
     /* Thingy:52 */

@@ -129,14 +129,18 @@
 					identifiers={isButton(editingInput)
 						? editingButtonMode === 'toggle'
 							? [`.${uniqueId}-on`, `.${uniqueId}-off`]
-							: [`.${uniqueId}-down`, `.${uniqueId}-up`]
+							: editingButtonMode === 'beat'
+								? editingInput?.type === 'audio'
+									? [`.${uniqueId}-bass`, `.${uniqueId}-mid`, `.${uniqueId}-high`]
+									: [`.${uniqueId}-beat`]
+								: [`.${uniqueId}-down`, `.${uniqueId}-up`]
 						: [`--${uniqueId}`]
 					}
 				/>
 			{/if}
 		</Group>
 
-		{#if isButton(editingInput)}
+		{#if isButton(editingInput) && editingInput?.type !== 'heartrate' && editingInput?.type !== 'audio'}
 			<Group label="Button Mode:" for="button-mode">
 				<SelectField id="button-mode" bind:value={editingButtonMode}>
 					<option value="momentary">Down/Up</option>

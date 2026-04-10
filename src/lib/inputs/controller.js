@@ -150,6 +150,13 @@ export class InputController {
 			this._setupThingyListeners(device);
 			return;
 		}
+
+		// Special handling for Heart Rate Monitor devices
+		if (device.type === 'heartrate') {
+			this._setupHeartRateListeners(device);
+			return;
+		}
+
 		// Special handling for Joy-Con devices
 		if (device.type === 'joycon') {
 			this._setupJoyConListeners(device);
@@ -291,6 +298,94 @@ export class InputController {
 			this.customPropertyManager.setProperty(propertyName, propertyValue);
 		});
 	}
+
+	/**
+	 * Setup listeners for Heart Rate Monitor devices
+	 * Auto-creates a heartrate input with beat trigger support and CSS properties
+	 */
+	_setupHeartRateListeners(device) {
+		// Auto-create a heartrate input for this device
+		let hrInput = this.inputLibrary.findByDeviceControl(device.id, 'heartrate');
+
+		if (!hrInput) {
+			hrInput = this.inputLibrary.create({
+				name: device.name,
+				deviceId: device.id,
+				controlId: 'heartrate',
+				deviceName: device.name,
+				type: 'heartrate',
+				colorSupport: 'none',
+				controlName: null,
+				buttonMode: 'beat'
+			});
+		}
+
+		// Get the InputType for value conversion metadata
+		const heartRateType = getInputType('heartrate');
+		const exportedValues = heartRateType.getExportedValues(hrInput);
+
+		// Build a lookup map from sensor key to value metadata
+		const sensorMetadata = new Map();
+		for (const valueDef of exportedValues) {
+			sensorMetadata.set(valueDef.key, valueDef);
+		}
+
+		// Handle beat triggers (down/up CSS classes per heartbeat)
+		device.on('trigger', ({ controlId }) => {
+			if (controlId === 'heartrate') {
+				this._handleTrigger(device.id, 'heartrate', 127);
+			}
+		});
+
+		device.on('release', ({ controlId }) => {
+			if (controlId === 'heartrate') {
+				this._handleRelease(device.id, 'heartrate');
+			}
+		});
+
+		// Track values for UI preview
+		let currentHR = 0;
+		let currentBeat = 0;
+
+		// Handle sensor value changes and expose as CSS properties
+		device.on('change', ({ controlId, value }) => {
+			// Track raw values for UI
+			if (controlId === 'heartrate') {
+				const { min, max } = sensorMetadata.get(controlId);
+				currentHR = min + (value * (max - min));
+			} else if (controlId === 'beat') {
+				currentBeat = value;
+			}
+
+			// Emit for UI preview
+			this._emit('input-valuechange', {
+				mapping: hrInput,
+				heartrate: currentHR,
+				beat: currentBeat
+			});
+
+			// Set CSS properties
+			const metadata = sensorMetadata.get(controlId);
+			if (!metadata || !metadata.cssProperty) return;
+
+			const { min, max, unit } = metadata;
+			const realValue = min + (value * (max - min));
+
+			let propertyValue;
+			if (unit === 'bpm') {
+				propertyValue = `${Math.round(realValue)}`;
+			} else if (unit === '') {
+				// Beat pulse: 0-1 normalized value as percentage
+				propertyValue = `${(realValue * 100).toFixed(1)}%`;
+			} else {
+				propertyValue = `${realValue.toFixed(1)}`;
+			}
+
+			const propertyName = metadata.cssProperty.replace(/^--/, '');
+			this.customPropertyManager.setProperty(propertyName, propertyValue);
+		});
+	}
+
 	/**
 	 * Setup listeners for Joy-Con devices
 	 *
@@ -509,6 +604,25 @@ export class InputController {
 
 					// Emit event for toggle state change
 					this._emit('input-trigger', { mapping: input, velocity, toggleState: newState });
+				} else if (buttonMode === 'beat') {
+					// Beat mode: add beat class, remove after duration
+					const beatClass = `${cssId}-beat`;
+
+					this.triggerManager.addRawClass(beatClass);
+
+					// Clear any existing timer for this input
+					const timerKey = `beat:${deviceId}:${controlId}`;
+					if (this._beatTimers?.has(timerKey)) {
+						clearTimeout(this._beatTimers.get(timerKey));
+					}
+					if (!this._beatTimers) this._beatTimers = new Map();
+
+					this._beatTimers.set(timerKey, setTimeout(() => {
+						this.triggerManager.removeRawClass(beatClass);
+						this._beatTimers.delete(timerKey);
+					}, 200));
+
+					this._emit('input-trigger', { mapping: input, velocity });
 				} else {
 					// Momentary mode: add down class, remove up class
 					const downClass = `${cssId}-down`;
@@ -592,6 +706,8 @@ export class InputController {
 			const toggleKey = `${input.deviceId}:${input.controlId}`;
 			const toggleState = this.toggleStates.get(toggleKey) || false;
 			stateToMatch = toggleState ? 'on' : 'off';
+		} else if (buttonMode === 'beat') {
+			stateToMatch = 'beat';
 		} else {
 			// Momentary mode: trigger fires on press (down)
 			stateToMatch = 'down';
@@ -666,6 +782,14 @@ export class InputController {
 	async requestThingy52() {
 		return await this.inputDeviceManager.requestThingy52();
 	}
+
+	/**
+	 * Request Heart Rate Monitor device
+	 */
+	async requestHeartRate() {
+		return await this.inputDeviceManager.requestHeartRate();
+	}
+
 	/**
 	 * Request Joy-Con device
 	 */
