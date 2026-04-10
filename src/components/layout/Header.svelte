@@ -7,6 +7,7 @@
     import midiIcon from '../../assets/icons/midi.svg?raw';
     import inputsIcon from '../../assets/icons/inputs.svg?raw';
     import thingyIcon from '../../assets/icons/thingy.svg?raw';
+    import joyconIcon from '../../assets/icons/joycon.svg?raw';
     import Dialog from '../common/Dialog.svelte';
 
     let { onconnect, ondisconnect, connected, inputController } = $props();
@@ -19,11 +20,12 @@
     let streamDeckDevices = $derived(connectedDevices.filter(d => d.type === 'streamdeck'));
     let hidDevices = $derived(connectedDevices.filter(d => d.type === 'hid' && d.id !== 'keyboard'));
     let thingyDevices = $derived(connectedDevices.filter(d => d.type === 'thingy'));
+    let joyConDevices = $derived(connectedDevices.filter(d => d.type === 'joycon'));
     let midiDevices = $derived(connectedDevices.filter(d => d.type === 'midi'));
     let gamepadDevices = $derived(connectedDevices.filter(d => d.type === 'gamepad'));
 
     // Unified list of all connected devices
-    let allConnectedDevices = $derived([...streamDeckDevices, ...hidDevices, ...thingyDevices, ...midiDevices, ...gamepadDevices]);
+    let allConnectedDevices = $derived([...streamDeckDevices, ...hidDevices, ...thingyDevices, ...joyConDevices, ...midiDevices, ...gamepadDevices]);
 
     // MIDI button should be disabled if we already have MIDI access
     let hasMidiAccess = $derived(midiDevices.length > 0);
@@ -96,6 +98,17 @@
             alert(`Failed to connect Thingy:52: ${error.message}\n\nMake sure your device is powered on and in range.`);
         }
     }
+    async function connectJoyCon() {
+        try {
+            await inputController?.requestJoyCon();
+            connectedDevices = inputController?.getInputDevices() || [];
+            closeDevicesDialog();
+        } catch (error) {
+            if (error.name === 'NotFoundError') return;
+            alert(`Failed to connect Joy-Con: ${error.message}\n\nMake sure WebHID is supported and the Joy-Con is in pairing mode.`);
+        }
+    }
+
 </script>
 
 <header>
@@ -151,6 +164,10 @@
             <button class="device-connect-btn" onclick={connectThingy52}>
                 <Icon data={thingyIcon} />
                 <span>Thingy:52</span>
+            </button>
+            <button class="device-connect-btn" onclick={connectJoyCon}>
+                <Icon data={joyconIcon} />
+                <span>Joy-Con</span>
             </button>
         </div>
 
@@ -218,11 +235,11 @@
         gap: 24px;
     }
 
-    /* Connect Buttons Grid (2x2) */
+    /* Connect Buttons Grid (3x2) */
     .connect-buttons-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
+        grid-template-rows: 1fr 1fr 1fr;
         gap: 4px;
     }
 
@@ -246,7 +263,7 @@
         padding: 4px;
     }
 
-    /* Rounded corners only on outer edges of grid */
+    /* Rounded corners only on outer edges of 3x2 grid */
     .device-connect-btn:nth-child(1) {
         border-top-left-radius: 8px;
     }
@@ -255,11 +272,11 @@
         border-top-right-radius: 8px;
     }
 
-    .device-connect-btn:nth-child(3) {
+    .device-connect-btn:nth-child(5) {
         border-bottom-left-radius: 8px;
     }
 
-    .device-connect-btn:nth-child(4) {
+    .device-connect-btn:nth-child(6) {
         border-bottom-right-radius: 8px;
     }
 
@@ -317,4 +334,6 @@
         font-size: 9pt;
         font-style: italic;
     }
+
+
 </style>

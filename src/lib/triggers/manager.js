@@ -68,10 +68,18 @@ export class TriggerManager extends EventEmitter {
 
 		// Handle scene change actions
 		if (mapping.action?.type === 'scene' && mapping.action?.scene?.id) {
-			// Only trigger scene change on 'down' state
 			const state = mapping.input?.state;
 			if (state === 'down' || state === 'on') {
 				this._emit('sceneChange', { sceneId: mapping.action.scene.id });
+			}
+			return;
+		}
+
+		// Handle drawing change actions
+		if (mapping.action?.type === 'drawing' && mapping.action?.drawing?.id) {
+			const state = mapping.input?.state;
+			if (state === 'down' || state === 'on') {
+				this._emit('drawingChange', { drawingId: mapping.action.drawing.id });
 			}
 			return;
 		}

@@ -122,6 +122,12 @@ export class GamepadManager {
 			const nativeGamepads = navigator.getGamepads ? navigator.getGamepads() : [];
 			const nativeGamepad = nativeGamepads[gamepad.id];
 
+			// Skip Joy-Cons — they are handled exclusively via WebHID
+			if (nativeGamepad?.id && /joy.?con/i.test(nativeGamepad.id)) {
+				console.log(`Skipping Joy-Con from Gamepad API (handled via WebHID): ${nativeGamepad.id}`);
+				return;
+			}
+
 			console.log(`Gamepad connected: ${gamepad.id} (stable ID: ${stableId})`);
 			console.log('Gamepad details:', {
 				index: gamepad.id,
@@ -168,8 +174,13 @@ export class GamepadManager {
 		// Check for already-connected gamepads (they may have connected before we initialized)
 		const existingGamepads = window.gameControl.getGamepads();
 		if (existingGamepads) {
+			const nativeGamepads = navigator.getGamepads ? navigator.getGamepads() : [];
 			for (const [id, gamepad] of Object.entries(existingGamepads)) {
 				if (gamepad) {
+					// Skip Joy-Cons — handled via WebHID
+					const native = nativeGamepads[gamepad.id];
+					if (native?.id && /joy.?con/i.test(native.id)) continue;
+
 					const stableId = this._generateGamepadId(gamepad);
 
 					if (!this.connectedGamepads.has(stableId)) {

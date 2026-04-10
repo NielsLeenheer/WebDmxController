@@ -33,6 +33,7 @@
 
 import { Library } from './Library.svelte.js';
 import { generateCSSTriggers, generateValueTriggersCSS } from './triggers/css.js';
+import { getCSSClassName } from './triggers/utils.js';
 
 export class TriggerLibrary extends Library {
 	constructor() {
@@ -96,6 +97,28 @@ export class TriggerLibrary extends Library {
 			});
 		}
 
+		// Drawing action triggers (no device target)
+		if (actionType === 'drawing') {
+			return this.add({
+				type: 'action',
+				enabled: config.enabled ?? true,
+				input: {
+					id: config.input?.id || null,
+					state: config.input?.state || 'down'
+				},
+				output: {
+					id: null
+				},
+				action: {
+					type: 'drawing',
+					drawing: {
+						id: config.action?.drawing?.id || null
+					}
+				},
+				order: this.items.length
+			});
+		}
+
 		return this.add({
 			type: 'action',
 			enabled: config.enabled ?? true,
@@ -128,7 +151,7 @@ export class TriggerLibrary extends Library {
 	 * @param {Object} inputLibrary - InputLibrary instance to resolve input names
 	 * @returns {string} Combined CSS
 	 */
-	toCSS(devices = [], animationLibrary = null, inputLibrary = null) {
+	toCSS(devices = [], animationLibrary = null, inputLibrary = null, drawingLibrary = null) {
 		const allTriggers = this.getAll().filter(trigger => trigger.enabled !== false);
 
 		// Separate value triggers from other triggers
@@ -157,6 +180,21 @@ export class TriggerLibrary extends Library {
 			const deviceValueTriggers = valueTriggers.filter(t => t.output?.id === deviceId);
 			const css = generateValueTriggersCSS(deviceValueTriggers, device, inputLibrary);
 			if (css) cssRules.push(css);
+		}
+
+		// Generate CSS for drawing triggers
+		if (drawingLibrary) {
+			const drawingTriggers = otherTriggers.filter(t => t.action?.type === 'drawing');
+			for (const trigger of drawingTriggers) {
+				const drawingId = trigger.action?.drawing?.id;
+				if (!drawingId) continue;
+
+				const drawing = drawingLibrary.get(drawingId);
+				if (!drawing) continue;
+
+				const cssClassName = getCSSClassName(trigger, inputLibrary);
+				cssRules.push(`.${cssClassName} svg { visibility: hidden; }\n.${cssClassName} #${drawing.cssIdentifier} { visibility: visible; }`);
+			}
 		}
 
 		return cssRules.join('\n\n');
@@ -220,6 +258,29 @@ export class TriggerLibrary extends Library {
 					type: 'scene',
 					scene: {
 						id: data.action?.scene?.id || null
+					}
+				},
+				order: data.order !== undefined ? data.order : index
+			};
+		}
+
+		// Handle drawing action triggers
+		if (actionType === 'drawing') {
+			return {
+				id: data.id,
+				type: 'action',
+				enabled: data.enabled !== undefined ? data.enabled : true,
+				input: {
+					id: data.input?.id || null,
+					state: data.input?.state || 'down'
+				},
+				output: {
+					id: null
+				},
+				action: {
+					type: 'drawing',
+					drawing: {
+						id: data.action?.drawing?.id || null
 					}
 				},
 				order: data.order !== undefined ? data.order : index

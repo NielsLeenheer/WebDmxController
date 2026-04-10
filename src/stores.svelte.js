@@ -9,6 +9,7 @@ import { AnimationLibrary } from './lib/AnimationLibrary.svelte.js';
 import { InputLibrary } from './lib/InputLibrary.svelte.js';
 import { TriggerLibrary } from './lib/TriggerLibrary.svelte.js';
 import { SceneLibrary } from './lib/SceneLibrary.svelte.js';
+import { DrawingLibrary } from './lib/DrawingLibrary.svelte.js';
 
 // Create singleton instances
 export const deviceLibrary = new DeviceLibrary();
@@ -16,3 +17,4 @@ export const animationLibrary = new AnimationLibrary();
 export const inputLibrary = new InputLibrary();
 export const triggerLibrary = new TriggerLibrary();
 export const sceneLibrary = new SceneLibrary();
+export const drawingLibrary = new DrawingLibrary();

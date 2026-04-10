@@ -5,12 +5,13 @@
  */
 
 export class CSSGenerator {
-	constructor(animationLibrary, inputLibrary, triggerLibrary, deviceLibrary, sceneLibrary) {
+	constructor(animationLibrary, inputLibrary, triggerLibrary, deviceLibrary, sceneLibrary, drawingLibrary = null) {
 		this.animationLibrary = animationLibrary;
 		this.inputLibrary = inputLibrary;
 		this.triggerLibrary = triggerLibrary;
 		this.deviceLibrary = deviceLibrary;
 		this.sceneLibrary = sceneLibrary;
+		this.drawingLibrary = drawingLibrary;
 	}
 
 	/**
@@ -37,9 +38,20 @@ export class CSSGenerator {
 			parts.push('');
 		}
 
+		// Drawings (before scenes and triggers so they can override)
+		if (this.drawingLibrary) {
+			const drawingsCSS = this.drawingLibrary.toCSS();
+			if (drawingsCSS) {
+				parts.push('/* Drawings ================== */');
+				parts.push('');
+				parts.push(drawingsCSS);
+				parts.push('');
+			}
+		}
+
 		// Scenes (before triggers so triggers can override scene values)
 		if (this.sceneLibrary) {
-			const scenesCSS = this.sceneLibrary.toCSS(devices, this.animationLibrary);
+			const scenesCSS = this.sceneLibrary.toCSS(devices, this.animationLibrary, this.drawingLibrary);
 			if (scenesCSS) {
 				parts.push('/* Scenes ================== */');
 				parts.push('');
@@ -49,7 +61,7 @@ export class CSSGenerator {
 		}
 
 		// Triggers (after scenes so they can override scene values)
-		const triggersCSS = this.triggerLibrary.toCSS(devices, this.animationLibrary, this.inputLibrary);
+		const triggersCSS = this.triggerLibrary.toCSS(devices, this.animationLibrary, this.inputLibrary, this.drawingLibrary);
 		if (triggersCSS) {
 			parts.push('/* Triggers ================== */');
 			parts.push('');

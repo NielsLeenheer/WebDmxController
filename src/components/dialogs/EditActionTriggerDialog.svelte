@@ -9,6 +9,7 @@
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { isButton } from '../../lib/inputs/utils.js';
+	import { drawingLibrary } from '../../stores.svelte.js';
 
 	/**
 	 * EditActionTriggerDialog - Promise-based dialog for editing action triggers
@@ -42,19 +43,22 @@
 	let selectedDevice = $state(null);
 	let selectedAnimation = $state(null);
 	let selectedScene = $state(null);
+	let selectedDrawing = $state(null);
+	let drawings = $derived(drawingLibrary.getAll());
 	let duration = $state(1000);
 	let looping = $state(false);
 	let easing = $state('linear');
 	let controlValues = $state({});
 	let enabledControls = $state([]);
 
-	// Dynamic action types based on input state (scene only available for 'down')
+	// Dynamic action types based on input state (scene/drawing only for trigger-on states)
 	let actionTypes = $derived(
-		inputState === 'down'
+		inputState !== 'up' && inputState !== 'off'
 			? [
 				{ value: 'animation', label: 'Run Animation' },
 				{ value: 'values', label: 'Set values' },
-				{ value: 'scene', label: 'Change Scene' }
+				{ value: 'scene', label: 'Change Scene' },
+				...(drawings.length > 0 ? [{ value: 'drawing', label: 'Change Drawing' }] : [])
 			]
 			: [
 				{ value: 'animation', label: 'Run Animation' },
@@ -155,6 +159,10 @@
 				selectedScene = trigger.action?.scene?.id || null;
 				selectedDevice = null;
 				enabledControls = [];
+			} else if (actionType === 'drawing') {
+				selectedDrawing = trigger.action?.drawing?.id || null;
+				selectedDevice = null;
+				enabledControls = [];
 			} else {
 				selectedDevice = trigger.output?.id;
 				selectedAnimation = trigger.action?.animation?.id;
@@ -178,9 +186,15 @@
 			return;
 		}
 
-		// Scene action doesn't require device
+		// Scene/drawing actions don't require device
 		if (actionType === 'scene') {
 			if (!selectedScene) {
+				resolvePromise(null);
+				closeDialog();
+				return;
+			}
+		} else if (actionType === 'drawing') {
+			if (!selectedDrawing) {
 				resolvePromise(null);
 				closeDialog();
 				return;
@@ -216,7 +230,8 @@
 			looping,
 			easing,
 			values: filteredValues,
-			scene: selectedScene
+			scene: selectedScene,
+			drawing: selectedDrawing
 		};
 
 		resolvePromise(result);
@@ -267,7 +282,7 @@
 					</SelectField>
 				</Group>
 
-				{#if actionType !== 'scene'}
+				{#if actionType !== 'scene' && actionType !== 'drawing'}
 					<Group label="Device:" for="edit-trigger-device">
 						<SelectField id="edit-trigger-device" bind:value={selectedDevice}>
 							{#each devices as device}

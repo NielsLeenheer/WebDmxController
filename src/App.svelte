@@ -3,7 +3,7 @@
     import { DMXController } from './lib/outputs/dmx.js';
     import { DEVICE_TYPES } from './lib/outputs/devices.js';
     import { controlValuesToDMX } from './lib/outputs/controls.js';
-    import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, sceneLibrary } from './stores.svelte.js';
+    import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, sceneLibrary, drawingLibrary } from './stores.svelte.js';
     import { TriggerManager } from './lib/triggers/manager.js';
     import { SceneController } from './lib/scenes/manager.svelte.js';
     import { CustomPropertyManager, CSSManager } from './lib/css/index.js';
@@ -17,6 +17,8 @@
     import TriggersView from './components/views/TriggersView.svelte';
     import ScenesView from './components/views/ScenesView.svelte';
     import EditorView from './components/views/EditorView.svelte';
+    import DrawingView from './components/views/DrawingView.svelte';
+    import FloatingPreview from './components/common/FloatingPreview.svelte';
 
     let view = $state('devices');
     let connected = $state(false);
@@ -85,7 +87,7 @@
 
     onMount(() => {
         // Create CSS Manager
-        cssManager = new CSSManager(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager, sceneLibrary);
+        cssManager = new CSSManager(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager, sceneLibrary, drawingLibrary);
         cssManager.initialize(mainElement);
 
         // Wire up scene controller to CSS manager
@@ -108,6 +110,7 @@
             inputLibrary.flush();
             triggerLibrary.flush();
             sceneLibrary.flush();
+            drawingLibrary.flush();
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
 
@@ -166,9 +169,21 @@
         <EditorView
             {cssManager}
             {sceneController}
+            {laserManager}
+        />
+    </div>
+
+    <div class="view-container" class:hidden={view !== 'drawing'}>
+        <DrawingView
+            {laserManager}
+            bind:selectedDrawingId
         />
     </div>
 </main>
+
+{#if view === 'drawing'}
+    <FloatingPreview {laserManager} {selectedDrawingId} />
+{/if}
 
 <style>
     .view-container {

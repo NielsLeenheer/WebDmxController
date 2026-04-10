@@ -73,6 +73,24 @@
             return;
         }
 
+        // Handle drawing action trigger
+        if (result.actionType === 'drawing') {
+            triggerLibrary.create({
+                type: 'action',
+                input: {
+                    id: input.id,
+                    state: result.inputState
+                },
+                action: {
+                    type: 'drawing',
+                    drawing: {
+                        id: result.drawing
+                    }
+                }
+            });
+            return;
+        }
+
         // Create trigger using library method
         triggerLibrary.create({
             type: 'action',
@@ -178,14 +196,15 @@
                 id: selectedInput.id,
                 state: result.inputState
             },
-            output: result.actionType === 'scene' ? null : {
+            output: (result.actionType === 'scene' || result.actionType === 'drawing') ? null : {
                 id: result.device
             },
             action: {
                 type: result.actionType,
                 animation: null,
                 values: null,
-                scene: null
+                scene: null,
+                drawing: null
             }
         };
 
@@ -199,6 +218,10 @@
         } else if (result.actionType === 'scene') {
             updates.action.scene = {
                 id: result.scene
+            };
+        } else if (result.actionType === 'drawing') {
+            updates.action.drawing = {
+                id: result.drawing
             };
         } else {
             updates.action.values = result.values;

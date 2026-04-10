@@ -2,6 +2,7 @@
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import { getKeyframeColor } from '../../lib/animations/utils.js';
     import { paletteColorToHex } from '../../lib/inputs/colors.js';
+    import DrawingPreview from './DrawingPreview.svelte';
 
     /**
      * Preview Component
@@ -184,6 +185,19 @@
         return `linear-gradient(90deg, ${gradientStops})`;
     }
 
+    // Extract displayable symbol for Joy-Con button control IDs
+    function extractJoyConSymbol(controlId) {
+        const symbols = {
+            'a': 'A', 'b': 'B', 'x': 'X', 'y': 'Y',
+            'l': 'L', 'r': 'R', 'zl': 'ZL', 'zr': 'ZR',
+            'plus': '+', 'minus': '−',
+            'sl': 'SL', 'sr': 'SR',
+            'up': '▲', 'down': '▼', 'left': '◀', 'right': '▶',
+            'home': '⌂', 'capture': '◻',
+        };
+        return symbols[controlId] ?? null;
+    }
+
     // Extract controls and data from device object if type is 'device'
     const effectiveControls = $derived(() => {
         if (type === 'device' && data) {
@@ -269,7 +283,7 @@
 {#if type === 'device' || type === 'controls'}
     <div class="preview {className} {sizeClass} {typeClass}">
         <div class="preview-base"></div>
-        
+
         <!-- Base color layer -->
         {#if hasControl('color')}
             {@const colorValue = effectiveData().color}
@@ -409,17 +423,19 @@
             {/if}
 
         {:else if inputType === 'button' || inputType === 'pad'}
-            {@const isGamepad = data.deviceId?.startsWith('gamepad-')}
+            {@const hasBrand = data.deviceId?.startsWith('gamepad-') || data.deviceId?.startsWith('joycon-')}
    
             <!-- Button/Pad: square with character or gamepad symbol -->
-            {#if isGamepad}
-                {@const gamepadSymbol = isGamepad && data.controlId?.startsWith('button-') ? extractGamepadSymbol(data.controlId, data.deviceBrand) : null}
-                {@const gamepadButtonClass = isGamepad && data.controlId?.startsWith('button-') ? `gamepad-${data.controlId}` : ''}
+            {#if hasBrand}
+                {@const isJoyCon = data.deviceId?.startsWith('joycon-')}
+                {@const symbol = isJoyCon
+                    ? extractJoyConSymbol(data.controlId)
+                    : (data.controlId?.startsWith('button-') ? extractGamepadSymbol(data.controlId, data.deviceBrand) : null)}
                 {@const brandClass = data.deviceBrand ? `brand-${data.deviceBrand}` : ''}
                 
-                <div class="preview-input button-preview {inputType}-input {inputNameClass} {gamepadButtonClass} {brandClass}" style="background: #555;">
-                    {#if gamepadSymbol}
-                        <div class="gamepad-symbol" class:small-text={gamepadSymbol.length > 1}>{gamepadSymbol}</div>
+                <div class="preview-input button-preview {inputType}-input {inputNameClass} {brandClass}" style="background: #555;">
+                    {#if symbol}
+                        <div class="gamepad-symbol" class:small-text={symbol.length > 1}>{symbol}</div>
                     {/if}
                 </div>
             {:else}
@@ -483,6 +499,36 @@
 
                 <!-- Circle for indent in the disc -->
                 <div class="stick-disc-indent"></div>
+            </div>
+        {:else if inputType === 'joycon'}
+            <!-- Joy-Con input preview: left or right controller -->
+            {@const isLeft = data.deviceId?.includes('joycon-left')}
+            <div class="preview-input joycon-preview">
+                {#if isLeft}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="joycon-icon">
+                        <path fill="#424242" d="M31.72 41.46v-9.91h-1c1.66 0 3 1.34 3 3v3.91c0 1.66-1.34 3-3 3zM31.72 17.46V7.54h-1c1.66 0 3 1.34 3 3v3.91c0 1.66-1.34 3-3 3h1Z"/>
+                        <path fill="#fc5e5e" d="M28.72 1.5v46h-3.87c-7.31 0-12.35-4.6-12.35-10.95v-24.1C12.5 6.1 17.54 1.5 24.85 1.5z"/>
+                        <path fill="#757575" d="M28.72 47.5c2.4 0 4-.82 4-4v-38c0-3.18-1.6-4-4-4"/>
+                        <circle cx="21.33" cy="14.13" r="4.5" fill="#424242"/>
+                        <circle cx="25.33" cy="28.63" r="2" fill="#424242"/>
+                        <circle cx="21.33" cy="24.63" r="2" fill="#424242"/>
+                        <circle cx="21.33" cy="32.63" r="2" fill="#424242"/>
+                        <circle cx="17.33" cy="28.63" r="2" fill="#424242"/>
+                        <path fill="#424242" d="M25.32 37.08v2h-2v-2z"/>
+                    </svg>
+                {:else}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="joycon-icon">
+                        <path fill="#424242" d="M14.5 7.54v9.91h1c-1.66 0-3-1.34-3-3v-3.91c0-1.66 1.34-3 3-3zM14.5 31.54v9.91h1c-1.66 0-3-1.34-3-3v-3.91c0-1.66 1.34-3 3-3z"/>
+                        <path fill="#4fc3f7" d="M17.5 47.5v-46h3.87c7.31 0 12.35 4.6 12.35 10.95v24.1c0 6.35-5.04 10.95-12.35 10.95z"/>
+                        <path fill="#757575" d="M17.5 1.5c-2.4 0-4 .82-4 4v38c0 3.18 1.6 4 4 4"/>
+                        <circle cx="24.89" cy="29.59" r="4.5" fill="#424242"/>
+                        <circle cx="20.89" cy="15.95" r="2" fill="#424242"/>
+                        <circle cx="24.89" cy="19.95" r="2" fill="#424242"/>
+                        <circle cx="24.89" cy="11.95" r="2" fill="#424242"/>
+                        <circle cx="28.89" cy="15.95" r="2" fill="#424242"/>
+                        <circle cx="21.99" cy="38.53" r="1.3" fill="#424242"/>
+                    </svg>
+                {/if}
             </div>
         {/if}
     </div>
@@ -854,6 +900,18 @@
         width: 100%;
         height: 30%;
         left: 0;
+    }
+    /* Joy-Con input */
+    .joycon-preview {
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .joycon-icon {
+        width: 100%;
+        height: 100%;
     }
 
     /* Thingy:52 */

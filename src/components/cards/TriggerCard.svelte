@@ -1,5 +1,5 @@
 <script>
-	import { deviceLibrary, animationLibrary, inputLibrary, sceneLibrary } from '../../stores.svelte.js';
+	import { deviceLibrary, animationLibrary, inputLibrary, sceneLibrary, drawingLibrary } from '../../stores.svelte.js';
 	import { getTriggerValuesPreviewData, DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { getInputExportedValues } from '../../lib/inputs/valueTypes.js';
 	import { isValueTrigger } from '../../lib/triggers/utils.js';
@@ -9,6 +9,7 @@
 	import Checkbox from '../common/Checkbox.svelte';
 	import dotsIcon from '../../assets/glyphs/dots.svg?raw';
 	import activeIcon from '../../assets/icons/active.svg?raw';
+	import drawingIcon from '../../assets/icons/svg.svg?raw';
 
 	let {
 		trigger,          // Trigger plain object
@@ -23,6 +24,7 @@
 	let animation = $derived(trigger.action?.animation?.id ? animationLibrary.get(trigger.action.animation.id) : null);
 	let input = $derived(trigger.input?.id ? inputLibrary.get(trigger.input.id) : null);
 	let scene = $derived(trigger.action?.scene?.id ? sceneLibrary.get(trigger.action.scene.id) : null);
+	let drawing = $derived(trigger.action?.drawing?.id ? drawingLibrary.get(trigger.action.drawing.id) : null);
 
 	const isEnabled = $derived(trigger.enabled !== false);
 
@@ -31,6 +33,9 @@
 
 	// Check if this is a scene trigger
 	let isScene = $derived(trigger.action?.type === 'scene');
+
+	// Check if this is a drawing trigger
+	let isDrawing = $derived(trigger.action?.type === 'drawing');
 
 	// For values triggers (actionType='values'), compute preview data from trigger values
 	let valuesPreview = $derived.by(() => {
@@ -169,6 +174,11 @@
 			<div class="trigger-text">
 				{scene?.name || 'Unknown Scene'}
 			</div>
+		{:else if isDrawing}
+			<span class="scene-icon">{@html drawingIcon}</span>
+			<div class="trigger-text">
+				{drawing?.name || 'Unknown Drawing'}
+			</div>
 		{:else if device}
 			<Preview
 				type="device"
@@ -184,8 +194,8 @@
 
 	<!-- Column 3: Action / Mapping -->
 	<div class="trigger-column trigger-action-column">
-		{#if isScene}
-			<!-- Empty for scene triggers -->
+		{#if isScene || isDrawing}
+			<!-- Empty for scene/drawing triggers -->
 		{:else if isValue && controlPreview}
 			<!-- Value trigger: show control preview -->
 			<Preview

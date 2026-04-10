@@ -7,12 +7,14 @@
 import { InputDeviceManager } from './manager.js';
 import { isButton } from './utils.js';
 import { getInputType } from './types/index.js';
+import { PathRecorder } from './PathRecorder.js';
 
 export class InputController {
 	constructor(inputLibrary, customPropertyManager, triggerManager, triggerLibrary = null) {
 		this.inputDeviceManager = new InputDeviceManager();
 		this.inputLibrary = inputLibrary;
 		this.customPropertyManager = customPropertyManager;
+		this.pathRecorder = new PathRecorder(customPropertyManager);
 		this.triggerManager = triggerManager;
 		this.triggerLibrary = triggerLibrary;
 
@@ -54,6 +56,20 @@ export class InputController {
 					if (device.type === 'thingy' && device.thingyDevice) {
 						device.thingyDevice.setDeviceColor(item.color);
 					}
+				}
+			}
+
+			// Sync draw button changes to Joy-Con device
+			if (changes.drawButton !== undefined && item.type === 'joycon') {
+				const device = this.inputDeviceManager.getDevice(item.deviceId);
+				if (device) {
+					device.drawButton = changes.drawButton;
+				}
+			}
+			if (changes.clearButton !== undefined && item.type === 'joycon') {
+				const device = this.inputDeviceManager.getDevice(item.deviceId);
+				if (device) {
+					device.clearButton = changes.clearButton;
 				}
 			}
 		});
@@ -134,6 +150,12 @@ export class InputController {
 			this._setupThingyListeners(device);
 			return;
 		}
+		// Special handling for Joy-Con devices
+		if (device.type === 'joycon') {
+			this._setupJoyConListeners(device);
+			return;
+		}
+
 
 		// Gamepad devices have their events routed through the manager
 		// No additional setup needed here - they use the standard trigger/change events
@@ -269,6 +291,175 @@ export class InputController {
 			this.customPropertyManager.setProperty(propertyName, propertyValue);
 		});
 	}
+	/**
+	 * Setup listeners for Joy-Con devices
+	 *
+	 * Mixed model:
+	 * - Auto-creates a sensor input (type 'joycon') that exports gyro/accel as CSS properties
+	 * - Buttons and stick are forwarded as individual controls (discovered via listening mode)
+	 * - A configurable draw button gates gyro → pathRecorder and is filtered from button events
+	 */
+	_setupJoyConListeners(device) {
+		// Auto-create the sensor input for this device
+		let sensorInput = this.inputLibrary.findByDeviceControl(device.id, 'joycon');
+
+		if (!sensorInput) {
+			sensorInput = this.inputLibrary.create({
+				name: device.name,
+				deviceId: device.id,
+				controlId: 'joycon',
+				deviceName: device.name,
+				type: 'joycon',
+				colorSupport: 'none',
+				controlName: null,
+				drawButton: device.side === 'left' ? 'zl' : 'zr',
+				clearButton: device.side === 'left' ? 'l' : 'r'
+			});
+		}
+
+		// Sync draw/clear buttons from persisted sensor input to the device
+		device.drawButton = sensorInput.drawButton || (device.side === 'left' ? 'zl' : 'zr');
+		device.clearButton = sensorInput.clearButton || (device.side === 'left' ? 'l' : 'r');
+
+		// Build sensor CSS metadata lookup
+		const joyConType = getInputType('joycon');
+		const exportedValues = joyConType.getExportedValues(sensorInput);
+		const sensorMetadata = new Map();
+		for (const valueDef of exportedValues) {
+			sensorMetadata.set(valueDef.key, valueDef);
+		}
+
+		// Drawing state: draw button gates gyro → pathRecorder
+		let isDrawing = false;
+		let cursorX = 0.5, cursorY = 0.5;
+		let smoothX = 0.5, smoothY = 0.5;
+		// Gyro values are degrees-per-report-period (~15ms).
+		// Scale: ±45° of wrist rotation maps to full 0–1 cursor range.
+		const GYRO_SCALE = 1.0 / 45;
+		const SMOOTHING = 0.3;  // exponential smoothing (0 = none, 1 = frozen)
+
+		// Buttons → individual controls (like gamepad), discovered via listening mode
+		// The draw button is already filtered by JoyConInputDevice (emits draw-start/draw-end instead)
+		device.on('trigger', ({ controlId, velocity }) => {
+			this._handleTrigger(device.id, controlId, velocity);
+		});
+
+		device.on('release', ({ controlId }) => {
+			this._handleRelease(device.id, controlId);
+		});
+
+		// Draw button events (from JoyConInputDevice, invisible to InputListeningController)
+		device.on('draw-start', () => {
+			if (!this.pathRecorder.isActiveDevice(device.id)) return;
+			isDrawing = true;
+			this.pathRecorder.startPart();
+		});
+
+		device.on('draw-end', () => {
+			if (!this.pathRecorder.isActiveDevice(device.id)) return;
+			isDrawing = false;
+			this.pathRecorder.pauseRecording();
+		});
+
+		device.on('draw-clear', () => {
+			isDrawing = false;
+			this.pathRecorder.activate(device.id);
+			cursorX = 0.5;
+			cursorY = 0.5;
+			smoothX = 0.5;
+			smoothY = 0.5;
+		});
+
+		// Stick → individual stick control (like gamepad sticks)
+		device.on('change', ({ controlId, x, y }) => {
+			this._handleValueChange(device.id, controlId, null, { x, y });
+		});
+
+		// Gyro → path recording when drawing.
+		// Decompose device-local gyro into world-frame yaw and pitch using gravity direction.
+		// Yaw = gyro component around gravity axis (left/right cursor).
+		// Pitch = gyro residual projected onto pitch axis (up/down cursor).
+		// Low-pass filter on gravity to reject centripetal acceleration during arm swings.
+		let filtGx = 0, filtGy = 0, filtGz = 0;
+		let gravInitialized = false;
+		const GRAV_ALPHA = 0.05;
+
+		device.on('gyro-raw', ({ dx, dy, dz, gx, gy, gz }) => {
+			// Update gravity filter always (even when not drawing)
+			if (!gravInitialized) {
+				filtGx = gx; filtGy = gy; filtGz = gz;
+				gravInitialized = true;
+			} else {
+				filtGx += GRAV_ALPHA * (gx - filtGx);
+				filtGy += GRAV_ALPHA * (gy - filtGy);
+				filtGz += GRAV_ALPHA * (gz - filtGz);
+			}
+
+			// Use filtered gravity
+			const gLen = Math.sqrt(filtGx * filtGx + filtGy * filtGy + filtGz * filtGz);
+			if (gLen < 0.01) return;
+			const gnx = filtGx / gLen, gny = filtGy / gLen, gnz = filtGz / gLen;
+
+			// --- Yaw rate: gyro component around gravity axis ---
+			const yawRate = dx * gnx + dy * gny + dz * gnz;
+
+			// --- Pitch rate: gyro residual projected onto pitch axis ---
+			const resX = dx - yawRate * gnx;
+			const resY = dy - yawRate * gny;
+			const resZ = dz - yawRate * gnz;
+
+			// Pitch axis = cross(g_hat, pointer_direction)
+			// Data shows pointer = device +X: when horizontal g=(0,0,-1),
+			// arm pivot up/down produces dominant dy gyro.
+			// cross([gnx,gny,gnz], [1,0,0]) = [0, gnz, -gny]
+			let pay = gnz, paz = -gny;
+			const paLen = Math.sqrt(pay * pay + paz * paz);
+			if (paLen < 0.01) return;
+			pay /= paLen;
+			paz /= paLen;
+
+			const pitchRate = resY * pay + resZ * paz;
+
+			cursorX = Math.max(0, Math.min(1, cursorX - yawRate * GYRO_SCALE));
+			cursorY = Math.max(0, Math.min(1, cursorY + pitchRate * GYRO_SCALE));
+
+			// Exponential smoothing to reduce jitter
+			smoothX = SMOOTHING * smoothX + (1 - SMOOTHING) * cursorX;
+			smoothY = SMOOTHING * smoothY + (1 - SMOOTHING) * cursorY;
+
+			// Only update cursor/path if this device owns the drawing session
+			if (this.pathRecorder.isActiveDevice(device.id)) {
+				this.pathRecorder.setCursor(smoothX * 100, smoothY * 100);
+
+				if (isDrawing) {
+					this.pathRecorder.addPoint(smoothX, smoothY);
+				}
+			}
+		});
+
+		// Sensors → CSS properties
+		device.on('sensor', ({ controlId, value }) => {
+			// Always export sensor values as CSS properties
+			const metadata = sensorMetadata.get(controlId);
+			if (!metadata || !metadata.cssProperty) return;
+
+			const { min, max, unit } = metadata;
+			const realValue = min + (value * (max - min));
+
+			let propertyValue;
+			if (unit === 'g') {
+				propertyValue = `${realValue.toFixed(2)}g`;
+			} else if (unit === 'deg/s') {
+				propertyValue = `${realValue.toFixed(1)}deg`;
+			} else {
+				propertyValue = realValue.toFixed(1);
+			}
+
+			const propertyName = metadata.cssProperty.replace(/^--/, '');
+			this.customPropertyManager.setProperty(propertyName, propertyValue);
+		});
+	}
+
 
 	/**
 	 * Generate CSS class name from control ID
@@ -475,6 +666,13 @@ export class InputController {
 	async requestThingy52() {
 		return await this.inputDeviceManager.requestThingy52();
 	}
+	/**
+	 * Request Joy-Con device
+	 */
+	async requestJoyCon() {
+		return await this.inputDeviceManager.requestJoyCon();
+	}
+
 
 	/**
 	 * Get all input devices

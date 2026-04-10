@@ -7,6 +7,7 @@
     import triggersIcon from '../../assets/icons/triggers.svg?raw';
     import scenesIcon from '../../assets/icons/list.svg?raw';
     import cssIcon from '../../assets/icons/css.svg?raw';
+    import svgIcon from '../../assets/icons/svg.svg?raw';
 
     let {
         view = $bindable()
@@ -43,6 +44,12 @@
             <input type="radio" name="view" value="triggers" bind:group={view}>
             <Icon data={triggersIcon} />
             Triggers
+        </label>
+
+        <label>
+            <input type="radio" name="view" value="drawing" bind:group={view}>
+            <Icon data={svgIcon} />
+            Drawing
         </label>
 
         <label>

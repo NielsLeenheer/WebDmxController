@@ -3,7 +3,9 @@
 	import Button from '../common/Button.svelte';
 	import Group from '../common/form/Group.svelte';
 	import InputText from '../common/form/InputText.svelte';
+	import SelectField from '../common/form/SelectField.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
+	import { drawingLibrary } from '../../stores.svelte.js';
 	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
 
 	/**
@@ -27,6 +29,8 @@
 	// Edit state
 	let editingScene = $state(null);
 	let sceneName = $state('');
+	let selectedDrawingId = $state(null);
+	let drawings = $derived(drawingLibrary.getAll());
 
 	/**
 	 * Open the dialog with a scene
@@ -40,6 +44,7 @@
 			// Copy scene data to edit state
 			editingScene = scene;
 			sceneName = scene.name;
+			selectedDrawingId = scene.drawingId || null;
 
 			requestAnimationFrame(() => {
 				dialogRef?.showModal();
@@ -55,7 +60,8 @@
 		}
 
 		const result = {
-			name: sceneName.trim()
+			name: sceneName.trim(),
+			drawingId: selectedDrawingId || null
 		};
 
 		resolvePromise(result);
@@ -103,6 +109,17 @@
 				/>
 			{/if}
 		</Group>
+
+		{#if drawings.length > 0}
+			<Group label="Drawing:" for="scene-drawing">
+				<SelectField id="scene-drawing" bind:value={selectedDrawingId}>
+					<option value={null}>None</option>
+					{#each drawings as drawing}
+						<option value={drawing.id}>{drawing.name}</option>
+					{/each}
+				</SelectField>
+			</Group>
+		{/if}
 	</form>
 
 	{#snippet buttons()}

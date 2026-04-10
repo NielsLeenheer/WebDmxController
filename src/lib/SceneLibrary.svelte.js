@@ -286,14 +286,13 @@ export class SceneLibrary extends Library {
 	 * @param {Object} animationLibrary - AnimationLibrary instance
 	 * @returns {string} Combined CSS
 	 */
-	toCSS(devices = [], animationLibrary = null) {
+	toCSS(devices = [], animationLibrary = null, drawingLibrary = null) {
 		const cssRules = [];
 
-		// Get all scenes (including default - it may have devices with custom values)
 		const scenes = this.getAll();
 
 		for (const scene of scenes) {
-			const sceneRules = this._generateSceneCSS(scene, devices, animationLibrary);
+			const sceneRules = this._generateSceneCSS(scene, devices, animationLibrary, drawingLibrary);
 			if (sceneRules) {
 				cssRules.push(sceneRules);
 			}
@@ -306,8 +305,17 @@ export class SceneLibrary extends Library {
 	 * Generate CSS for a single scene
 	 * @private
 	 */
-	_generateSceneCSS(scene, devices, animationLibrary) {
+	_generateSceneCSS(scene, devices, animationLibrary, drawingLibrary) {
 		const rules = [];
+
+		// Drawing selection for this scene
+		if (scene.drawingId && drawingLibrary) {
+			const drawing = drawingLibrary.get(scene.drawingId);
+			if (drawing) {
+				rules.push(`[scene="${scene.cssIdentifier}"] svg { visibility: hidden; }`);
+				rules.push(`[scene="${scene.cssIdentifier}"] #${drawing.cssIdentifier} { visibility: visible; }`);
+			}
+		}
 
 		// Group device entries by deviceId to combine animations
 		const deviceEntryGroups = new Map();
@@ -413,13 +421,19 @@ export class SceneLibrary extends Library {
 			return entry;
 		});
 
-		return {
+		const scene = {
 			id: data.id,
 			name: data.name,
 			cssIdentifier: data.cssIdentifier || toCSSIdentifier(data.name),
 			devices,
 			order: data.order !== undefined ? data.order : index
 		};
+
+		if (data.drawingId) {
+			scene.drawingId = data.drawingId;
+		}
+
+		return scene;
 	}
 
 	/**

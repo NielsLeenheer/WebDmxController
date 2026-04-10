@@ -99,7 +99,11 @@
 		const result = await editSceneDialog.open(scene);
 		if (!result) return;
 
-		sceneLibrary.update(scene.id, { name: result.name });
+		const updates = { name: result.name };
+		if (result.drawingId !== undefined) {
+			updates.drawingId = result.drawingId;
+		}
+		sceneLibrary.update(scene.id, updates);
 	}
 
 	function deleteScene(scene) {

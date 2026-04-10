@@ -8,14 +8,16 @@
 import { StreamDeckManager, isStreamDeck } from './streamdeck.js';
 import { MIDIDeviceProfileManager } from './midi.js';
 import { Thingy52Manager } from './thingy52.js';
+import { JoyConManager } from './joycon.js';
 import { GamepadManager } from './gamepad.js';
-import { 
-	KeyboardInputDevice, 
-	MIDIInputDevice, 
+import {
+	KeyboardInputDevice,
+	MIDIInputDevice,
 	HIDInputDevice,
 	StreamDeckInputDevice,
 	ThingyInputDevice,
 	GamepadInputDevice,
+	JoyConInputDevice,
 } from './devices.js';
 
 /**
@@ -28,10 +30,12 @@ export class InputDeviceManager {
 		this.keyboardDevice = null;
 		this.streamDeckManager = new StreamDeckManager();
 		this.thingy52Manager = new Thingy52Manager();
+		this.joyConManager = new JoyConManager();
 		this.midiProfileManager = new MIDIDeviceProfileManager();
 		this.gamepadManager = new GamepadManager();
 		this._setupStreamDeckListeners();
 		this._setupThingy52Listeners();
+		this._setupJoyConListeners();
 		this._setupGamepadListeners();
 	}
 
@@ -90,6 +94,23 @@ export class InputDeviceManager {
 
 		this.thingy52Manager.on('disconnected', ({ device }) => {
 			console.log(`Thingy:52 disconnected: ${device.name}`);
+			this.removeDevice(device.id);
+		});
+	}
+	/**
+	 * Setup Joy-Con event listeners
+	 */
+	_setupJoyConListeners() {
+		this.joyConManager.on('connected', ({ device }) => {
+			console.log(`Joy-Con connected: ${device.name}`);
+
+			const inputDevice = new JoyConInputDevice(device);
+			this.devices.set(device.id, inputDevice);
+			this._emit('deviceadded', inputDevice);
+		});
+
+		this.joyConManager.on('disconnected', ({ device }) => {
+			console.log(`Joy-Con disconnected: ${device.name}`);
 			this.removeDevice(device.id);
 		});
 	}
@@ -283,6 +304,18 @@ export class InputDeviceManager {
 		} catch (error) {
 			console.error('Failed to auto-reconnect Thingy:52 devices:', error);
 			return [];
+		}
+	}
+
+	/**
+	 * Request Joy-Con device
+	 */
+	async requestJoyCon() {
+		try {
+			return await this.joyConManager.requestDevice();
+		} catch (error) {
+			console.error('Failed to request Joy-Con:', error);
+			throw error;
 		}
 	}
 

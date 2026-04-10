@@ -9,6 +9,7 @@
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { isButton } from '../../lib/inputs/utils.js';
+	import { drawingLibrary } from '../../stores.svelte.js';
 
 	/**
 	 * AddActionTriggerDialog - Promise-based dialog for creating action triggers
@@ -43,16 +44,21 @@
 	let controlValues = $state({});
 	let enabledControls = $state([]);
 
-	// Action types - scene only available for 'down' state
+	let selectedDrawing = $state(null);
+	let drawings = $derived(drawingLibrary.getAll());
+
+	// Action types - scene/drawing only available for 'down' state
 	let availableActionTypes = $derived.by(() => {
 		const types = [
 			{ value: 'animation', label: 'Run Animation' },
 			{ value: 'values', label: 'Set values' }
 		];
 
-		// Only allow scene change on 'down' state
-		if (inputState === 'down') {
+		if (inputState !== 'up' && inputState !== 'off') {
 			types.push({ value: 'scene', label: 'Change Scene' });
+			if (drawings.length > 0) {
+				types.push({ value: 'drawing', label: 'Change Drawing' });
+			}
 		}
 
 		return types;
@@ -195,6 +201,26 @@
 			return;
 		}
 
+		// Drawing action
+		if (actionType === 'drawing') {
+			if (!selectedDrawing) {
+				resolvePromise(null);
+				closeDialog();
+				return;
+			}
+
+			const result = {
+				input: selectedInput,
+				inputState,
+				actionType: 'drawing',
+				drawing: selectedDrawing
+			};
+
+			resolvePromise(result);
+			closeDialog();
+			return;
+		}
+
 		// Other action types require device
 		if (!selectedDevice) {
 			resolvePromise(null);
@@ -275,7 +301,7 @@
 					</SelectField>
 				</Group>
 
-				{#if actionType !== 'scene'}
+				{#if actionType !== 'scene' && actionType !== 'drawing'}
 					<Group label="Device:" for="trigger-device">
 						<SelectField id="trigger-device" bind:value={selectedDevice} onchange={handleDeviceChange}>
 							{#each devices as device}
@@ -319,6 +345,15 @@
 							</SelectField>
 						</Group>
 						<p class="scene-hint">When triggered, the scene will be activated.</p>
+					{:else if actionType === 'drawing'}
+						<Group label="Drawing:" for="trigger-drawing">
+							<SelectField id="trigger-drawing" bind:value={selectedDrawing}>
+								{#each drawings as drawing}
+									<option value={drawing.id}>{drawing.name}</option>
+								{/each}
+							</SelectField>
+						</Group>
+						<p class="scene-hint">When triggered, the drawing will be shown on the laser projector.</p>
 					{/if}
 				</DialogColumnPanel>
 			{/snippet}

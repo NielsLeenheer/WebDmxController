@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@elgato-stream-deck/webhid": "^7.3.4",
-    "gamecontroller.js": "^1.5.0"
+    "gamecontroller.js": "^1.5.0",
+    "joy-con-webhid": "^0.11.0"
   }
 }

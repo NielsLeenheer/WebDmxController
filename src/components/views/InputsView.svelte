@@ -73,6 +73,14 @@
                 updates.color = result.color;
             }
 
+            // Include draw button for joycon sensor inputs
+            if (result.drawButton !== undefined && existingInput.type === 'joycon') {
+                updates.drawButton = result.drawButton;
+            }
+            if (result.clearButton !== undefined && existingInput.type === 'joycon') {
+                updates.clearButton = result.clearButton;
+            }
+
             // Library emits event, controller syncs hardware
             inputLibrary.update(existingInput.id, updates);
         }
