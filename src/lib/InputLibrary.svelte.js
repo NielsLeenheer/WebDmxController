@@ -189,6 +189,8 @@ export class InputLibrary extends Library {
 			orientation: inputData.orientation || null,
 			deviceBrand: inputData.deviceBrand || null,
 			buttonMode: inputData.buttonMode || 'momentary',
+			drawButton: inputData.drawButton || null,
+			clearButton: inputData.clearButton || null,
 			cssIdentifier: inputData.cssIdentifier,
 			order: inputData.order !== undefined ? inputData.order : index
 		};

@@ -29,6 +29,7 @@ import { FlameControl } from './FlameControl.js';
 import { SafetyControl } from './SafetyControl.js';
 import { PanTiltControl } from './PanTiltControl.js';
 import { PanTilt16Control } from './PanTilt16Control.js';
+import { ILDAControl } from './ILDAControl.js';
 
 /**
  * Control Type Registry
@@ -55,5 +56,8 @@ export const CONTROL_TYPES = {
 
 	// Position controls
 	PanTilt: new PanTiltControl(),
-	PanTilt16: new PanTilt16Control()
+	PanTilt16: new PanTilt16Control(),
+
+	// Non-DMX controls
+	ILDA: new ILDAControl()
 };

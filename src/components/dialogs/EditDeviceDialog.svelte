@@ -130,18 +130,20 @@
 			return;
 		}
 
-		// Validate channel
-		if (!isChannelValid(editingDevice, dialogChannel - 1)) {
+		const hasChannels = DEVICE_TYPES[editingDevice.type].channels > 0;
+
+		// Validate channel only for devices with DMX channels
+		if (hasChannels && !isChannelValid(editingDevice, dialogChannel - 1)) {
 			return;
 		}
 
 		// Return modified data
 		const result = {
 			name: dialogName.trim(),
-			startChannel: Math.max(0, Math.min(511, dialogChannel - 1)),
-			linkedTo: selectedLinkTarget,
-			syncedControls: selectedLinkTarget !== null ? selectedSyncControls : null,
-			mirrorPan: selectedLinkTarget !== null ? mirrorPan : false
+			startChannel: hasChannels ? Math.max(0, Math.min(511, dialogChannel - 1)) : 0,
+			linkedTo: hasChannels ? selectedLinkTarget : null,
+			syncedControls: hasChannels && selectedLinkTarget !== null ? selectedSyncControls : null,
+			mirrorPan: hasChannels && selectedLinkTarget !== null ? mirrorPan : false
 		};
 
 		resolvePromise(result);
@@ -187,41 +189,43 @@
 			/>
 		</Group>
 
-		<Group label="Starting channel (1-512):" for="channel-input">
-			<InputNumber
-				id="channel-input"
-				min={1}
-				max={512}
-				bind:value={dialogChannel}
-				valid={isChannelValid(editingDevice, dialogChannel - 1)}
-			/>
-			<small class="channel-range">
-				Device uses {DEVICE_TYPES[editingDevice.type].channels} channels:
-				{dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1}
-			</small>
-		</Group>
+		{#if DEVICE_TYPES[editingDevice.type].channels > 0}
+			<Group label="Starting channel (1-512):" for="channel-input">
+				<InputNumber
+					id="channel-input"
+					min={1}
+					max={512}
+					bind:value={dialogChannel}
+					valid={isChannelValid(editingDevice, dialogChannel - 1)}
+				/>
+				<small class="channel-range">
+					Device uses {DEVICE_TYPES[editingDevice.type].channels} channels:
+					{dialogChannel}-{dialogChannel + DEVICE_TYPES[editingDevice.type].channels - 1}
+				</small>
+			</Group>
 
-		<Group label="Link to device:" for="link-select">
-			{#if getLinkableDevices(editingDevice).length > 0 || editingDevice.linkedTo !== null}
-				<div class="link-select-row">
-					<select id="link-select" bind:value={selectedLinkTarget}>
-						<option value={null}>None</option>
-						{#each getLinkableDevices(editingDevice) as linkableDevice}
-							<option value={linkableDevice.id}>
-								{linkableDevice.name} ({DEVICE_TYPES[linkableDevice.type].name})
-							</option>
-						{/each}
-					</select>
-					{#if selectedLinkTarget !== null && getAvailableControlsForLink().length > 0}
-						<Button onclick={openCustomizeControlsDialog} variant="secondary">
-							Customize
-						</Button>
-					{/if}
-				</div>
-			{:else}
-				<p class="no-devices">No compatible devices available to link</p>
-			{/if}
-		</Group>
+			<Group label="Link to device:" for="link-select">
+				{#if getLinkableDevices(editingDevice).length > 0 || editingDevice.linkedTo !== null}
+					<div class="link-select-row">
+						<select id="link-select" bind:value={selectedLinkTarget}>
+							<option value={null}>None</option>
+							{#each getLinkableDevices(editingDevice) as linkableDevice}
+								<option value={linkableDevice.id}>
+									{linkableDevice.name} ({DEVICE_TYPES[linkableDevice.type].name})
+								</option>
+							{/each}
+						</select>
+						{#if selectedLinkTarget !== null && getAvailableControlsForLink().length > 0}
+							<Button onclick={openCustomizeControlsDialog} variant="secondary">
+								Customize
+							</Button>
+						{/if}
+					</div>
+				{:else}
+					<p class="no-devices">No compatible devices available to link</p>
+				{/if}
+			</Group>
+		{/if}
 	</form>
 
 	{#snippet buttons()}
@@ -229,7 +233,7 @@
 		<Button
 			onclick={handleSave}
 			variant="primary"
-			disabled={!isChannelValid(editingDevice, dialogChannel - 1)}
+			disabled={DEVICE_TYPES[editingDevice.type].channels > 0 && !isChannelValid(editingDevice, dialogChannel - 1)}
 		>
 			Save
 		</Button>

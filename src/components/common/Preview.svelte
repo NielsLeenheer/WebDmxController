@@ -22,6 +22,7 @@
         controls = [],
         data = {},
         state = {},       // Raw state object: { value?, x?, y?, state?, roll?, pitch?, yaw? }
+        laserManager = null,
         class: className = '',
     } = $props();
 
@@ -361,6 +362,49 @@
             </div>
         {/if}
 
+        <!-- ILDA laser projector -->
+        {#if hasControl('ilda')}
+            {@const power = state.power ?? 0}
+            {@const enabled = state.enabled !== false}
+            {@const brightness = enabled ? power / 255 : 0}
+            {@const glowAmount = brightness > 0.5 ? (brightness - 0.5) * 2 : 0}
+
+            {#if size === 'large' && laserManager}
+                <!-- Large: show live drawing preview -->
+                <div class="control-layer control-ilda control-ilda-drawing">
+                    <DrawingPreview
+                        segments={laserManager.lastSegments}
+                        width={128}
+                        height={128}
+                        background="#444"
+                        lineWidth={2.5}
+                    />
+                </div>
+            {:else}
+                <!-- Small/Medium: show laser symbol -->
+                <div class="control-layer control-ilda" style="background: #444;">
+                    {#if enabled && power > 0}
+                        <div class="ilda-laser-mark" style="
+                            opacity: {brightness};
+                            filter: drop-shadow(0 0 {glowAmount * 8}px rgba(0, 255, 0, {glowAmount})) drop-shadow(0 0 {glowAmount * 3}px rgba(0, 255, 0, {glowAmount * 0.8}));
+                        ">
+                            <svg viewBox="0 0 100 100" class="ilda-star">
+                                <circle cx="40" cy="50" r="4" fill="rgb(0, 255, 0)"/>
+                                <line x1="40" y1="50" x2="40" y2="30" stroke="rgb(0, 255, 0)" stroke-width="2"/>
+                                <line x1="40" y1="50" x2="40" y2="70" stroke="rgb(0, 255, 0)" stroke-width="2"/>
+                                <line x1="40" y1="50" x2="22" y2="50" stroke="rgb(0, 255, 0)" stroke-width="2"/>
+                                <line x1="40" y1="50" x2="26" y2="36" stroke="rgb(0, 255, 0)" stroke-width="1.5"/>
+                                <line x1="40" y1="50" x2="26" y2="64" stroke="rgb(0, 255, 0)" stroke-width="1.5"/>
+                                <line x1="40" y1="50" x2="54" y2="36" stroke="rgb(0, 255, 0)" stroke-width="1.5"/>
+                                <line x1="40" y1="50" x2="54" y2="64" stroke="rgb(0, 255, 0)" stroke-width="1.5"/>
+                                <line x1="40" y1="50" x2="100" y2="50" stroke="rgb(0, 255, 0)" stroke-width="2"/>
+                            </svg>
+                        </div>
+                    {/if}
+                </div>
+            {/if}
+        {/if}
+
         <div class="preview-inset-shadow"></div>
     </div>
 
@@ -632,6 +676,28 @@
         height: 100%;
         border-radius: inherit;
         corner-shape: inherit;
+    }
+
+    /* ILDA laser projector */
+    .control-ilda {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ilda-laser-mark {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ilda-star {
+        width: 100%;
+        height: 100%;
+    }
+
+    .control-ilda-drawing {
+        overflow: hidden;
     }
 
     /* Animation and input previews */

@@ -66,7 +66,7 @@
 
     // Expose methods via contextRef
     $effect(() => {
-        contextRef = { show };
+        contextRef = { show, getContext: () => currentContext };
     });
 </script>
 

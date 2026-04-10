@@ -18,6 +18,7 @@ import { SmokeDeviceType } from './SmokeDeviceType.js';
 import { MovingHeadDeviceType } from './MovingHeadDeviceType.js';
 import { MovingHead11CHDeviceType } from './MovingHead11CHDeviceType.js';
 import { FlamethrowerDeviceType } from './FlamethrowerDeviceType.js';
+import { LaserProjectorDeviceType } from './LaserProjectorDeviceType.js';
 
 export const DEVICE_TYPES = {
     'rgb': new RGBDeviceType(),
@@ -27,5 +28,6 @@ export const DEVICE_TYPES = {
     'smoke': new SmokeDeviceType(),
     'moving-head': new MovingHeadDeviceType(),
     'moving-head-11ch': new MovingHead11CHDeviceType(),
-    'flamethrower': new FlamethrowerDeviceType()
+    'flamethrower': new FlamethrowerDeviceType(),
+    'laser-projector': new LaserProjectorDeviceType()
 };

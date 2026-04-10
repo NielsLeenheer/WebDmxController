@@ -19,6 +19,7 @@
     import EditorView from './components/views/EditorView.svelte';
     import DrawingView from './components/views/DrawingView.svelte';
     import FloatingPreview from './components/common/FloatingPreview.svelte';
+    import { LaserManager } from './lib/outputs/laser/LaserManager.js';
 
     let view = $state('devices');
     let connected = $state(false);
@@ -34,6 +35,8 @@
 
     // CSS Manager - handles all CSS sampling and DOM management
     let cssManager = $state(null);
+    let laserManager = $state(new LaserManager(deviceLibrary, drawingLibrary));
+    let selectedDrawingId = $state(null);
     let mainElement;
 
     // Initialize input controller
@@ -100,6 +103,10 @@
             sceneController.setScene(sceneId);
         });
 
+
+        // Initialize LaserManager with the sampler container
+        laserManager.initialize(cssManager.getContainer());
+
         // Subscribe to sampled values for DMX output
         const unsubscribe = cssManager.subscribe(handleSampledValues);
 
@@ -117,6 +124,7 @@
         // Return cleanup function
         return () => {
             unsubscribe();
+            laserManager.destroy();
             cssManager.destroy();
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
@@ -138,6 +146,7 @@
     <div class="view-container" class:hidden={view !== 'devices'}>
         <DevicesView
             {dmxController}
+            {laserManager}
             bind:this={devicesViewRef}
             isActive={view === 'devices'}
         />

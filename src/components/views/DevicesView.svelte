@@ -6,13 +6,19 @@
     import Button from '../common/Button.svelte';
     import ContextMenu from '../common/ContextMenu.svelte';
     import ContextAction from '../common/ContextAction.svelte';
+	import ContextSeparator from '../common/ContextSeparator.svelte';
     import EditDeviceDialog from '../dialogs/EditDeviceDialog.svelte';
+    import LaserCalibrationDialog from '../dialogs/LaserCalibrationDialog.svelte';
+    import LaserSettingsDialog from '../dialogs/LaserSettingsDialog.svelte';
 
     import newIcon from '../../assets/icons/new.svg?raw';
     import editIcon from '../../assets/icons/edit.svg?raw';
     import removeIcon from '../../assets/icons/remove.svg?raw';
+    import laserIcon from '../../assets/icons/laser.svg?raw';
+    import calibrateIcon from '../../assets/icons/calibrate.svg?raw';
+    import settingsIcon from '../../assets/icons/settings.svg?raw';
 
-    let { dmxController, isActive = false } = $props();
+    let { dmxController, isActive = false, laserManager = null } = $props();
 
     // Get devices
     let devices = $derived(deviceLibrary.getAll());
@@ -20,11 +26,20 @@
     // Device type selection
     let selectedType = $state('rgb');
 
-    // Dialog reference
+    // Dialog references
     let editDeviceDialog;
+    let calibrationDialog = $state(null);
+    let settingsDialog = $state(null);
+
+    function hasILDAControl(device) {
+        if (!device) return false;
+        const deviceType = DEVICE_TYPES[device.type];
+        return deviceType?.controls.some(c => c.type.type === 'ilda');
+    }
 
     // Context menu state
     let contextMenuRef = $state(null);
+    let contextDevice = $state(null);
 
     // Drag and drop helper
     const dnd = createDragDrop({
@@ -101,7 +116,8 @@
                 {device}
                 {dnd}
                 {devices}
-                onEdit={(device, anchor) => contextMenuRef?.show(device, anchor)}
+                {laserManager}
+                onEdit={(device, anchor) => { contextDevice = device; contextMenuRef?.show(device, anchor); }}
                 onValueChange={handleDeviceValueChange}
             />
         {/each}
@@ -119,11 +135,32 @@
             {@html editIcon}
             Edit
         </ContextAction>
+        {#if hasILDAControl(contextDevice)}
+            <ContextAction onclick={(device) => settingsDialog?.show(device?.id)}>
+                {@html settingsIcon}
+                Settings
+            </ContextAction>
+            <ContextAction onclick={(device) => calibrationDialog?.show(device?.id)} disabled={(device) => !laserManager?.isDeviceConnected(device?.id)}>
+                {@html calibrateIcon}
+                Calibrate
+            </ContextAction>
+        {/if}
+        <ContextSeparator />
         <ContextAction onclick={(device) => deleteDevice(device?.id)} variant="danger">
             {@html removeIcon}
             Delete
         </ContextAction>
     </ContextMenu>
+
+    <LaserCalibrationDialog
+        bind:this={calibrationDialog}
+        {laserManager}
+    />
+
+    <LaserSettingsDialog
+        bind:this={settingsDialog}
+        {laserManager}
+    />
 </div>
 
 <style>

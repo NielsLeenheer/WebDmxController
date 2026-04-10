@@ -40,10 +40,11 @@ export class DeviceType {
      * Validate that controls don't overlap channels
      */
     _validateControls() {
-        const channelUsage = new Array(this.channels).fill(false);
-
         for (const control of this.controls) {
             const channelCount = control.type.getChannelCount();
+            // Skip validation for non-DMX controls (e.g. ILDA)
+            if (channelCount === 0) continue;
+
             for (let i = 0; i < channelCount; i++) {
                 const channel = control.startChannel + i;
                 if (channel >= this.channels) {

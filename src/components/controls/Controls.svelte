@@ -239,6 +239,8 @@
                     maxlength="3"
                 />
             </div>
+        {:else if control.type.type === 'ilda'}
+            <!-- ILDA control rendered separately below -->
         {:else if control.type.type === 'slider'}
             {@const controlValue = values[control.id] ?? 0}
             {@const controlDisabled = isControlDisabled(control.id) || !isControlEnabled(control)}

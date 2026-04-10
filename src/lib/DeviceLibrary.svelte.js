@@ -222,7 +222,7 @@ export class DeviceLibrary extends Library {
 			}
 		}
 
-		return {
+		const device = {
 			id: deviceData.id,
 			type: deviceData.type,
 			startChannel: deviceData.startChannel,
@@ -234,5 +234,12 @@ export class DeviceLibrary extends Library {
 			cssIdentifier: deviceData.cssIdentifier,
 			order: deviceData.order !== undefined ? deviceData.order : index
 		};
+
+		// Preserve ILDA settings for laser projectors
+		if (deviceData.ildaSettings) {
+			device.ildaSettings = deviceData.ildaSettings;
+		}
+
+		return device;
 	}
 }

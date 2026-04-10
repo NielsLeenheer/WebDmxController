@@ -312,6 +312,14 @@
 								{/each}
 							</SelectField>
 						</Group>
+					{:else if actionType === 'drawing'}
+						<Group label="Drawing:" for="edit-trigger-drawing">
+							<SelectField id="edit-trigger-drawing" bind:value={selectedDrawing}>
+								{#each drawings as drawing}
+									<option value={drawing.id}>{drawing.name}</option>
+								{/each}
+							</SelectField>
+						</Group>
 					{:else if actionType === 'values' && selectedDevice}
 						{@const device = devices.find(d => d.id === selectedDevice)}
 						{#if device}

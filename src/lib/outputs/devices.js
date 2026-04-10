@@ -33,10 +33,16 @@ export function getDevicePreviewData(deviceType, controlValues) {
 
     // Process each control in the device type
     for (const control of deviceTypeDef.controls) {
+        const controlTypeId = control.type.type;
+
+        // ILDA controls have no DMX value — always include them
+        if (controlTypeId === 'ilda') {
+            controls.push('ilda');
+            continue;
+        }
+
         const value = controlValues[control.id];  // Use device control id
         if (value === undefined) continue;
-
-        const controlTypeId = control.type.type;  // e.g., 'rgb', 'slider', 'xypad'
 
         if (controlTypeId === 'rgb') {
             // RGB/RGBA control - pass through the color object

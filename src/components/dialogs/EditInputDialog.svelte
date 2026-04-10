@@ -36,6 +36,8 @@
 	let editingName = $state('');
 	let editingButtonMode = $state('momentary');
 	let editingColor = $state(null);
+	let editingDrawButton = $state(null);
+	let editingClearButton = $state(null);
 	let showColorPicker = $state(false);
 
 	/**
@@ -52,6 +54,8 @@
 			editingName = input.name;
 			editingButtonMode = input.buttonMode || 'momentary';
 			editingColor = input.color;
+			editingDrawButton = input.drawButton || null;
+			editingClearButton = input.clearButton || null;
 
 			// Only show color picker for RGB color support
 			// Single-color buttons (red, green) don't need a picker
@@ -74,7 +78,9 @@
 		const result = {
 			name: editingName.trim(),
 			buttonMode: editingButtonMode,
-			color: editingColor
+			color: editingColor,
+			drawButton: editingDrawButton,
+			clearButton: editingClearButton
 		};
 
 		resolvePromise(result);
@@ -91,6 +97,8 @@
 		editingInput = null;
 		editingName = '';
 		editingColor = null;
+		editingDrawButton = null;
+		editingClearButton = null;
 	}
 </script>
 
@@ -133,6 +141,43 @@
 				<SelectField id="button-mode" bind:value={editingButtonMode}>
 					<option value="momentary">Down/Up</option>
 					<option value="toggle">On/Off</option>
+				</SelectField>
+			</Group>
+		{/if}
+
+		{#if editingInput?.type === 'joycon'}
+			<Group label="Draw Button:" for="draw-button">
+				<SelectField id="draw-button" bind:value={editingDrawButton}>
+					<option value="zr">ZR</option>
+					<option value="zl">ZL</option>
+					<option value="r">R</option>
+					<option value="l">L</option>
+					<option value="a">A</option>
+					<option value="b">B</option>
+					<option value="x">X</option>
+					<option value="y">Y</option>
+					<option value="sl">SL</option>
+					<option value="sr">SR</option>
+					<option value="plus">+</option>
+					<option value="minus">−</option>
+					<option value="stickButton">Stick Press</option>
+				</SelectField>
+			</Group>
+			<Group label="Clear Button:" for="clear-button">
+				<SelectField id="clear-button" bind:value={editingClearButton}>
+					<option value="r">R</option>
+					<option value="l">L</option>
+					<option value="zr">ZR</option>
+					<option value="zl">ZL</option>
+					<option value="a">A</option>
+					<option value="b">B</option>
+					<option value="x">X</option>
+					<option value="y">Y</option>
+					<option value="sl">SL</option>
+					<option value="sr">SR</option>
+					<option value="plus">+</option>
+					<option value="minus">−</option>
+					<option value="stickButton">Stick Press</option>
 				</SelectField>
 			</Group>
 		{/if}
