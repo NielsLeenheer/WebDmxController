@@ -9,6 +9,7 @@
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { isButton } from '../../lib/inputs/utils.js';
+	import { getInputType } from '../../lib/inputs/types/index.js';
 	import { drawingLibrary } from '../../stores.svelte.js';
 
 	/**
@@ -45,6 +46,19 @@
 	let selectedScene = $state(null);
 	let selectedDrawing = $state(null);
 	let drawings = $derived(drawingLibrary.getAll());
+
+	// Group inputs by device for optgroup rendering
+	let inputsByDevice = $derived.by(() => {
+		const groups = new Map();
+		for (const input of availableInputs) {
+			const key = input.deviceId || 'unknown';
+			if (!groups.has(key)) {
+				groups.set(key, { label: input.deviceName || key, inputs: [] });
+			}
+			groups.get(key).inputs.push(input);
+		}
+		return [...groups.values()];
+	});
 	let duration = $state(1000);
 	let looping = $state(false);
 	let easing = $state('linear');
@@ -105,6 +119,14 @@
 				{ value: 'down', label: 'Down' },
 				{ value: 'up', label: 'Up' }
 			];
+		}
+	}
+
+	// Handle input selection change - reset inputState to first available option
+	function handleInputChange() {
+		const options = getInputStateOptions();
+		if (options.length > 0 && !options.some(o => o.value === inputState)) {
+			inputState = options[0].value;
 		}
 	}
 
@@ -264,9 +286,13 @@
 			{#snippet column1()}
 				<!-- Column 1: Input Configuration -->
 				<Group label="Input:" for="edit-trigger-input">
-					<SelectField id="edit-trigger-input" bind:value={selectedInput}>
-						{#each availableInputs as input}
-							<option value={input.deviceId + '_' + input.controlId}>{input.name}</option>
+					<SelectField id="edit-trigger-input" bind:value={selectedInput} onchange={handleInputChange}>
+						{#each inputsByDevice as group}
+							<optgroup label={group.label}>
+								{#each group.inputs as input}
+									<option value={input.deviceId + '_' + input.controlId}>{input.name}</option>
+								{/each}
+							</optgroup>
 						{/each}
 					</SelectField>
 				</Group>
@@ -292,8 +318,8 @@
 
 				{#if actionType !== 'scene' && actionType !== 'drawing'}
 					<Group label="Device:" for="edit-trigger-device">
-						<SelectField id="edit-trigger-device" bind:value={selectedDevice}>
-							{#each devices as device}
+						<SelectField id="edit-trigger-device" bind:value={selectedDevice} onchange={() => { controlValues = {}; enabledControls = []; }}>
+							{#each devices.filter(d => DEVICE_TYPES[d.type]?.channels > 0) as device}
 								<option value={device.id}>{device.name}</option>
 							{/each}
 						</SelectField>

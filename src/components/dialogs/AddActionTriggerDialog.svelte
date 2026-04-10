@@ -9,6 +9,7 @@
 	import Controls from '../controls/Controls.svelte';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { isButton } from '../../lib/inputs/utils.js';
+	import { getInputType } from '../../lib/inputs/types/index.js';
 	import { drawingLibrary } from '../../stores.svelte.js';
 
 	/**
@@ -46,6 +47,19 @@
 
 	let selectedDrawing = $state(null);
 	let drawings = $derived(drawingLibrary.getAll());
+
+	// Group inputs by device for optgroup rendering
+	let inputsByDevice = $derived.by(() => {
+		const groups = new Map();
+		for (const input of availableInputs) {
+			const key = input.deviceId || 'unknown';
+			if (!groups.has(key)) {
+				groups.set(key, { label: input.deviceName || key, inputs: [] });
+			}
+			groups.get(key).inputs.push(input);
+		}
+		return [...groups.values()];
+	});
 
 	// Action types - scene/drawing only available for 'down' state
 	let availableActionTypes = $derived.by(() => {
@@ -109,9 +123,17 @@
 		}
 	}
 
+	// Handle input selection change - reset inputState to first available option
+	function handleInputChange() {
+		const options = getInputStateOptions();
+		if (options.length > 0 && !options.some(o => o.value === inputState)) {
+			inputState = options[0].value;
+		}
+	}
+
 	// Handle input state change - reset action type if scene is selected but state changed
 	function handleInputStateChange() {
-		if (actionType === 'scene' && inputState !== 'down') {
+		if (actionType === 'scene' && (inputState === 'up' || inputState === 'off')) {
 			actionType = 'animation';
 		}
 	}
@@ -131,8 +153,11 @@
 		}
 	}
 
-	// Handle device change - initialize enabled controls
+	// Handle device change - reset values and enabled controls
 	function handleDeviceChange() {
+		controlValues = {};
+		enabledControls = [];
+
 		if (actionType === 'values' && selectedDevice) {
 			const device = devices.find(d => d.id === selectedDevice);
 			if (device) {
@@ -283,9 +308,13 @@
 			{#snippet column1()}
 				<!-- Column 1: Input Configuration -->
 				<Group label="Input:" for="trigger-input">
-					<SelectField id="trigger-input" bind:value={selectedInput}>
-						{#each availableInputs as input}
-							<option value={`${input.deviceId}_${input.controlId}`}>{input.name}</option>
+					<SelectField id="trigger-input" bind:value={selectedInput} onchange={handleInputChange}>
+						{#each inputsByDevice as group}
+							<optgroup label={group.label}>
+								{#each group.inputs as input}
+									<option value={`${input.deviceId}_${input.controlId}`}>{input.name}</option>
+								{/each}
+							</optgroup>
 						{/each}
 					</SelectField>
 				</Group>
@@ -312,7 +341,7 @@
 				{#if actionType !== 'scene' && actionType !== 'drawing'}
 					<Group label="Device:" for="trigger-device">
 						<SelectField id="trigger-device" bind:value={selectedDevice} onchange={handleDeviceChange}>
-							{#each devices as device}
+							{#each devices.filter(d => DEVICE_TYPES[d.type]?.channels > 0) as device}
 								<option value={device.id}>{device.name}</option>
 							{/each}
 						</SelectField>

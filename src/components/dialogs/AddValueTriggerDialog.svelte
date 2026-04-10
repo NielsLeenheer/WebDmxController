@@ -40,14 +40,25 @@
 	let exportedValues = $derived(selectedInput ? getInputExportedValues(selectedInput) : []);
 	let selectedDevice = $derived(devices.find(d => d.id === selectedDeviceId));
 	let deviceType = $derived(selectedDevice ? DEVICE_TYPES[selectedDevice.type] : null);
-	let controls = $derived(deviceType ? deviceType.controls : []);
+	let controls = $derived(deviceType ? deviceType.controls.filter(c => c.type.getValueMetadata().values.length > 0) : []);
 
 	// Get control values for selected control
 	let selectedControlDef = $derived(controls.find(c => c.id === selectedControlId));
 	let controlValues = $derived(selectedControlDef ? selectedControlDef.type.getValueMetadata().values : []);
 	let needsValueSelection = $derived(controlValues.length > 1);
 
-	// Update selected value when input changes
+	// Group inputs by device for optgroup rendering
+	let inputsByDevice = $derived.by(() => {
+		const groups = new Map();
+		for (const input of availableInputs) {
+			const key = input.deviceId || 'unknown';
+			if (!groups.has(key)) {
+				groups.set(key, { label: input.deviceName || key, inputs: [] });
+			}
+			groups.get(key).inputs.push(input);
+		}
+		return [...groups.values()];
+	});
 	$effect(() => {
 		if (exportedValues.length > 0 && !exportedValues.find(v => v.key === selectedValueKey)) {
 			selectedValueKey = exportedValues[0].key;
@@ -56,8 +67,10 @@
 
 	// Update selected control when device changes
 	$effect(() => {
-		if (controls.length > 0 && !controls.find(c => c.id === selectedControlId)) {
+		if (selectedDeviceId && controls.length > 0 && !controls.find(c => c.id === selectedControlId)) {
 			selectedControlId = controls[0].id;
+		} else if (!selectedDeviceId) {
+			selectedControlId = null;
 		}
 	});
 
@@ -138,8 +151,12 @@
 				<!-- Column 1: Input Configuration -->
 				<Group label="Input:" for="value-trigger-input">
 					<SelectField id="value-trigger-input" bind:value={selectedInputId}>
-						{#each availableInputs as input}
-							<option value={input.id}>{input.name}</option>
+						{#each inputsByDevice as group}
+							<optgroup label={group.label}>
+								{#each group.inputs as input}
+									<option value={input.id}>{input.name}</option>
+								{/each}
+							</optgroup>
 						{/each}
 					</SelectField>
 				</Group>
@@ -159,7 +176,7 @@
 				<!-- Column 2: Device Configuration -->
 				<Group label="Device:" for="value-trigger-device">
 					<SelectField id="value-trigger-device" bind:value={selectedDeviceId}>
-						{#each devices as device}
+						{#each devices.filter(d => DEVICE_TYPES[d.type]?.channels > 0) as device}
 							<option value={device.id}>{device.name || device.cssIdentifier}</option>
 						{/each}
 					</SelectField>
