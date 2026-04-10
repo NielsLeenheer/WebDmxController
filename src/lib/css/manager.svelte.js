@@ -16,15 +16,19 @@ export class CSSManager {
 	// Reactive devices array
 	devices = $state.raw([]);
 
-	constructor(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager, sceneLibrary) {
+	// Reactive generated CSS string for EditorView tracking
+	generatedCSSReactive = $state('');
+
+	constructor(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager, sceneLibrary, drawingLibrary = null) {
 		this.deviceLibrary = deviceLibrary;
 		this.animationLibrary = animationLibrary;
 		this.inputLibrary = inputLibrary;
 		this.triggerLibrary = triggerLibrary;
 		this.triggerManager = triggerManager;
 		this.sceneLibrary = sceneLibrary;
+		this.drawingLibrary = drawingLibrary;
 
-		this.cssGenerator = new CSSGenerator(animationLibrary, inputLibrary, triggerLibrary, deviceLibrary, sceneLibrary);
+		this.cssGenerator = new CSSGenerator(animationLibrary, inputLibrary, triggerLibrary, deviceLibrary, sceneLibrary, drawingLibrary);
 		this.cssSampler = new CSSSampler();
 
 		// DOM elements
@@ -118,6 +122,15 @@ export class CSSManager {
 			}
 		});
 
+		// Watch drawing library changes
+		$effect(() => {
+			if (this.drawingLibrary) {
+				this.drawingLibrary.getAll(); // Track reactivity
+				this.regenerateCSS();
+				this.updateStyleElement();
+			}
+		});
+
 		// Start sampling loop
 		this.startSampling();
 	}
@@ -168,6 +181,14 @@ export class CSSManager {
 	}
 
 	/**
+	 * Get the trigger classes container element
+	 * Used by LaserManager to inject SVG content into the sampler container
+	 */
+	getContainer() {
+		return this.triggerClassesContainer;
+	}
+
+	/**
 	 * Subscribe to sampled CSS values
 	 * @param {Function} callback - Called with sampledValues Map on each frame
 	 * @returns {Function} Unsubscribe function
@@ -192,6 +213,7 @@ export class CSSManager {
 	 */
 	regenerateCSS() {
 		this._generatedCSS = this.cssGenerator.generate(this.devices);
+		this.generatedCSSReactive = this._generatedCSS;
 	}
 
 	/**
