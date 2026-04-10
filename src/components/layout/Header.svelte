@@ -9,6 +9,7 @@
     import thingyIcon from '../../assets/icons/thingy.svg?raw';
     import heartrateIcon from '../../assets/icons/heartrate.svg?raw';
     import joyconIcon from '../../assets/icons/joycon.svg?raw';
+    import audioIcon from '../../assets/icons/audio.svg?raw';
     import Dialog from '../common/Dialog.svelte';
 
     let { onconnect, ondisconnect, connected, inputController } = $props();
@@ -23,11 +24,12 @@
     let thingyDevices = $derived(connectedDevices.filter(d => d.type === 'thingy'));
     let heartRateDevices = $derived(connectedDevices.filter(d => d.type === 'heartrate'));
     let joyConDevices = $derived(connectedDevices.filter(d => d.type === 'joycon'));
+    let audioDevices = $derived(connectedDevices.filter(d => d.type === 'audio'));
     let midiDevices = $derived(connectedDevices.filter(d => d.type === 'midi'));
     let gamepadDevices = $derived(connectedDevices.filter(d => d.type === 'gamepad'));
 
     // Unified list of all connected devices
-    let allConnectedDevices = $derived([...streamDeckDevices, ...hidDevices, ...thingyDevices, ...heartRateDevices, ...joyConDevices, ...midiDevices, ...gamepadDevices]);
+    let allConnectedDevices = $derived([...streamDeckDevices, ...hidDevices, ...thingyDevices, ...heartRateDevices, ...joyConDevices, ...audioDevices, ...midiDevices, ...gamepadDevices]);
 
     // MIDI button should be disabled if we already have MIDI access
     let hasMidiAccess = $derived(midiDevices.length > 0);
@@ -123,6 +125,17 @@
         }
     }
 
+    async function connectAudio() {
+        try {
+            await inputController?.requestAudio();
+            connectedDevices = inputController?.getInputDevices() || [];
+            closeDevicesDialog();
+        } catch (error) {
+            if (error.name === 'NotAllowedError') return;
+            alert(`Failed to connect audio: ${error.message}\n\nMake sure microphone access is allowed.`);
+        }
+    }
+
 </script>
 
 <header>
@@ -182,6 +195,10 @@
             <button class="device-connect-btn" onclick={connectJoyCon}>
                 <Icon data={joyconIcon} />
                 <span>Joy-Con</span>
+            </button>
+            <button class="device-connect-btn" onclick={connectAudio}>
+                <Icon data={audioIcon} />
+                <span>Audio</span>
             </button>
         </div>
 

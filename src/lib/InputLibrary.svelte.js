@@ -192,6 +192,7 @@ export class InputLibrary extends Library {
 			drawButton: inputData.drawButton || null,
 			clearButton: inputData.clearButton || null,
 			cssIdentifier: inputData.cssIdentifier,
+			audioSettings: inputData.audioSettings || null,
 			order: inputData.order !== undefined ? inputData.order : index
 		};
 	}

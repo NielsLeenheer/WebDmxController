@@ -8,11 +8,14 @@
     import Button from '../common/Button.svelte';
     import ContextMenu from '../common/ContextMenu.svelte';
     import ContextAction from '../common/ContextAction.svelte';
+    import ContextSeparator from '../common/ContextSeparator.svelte';
     import EditInputDialog from '../dialogs/EditInputDialog.svelte';
+    import AudioPreviewDialog from '../dialogs/AudioPreviewDialog.svelte';
     import recordIcon from '../../assets/icons/record.svg?raw';
     import stopIcon from '../../assets/icons/stop.svg?raw';
     import editIcon from '../../assets/icons/edit.svg?raw';
     import removeIcon from '../../assets/icons/remove.svg?raw';
+    import audioIcon from '../../assets/icons/audio.svg?raw';
 
     let {
         inputController
@@ -22,7 +25,9 @@
     let inputs = $derived(inputLibrary.getAll());
 
     let editInputDialog; // Reference to EditInputDialog component
+    let audioPreviewDialog; // Reference to AudioPreviewDialog component
     let inputStates = $state({}); // Track state/value for each input: { inputId: { state: 'on'|'off', value: number, roll?, pitch?, yaw? } }
+    let contextInput = $state(null); // Track which input the context menu is open for
 
     // Context menu state
     let contextMenuRef = $state(null);
@@ -243,12 +248,28 @@
     {inputLibrary}
 />
 
+<!-- Audio Preview Dialog -->
+<AudioPreviewDialog bind:this={audioPreviewDialog} />
+
 <!-- Context Menu -->
 <ContextMenu bind:contextRef={contextMenuRef}>
     <ContextAction onclick={(input) => startEditing(input)}>
         {@html editIcon}
         Edit
     </ContextAction>
+    {#if contextInput?.type === 'audio'}
+        <ContextAction
+            disabled={!inputController.getInputDevice(contextInput?.deviceId)}
+            onclick={(input) => {
+                const device = inputController.getInputDevice(input?.deviceId);
+                if (device) audioPreviewDialog?.show(device, inputController);
+            }}
+        >
+            {@html audioIcon}
+            Audio Settings
+        </ContextAction>
+    {/if}
+    <ContextSeparator />
     <ContextAction onclick={(input) => deleteInput(input?.id)} variant="danger">
         {@html removeIcon}
         Delete

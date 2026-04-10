@@ -14,6 +14,7 @@ import { ThingyInputType } from './ThingyInputType.js';
 import { StickInputType } from './StickInputType.js';
 import { HeartRateInputType } from './HeartRateInputType.js';
 import { JoyConInputType } from './JoyConInputType.js';
+import { AudioInputType } from './AudioInputType.js';
 
 // Export classes
 export { InputType };
@@ -26,6 +27,7 @@ export { ThingyInputType };
 export { StickInputType };
 export { HeartRateInputType };
 export { JoyConInputType };
+export { AudioInputType };
 
 // Singleton instances for each type
 const buttonType = new ButtonInputType();
@@ -37,6 +39,7 @@ const thingyType = new ThingyInputType();
 const stickType = new StickInputType();
 const heartRateType = new HeartRateInputType();
 const joyConType = new JoyConInputType();
+const audioType = new AudioInputType();
 
 /**
  * Input types registry
@@ -52,6 +55,7 @@ export const INPUT_TYPES = {
 	stick: stickType,
 	heartrate: heartRateType,
 	joycon: joyConType,
+	audio: audioType
 };
 
 /**

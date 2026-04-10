@@ -163,6 +163,11 @@ export class InputController {
 			return;
 		}
 
+		// Special handling for Audio devices
+		if (device.type === 'audio') {
+			this._setupAudioListeners(device);
+			return;
+		}
 
 		// Gamepad devices have their events routed through the manager
 		// No additional setup needed here - they use the standard trigger/change events
@@ -555,6 +560,85 @@ export class InputController {
 		});
 	}
 
+	/**
+	 * Setup listeners for Audio devices
+	 *
+	 * Auto-creates an audio input that exposes per-band energy as CSS properties
+	 * and per-band beat triggers for CSS class toggling.
+	 */
+	_setupAudioListeners(device) {
+		let audioInput = this.inputLibrary.findByDeviceControl(device.id, 'audio');
+
+		if (!audioInput) {
+			audioInput = this.inputLibrary.create({
+				name: device.name,
+				deviceId: device.id,
+				controlId: 'audio',
+				deviceName: device.name,
+				type: 'audio',
+				colorSupport: 'none',
+				controlName: null,
+				buttonMode: 'beat'
+			});
+		}
+
+		// Apply saved band settings if available
+		if (audioInput.audioSettings) {
+			device.applyAudioSettings(audioInput.audioSettings);
+		}
+
+		const audioType = getInputType('audio');
+		const exportedValues = audioType.getExportedValues(audioInput);
+
+		const sensorMetadata = new Map();
+		for (const valueDef of exportedValues) {
+			sensorMetadata.set(valueDef.key, valueDef);
+		}
+
+		// Band triggers → CSS classes (e.g. .microphone-bass)
+		if (!this._beatTimers) this._beatTimers = new Map();
+
+		device.on('trigger', ({ controlId: bandId, velocity }) => {
+			const cssId = audioInput.cssIdentifier || 'audio';
+			const beatClass = `${cssId}-${bandId}`;
+			this.triggerManager.addRawClass(beatClass);
+
+			const timerKey = `beat:${device.id}:${bandId}`;
+			if (this._beatTimers.has(timerKey)) {
+				clearTimeout(this._beatTimers.get(timerKey));
+			}
+			this._beatTimers.set(timerKey, setTimeout(() => {
+				this.triggerManager.removeRawClass(beatClass);
+				this._beatTimers.delete(timerKey);
+			}, 200));
+
+			this._emit('input-trigger', { mapping: audioInput, velocity, band: bandId });
+
+			// Execute action triggers for this band
+			this._executeAudioTriggers(audioInput, bandId, velocity);
+		});
+
+		device.on('release', ({ controlId: bandId }) => {
+			// Release is handled by the beat timer above
+		});
+
+		// Continuous energy values → CSS custom properties
+		device.on('change', ({ controlId, value }) => {
+			// Emit for UI preview
+			this._emit('input-valuechange', {
+				mapping: audioInput,
+				controlId,
+				value
+			});
+
+			const metadata = sensorMetadata.get(controlId);
+			if (!metadata || !metadata.cssProperty) return;
+
+			const propertyValue = `${(value * 100).toFixed(1)}%`;
+			const propertyName = metadata.cssProperty.replace(/^--/, '');
+			this.customPropertyManager.setProperty(propertyName, propertyValue);
+		});
+	}
 
 	/**
 	 * Generate CSS class name from control ID
@@ -730,6 +814,31 @@ export class InputController {
 	}
 
 	/**
+	 * Execute action triggers for an audio band beat
+	 * @param {Object} input - The audio input
+	 * @param {string} bandId - The band that triggered (e.g. 'bass', 'mid', 'high')
+	 * @param {number} velocity - Beat velocity
+	 */
+	_executeAudioTriggers(input, bandId, velocity) {
+		if (!this.triggerLibrary) return;
+
+		const triggers = this.triggerLibrary.getAll().filter(t => t.type === 'action');
+
+		for (const trigger of triggers) {
+			if (!trigger.enabled) continue;
+			if (trigger.input?.id !== input.id) continue;
+			if (trigger.input?.state !== bandId) continue;
+
+			this.triggerManager.trigger({
+				mode: 'trigger',
+				input: trigger.input,
+				action: trigger.action,
+				cssClassName: trigger.cssClassName
+			});
+		}
+	}
+
+	/**
 	 * Handle value change (knob/slider/stick)
 	 */
 	_handleValueChange(deviceId, controlId, value, extraData = {}) {
@@ -797,6 +906,49 @@ export class InputController {
 		return await this.inputDeviceManager.requestJoyCon();
 	}
 
+	/**
+	 * Request Audio input
+	 * Uses saved source device ID if available and none is specified.
+	 */
+	async requestAudio(deviceId) {
+		if (!deviceId) {
+			const audioInput = this.inputLibrary.items.find(i => i.type === 'audio');
+			if (audioInput?.audioSettings?.sourceDeviceId) {
+				deviceId = audioInput.audioSettings.sourceDeviceId;
+			}
+		}
+		return await this.inputDeviceManager.requestAudio(deviceId);
+	}
+
+	/**
+	 * Switch audio input device
+	 */
+	async switchAudioDevice(deviceId) {
+		return await this.inputDeviceManager.switchAudioDevice(deviceId);
+	}
+
+	/**
+	 * Save audio settings (band config + source) to the input library
+	 * @param {object} device - AudioInputDevice instance
+	 * @param {string} [sourceDeviceId] - Media device ID of the audio source
+	 */
+	saveAudioSettings(device, sourceDeviceId) {
+		const audioInput = this.inputLibrary.findByDeviceControl(device.id, 'audio');
+		if (!audioInput) return;
+		const settings = device.getAudioSettings();
+		if (sourceDeviceId !== undefined) settings.sourceDeviceId = sourceDeviceId;
+		else if (audioInput.audioSettings?.sourceDeviceId) {
+			settings.sourceDeviceId = audioInput.audioSettings.sourceDeviceId;
+		}
+		this.inputLibrary.update(audioInput.id, { audioSettings: settings });
+	}
+
+	/**
+	 * Get the stored audio input entry
+	 */
+	getAudioInput() {
+		return this.inputLibrary.items.find(i => i.type === 'audio');
+	}
 
 	/**
 	 * Get all input devices

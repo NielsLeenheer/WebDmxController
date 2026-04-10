@@ -20,6 +20,7 @@ import {
 	GamepadInputDevice,
 	HeartRateInputDevice,
 	JoyConInputDevice,
+	AudioInputDevice,
 } from './devices.js';
 
 /**
@@ -352,6 +353,47 @@ export class InputDeviceManager {
 			console.error('Failed to request Joy-Con:', error);
 			throw error;
 		}
+	}
+
+	/**
+	 * Request audio input (microphone)
+	 * Only one audio device is allowed — returns the existing one if present.
+	 */
+	async requestAudio(deviceId) {
+		// Reuse existing audio device if one is already connected
+		for (const device of this.devices.values()) {
+			if (device.type === 'audio') return device;
+		}
+
+		const audioConstraints = deviceId ? { deviceId: { exact: deviceId } } : true;
+		const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+		const device = new AudioInputDevice(stream);
+		this.devices.set(device.id, device);
+		this._emit('deviceadded', device);
+		return device;
+	}
+
+	/**
+	 * Switch the audio input to a different device.
+	 * Disconnects the current audio device and creates a new one.
+	 * @param {string} [deviceId] Media device ID, or omit for default
+	 * @returns {AudioInputDevice} The new audio device
+	 */
+	async switchAudioDevice(deviceId) {
+		// Remove existing audio device
+		for (const device of this.devices.values()) {
+			if (device.type === 'audio') {
+				this.removeDevice(device.id);
+				break;
+			}
+		}
+
+		const audioConstraints = deviceId ? { deviceId: { exact: deviceId } } : true;
+		const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+		const device = new AudioInputDevice(stream);
+		this.devices.set(device.id, device);
+		this._emit('deviceadded', device);
+		return device;
 	}
 
 	/**

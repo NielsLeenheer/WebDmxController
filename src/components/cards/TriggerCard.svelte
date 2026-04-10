@@ -82,6 +82,9 @@
 			'on': 'On',
 			'off': 'Off',
 			'beat': 'Beat',
+			'bass': 'Bass',
+			'mid': 'Mid',
+			'high': 'High'
 		};
 		return stateLabels[state] || state;
 	});
