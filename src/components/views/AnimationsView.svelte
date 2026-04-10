@@ -6,6 +6,7 @@
     import Button from '../common/Button.svelte';
     import ContextMenu from '../common/ContextMenu.svelte';
     import ContextAction from '../common/ContextAction.svelte';
+	import ContextSeparator from '../common/ContextSeparator.svelte';
     import AddAnimationDialog from '../dialogs/AddAnimationDialog.svelte';
     import EditAnimationDialog from '../dialogs/EditAnimationDialog.svelte';
 
@@ -128,6 +129,7 @@
         {@html editIcon}
         Edit
     </ContextAction>
+    <ContextSeparator />
     <ContextAction onclick={(animation) => deleteAnimation(animation?.id)} variant="danger">
         {@html removeIcon}
         Delete

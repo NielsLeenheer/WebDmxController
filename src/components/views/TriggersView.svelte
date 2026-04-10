@@ -5,6 +5,7 @@
     import Button from '../common/Button.svelte';
     import ContextMenu from '../common/ContextMenu.svelte';
     import ContextAction from '../common/ContextAction.svelte';
+    import ContextSeparator from '../common/ContextSeparator.svelte';
     import AddActionTriggerDialog from '../dialogs/AddActionTriggerDialog.svelte';
     import AddValueTriggerDialog from '../dialogs/AddValueTriggerDialog.svelte';
     import EditActionTriggerDialog from '../dialogs/EditActionTriggerDialog.svelte';
@@ -313,6 +314,7 @@
         {@html editIcon}
         Edit
     </ContextAction>
+    <ContextSeparator />
     <ContextAction onclick={(trigger) => deleteTrigger(trigger)} variant="danger">
         {@html removeIcon}
         Delete

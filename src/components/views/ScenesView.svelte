@@ -6,6 +6,7 @@
 	import Button from '../common/Button.svelte';
 	import ContextMenu from '../common/ContextMenu.svelte';
 	import ContextAction from '../common/ContextAction.svelte';
+	import ContextSeparator from '../common/ContextSeparator.svelte';
 	import AddSceneDialog from '../dialogs/AddSceneDialog.svelte';
 	import EditSceneDialog from '../dialogs/EditSceneDialog.svelte';
 	import AddSceneDeviceDialog from '../dialogs/AddSceneDeviceDialog.svelte';
@@ -239,14 +240,15 @@
 
 <!-- Scene Context Menu -->
 <ContextMenu bind:contextRef={sceneContextMenuRef}>
-	<ContextAction onclick={(scene) => editScene(scene)}>
-		{@html editIcon}
-		Edit
-	</ContextAction>
 	<ContextAction onclick={(scene) => activateScene(scene)}>
 		{@html activeIcon}
 		Activate
 	</ContextAction>
+	<ContextAction onclick={(scene) => editScene(scene)}>
+		{@html editIcon}
+		Edit
+	</ContextAction>
+	<ContextSeparator />
 	<ContextAction
 		onclick={(scene) => deleteScene(scene)}
 		variant="danger"
@@ -263,6 +265,7 @@
 		{@html editIcon}
 		Edit
 	</ContextAction>
+	<ContextSeparator />
 	<ContextAction onclick={({ entry }) => removeDeviceFromScene(entry)} variant="danger">
 		{@html removeIcon}
 		Remove from Scene
