@@ -158,6 +158,13 @@ export class TriggerLibrary extends Library {
 		const valueTriggers = allTriggers.filter(t => t.type === 'value');
 		const otherTriggers = allTriggers.filter(t => t.type !== 'value');
 
+		// Sort by priority: select first, then toggle (on/off), then momentary (down/up) last
+		// Later CSS rules override earlier ones, so momentary (highest priority) comes last
+		const statePriority = { 'select': 0, 'on': 1, 'off': 1, 'beat': 2, 'down': 3, 'up': 3 };
+		otherTriggers.sort((a, b) =>
+			(statePriority[a.input?.state] ?? 2) - (statePriority[b.input?.state] ?? 2)
+		);
+
 		// Get unique device IDs that are used in non-value triggers
 		const deviceIds = new Set(otherTriggers.map(t => t.output?.id).filter(id => id));
 

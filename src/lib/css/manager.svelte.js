@@ -167,6 +167,18 @@ export class CSSManager {
 	}
 
 	/**
+	 * Set the selected input for a select group
+	 * Updates a group attribute on the trigger classes container
+	 * @param {string} groupCssId - CSS identifier of the group
+	 * @param {string} inputCssId - CSS identifier of the selected input
+	 */
+	setGroupSelection(groupCssId, inputCssId) {
+		if (this.triggerClassesContainer) {
+			this.triggerClassesContainer.setAttribute(`group-${groupCssId}`, inputCssId || '');
+		}
+	}
+
+	/**
 	 * Get generated CSS (read-only)
 	 * Dynamically generates CSS from current library state
 	 */

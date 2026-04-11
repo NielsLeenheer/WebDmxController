@@ -6,8 +6,10 @@
 	import SelectField from '../common/form/SelectField.svelte';
 	import SelectColorField from '../common/form/SelectColorField.svelte';
 	import IdentifierPreview from '../common/IdentifierPreview.svelte';
+	import NewGroupDialog from './NewGroupDialog.svelte';
 	import { isButton, getInputPropertyName } from '../../lib/inputs/utils.js';
-	import { toUniqueCSSIdentifier } from '../../lib/css/utils.js';
+	import { toUniqueCSSIdentifier, toCSSIdentifier } from '../../lib/css/utils.js';
+	import { sceneLibrary } from '../../stores.svelte.js';
 
 	/**
 	 * EditInputDialog - Promise-based dialog for editing inputs
@@ -35,10 +37,27 @@
 	let editingInput = $state(null);
 	let editingName = $state('');
 	let editingButtonMode = $state('momentary');
+	let editingSelectGroup = $state(null);
+	let newGroupDialog = $state(null);
 	let editingColor = $state(null);
 	let editingDrawButton = $state(null);
 	let editingClearButton = $state(null);
 	let showColorPicker = $state(false);
+
+	// Get scenes for the group dropdown
+	let scenes = $derived(sceneLibrary.getAll());
+
+	// Compute existing select groups from all inputs (excluding scene: groups)
+	let existingGroups = $derived.by(() => {
+		if (!editingInput) return [];
+		const groups = new Set();
+		for (const input of inputLibrary.getAll()) {
+			if (input.buttonMode === 'select' && input.selectGroup && !input.selectGroup.startsWith('scene:')) {
+				groups.add(input.selectGroup);
+			}
+		}
+		return [...groups].sort();
+	});
 
 	/**
 	 * Open the dialog with an input
@@ -53,6 +72,7 @@
 			editingInput = input;
 			editingName = input.name;
 			editingButtonMode = input.buttonMode || 'momentary';
+			editingSelectGroup = input.selectGroup || `scene:${sceneLibrary.getAll()[0]?.id || 'default'}`;
 			editingColor = input.color;
 			editingDrawButton = input.drawButton || null;
 			editingClearButton = input.clearButton || null;
@@ -74,10 +94,17 @@
 			return;
 		}
 
+		// Determine the select group value
+		let selectGroup = null;
+		if (editingButtonMode === 'select') {
+			selectGroup = editingSelectGroup;
+		}
+
 		// Return modified data
 		const result = {
 			name: editingName.trim(),
 			buttonMode: editingButtonMode,
+			selectGroup,
 			color: editingColor,
 			drawButton: editingDrawButton,
 			clearButton: editingClearButton
@@ -96,6 +123,7 @@
 		dialogRef?.close();
 		editingInput = null;
 		editingName = '';
+		editingSelectGroup = null;
 		editingColor = null;
 		editingDrawButton = null;
 		editingClearButton = null;
@@ -129,11 +157,15 @@
 					identifiers={isButton(editingInput)
 						? editingButtonMode === 'toggle'
 							? [`.${uniqueId}-on`, `.${uniqueId}-off`]
-							: editingButtonMode === 'beat'
-								? editingInput?.type === 'audio'
-									? [`.${uniqueId}-bass`, `.${uniqueId}-mid`, `.${uniqueId}-high`]
-									: [`.${uniqueId}-beat`]
-								: [`.${uniqueId}-down`, `.${uniqueId}-up`]
+							: editingButtonMode === 'select'
+								? editingSelectGroup?.startsWith('scene:')
+									? (() => { const sceneId = editingSelectGroup.substring(6); const scene = sceneLibrary.get(sceneId); return [`[scene="${scene?.cssIdentifier || ''}"]`]; })()
+									: [`[group-${toCSSIdentifier(editingSelectGroup || '')}="${uniqueId}"]`]
+								: editingButtonMode === 'beat'
+									? editingInput?.type === 'audio'
+										? [`.${uniqueId}-bass`, `.${uniqueId}-mid`, `.${uniqueId}-high`]
+										: [`.${uniqueId}-beat`]
+									: [`.${uniqueId}-down`, `.${uniqueId}-up`]
 						: [`--${uniqueId}`]
 					}
 				/>
@@ -141,12 +173,48 @@
 		</Group>
 
 		{#if isButton(editingInput) && editingInput?.type !== 'heartrate' && editingInput?.type !== 'audio'}
-			<Group label="Button Mode:" for="button-mode">
-				<SelectField id="button-mode" bind:value={editingButtonMode}>
-					<option value="momentary">Down/Up</option>
-					<option value="toggle">On/Off</option>
-				</SelectField>
-			</Group>
+			<div class="button-mode-row">
+				<Group label="Button Mode:" for="button-mode">
+					<SelectField id="button-mode" bind:value={editingButtonMode}>
+						<option value="momentary">Down/Up</option>
+						<option value="toggle">On/Off</option>
+						<option value="select">Select</option>
+					</SelectField>
+				</Group>
+
+				{#if editingButtonMode === 'select'}
+					{@const isCustomGroup = editingSelectGroup && !editingSelectGroup.startsWith('scene:') && editingSelectGroup !== '__new__' && !existingGroups.includes(editingSelectGroup)}
+					<Group label="Group:" for="select-group">
+						<SelectField id="select-group" bind:value={editingSelectGroup} onchange={async (e) => {
+							if (editingSelectGroup === '__new__') {
+								const previousValue = e.target.dataset.previous || `scene:${scenes[0]?.id || 'default'}`;
+								editingSelectGroup = previousValue;
+
+								const name = await newGroupDialog.open();
+								if (name) {
+									editingSelectGroup = name;
+								}
+							}
+							e.target.dataset.previous = editingSelectGroup;
+						}}>
+							{#each scenes as scene}
+								<option value="scene:{scene.id}">Scene → {scene.name}</option>
+							{/each}
+							{#if existingGroups.length > 0 || isCustomGroup}
+								<hr>
+								{#if isCustomGroup}
+									<option value={editingSelectGroup}>{editingSelectGroup}</option>
+								{/if}
+								{#each existingGroups as group}
+									<option value={group}>{group}</option>
+								{/each}
+							{/if}
+							<hr>
+							<option value="__new__">New group...</option>
+						</SelectField>
+					</Group>
+				{/if}
+			</div>
 		{/if}
 
 		{#if editingInput?.type === 'joycon'}
@@ -200,5 +268,11 @@
 </Dialog>
 {/if}
 
+<NewGroupDialog bind:this={newGroupDialog} />
+
 <style>
+	.button-mode-row {
+		display: flex;
+		gap: 16px;
+	}
 </style>

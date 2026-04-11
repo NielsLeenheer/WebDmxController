@@ -66,11 +66,18 @@ export class TriggerManager extends EventEmitter {
 		if (mapping.mode !== 'trigger') return;
 		if (!this.container) return;
 
-		// Handle scene change actions
+		// Handle scene change actions via priority stack
 		if (mapping.action?.type === 'scene' && mapping.action?.scene?.id) {
 			const state = mapping.input?.state;
-			if (state === 'down' || state === 'on') {
-				this._emit('sceneChange', { sceneId: mapping.action.scene.id });
+			const inputId = mapping.input?.id;
+			const sceneId = mapping.action.scene.id;
+
+			if (state === 'down') {
+				this._emit('scenePush', { level: 'momentary', id: inputId, sceneId });
+			} else if (state === 'on') {
+				this._emit('scenePush', { level: 'toggle', id: inputId, sceneId });
+			} else if (state === 'select') {
+				this._emit('sceneSelect', { sceneId });
 			}
 			return;
 		}
@@ -78,7 +85,7 @@ export class TriggerManager extends EventEmitter {
 		// Handle drawing change actions
 		if (mapping.action?.type === 'drawing' && mapping.action?.drawing?.id) {
 			const state = mapping.input?.state;
-			if (state === 'down' || state === 'on') {
+			if (state === 'down' || state === 'on' || state === 'select') {
 				this._emit('drawingChange', { drawingId: mapping.action.drawing.id });
 			}
 			return;
@@ -88,8 +95,8 @@ export class TriggerManager extends EventEmitter {
 		const className = mapping.cssClassName;
 		const state = mapping.input?.state;
 
-		if (state === 'down' || state === 'on') {
-			// Down/On: Add class when triggered
+		if (state === 'down' || state === 'on' || state === 'select') {
+			// Down/On/Select: Add class when triggered
 			this.container.classList.add(className);
 			this.activeClasses.add(className);
 		} else if (state === 'up' || state === 'off') {
@@ -105,6 +112,18 @@ export class TriggerManager extends EventEmitter {
 		if (mapping.mode !== 'trigger') return;
 		if (!this.container) return;
 
+		// Handle scene release - pop from priority stack
+		if (mapping.action?.type === 'scene') {
+			const state = mapping.input?.state;
+			const inputId = mapping.input?.id;
+
+			if (state === 'down') {
+				this._emit('scenePop', { level: 'momentary', id: inputId });
+			}
+			// Toggle scenes are popped when toggle turns off (handled by InputController)
+			return;
+		}
+
 		// Both animation and setValue actions use CSS classes
 		const className = mapping.cssClassName;
 		const state = mapping.input?.state;
@@ -117,6 +136,7 @@ export class TriggerManager extends EventEmitter {
 			// Up/Off: Add class back when released
 			this.container.classList.add(className);
 		}
+		// Select: no action on release — state persists
 	}
 
 	/**

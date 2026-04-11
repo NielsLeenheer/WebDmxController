@@ -93,16 +93,44 @@
         cssManager = new CSSManager(deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, triggerManager, sceneLibrary, drawingLibrary);
         cssManager.initialize(mainElement);
 
-        // Wire up scene controller to CSS manager
+        // Give input controller access to scene state for LED feedback
+        inputController.setSceneController(sceneController);
+
+        // Wire up scene controller to CSS manager and LED refresh
         sceneController.setOnSceneChange((cssIdentifier) => {
             cssManager.setScene(cssIdentifier);
+
+            // Refresh button LEDs so scene-selecting buttons reflect the active scene
+            inputController.applyColorsToDevices().catch(err => {
+                console.warn('Failed to refresh button colors after scene change:', err);
+            });
         });
 
-        // Listen for scene change events from triggers
-        triggerManager.on('sceneChange', ({ sceneId }) => {
-            sceneController.setScene(sceneId);
+        // Listen for scene priority stack events from triggers and select buttons
+        triggerManager.on('scenePush', ({ level, id, sceneId }) => {
+            if (level === 'momentary') {
+                sceneController.pushMomentaryScene(id, sceneId);
+            } else if (level === 'toggle') {
+                sceneController.pushToggleScene(id, sceneId);
+            }
         });
 
+        triggerManager.on('scenePop', ({ level, id }) => {
+            if (level === 'momentary') {
+                sceneController.removeMomentaryScene(id);
+            } else if (level === 'toggle') {
+                sceneController.removeToggleScene(id);
+            }
+        });
+
+        triggerManager.on('sceneSelect', ({ sceneId }) => {
+            sceneController.setSelectScene(sceneId);
+        });
+
+        // Listen for group selection events from select-mode buttons
+        triggerManager.on('groupSelection', ({ groupCssId, inputCssId }) => {
+            cssManager.setGroupSelection(groupCssId, inputCssId);
+        });
 
         // Initialize LaserManager with the sampler container
         laserManager.initialize(cssManager.getContainer());

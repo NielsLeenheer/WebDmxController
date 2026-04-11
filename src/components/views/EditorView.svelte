@@ -3,6 +3,7 @@
     import { deviceLibrary, animationLibrary, inputLibrary, triggerLibrary, sceneLibrary } from '../../stores.svelte.js';
     import { isButton, hasValues } from '../../lib/inputs/utils.js';
     import { getInputTypeForInput } from '../../lib/inputs/types/index.js';
+    import { toCSSIdentifier } from '../../lib/css/utils.js';
     import { AUDIO_BANDS } from '../../lib/inputs/devices/AudioInputDevice.js';
     import Preview from '../common/Preview.svelte';
     import CodeEditor from '../common/CodeEditor.svelte';
@@ -223,6 +224,14 @@
                                 {#if input.buttonMode === 'toggle'}
                                     <code class="css-identifier">.{input.cssIdentifier}-on</code>
                                     <code class="css-identifier">.{input.cssIdentifier}-off</code>
+                                {:else if input.buttonMode === 'select'}
+                                    {#if input.selectGroup?.startsWith('scene:')}
+                                        {@const sceneId = input.selectGroup.substring(6)}
+                                        {@const scene = sceneLibrary.get(sceneId)}
+                                        <code class="css-identifier">[scene="{scene?.cssIdentifier || ''}"]</code>
+                                    {:else}
+                                        <code class="css-identifier">[group-{toCSSIdentifier(input.selectGroup || '')}="{input.cssIdentifier}"]</code>
+                                    {/if}
                                 {:else if input.buttonMode === 'beat'}
                                     <code class="css-identifier">.{input.cssIdentifier}-beat</code>
                                 {:else}

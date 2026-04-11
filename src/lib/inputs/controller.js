@@ -8,6 +8,7 @@ import { InputDeviceManager } from './manager.js';
 import { isButton } from './utils.js';
 import { getInputType } from './types/index.js';
 import { PathRecorder } from './PathRecorder.js';
+import { toCSSIdentifier } from '../css/utils.js';
 
 export class InputController {
 	constructor(inputLibrary, customPropertyManager, triggerManager, triggerLibrary = null) {
@@ -20,6 +21,8 @@ export class InputController {
 
 		this.listeners = new Map();
 		this.toggleStates = new Map(); // Track toggle button states: "deviceId:controlId" -> boolean
+		this.selectGroupStates = new Map(); // Track select group states: "groupName" -> input id
+		this.sceneController = null;
 		this._setupInputListeners();
 		this._setupLibraryListeners();
 	}
@@ -43,6 +46,13 @@ export class InputController {
 
 		// When an input is updated, sync color to hardware if it changed
 		this.inputLibrary.on('updated', ({ item, changes }) => {
+			// Refresh all colors when button mode changes (e.g. momentary → select)
+			if (changes.buttonMode !== undefined && item.colorSupport && item.colorSupport !== 'none') {
+				this.applyColorsToDevices().catch(err => {
+					console.warn('Failed to apply colors after button mode change:', err);
+				});
+			}
+
 			// Check if color was changed
 			if (changes.color !== undefined && item.colorSupport && item.colorSupport !== 'none') {
 				const device = this.inputDeviceManager.getDevice(item.deviceId);
@@ -681,6 +691,9 @@ export class InputController {
 						// Turned OFF
 						this.triggerManager.addRawClass(offClass);
 						this.triggerManager.removeRawClass(onClass);
+
+						// Pop any toggle-level scene for this input
+						this.triggerManager._emit('scenePop', { level: 'toggle', id: input.id });
 					}
 
 					// Update button color based on toggle state
@@ -688,6 +701,41 @@ export class InputController {
 
 					// Emit event for toggle state change
 					this._emit('input-trigger', { mapping: input, velocity, toggleState: newState });
+				} else if (buttonMode === 'select') {
+					// Select mode: exclusive selection within a group
+					const rawGroup = input.selectGroup || input.id;
+					const isSceneGroup = rawGroup.startsWith('scene:');
+					// All scene selections share one exclusive group
+					const group = isSceneGroup ? '__scene__' : rawGroup;
+					const currentSelectedId = this.selectGroupStates.get(group);
+
+					// No-op if already selected
+					if (currentSelectedId === input.id) {
+						this._emit('input-trigger', { mapping: input, velocity });
+						this._executeActionTriggers(input, buttonMode);
+						return;
+					}
+
+					// Update selection state
+					this.selectGroupStates.set(group, input.id);
+
+					if (isSceneGroup) {
+						// Scene group: change scene directly via priority stack
+						const sceneId = rawGroup.substring(6); // Remove 'scene:' prefix
+						this.triggerManager._emit('sceneSelect', { sceneId });
+					} else {
+						// Regular group: set attribute on CSS container
+						const groupCssId = toCSSIdentifier(rawGroup);
+						this.triggerManager._emit('groupSelection', { groupCssId, inputCssId: cssId });
+					}
+
+					// Refresh all button colors (batch update handles all device types)
+					this.applyColorsToDevices().catch(err => {
+						console.warn('Failed to apply colors after select:', err);
+					});
+
+					// Emit event for select state change
+					this._emit('input-trigger', { mapping: input, velocity, selectState: true });
 				} else if (buttonMode === 'beat') {
 					// Beat mode: add beat class, remove after duration
 					const beatClass = `${cssId}-beat`;
@@ -754,6 +802,9 @@ export class InputController {
 				this.triggerManager.removeRawClass(downClass);
 				this.triggerManager.addRawClass(upClass);
 
+				// Release 'down' state triggers (pops momentary scenes, removes CSS classes)
+				this._releaseActionTriggers(input);
+
 				// Execute 'up' state action triggers on release
 				this._executeActionTriggers(input, buttonMode, 'up');
 			}
@@ -790,6 +841,8 @@ export class InputController {
 			const toggleKey = `${input.deviceId}:${input.controlId}`;
 			const toggleState = this.toggleStates.get(toggleKey) || false;
 			stateToMatch = toggleState ? 'on' : 'off';
+		} else if (buttonMode === 'select') {
+			stateToMatch = 'select';
 		} else if (buttonMode === 'beat') {
 			stateToMatch = 'beat';
 		} else {
@@ -805,6 +858,31 @@ export class InputController {
 
 			// Execute the trigger via TriggerManager
 			this.triggerManager.trigger({
+				mode: 'trigger',
+				input: trigger.input,
+				action: trigger.action,
+				cssClassName: trigger.cssClassName
+			});
+		}
+	}
+
+	/**
+	 * Release action triggers for an input (called on momentary button release)
+	 * Finds all 'down' state triggers for this input and calls triggerManager.release()
+	 * This pops momentary scenes and removes CSS classes
+	 * @param {Object} input - The input being released
+	 */
+	_releaseActionTriggers(input) {
+		if (!this.triggerLibrary) return;
+
+		const triggers = this.triggerLibrary.getAll().filter(t => t.type === 'action');
+
+		for (const trigger of triggers) {
+			if (!trigger.enabled) continue;
+			if (trigger.input?.id !== input.id) continue;
+			if (trigger.input?.state !== 'down') continue;
+
+			this.triggerManager.release({
 				mode: 'trigger',
 				input: trigger.input,
 				action: trigger.action,
@@ -1020,6 +1098,21 @@ export class InputController {
 			return isOn ? input.color : 'black';
 		}
 
+		// For select buttons, check if this input is the selected one in its group
+		if (isButton(input) && input.buttonMode === 'select') {
+			const rawGroup = input.selectGroup || input.id;
+
+			// Scene groups: LED reflects the currently active scene
+			if (rawGroup.startsWith('scene:') && this.sceneController) {
+				const sceneId = rawGroup.substring(6);
+				return this.sceneController.getActiveSceneId() === sceneId ? input.color : 'black';
+			}
+
+			const group = rawGroup;
+			const selectedId = this.selectGroupStates.get(group);
+			return selectedId === input.id ? input.color : 'black';
+		}
+
 		return input.color;
 	}
 
@@ -1162,6 +1255,13 @@ export class InputController {
 	 */
 	setTriggerContainer(element) {
 		this.triggerManager.setContainer(element);
+	}
+
+	/**
+	 * Set scene controller reference for LED feedback on scene-selecting buttons
+	 */
+	setSceneController(sceneController) {
+		this.sceneController = sceneController;
 	}
 
 	/**

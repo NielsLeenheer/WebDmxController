@@ -47,6 +47,7 @@ export class InputLibrary extends Library {
 	create(config = {}) {
 		const name = config.name || 'Untitled Input';
 		const buttonMode = config.buttonMode || 'momentary';
+		const selectGroup = config.selectGroup || null;
 		const colorSupport = config.colorSupport || 'none';
 		const deviceId = config.deviceId || null;
 		const controlId = config.controlId || null;
@@ -73,6 +74,7 @@ export class InputLibrary extends Library {
 			orientation: config.orientation || null,
 			deviceBrand: config.deviceBrand || null,
 			buttonMode,
+			selectGroup,
 			cssIdentifier: config.cssIdentifier || toUniqueCSSIdentifier(name, existingIdentifiers),
 			order: this.items.length
 		};
@@ -189,6 +191,7 @@ export class InputLibrary extends Library {
 			orientation: inputData.orientation || null,
 			deviceBrand: inputData.deviceBrand || null,
 			buttonMode: inputData.buttonMode || 'momentary',
+			selectGroup: inputData.selectGroup || null,
 			drawButton: inputData.drawButton || null,
 			clearButton: inputData.clearButton || null,
 			cssIdentifier: inputData.cssIdentifier,

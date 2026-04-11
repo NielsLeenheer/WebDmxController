@@ -71,6 +71,7 @@
             // Update button mode for button inputs
             if (isButton(existingInput)) {
                 updates.buttonMode = result.buttonMode;
+                updates.selectGroup = result.selectGroup;
             }
 
             // Include color in updates if it changed
@@ -162,10 +163,19 @@
         });
 
         // Track input state changes for display
-        inputController.on('input-trigger', ({ mapping, velocity, toggleState }) => {
+        inputController.on('input-trigger', ({ mapping, velocity, toggleState, selectState }) => {
             // For toggle buttons, use the toggleState from the event
             if (mapping.buttonMode === 'toggle') {
                 inputStates[mapping.id] = { ...inputStates[mapping.id], state: toggleState ? 'on' : 'off', pressed: true };
+            } else if (mapping.buttonMode === 'select') {
+                // For select buttons, mark this one as selected and deselect others in the group
+                const group = mapping.selectGroup || mapping.id;
+                for (const input of inputs) {
+                    if (input.buttonMode === 'select' && (input.selectGroup || input.id) === group && input.id !== mapping.id) {
+                        inputStates[input.id] = { ...inputStates[input.id], state: 'deselected', pressed: false };
+                    }
+                }
+                inputStates[mapping.id] = { ...inputStates[mapping.id], state: 'selected', pressed: true };
             } else if (isButton(mapping)) {
                 // For momentary buttons, show pressed state
                 inputStates[mapping.id] = { ...inputStates[mapping.id], state: 'pressed', pressed: true };
@@ -174,12 +184,12 @@
 
         inputController.on('input-release', ({ mapping }) => {
             if (isButton(mapping)) {
-                // Track physical release for all buttons (including toggle)
+                // Track physical release for all buttons (including toggle and select)
                 // For momentary buttons, also update state to 'released'
-                if (mapping.buttonMode !== 'toggle') {
-                    inputStates[mapping.id] = { ...inputStates[mapping.id], pressed: false, state: 'released' };
-                } else {
+                if (mapping.buttonMode === 'toggle' || mapping.buttonMode === 'select') {
                     inputStates[mapping.id] = { ...inputStates[mapping.id], pressed: false };
+                } else {
+                    inputStates[mapping.id] = { ...inputStates[mapping.id], pressed: false, state: 'released' };
                 }
             }
         });

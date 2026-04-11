@@ -68,7 +68,7 @@
 			{ value: 'values', label: 'Set values' }
 		];
 
-		if (inputState !== 'up' && inputState !== 'off') {
+		if (inputState !== 'up' && inputState !== 'off' && inputState !== 'deselect') {
 			types.push({ value: 'scene', label: 'Change Scene' });
 			if (drawings.length > 0) {
 				types.push({ value: 'drawing', label: 'Change Drawing' });
@@ -106,6 +106,10 @@
 			return [
 				{ value: 'on', label: 'On' },
 				{ value: 'off', label: 'Off' }
+			];
+		} else if (buttonMode === 'select') {
+			return [
+				{ value: 'select', label: 'Select' }
 			];
 		} else if (buttonMode === 'beat') {
 			const inputType = getInputType(input.type);
