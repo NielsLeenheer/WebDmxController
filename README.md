@@ -2,7 +2,7 @@
 
 A browser-based DMX lighting controller that runs entirely in your browser. No software to install – just open the app and start controlling your lights.
 
-**[Live Demo →](https://demx.nielsleenheer.com)**
+**[Live Demo →](https://dmx.nielsleenheer.com)**
 
 ## Features
 
