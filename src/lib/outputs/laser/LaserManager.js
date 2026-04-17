@@ -9,6 +9,7 @@
 
 import { LaserRenderer } from './LaserRenderer.js';
 import { SVGSampler } from './SVGSampler.js';
+import { executeScripts, cleanupScripts, cleanupAllScripts, hasScripts } from './SVGScriptRunner.js';
 import { resolveEnv } from '../../env.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -27,6 +28,7 @@ export class LaserManager {
 
 		this.container = null;
 		this.svgElements = new Map(); // drawingId -> SVG element
+		this.scriptedSvgs = new Set(); // SVG elements that contain scripts
 		this.animationFrameId = null;
 		this.lastSegments = [];
 
@@ -254,12 +256,23 @@ export class LaserManager {
 			}
 
 			try {
+				// Clean up scripts from previous preview SVG
+				if (this._previewSvgElement) {
+					cleanupScripts(this._previewSvgElement);
+				}
+
 				const parser = new DOMParser();
 				const doc = parser.parseFromString(svgMarkup, 'image/svg+xml');
 				if (doc.querySelector('parsererror')) return [];
 
 				const svgElement = document.importNode(doc.documentElement, true);
 				this._previewContainer.appendChild(svgElement);
+				this._previewSvgElement = svgElement;
+
+				// Execute scripts before auto-detecting viewBox
+				if (hasScripts(svgElement)) {
+					executeScripts(svgElement, true);
+				}
 
 				if (!svgElement.getAttribute('viewBox')) {
 					this._autoSetViewBox(svgElement);
@@ -349,7 +362,9 @@ export class LaserManager {
 	_injectAllDrawings() {
 		if (!this.container) return;
 
-		// Remove existing SVG elements
+		// Clean up existing scripts and SVG elements
+		cleanupAllScripts();
+		this.scriptedSvgs.clear();
 		for (const el of this.svgElements.values()) {
 			el.remove();
 		}
@@ -404,6 +419,12 @@ export class LaserManager {
 			}
 
 			this.container.appendChild(svgElement);
+
+			// Execute scripts before auto-detecting viewBox — scripts may create elements
+			if (hasScripts(svgElement)) {
+				executeScripts(svgElement, true);
+				this.scriptedSvgs.add(svgElement);
+			}
 
 			// Auto-detect viewBox if not set
 			if (!svgElement.getAttribute('viewBox')) {
