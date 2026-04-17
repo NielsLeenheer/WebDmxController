@@ -7,12 +7,17 @@
  * gyroscope) that JoyConInputDevice expects.
  */
 
-import {
-	connectJoyCon,
-	connectedJoyCons,
-	JoyConLeft,
-	JoyConRight,
-} from 'joy-con-webhid';
+let connectJoyCon, connectedJoyCons, JoyConLeft, JoyConRight;
+
+async function loadJoyConLib() {
+	if (!connectJoyCon) {
+		const mod = await import('joy-con-webhid');
+		connectJoyCon = mod.connectJoyCon;
+		connectedJoyCons = mod.connectedJoyCons;
+		JoyConLeft = mod.JoyConLeft;
+		JoyConRight = mod.JoyConRight;
+	}
+}
 
 const PRODUCT_ID_LEFT = 0x2006;
 
@@ -162,6 +167,11 @@ export class JoyConManager {
 	 * Prompt user to pair a Joy-Con via WebHID chooser.
 	 */
 	async requestDevice() {
+		if (!navigator.hid) {
+			throw new Error('WebHID not supported in this browser');
+		}
+
+		await loadJoyConLib();
 		await connectJoyCon();
 
 		// The library populates connectedJoyCons synchronously after connect.
