@@ -30,6 +30,8 @@ import { SafetyControl } from './SafetyControl.js';
 import { PanTiltControl } from './PanTiltControl.js';
 import { PanTilt16Control } from './PanTilt16Control.js';
 import { ILDAControl } from './ILDAControl.js';
+import { HeatingControl } from './HeatingControl.js';
+import { SparksControl } from './SparksControl.js';
 
 /**
  * Control Type Registry
@@ -50,9 +52,11 @@ export const CONTROL_TYPES = {
 	Smoke: new SmokeControl(),
 	Fan: new FanControl(),
 	Flame: new FlameControl(),
+	Sparks: new SparksControl(),
 
 	// Toggle controls
 	Safety: new SafetyControl(),
+	Heating: new HeatingControl(),
 
 	// Position controls
 	PanTilt: new PanTiltControl(),

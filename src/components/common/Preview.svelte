@@ -26,6 +26,38 @@
         class: className = '',
     } = $props();
 
+    // Scattered sparks positions (x%, y%, size%) — x/y can be negative or >100 to push
+    // sparks into (and past) the edges so the preview edges don't look darker.
+    // Rendered in order, count scales with spark level.
+    const SPARK_POSITIONS = [
+        { x: 44, y: 76, size: 48 },
+        { x: 76, y: 30, size: 44 },
+        { x: 18, y: 40, size: 46 },
+        { x: 58, y: 52, size: 38 },
+        { x: 32, y: 18, size: 40 },
+        { x: 86, y: 78, size: 36 },
+        { x: 10, y: 88, size: 38 },
+        { x: 96, y: 48, size: 34 },
+        { x: 4, y: 12, size: 34 },
+        { x: 64, y: 94, size: 32 },
+        { x: 50, y: -4, size: 32 },
+        { x: -2, y: 58, size: 30 },
+        { x: 102, y: 8, size: 30 },
+        { x: 38, y: 100, size: 28 },
+        { x: 80, y: 104, size: 28 },
+        { x: 22, y: -2, size: 26 },
+        { x: 104, y: 90, size: 28 },
+        { x: -4, y: 30, size: 26 },
+        { x: 68, y: 62, size: 24 },
+        { x: 28, y: 56, size: 24 },
+        { x: 92, y: 18, size: 22 },
+        { x: 48, y: 36, size: 22 },
+        { x: 14, y: 72, size: 22 },
+        { x: 82, y: 58, size: 20 },
+        { x: 40, y: 90, size: 20 },
+    ];
+
+
     // Extract displayable character from keyboard key control ID
     function extractKeyChar(controlId) {
         if (!controlId || !controlId.startsWith('key-')) return null;
@@ -329,6 +361,29 @@
             <div class="control-layer control-smoke">
                 <div class="smoke-effect" style="opacity: {smokePercent / 100}"></div>
             </div>
+        {/if}
+
+        <!-- Sparks layer -->
+        {#if hasControl('sparks')}
+            {@const sparksValue = effectiveData().sparks ?? { level: 0, cleaning: false }}
+            {#if sparksValue.cleaning}
+                <div class="control-layer control-sparks-cleaning"></div>
+            {:else}
+                {@const sparksIntensity = Math.max(0, Math.min(1, (sparksValue.level ?? 0) / 209))}
+                {@const sparkCount = Math.round(sparksIntensity * SPARK_POSITIONS.length)}
+                <div class="control-layer control-sparks">
+                    {#each SPARK_POSITIONS.slice(0, sparkCount) as pos}
+                        <svg class="spark" viewBox="-10 -10 20 20" style="left: {pos.x}%; top: {pos.y}%; width: {pos.size}%;">
+                            <g stroke="#fff6d0" stroke-width="1.5" stroke-linecap="round">
+                                <line x1="-9" y1="0" x2="9" y2="0" />
+                                <line x1="0" y1="-9" x2="0" y2="9" />
+                                <line x1="-6.5" y1="-6.5" x2="6.5" y2="6.5" />
+                                <line x1="-6.5" y1="6.5" x2="6.5" y2="-6.5" />
+                            </g>
+                        </svg>
+                    {/each}
+                </div>
+            {/if}
         {/if}
 
         <!-- Flame layer -->

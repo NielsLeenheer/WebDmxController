@@ -99,6 +99,20 @@ export function getProperties(controlValues, controls, options = {}) {
 			const value = controlValue ?? 0;
 			const sliderMeta = meta.values?.[0] || meta;
 			properties[sliderMeta.cssProperty] = dmxToCssValue(value, sliderMeta);
+
+		} else if (control.type.type === 'sparks') {
+			// Sparks control — emit --sparks (slider level) and --sparks-cleaning.
+			const level = controlValue?.level ?? 0;
+			const cleaning = !!controlValue?.cleaning;
+			const levelMeta = meta.values?.find(v => v.id === 'level');
+			const cleaningMeta = meta.values?.find(v => v.id === 'cleaning');
+			if (levelMeta) {
+				properties[levelMeta.cssProperty] = level.toString();
+			}
+			if (cleaningMeta) {
+				properties[cleaningMeta.cssProperty] = cleaning ? cleaningMeta.on : cleaningMeta.off;
+			}
+
 		}
 	}
 

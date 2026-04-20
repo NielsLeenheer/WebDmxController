@@ -253,6 +253,65 @@
                     maxlength="3"
                 />
             </div>
+        {:else if control.type.type === 'sparks'}
+            {@const sparksValue = values[control.id] ?? { level: 0, cleaning: false }}
+            {@const controlDisabled = isControlDisabled(control.id) || !isControlEnabled(control)}
+            {@const sliderValue = sparksValue.level ?? 0}
+            {@const cleaning = !!sparksValue.cleaning}
+            {@const dmxDisplay = cleaning ? 255 : sliderValue}
+            <div class="control control-sparks" class:no-checkbox={!showCheckboxes}>
+                {#if showCheckboxes}
+                    <input
+                        type="checkbox"
+                        checked={isControlEnabled(control)}
+                        onchange={() => toggleControlEnabled(control)}
+                        class="control-checkbox"
+                    />
+                {/if}
+                <span class="control-label" class:disabled={controlDisabled}>{control.type.name}</span>
+                <div class="slider-wrapper">
+                    <input
+                        type="range"
+                        min="0"
+                        max="209"
+                        value={sliderValue}
+                        oninput={(e) => !controlDisabled && handleControlChange(control.id, { level: parseInt(e.target.value), cleaning })}
+                        style="--slider-gradient: {control.type.getGradient()}; --thumb-color: {control.type.getColor(sparksValue)}"
+                        disabled={controlDisabled}
+                        class="color-slider"
+                    />
+                </div>
+                <input
+                    type="text"
+                    value={dmxDisplay}
+                    oninput={handleTextInput}
+                    onchange={(e) => {
+                        if (controlDisabled) return;
+                        const typed = parseInt(e.target.value);
+                        if (!isNaN(typed) && typed >= 0 && typed <= 255) {
+                            if (typed >= 210) {
+                                handleControlChange(control.id, { level: sliderValue, cleaning: true });
+                            } else {
+                                handleControlChange(control.id, { level: typed, cleaning: false });
+                            }
+                        } else {
+                            e.target.value = dmxDisplay;
+                        }
+                    }}
+                    class="value-input"
+                    disabled={controlDisabled}
+                    maxlength="3"
+                />
+                <label class="sparks-cleaning">
+                    <input
+                        type="checkbox"
+                        checked={cleaning}
+                        disabled={controlDisabled}
+                        onchange={(e) => handleControlChange(control.id, { level: sliderValue, cleaning: e.target.checked })}
+                    />
+                    Cleaning
+                </label>
+            </div>
         {:else if control.type.type === 'ilda'}
             <!-- ILDA control rendered separately below -->
         {:else if control.type.type === 'slider'}
@@ -318,6 +377,49 @@
         border-top: 1px solid #e0e0e0;
         margin: 6px 0;
         width: 100%;
+    }
+
+    /* Sparks control — slider row + cleaning row */
+    .control-sparks {
+        display: grid;
+        grid-template-columns: 16px 4em 1fr 3em;
+        grid-template-areas:
+            "cb    label slider    value"
+            ".     .     cleaning  .";
+        column-gap: 8px;
+        row-gap: 4px;
+        align-items: center;
+    }
+
+    .control-sparks.no-checkbox {
+        grid-template-columns: 4em 1fr 3em;
+        grid-template-areas:
+            "label slider    value"
+            ".     cleaning  .";
+    }
+
+    .control-sparks > .control-checkbox { grid-area: cb; }
+    .control-sparks > .control-label    { grid-area: label; }
+    .control-sparks > .slider-wrapper   { grid-area: slider; }
+    .control-sparks > .value-input      { grid-area: value; text-align: right; }
+    .control-sparks > .sparks-cleaning  { grid-area: cleaning; }
+
+    .sparks-cleaning {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 0px;
+        margin-bottom: 6px;
+        font-size: 9pt;
+        color: #555;
+        cursor: pointer;
+        user-select: none;
+        justify-self: start;
+    }
+
+    .sparks-cleaning input {
+        margin: 0;
+        cursor: pointer;
     }
 
     .control {
