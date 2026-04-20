@@ -597,10 +597,14 @@
         appearance: none;
         width: 100%;
         height: 7px;
+        margin: 0;
         border-radius: 3.5px;
         background: var(--slider-gradient);
         cursor: pointer;
         outline: none;
+
+        position: relative;
+        top: -1px;
     }
 
     .color-slider:disabled {
@@ -691,7 +695,6 @@
     }
 
     .xypad-wrapper {
-        padding-left: 7px;
         padding-bottom: 6px;
     }
     .xypad-wrapper.disabled {
