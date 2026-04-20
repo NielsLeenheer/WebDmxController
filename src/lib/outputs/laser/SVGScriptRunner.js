@@ -45,9 +45,10 @@ function cleanupTimers(svgElement) {
  * @param {SVGElement} svgElement - The SVG element containing scripts
  * @param {boolean} force - Force re-execution even if content unchanged
  */
-export function executeScripts(svgElement, force = false) {
-	const scripts = svgElement.querySelectorAll('script');
-	if (scripts.length === 0) return;
+export function executeScripts(svgElement, force = false, explicitScripts = null, explicitOnload = null) {
+	const scripts = explicitScripts ?? svgElement.querySelectorAll('script');
+	const onload = explicitOnload ?? svgElement.getAttribute('onload');
+	if (scripts.length === 0 && !onload) return;
 
 	// Concatenate all scripts, stripping CDATA wrappers
 	const rawContent = Array.from(scripts)
@@ -72,7 +73,6 @@ export function executeScripts(svgElement, force = false) {
 
 	// Append onload handler so it runs in the same scope as the scripts
 	let code = rawContent;
-	const onload = svgElement.getAttribute('onload');
 	if (onload) {
 		code += `\n;${onload};`;
 	}

@@ -9,7 +9,7 @@
 
 import { LaserRenderer } from './LaserRenderer.js';
 import { SVGSampler } from './SVGSampler.js';
-import { executeScripts, cleanupScripts, cleanupAllScripts, hasScripts } from './SVGScriptRunner.js';
+import { executeScripts, cleanupScripts, cleanupAllScripts } from './SVGScriptRunner.js';
 import { resolveEnv } from '../../env.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -285,17 +285,18 @@ export class LaserManager {
 					cleanupScripts(this._previewSvgElement);
 				}
 
-				const parser = new DOMParser();
-				const doc = parser.parseFromString(svgMarkup, 'image/svg+xml');
-				if (doc.querySelector('parsererror')) return [];
+				// Detach scripts and onload before appendChild to prevent
+				// auto-execution (see note in _injectDrawing).
+				const detachedScripts = Array.from(svgElement.querySelectorAll('script'));
+				for (const s of detachedScripts) s.remove();
+				const detachedOnload = svgElement.getAttribute('onload');
+				if (detachedOnload !== null) svgElement.removeAttribute('onload');
 
-				const svgElement = document.importNode(doc.documentElement, true);
 				this._previewContainer.appendChild(svgElement);
 				this._previewSvgElement = svgElement;
 
-				// Execute scripts before auto-detecting viewBox
-				if (hasScripts(svgElement)) {
-					executeScripts(svgElement, true);
+				if (detachedScripts.length > 0 || detachedOnload) {
+					executeScripts(svgElement, true, detachedScripts, detachedOnload);
 				}
 
 				if (!svgElement.getAttribute('viewBox')) {
@@ -442,11 +443,19 @@ export class LaserManager {
 				svgElement.classList.add('default');
 			}
 
+			// Detach <script> nodes and the onload attribute BEFORE appendChild
+			// so the browser doesn't auto-execute them (which leaks declarations
+			// into global scope and crashes on re-injection). We run both in an
+			// isolated Function scope below.
+			const detachedScripts = Array.from(svgElement.querySelectorAll('script'));
+			for (const s of detachedScripts) s.remove();
+			const detachedOnload = svgElement.getAttribute('onload');
+			if (detachedOnload !== null) svgElement.removeAttribute('onload');
+
 			this.container.appendChild(svgElement);
 
-			// Execute scripts before auto-detecting viewBox — scripts may create elements
-			if (hasScripts(svgElement)) {
-				executeScripts(svgElement, true);
+			if (detachedScripts.length > 0 || detachedOnload) {
+				executeScripts(svgElement, true, detachedScripts, detachedOnload);
 				this.scriptedSvgs.add(svgElement);
 			}
 
