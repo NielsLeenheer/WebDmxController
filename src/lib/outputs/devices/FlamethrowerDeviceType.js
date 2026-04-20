@@ -18,14 +18,14 @@ export class FlamethrowerDeviceType extends DeviceType {
             defaultValues: [0, 0],
             controls: [
                 {
-                    id: 'safety',
-                    type: CONTROL_TYPES.Safety,
-                    startChannel: 0
-                },
-                {
                     id: 'flame',
                     type: CONTROL_TYPES.Flame,
                     startChannel: 1
+                },
+                {
+                    id: 'safety',
+                    type: CONTROL_TYPES.Safety,
+                    startChannel: 0
                 }
             ]
         });
