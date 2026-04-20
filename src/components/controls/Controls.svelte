@@ -213,6 +213,7 @@
             {@const controlValue = values[control.id] ?? control.type.offValue}
             {@const controlDisabled = isControlDisabled(control.id) || !isControlEnabled(control)}
             {@const isOn = controlValue === control.type.onValue}
+            {@const displayValue = control.inverted ? (255 - controlValue) : controlValue}
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
                     <input
@@ -233,9 +234,20 @@
                 </div>
                 <input
                     type="text"
-                    value={controlValue}
+                    value={displayValue}
                     oninput={handleTextInput}
-                    onchange={(e) => !controlDisabled && handleTextInputChange(control.id, e.target.value, e)}
+                    onchange={(e) => {
+                        if (controlDisabled) return;
+                        const typed = parseInt(e.target.value);
+                        if (!isNaN(typed) && typed >= 0 && typed <= 255) {
+                            const actual = control.inverted ? (255 - typed) : typed;
+                            handleControlChange(control.id, actual);
+                        } else if (e.target.value === '') {
+                            e.target.value = '';
+                        } else {
+                            e.target.value = displayValue;
+                        }
+                    }}
                     class="value-input"
                     disabled={controlDisabled}
                     maxlength="3"
@@ -246,6 +258,7 @@
         {:else if control.type.type === 'slider'}
             {@const controlValue = values[control.id] ?? 0}
             {@const controlDisabled = isControlDisabled(control.id) || !isControlEnabled(control)}
+            {@const displayValue = control.inverted ? (255 - controlValue) : controlValue}
             <div class="control" class:no-checkbox={!showCheckboxes}>
                 {#if showCheckboxes}
                     <input
@@ -270,9 +283,20 @@
                 </div>
                 <input
                     type="text"
-                    value={controlValue}
+                    value={displayValue}
                     oninput={handleTextInput}
-                    onchange={(e) => !controlDisabled && handleTextInputChange(control.id, e.target.value, e)}
+                    onchange={(e) => {
+                        if (controlDisabled) return;
+                        const typed = parseInt(e.target.value);
+                        if (!isNaN(typed) && typed >= 0 && typed <= 255) {
+                            const actual = control.inverted ? (255 - typed) : typed;
+                            handleControlChange(control.id, actual);
+                        } else if (e.target.value === '') {
+                            e.target.value = '';
+                        } else {
+                            e.target.value = displayValue;
+                        }
+                    }}
                     class="value-input"
                     disabled={controlDisabled}
                     maxlength="3"

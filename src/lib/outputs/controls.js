@@ -40,9 +40,13 @@ export function controlValuesToDMX(deviceType, controlValues) {
 		// Input: plain object/number, Output: plain array
 		const controlDMX = controlDef.type.valueToDMX(value);
 
-		// Write to correct channels
+		// Write to correct channels. `inverted: true` flips each channel
+		// (255 - n) — useful when the physical device expects the opposite
+		// polarity of what the control type emits (e.g. dimmer channels
+		// where 0 = full bright instead of off).
 		for (let i = 0; i < controlDMX.length; i++) {
-			dmxArray[controlDef.startChannel + i] = controlDMX[i];
+			const raw = controlDMX[i];
+			dmxArray[controlDef.startChannel + i] = controlDef.inverted ? (255 - raw) : raw;
 		}
 	}
 
