@@ -227,7 +227,34 @@
                     };
                 }
             }
+            if (device.type === 'audio') {
+                const audioInput = inputs.find(i => i.type === 'audio');
+                if (audioInput) {
+                    inputStates[audioInput.id] = { ...inputStates[audioInput.id], connected: false };
+                }
+            }
         });
+
+        inputController.on('deviceadded', (device) => {
+            if (device.type === 'audio') {
+                const audioInput = inputs.find(i => i.type === 'audio');
+                if (audioInput) {
+                    inputStates[audioInput.id] = { ...inputStates[audioInput.id], connected: true };
+                }
+            }
+        });
+
+        // Seed initial connected state for any audio device already present
+        // (e.g. when switching back to the inputs view after the mic was granted).
+        const initialAudio = inputController.inputDeviceManager
+            ?.getAllDevices?.()
+            ?.find(d => d.type === 'audio');
+        if (initialAudio) {
+            const audioInput = inputs.find(i => i.type === 'audio');
+            if (audioInput) {
+                inputStates[audioInput.id] = { ...inputStates[audioInput.id], connected: true };
+            }
+        }
 
         // Track input state changes for display
         inputController.on('input-trigger', ({ mapping, velocity, toggleState, selectState }) => {
@@ -371,7 +398,7 @@
     </ContextAction>
     {#if contextInput?.type === 'audio'}
         <ContextAction
-            disabled={!inputController.getInputDevice(contextInput?.deviceId)}
+            disabled={!inputStates[contextInput?.id]?.connected}
             onclick={(input) => {
                 const device = inputController.getInputDevice(input?.deviceId);
                 if (device) audioPreviewDialog?.show(device, inputController);

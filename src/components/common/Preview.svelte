@@ -591,6 +591,9 @@
                     <path fill="#5c6bc0" d="M15 10H23V12H15zM25 10H33V12H25zM25 14H33V16H25zM15 14H23V16H15zM25 18H33V20H25zM15 18H23V20H15zM15 22H23V24H15zM25 22H33V24H25z"/>
                     <path fill="#3f51b5" d="M26,35h-4c-3.1,0-9-1.7-9-8v-9h2v9c0,5.9,6.7,6,7,6h4c0.3,0,7-0.1,7-6v-9h2v9C35,33.3,29.1,35,26,35z"/>
                 </svg>
+                {#if state.connected}
+                    <div class="audio-connected-dot" title="Microphone connected"></div>
+                {/if}
             </div>
 
         {:else if inputType === 'joycon'}
@@ -1033,6 +1036,18 @@
     .audio-icon {
         width: 100%;
         height: 100%;
+    }
+
+    .audio-connected-dot {
+        position: absolute;
+        bottom: 2px;
+        left: 2px;
+        width: 6px;
+        height: 6px;
+        background: #e53935;
+        border-radius: 50%;
+        box-shadow: 0 0 4px rgba(229, 57, 53, 0.6);
+        z-index: 10;
     }
 
     /* Joy-Con input */
