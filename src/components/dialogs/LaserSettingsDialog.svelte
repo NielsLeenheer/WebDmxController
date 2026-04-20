@@ -19,7 +19,18 @@
 
     let pointsPerFrame = $derived(Math.floor(pps / targetFps));
 
+    let stats = $state(null);
     let originalSettings = null;
+    // Poll render stats from the manager while the dialog is visible so the
+    // user can see how settings changes affect throughput and point mix.
+    $effect(() => {
+        if (!deviceId || !laserManager) return;
+        const tick = () => { stats = laserManager.getDeviceStats(deviceId); };
+        tick();
+        const interval = setInterval(tick, 250);
+        return () => clearInterval(interval);
+    });
+
 
     export function show(id) {
         deviceId = id;
@@ -69,6 +80,7 @@
     onclose={handleCancel}
 >
     <div class="settings-content">
+      <div class="settings-column">
         <div class="setting-slider">
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -111,10 +123,53 @@
         <div class="setting-slider">
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <span class="setting-label clickable" onclick={() => { velocityDimming = 0.5; applySettings(); }}>Vel. Dimming</span>
-            <input type="range" min="0" max="1" step="0.05" bind:value={velocityDimming} oninput={applySettings} />
-            <span class="setting-value">{Math.round(velocityDimming * 100)}%</span>
-        </div>
+      <div class="settings-column stats-column">
+        {#if stats}
+            <div class="stats-panel">
+                <div class="stats-grid">
+                    <span class="stats-label">FPS</span>
+                    <span class="stats-value">{stats.framesPerSecond}</span>
+                    <span class="stats-unit">/ {targetFps} target</span>
+
+                    <span class="stats-label">Points/frame</span>
+                    <span class="stats-value">{stats.pointsPerFrame}</span>
+                    <span class="stats-unit">/ {stats.targetPoints || pointsPerFrame} budget</span>
+
+                    <span class="stats-label stats-sub">Drawing</span>
+                    <span class="stats-value stats-sub">{stats.drawingPoints}</span>
+                    <span class="stats-unit">pts</span>
+
+                    <span class="stats-label stats-sub">Blanking</span>
+                    <span class="stats-value stats-sub">{stats.blankingPoints}</span>
+                    <span class="stats-unit">pts</span>
+
+                    <span class="stats-label stats-sub">Corner dwell</span>
+                    <span class="stats-value stats-sub">{stats.cornerDwellPoints}</span>
+                    <span class="stats-unit">pts</span>
+
+                    <span class="stats-label stats-sub">Anchor dwell</span>
+                    <span class="stats-value stats-sub">{stats.anchorDwellPoints}</span>
+                    <span class="stats-unit">pts</span>
+
+                    <span class="stats-label">Input</span>
+                    <span class="stats-value">{stats.inputPoints}</span>
+                    <span class="stats-unit">points</span>
+
+                    <span class="stats-label">Process</span>
+                    <span class="stats-value">{(stats.processMs ?? 0).toFixed(1)}</span>
+                    <span class="stats-unit">ms/frame</span>
+
+                    <span class="stats-label">Send</span>
+                    <span class="stats-value">{(stats.sendMs ?? 0).toFixed(1)}</span>
+                    <span class="stats-unit">ms/frame</span>
+
+                    <span class="stats-label">Status poll</span>
+                    <span class="stats-value">{(stats.statusMs ?? 0).toFixed(1)}</span>
+                    <span class="stats-unit">ms</span>
+                </div>
+            </div>
+        {/if}
+      </div>
     </div>
 
     {#snippet buttons()}
@@ -126,9 +181,25 @@
 <style>
     .settings-content {
         display: flex;
+        flex-direction: row;
+        gap: 36px;
+        min-width: 1000px;
+        align-items: flex-start;
+    }
+
+    .settings-column {
+        display: flex;
         flex-direction: column;
         gap: 8px;
-        min-width: 340px;
+        flex: 1;
+        min-width: 300px;
+    }
+
+    .stats-column {
+        flex: 0 0 260px;
+        min-width: 260px;
+    }
+
     }
 
     .setting-slider {
@@ -175,5 +246,46 @@
         width: 100%;
         height: 4px;
         accent-color: #1976d2;
+    }
+
+    .stats-panel {
+        padding: 18px;
+        background: #f7f7f7;
+        border-radius: 10px;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: auto auto 1fr;
+        row-gap: 6px;
+        column-gap: 8px;
+        align-items: baseline;
+    }
+
+    .stats-label {
+        font-size: 9pt;
+        color: #555;
+    }
+
+    .stats-value {
+        font-size: 9pt;
+        font-family: var(--font-stack-mono);
+        color: #1976d2;
+        font-weight: 600;
+        text-align: right;
+        min-width: 48px;
+    }
+
+    .stats-unit {
+        font-size: 8pt;
+        color: #888;
+    }
+
+    .stats-label.stats-sub,
+    .stats-value.stats-sub,
+    .stats-unit.stats-sub {
+        padding-left: 12px;
+        color: #777;
+        font-weight: 400;
     }
 </style>
