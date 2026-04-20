@@ -1,6 +1,7 @@
 <script>
     import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
     import { deviceLibrary } from '../../stores.svelte.js';
+    import { isControlVisible } from '../../lib/outputs/controls.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import DeviceCard from '../cards/DeviceCard.svelte';
     import Button from '../common/Button.svelte';
@@ -8,6 +9,7 @@
     import ContextAction from '../common/ContextAction.svelte';
 	import ContextSeparator from '../common/ContextSeparator.svelte';
     import EditDeviceDialog from '../dialogs/EditDeviceDialog.svelte';
+    import ControlVisibilityDialog from '../dialogs/ControlVisibilityDialog.svelte';
     import LaserCalibrationDialog from '../dialogs/LaserCalibrationDialog.svelte';
     import LaserSettingsDialog from '../dialogs/LaserSettingsDialog.svelte';
 
@@ -17,6 +19,9 @@
     import laserIcon from '../../assets/icons/laser.svg?raw';
     import calibrateIcon from '../../assets/icons/calibrate.svg?raw';
     import settingsIcon from '../../assets/icons/settings.svg?raw';
+    import listIcon from '../../assets/icons/list.svg?raw';
+    import expandIcon from '../../assets/icons/expand.svg?raw';
+    import collapseIcon from '../../assets/icons/collapse.svg?raw';
 
     let { dmxController, isActive = false, laserManager = null } = $props();
 
@@ -28,18 +33,67 @@
 
     // Dialog references
     let editDeviceDialog;
+    let visibilityDialog = $state(null);
     let calibrationDialog = $state(null);
     let settingsDialog = $state(null);
 
     function hasILDAControl(device) {
         if (!device) return false;
         const deviceType = DEVICE_TYPES[device.type];
-        return deviceType?.controls.some(c => c.type.type === 'ilda');
+        return deviceType?.controls.some(c => !c.separator && c.type?.type === 'ilda');
+    }
+
+    function hasMultipleControls(device) {
+        if (!device) return false;
+        const deviceType = DEVICE_TYPES[device.type];
+        const realControls = deviceType?.controls.filter(c => !c.separator) ?? [];
+        return realControls.length > 1;
+    }
+
+    /**
+     * Compute the "Show all / Hide optional" state for the context menu.
+     * Returns null if the toggle isn't useful (e.g., every control is already
+     * visible by default).
+     */
+    function getShowAllState(device) {
+        if (!device) return null;
+        const deviceType = DEVICE_TYPES[device.type];
+        if (!deviceType) return null;
+        const realControls = deviceType.controls.filter(c => !c.separator);
+        const visibility = device.controlVisibility ?? {};
+        const anyHidden = realControls.some(c => !isControlVisible(c, visibility));
+        if (anyHidden) return { label: 'Show all', action: 'show' };
+        // Everything currently visible — offer "Hide optional" only if there
+        // are default-hidden controls to go back to.
+        const hasHiddenDefaults = realControls.some(c => c.hidden);
+        if (hasHiddenDefaults) return { label: 'Hide optional', action: 'hide' };
+        return null;
+    }
+
+    function toggleShowAll(device, action) {
+        if (!device) return;
+        const deviceType = DEVICE_TYPES[device.type];
+        if (!deviceType) return;
+        const realControls = deviceType.controls.filter(c => !c.separator);
+
+        if (action === 'show') {
+            // Make every control visible: explicit override for anything
+            // that would otherwise be hidden.
+            const visibility = {};
+            for (const c of realControls) {
+                visibility[c.id] = true;
+            }
+            deviceLibrary.update(device.id, { controlVisibility: visibility });
+        } else {
+            // Revert to device type defaults — drops all overrides.
+            deviceLibrary.update(device.id, { controlVisibility: {} });
+        }
     }
 
     // Context menu state
     let contextMenuRef = $state(null);
     let contextDevice = $state(null);
+    let showAllState = $derived(getShowAllState(contextDevice));
 
     // Drag and drop helper
     const dnd = createDragDrop({
@@ -61,6 +115,12 @@
             syncedControls: result.syncedControls,
             mirrorPan: result.mirrorPan
         });
+    }
+
+    async function showControlVisibility(device) {
+        const result = await visibilityDialog?.open(device);
+        if (result === null || result === undefined) return;
+        deviceLibrary.update(device.id, { controlVisibility: result });
     }
 
     function deleteDevice(deviceId) {
@@ -145,12 +205,27 @@
                 Calibrate
             </ContextAction>
         {/if}
+        {#if hasMultipleControls(contextDevice)}
+            <ContextSeparator />
+            <ContextAction onclick={(device) => showControlVisibility(device)}>
+                {@html listIcon}
+                Controls…
+            </ContextAction>
+            {#if showAllState}
+                <ContextAction onclick={(device) => toggleShowAll(device, showAllState.action)}>
+                    {@html showAllState.action === 'show' ? expandIcon : collapseIcon}
+                    {showAllState.label}
+                </ContextAction>
+            {/if}
+        {/if}
         <ContextSeparator />
         <ContextAction onclick={(device) => deleteDevice(device?.id)} variant="danger">
             {@html removeIcon}
             Delete
         </ContextAction>
     </ContextMenu>
+
+    <ControlVisibilityDialog bind:this={visibilityDialog} />
 
     <LaserCalibrationDialog
         bind:this={calibrationDialog}

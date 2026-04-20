@@ -44,6 +44,7 @@ export class DeviceLibrary extends Library {
 			linkedTo: null,
 			syncedControls: null,
 			mirrorPan: false,
+			controlVisibility: {},
 			cssIdentifier: toUniqueCSSIdentifier(name, existingIdentifiers)
 		};
 
@@ -231,6 +232,7 @@ export class DeviceLibrary extends Library {
 			linkedTo: deviceData.linkedTo || null,
 			syncedControls: deviceData.syncedControls || null,
 			mirrorPan: deviceData.mirrorPan || false,
+			controlVisibility: deviceData.controlVisibility ? { ...deviceData.controlVisibility } : {},
 			cssIdentifier: deviceData.cssIdentifier,
 			order: deviceData.order !== undefined ? deviceData.order : index
 		};

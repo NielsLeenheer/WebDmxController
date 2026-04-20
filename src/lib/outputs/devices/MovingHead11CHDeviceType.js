@@ -34,7 +34,8 @@ export class MovingHead11CHDeviceType extends DeviceType {
                 {
                     id: 'speed',
                     type: CONTROL_TYPES.Speed,
-                    startChannel: 4
+                    startChannel: 4,
+                    hidden: true
                 },
                 {
                     id: 'dimmer',
@@ -44,7 +45,8 @@ export class MovingHead11CHDeviceType extends DeviceType {
                 {
                     id: 'strobe',
                     type: CONTROL_TYPES.Strobe,
-                    startChannel: 6
+                    startChannel: 6,
+                    hidden: true
                 },
                 {
                     id: 'color',

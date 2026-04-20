@@ -2,6 +2,7 @@
 	import { Icon } from 'svelte-icon';
 	import { DEVICE_TYPES } from '../../lib/outputs/devices.js';
 	import { getMappedControls } from '../../lib/outputs/sync.js';
+	import { filterVisibleControls } from '../../lib/outputs/controls.js';
 	import DraggableCard from '../common/DraggableCard.svelte';
 	import CardHeader from '../common/CardHeader.svelte';
 	import Controls from '../controls/Controls.svelte';
@@ -31,7 +32,13 @@
 	}
 
 	let disabledControls = $derived(getDisabledControls());
-	let hasILDA = $derived(DEVICE_TYPES[device.type]?.controls.some(c => c.type.type === 'ilda'));
+	let hasILDA = $derived(DEVICE_TYPES[device.type]?.controls.some(c => c.type?.type === 'ilda'));
+	let visibleControls = $derived(
+		filterVisibleControls(
+			DEVICE_TYPES[device.type]?.controls ?? [],
+			device.controlVisibility
+		)
+	);
 	let laserEnabled = $state(true);
 	let laserPower = $state(255);
 </script>
@@ -58,7 +65,7 @@
 	</CardHeader>
 
 	<Controls
-		controls={DEVICE_TYPES[device.type].controls}
+		controls={visibleControls}
 		values={device.defaultValues}
 		onChange={(controlId, value) => onValueChange?.(device, controlId, value)}
 		disabledControls={disabledControls}

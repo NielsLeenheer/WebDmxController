@@ -98,3 +98,43 @@ export function mirrorPanTilt(controlValue) {
 	}
 	return controlValue;
 }
+
+/**
+ * Determine if a control should be visible for a given device.
+ * Per-device `controlVisibility[controlId]` overrides the device type default
+ * (which is visible unless `control.hidden` is true).
+ *
+ * @param {Object} control - Control definition
+ * @param {Object} [visibility] - Per-device overrides ({ controlId: boolean })
+ * @returns {boolean}
+ */
+export function isControlVisible(control, visibility) {
+	if (control.separator) return true;
+	const override = visibility?.[control.id];
+	if (override !== undefined) return !!override;
+	return !control.hidden;
+}
+
+/**
+ * Filter a control list for UI display: drop hidden controls and clean up
+ * separators that would end up leading, trailing, or adjacent to each other.
+ *
+ * @param {Array} controls - Device type control list
+ * @param {Object} [visibility] - Per-device overrides
+ * @returns {Array}
+ */
+export function filterVisibleControls(controls, visibility) {
+	const kept = [];
+	for (const control of controls) {
+		if (!isControlVisible(control, visibility)) continue;
+		if (control.separator) {
+			if (kept.length === 0) continue;
+			if (kept[kept.length - 1].separator) continue;
+		}
+		kept.push(control);
+	}
+	while (kept.length > 0 && kept[kept.length - 1].separator) {
+		kept.pop();
+	}
+	return kept;
+}
