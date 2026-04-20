@@ -17,6 +17,7 @@ import { DimmerDeviceType } from './DimmerDeviceType.js';
 import { SmokeDeviceType } from './SmokeDeviceType.js';
 import { MovingHeadDeviceType } from './MovingHeadDeviceType.js';
 import { MovingHead11CHDeviceType } from './MovingHead11CHDeviceType.js';
+import { MovingHeadBeam14CHDeviceType } from './MovingHeadBeam14CHDeviceType.js';
 import { FlamethrowerDeviceType } from './FlamethrowerDeviceType.js';
 import { SparkMachineDeviceType } from './SparkMachineDeviceType.js';
 import { LaserProjectorDeviceType } from './LaserProjectorDeviceType.js';
@@ -29,6 +30,7 @@ export const DEVICE_TYPES = {
     'smoke': new SmokeDeviceType(),
     'moving-head': new MovingHeadDeviceType(),
     'moving-head-11ch': new MovingHead11CHDeviceType(),
+    'moving-head-beam-14ch': new MovingHeadBeam14CHDeviceType(),
     'flamethrower': new FlamethrowerDeviceType(),
     'spark-machine': new SparkMachineDeviceType(),
     'laser-projector': new LaserProjectorDeviceType()

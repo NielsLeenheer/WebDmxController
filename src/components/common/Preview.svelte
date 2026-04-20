@@ -57,6 +57,26 @@
         { x: 40, y: 90, size: 20 },
     ];
 
+    // Resolve the color of a wheel slot as a CSS background value.
+    function wheelSlotBackground(slot) {
+        const colors = slot?.colors ?? [];
+        if (colors.length === 0) return 'transparent';
+        if (colors.length === 1) return colors[0];
+        if (colors.length === 2) return `linear-gradient(90deg, ${colors[0]} 0 50%, ${colors[1]} 50% 100%)`;
+        const stops = colors.map((c, i) => `${c} ${((i / (colors.length - 1)) * 100).toFixed(1)}%`).join(', ');
+        return `linear-gradient(90deg, ${stops})`;
+    }
+
+    // Resolve the current slot from a wheel control value ({ index, modifier, speed }).
+    function wheelSelectedSlot(wheelControl, wheelValue) {
+        if (!wheelControl?.type) return null;
+        const modifier = !!wheelValue?.modifier;
+        const statics = wheelControl.type.staticSlots ?? [];
+        const modifiers = wheelControl.type.modifierSlots ?? [];
+        const slots = modifier ? (modifiers.length > 0 ? modifiers : statics) : statics;
+        const index = Math.max(0, Math.min(slots.length - 1, wheelValue?.index ?? 0));
+        return slots[index];
+    }
 
     // Extract displayable character from keyboard key control ID
     function extractKeyChar(controlId) {
@@ -323,10 +343,18 @@
         {#if hasControl('color')}
             {@const colorValue = effectiveData().color}
             {@const color = colorValue ? `rgb(${colorValue.red ?? 0}, ${colorValue.green ?? 0}, ${colorValue.blue ?? 0})` : 'transparent'}
-            <div 
-                class="control-layer control-color" 
+            <div
+                class="control-layer control-color"
                 style="background-color: {color}"
             ></div>
+        {/if}
+
+        <!-- Color wheel layer (selected swatch color) -->
+        {#if hasControl('color-wheel')}
+            {@const wheelValue = effectiveData()['color-wheel'] ?? { index: 0, modifier: false, speed: 0 }}
+            {@const wheelControl = DEVICE_TYPES[data.type]?.controls.find(c => c.id === 'color-wheel')}
+            {@const slot = wheelSelectedSlot(wheelControl, wheelValue)}
+            <div class="control-layer control-color-wheel" style="background: {wheelSlotBackground(slot)}"></div>
         {/if}
 
         <!-- Amber layer -->

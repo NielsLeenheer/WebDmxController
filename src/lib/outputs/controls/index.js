@@ -30,6 +30,11 @@ import { SafetyControl } from './SafetyControl.js';
 import { PanTiltControl } from './PanTiltControl.js';
 import { PanTilt16Control } from './PanTilt16Control.js';
 import { ILDAControl } from './ILDAControl.js';
+import { ColorWheelControl } from './ColorWheelControl.js';
+import { PatternWheelControl } from './PatternWheelControl.js';
+import { FocusControl } from './FocusControl.js';
+import { PrismControl } from './PrismControl.js';
+import { MacroControl } from './MacroControl.js';
 import { HeatingControl } from './HeatingControl.js';
 import { SparksControl } from './SparksControl.js';
 
@@ -42,6 +47,10 @@ export const CONTROL_TYPES = {
 	// Color control
 	Color: new ColorControl(),
 
+	// Wheel controls
+	ColorWheel: new ColorWheelControl(),
+	PatternWheel: new PatternWheelControl(),
+
 	// Single-channel controls
 	Dimmer: new DimmerControl(),
 	Strobe: new StrobeControl(),
@@ -52,10 +61,13 @@ export const CONTROL_TYPES = {
 	Smoke: new SmokeControl(),
 	Fan: new FanControl(),
 	Flame: new FlameControl(),
+	Focus: new FocusControl(),
+	Prism: new PrismControl(),
 	Sparks: new SparksControl(),
 
 	// Toggle controls
 	Safety: new SafetyControl(),
+	Macro: new MacroControl(),
 	Heating: new HeatingControl(),
 
 	// Position controls

@@ -68,6 +68,41 @@ export function getPalette() {
 }
 
 /**
+ * Find the index of the slot whose color is closest to the given RGB.
+ * Used by wheel-style controls to snap a CSS rgb(...) input to a fixed palette.
+ *
+ * @param {{r:number, g:number, b:number}} rgb - Input RGB (0-255)
+ * @param {Array<{colors?: string[]}>} slots - Slots with optional `colors` hex array; the first color is used for distance
+ * @returns {number} Index of the nearest slot, or 0 if none have colors
+ */
+export function nearestPaletteColorIndex(rgb, slots) {
+    let bestIndex = 0;
+    let bestDistance = Infinity;
+
+    for (let i = 0; i < slots.length; i++) {
+        const hex = slots[i]?.colors?.[0];
+        if (!hex) continue;
+
+        const h = hex.replace('#', '');
+        const r = parseInt(h.substring(0, 2), 16);
+        const g = parseInt(h.substring(2, 4), 16);
+        const b = parseInt(h.substring(4, 6), 16);
+
+        const dr = r - rgb.r;
+        const dg = g - rgb.g;
+        const db = b - rgb.b;
+        const distance = dr * dr + dg * dg + db * db;
+
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestIndex = i;
+        }
+    }
+
+    return bestIndex;
+}
+
+/**
  * Get the next unused color from the palette
  * @param {string[]} usedColors - Array of already used color names (normalized to lowercase)
  * @returns {string|undefined} Next unused color, or undefined if palette is empty

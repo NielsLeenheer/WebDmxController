@@ -106,9 +106,9 @@ export class CSSSampler {
 			const samplingConfig = control.type.getSamplingConfig?.();
 			if (!samplingConfig) continue;
 
-			// Handle multi-property controls (XY pads)
+			// Handle multi-property controls (XY pads, wheels)
 			if (samplingConfig.properties) {
-				const controlValue = {};
+				let controlValue = {};
 				for (const propConfig of samplingConfig.properties) {
 					const cssValue = computed.getPropertyValue(propConfig.cssProperty);
 					if (cssValue) {
@@ -119,7 +119,12 @@ export class CSSSampler {
 						}
 					}
 				}
-				if (Object.keys(controlValue).length > 0) {
+				// Optional finalize step — collapses partial results into the final
+				// control value (used by wheels to combine mode + index candidates).
+				if (samplingConfig.finalize) {
+					controlValue = samplingConfig.finalize(controlValue);
+				}
+				if (controlValue && Object.keys(controlValue).length > 0) {
 					result[control.id] = controlValue;
 				}
 			}

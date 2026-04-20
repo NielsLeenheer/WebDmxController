@@ -65,6 +65,55 @@
         handleControlChange(controlId, newValue);
     }
 
+    function wheelDefaultValue() {
+        return { index: 0, modifier: false, speed: 0 };
+    }
+
+    function handleWheelSwatch(controlId, index) {
+        const current = values[controlId] ?? wheelDefaultValue();
+        handleControlChange(controlId, {
+            index,
+            modifier: !!current.modifier,
+            speed: 0
+        });
+    }
+
+    function handleWheelModifier(controlId, control, nextModifier) {
+        const current = values[controlId] ?? wheelDefaultValue();
+        const slots = nextModifier
+            ? (control.type.modifierSlots ?? control.type.staticSlots)
+            : control.type.staticSlots;
+        const maxIndex = Math.max(0, (slots?.length ?? 1) - 1);
+        handleControlChange(controlId, {
+            index: Math.min(current.index ?? 0, maxIndex),
+            modifier: nextModifier,
+            speed: current.speed ?? 0
+        });
+    }
+
+    function handleWheelSpeed(controlId, rawSpeed) {
+        const current = values[controlId] ?? wheelDefaultValue();
+        // Middle third of the slider is a deadzone — the selected swatch drives the channel.
+        // Only the outer thirds send rotation speed (reverse / forward).
+        const effective = Math.abs(rawSpeed) < 34 ? 0 : rawSpeed;
+        handleControlChange(controlId, {
+            index: current.index ?? 0,
+            modifier: !!current.modifier,
+            speed: effective
+        });
+    }
+
+    function wheelSwatchBackground(slot) {
+        const colors = slot?.colors ?? [];
+        if (colors.length === 0) {
+            return slot?.icon ? '#f5f5f5' : 'repeating-linear-gradient(45deg, #ddd 0 4px, #ccc 4px 8px)';
+        }
+        if (colors.length === 1) return colors[0];
+        if (colors.length === 2) return `linear-gradient(90deg, ${colors[0]} 0 50%, ${colors[1]} 50% 100%)`;
+        const stops = colors.map((c, i) => `${c} ${((i / (colors.length - 1)) * 100).toFixed(1)}%`).join(', ');
+        return `linear-gradient(90deg, ${stops})`;
+    }
+
     function handleTextInputChange(controlId, inputValue, e, component = null) {
         const numValue = parseInt(inputValue);
         if (!isNaN(numValue) && numValue >= 0 && numValue <= 255) {
@@ -249,6 +298,99 @@
                         }
                     }}
                     class="value-input"
+                    disabled={controlDisabled}
+                    maxlength="3"
+                />
+            </div>
+        {:else if control.type.type === 'wheel'}
+            {@const wheelValue = values[control.id] ?? { index: 0, modifier: false, speed: 0 }}
+            {@const controlDisabled = isControlDisabled(control.id) || !isControlEnabled(control)}
+            {@const activeSlots = wheelValue.modifier
+                ? (control.type.modifierSlots ?? control.type.staticSlots)
+                : control.type.staticSlots}
+            {@const rotating = (wheelValue.speed ?? 0) !== 0}
+            {@const wheelDmx = control.type.valueToDMX(wheelValue)[0] ?? 0}
+            {@const modeLabel = control.type.id === 'pattern-wheel' ? 'Shake' : 'Mixed'}
+            <div class="control control-wheel" class:no-checkbox={!showCheckboxes}>
+                {#if showCheckboxes}
+                    <input
+                        type="checkbox"
+                        checked={isControlEnabled(control)}
+                        onchange={() => toggleControlEnabled(control)}
+                        class="control-checkbox"
+                    />
+                {/if}
+                <span class="control-label" class:disabled={controlDisabled}>{control.type.name}</span>
+                <div class="wheel-swatches" class:dim={rotating} class:disabled={controlDisabled}>
+                    {#each activeSlots as slot, i}
+                        <button
+                            type="button"
+                            class="wheel-swatch"
+                            class:selected={!rotating && wheelValue.index === i}
+                            class:numbered={(slot.colors?.length ?? 0) === 0 && !slot.icon}
+                            class:iconed={!!slot.icon}
+                            class:slot-disabled={slot.disabled}
+                            style="background: {wheelSwatchBackground(slot)};"
+                            disabled={controlDisabled || slot.disabled}
+                            title={slot.label}
+                            onclick={() => !controlDisabled && !slot.disabled && handleWheelSwatch(control.id, i)}
+                        >
+                            {#if slot.icon}
+                                {@html slot.icon}
+                            {:else if (slot.colors?.length ?? 0) === 0}
+                                <span>{i}</span>
+                            {/if}
+                        </button>
+                    {/each}
+                </div>
+                {#if control.type.modifierSlots}
+                    <label class="wheel-mode">
+                        <input
+                            type="checkbox"
+                            checked={!!wheelValue.modifier}
+                            onchange={(e) => !controlDisabled && handleWheelModifier(control.id, control, e.target.checked)}
+                            disabled={controlDisabled}
+                        />
+                        {modeLabel}
+                    </label>
+                {/if}
+                <div class="wheel-speed-row">
+                    <span class="wheel-speed-label">◀</span>
+                    <div class="slider-wrapper">
+                        <input
+                            type="range"
+                            min="-100"
+                            max="100"
+                            step="1"
+                            value={wheelValue.speed ?? 0}
+                            oninput={(e) => !controlDisabled && handleWheelSpeed(control.id, parseInt(e.target.value))}
+                            onchange={(e) => {
+                                // On release in the deadzone, snap the thumb to exact center.
+                                if (Math.abs(parseInt(e.target.value)) < 34) {
+                                    e.target.value = 0;
+                                }
+                            }}
+                            style="--slider-gradient: linear-gradient(to right, #ccc 0%, #333 50%, #ccc 100%); --thumb-color: #444;"
+                            disabled={controlDisabled}
+                            class="color-slider wheel-speed"
+                        />
+                    </div>
+                    <span class="wheel-speed-label">▶</span>
+                </div>
+                <input
+                    type="text"
+                    value={wheelDmx}
+                    oninput={handleTextInput}
+                    onchange={(e) => {
+                        const n = parseInt(e.target.value);
+                        if (!isNaN(n) && n >= 0 && n <= 255 && !controlDisabled) {
+                            const next = control.type.dmxToValue([n], wheelValue);
+                            handleControlChange(control.id, next);
+                        } else {
+                            e.target.value = wheelDmx;
+                        }
+                    }}
+                    class="value-input wheel-speed-value"
                     disabled={controlDisabled}
                     maxlength="3"
                 />
@@ -577,5 +719,146 @@
         cursor: pointer;
         margin: 0;
         flex-shrink: 0;
+    }
+
+    /* Wheel control styles — share column widths with .control */
+    .control-wheel {
+        display: grid;
+        grid-template-columns: 16px 4em 1fr 3em;
+        grid-template-areas:
+            "cb    label swatches swatches"
+            ".     .     mode     ."
+            ".     .     speed    value";
+        column-gap: 8px;
+        row-gap: 6px;
+        align-items: start;
+    }
+
+    .control-wheel.no-checkbox {
+        grid-template-columns: 4em 1fr 3em;
+        grid-template-areas:
+            "label mode     ."
+            ".     swatches swatches"
+            ".     speed    value";
+    }
+
+    .control-wheel > .control-checkbox {
+        grid-area: cb;
+        align-self: center;
+    }
+
+    .control-wheel > .control-label {
+        grid-area: label;
+        align-self: start;
+        margin-top: 3px;
+    }
+
+    .wheel-swatches {
+        grid-area: swatches;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .wheel-swatches.dim .wheel-swatch {
+        opacity: 0.45;
+    }
+
+    .wheel-swatches.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+
+    .wheel-mode {
+        grid-area: mode;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 4px;
+        margin-bottom: 4px;
+        font-size: 9pt;
+        color: #555;
+        cursor: pointer;
+        user-select: none;
+        justify-self: start;
+    }
+
+    .wheel-mode input {
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .wheel-swatch {
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        /* border: 1px solid rgba(0, 0, 0, 0.2); */
+        cursor: pointer;
+        padding: 0;
+        position: relative;
+        transition: transform 0.08s ease, box-shadow 0.08s ease;
+        box-shadow: inset 0 -2px 0 0 rgba(0, 0, 0, 0.1);
+    }
+
+    .wheel-swatch:hover:not(:disabled) {
+        transform: scale(1.08);
+    }
+
+    .wheel-swatch.selected {
+        box-shadow: inset 0 -2px 0 0 rgba(0, 0, 0, 0.1), 0 0 0 1.5px #2196f3, 0 0 12px rgba(33, 150, 243, 0.4);
+    }
+
+    .wheel-swatch.slot-disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .wheel-swatch.slot-disabled:hover {
+        transform: none;
+    }
+
+    .wheel-swatch.numbered {
+        color: #444;
+        font-size: 9pt;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .wheel-swatch.iconed {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #333;
+    }
+
+    .wheel-swatch.iconed > :global(svg) {
+        width: 18px;
+        height: 18px;
+        pointer-events: none;
+    }
+
+    .wheel-speed-row {
+        grid-area: speed;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .wheel-speed-row .slider-wrapper {
+        flex: 1;
+    }
+
+    .wheel-speed-label {
+        font-size: 9pt;
+        color: #888;
+        font-family: var(--font-stack-mono);
+    }
+
+    .wheel-speed-value {
+        grid-area: value;
+        align-self: center;
+        text-align: right;
     }
 </style>

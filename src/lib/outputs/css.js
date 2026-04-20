@@ -113,6 +113,60 @@ export function getProperties(controlValues, controls, options = {}) {
 				properties[cleaningMeta.cssProperty] = cleaning ? cleaningMeta.on : cleaningMeta.off;
 			}
 
+		} else if (control.type.type === 'wheel') {
+			// Wheel control (Color wheel / Pattern disk):
+			//   - Color wheels emit --red/--green/--blue (from the first color of
+			//     the selected swatch — always the "primary" color even in dual mode)
+			//     plus a composite `color` property.
+			//   - Pattern wheels emit a --pattern string (the slot's id).
+			//   - Both emit --<prefix>-mode ("normal" | "dual"/"shake") and
+			//     --<prefix>-speed (-100..100).
+			const modifier = !!controlValue.modifier;
+			const index = controlValue.index ?? 0;
+			const speed = controlValue.speed ?? 0;
+
+			const activeSlots = modifier
+				? (control.type.modifierSlots ?? control.type.staticSlots)
+				: control.type.staticSlots;
+			const clampedIndex = Math.max(0, Math.min(activeSlots.length - 1, index));
+			const slot = activeSlots[clampedIndex];
+
+			const rMeta = meta.values?.find(v => v.id === 'red');
+			const gMeta = meta.values?.find(v => v.id === 'green');
+			const bMeta = meta.values?.find(v => v.id === 'blue');
+			const colorMeta = meta.values?.find(v => v.id === 'color');
+			const patternMeta = meta.values?.find(v => v.id === 'pattern');
+			const modeMeta = meta.values?.find(v => v.id === 'mode');
+			const speedMeta = meta.values?.find(v => v.id === 'speed');
+
+			// Color wheel: --red/--green/--blue from the slot's FIRST color
+			const hex = slot?.colors?.[0];
+			if (hex && rMeta && gMeta && bMeta) {
+				const h = hex.replace('#', '');
+				properties[rMeta.cssProperty] = parseInt(h.substring(0, 2), 16).toString();
+				properties[gMeta.cssProperty] = parseInt(h.substring(2, 4), 16).toString();
+				properties[bMeta.cssProperty] = parseInt(h.substring(4, 6), 16).toString();
+
+				if (includeColorProperty && colorMeta) {
+					properties[colorMeta.cssProperty] = colorMeta.value;
+				}
+			}
+
+			// Pattern wheel: --pattern is the slot's id
+			if (patternMeta && slot?.id) {
+				properties[patternMeta.cssProperty] = slot.id;
+			}
+
+			// Mode (only meaningful when modifier slots exist on the control)
+			if (modeMeta && control.type.modifierSlots) {
+				const modeKeyword = rMeta ? 'dual' : 'shake';
+				properties[modeMeta.cssProperty] = modifier ? modeKeyword : 'normal';
+			}
+
+			// Speed
+			if (speedMeta) {
+				properties[speedMeta.cssProperty] = speed.toString();
+			}
 		}
 	}
 
