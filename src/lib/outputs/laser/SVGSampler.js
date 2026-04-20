@@ -569,9 +569,13 @@ function splitPathSections(d) {
  * Sections are delimited by M commands. Frozen sections (all but last) are cached.
  * Only the last (active) section is re-evaluated each frame.
  *
- * An M-only section (just "M x,y" with no drawing commands) signals a part
- * boundary — a disconnected jump. Sections between part boundaries are merged
- * into continuous parts; parts are returned as separate point arrays.
+ * Section boundaries are determined by comparing the M coordinate to the
+ * previous section's end:
+ *   - coincident position → zero-length move, treated as a cache marker, merged
+ *     into the same part (used by incremental drawings e.g. Joycon input).
+ *   - different position → true SVG subpath boundary, emitted as a separate
+ *     part so the laser pipeline blanks between them.
+ * An M-only section (no drawing commands) is an explicit part boundary.
  *
  * cache object: { sections: string[], sectionPoints: Array<Array<[x,y]>|null> }
  * Returns: array of point arrays (one per disconnected part), or null.
@@ -603,30 +607,38 @@ function samplePathSectioned(d, samplesPerUnit, cache) {
 	cache.sections = sections;
 	cache.sectionPoints = sectionPoints;
 
-	// Group sections into parts, splitting at M-only sections (null points = part gap)
 	const parts = [];
 	let currentPart = [];
+	const EPS = 1e-4;
 
-	for (let i = 0; i < sectionPoints.length; i++) {
-		const pts = sectionPoints[i];
+	for (const pts of sectionPoints) {
 		if (!pts || pts.length < 2) {
-			// M-only section = part boundary
-			if (currentPart.length >= 2) {
-				parts.push(currentPart);
-			}
+			// Explicit M-only boundary: close current part and start fresh.
+			if (currentPart.length >= 2) parts.push(currentPart);
 			currentPart = [];
 			continue;
 		}
-		// Append to current part (skip first point of non-first sections within a part to avoid duplicate)
-		if (currentPart.length > 0 && pts.length > 1) {
+
+		if (currentPart.length === 0) {
+			currentPart = pts.slice();
+			continue;
+		}
+
+		const prevEnd = currentPart[currentPart.length - 1];
+		const newStart = pts[0];
+		const continuation = Math.abs(prevEnd[0] - newStart[0]) < EPS
+			&& Math.abs(prevEnd[1] - newStart[1]) < EPS;
+
+		if (continuation) {
+			// Zero-length M: marker, not a real jump. Merge (skip duplicate start).
 			for (let j = 1; j < pts.length; j++) currentPart.push(pts[j]);
 		} else {
-			for (let j = 0; j < pts.length; j++) currentPart.push(pts[j]);
+			// Real subpath boundary: emit current part, start new.
+			parts.push(currentPart);
+			currentPart = pts.slice();
 		}
 	}
-	if (currentPart.length >= 2) {
-		parts.push(currentPart);
-	}
+	if (currentPart.length >= 2) parts.push(currentPart);
 
 	if (parts.length === 0) return null;
 
