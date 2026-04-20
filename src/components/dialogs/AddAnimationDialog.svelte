@@ -56,6 +56,7 @@
 		const controlsMap = new Map(); // id -> name
 		for (const deviceDef of Object.values(DEVICE_TYPES)) {
 			for (const control of deviceDef.controls) {
+				if (control.separator) continue;
 				// Use device control id (e.g., 'pantilt') not type id (e.g., 'pantilt16')
 				if (!controlsMap.has(control.id)) {
 					controlsMap.set(control.id, control.type.name);
@@ -114,7 +115,7 @@
 			// All controls from device type
 			const deviceDef = DEVICE_TYPES[targetId];
 			return {
-				controls: deviceDef.controls.map(c => c.id),
+				controls: deviceDef.controls.filter(c => !c.separator).map(c => c.id),
 				targetLabel: deviceDef.name
 			};
 		}

@@ -166,7 +166,7 @@
 			const device = devices.find(d => d.id === selectedDevice);
 			if (device) {
 				const deviceType = DEVICE_TYPES[device.type];
-				enabledControls = deviceType.controls.map(c => c.id);
+				enabledControls = deviceType.controls.filter(c => !c.separator).map(c => c.id);
 			}
 		}
 	}

@@ -46,6 +46,8 @@ export function getProperties(controlValues, controls, options = {}) {
 	const { includeColorProperty = false } = options;
 
 	for (const control of controls) {
+		if (control.separator) continue;
+
 		const controlValue = controlValues[control.id];
 		if (controlValue === undefined) continue;
 

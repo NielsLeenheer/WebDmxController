@@ -40,7 +40,7 @@
 	let exportedValues = $derived(selectedInput ? getInputExportedValues(selectedInput) : []);
 	let selectedDevice = $derived(devices.find(d => d.id === selectedDeviceId));
 	let deviceType = $derived(selectedDevice ? DEVICE_TYPES[selectedDevice.type] : null);
-	let controls = $derived(deviceType ? deviceType.controls.filter(c => c.type.getValueMetadata().values.length > 0) : []);
+	let controls = $derived(deviceType ? deviceType.controls.filter(c => !c.separator && c.type.getValueMetadata().values.length > 0) : []);
 
 	// Get control values for selected control
 	let selectedControlDef = $derived(controls.find(c => c.id === selectedControlId));

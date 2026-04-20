@@ -37,6 +37,7 @@ export class MovingHead11CHDeviceType extends DeviceType {
                     startChannel: 4,
                     hidden: true
                 },
+				{ separator: true },
                 {
                     id: 'dimmer',
                     type: CONTROL_TYPES.Dimmer,
@@ -48,6 +49,7 @@ export class MovingHead11CHDeviceType extends DeviceType {
                     startChannel: 6,
                     hidden: true
                 },
+				{ separator: true },
                 {
                     id: 'color',
                     type: CONTROL_TYPES.Color,

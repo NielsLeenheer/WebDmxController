@@ -33,6 +33,7 @@ export function getDevicePreviewData(deviceType, controlValues) {
 
     // Process each control in the device type
     for (const control of deviceTypeDef.controls) {
+        if (control.separator) continue;
         const controlTypeId = control.type.type;
 
         // ILDA controls have no DMX value — always include them

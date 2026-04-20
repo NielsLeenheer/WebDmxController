@@ -112,7 +112,9 @@
 
 <div class="controls">
     {#each controls as control}
-        {#if control.type.type === 'xypad' || control.type.type === 'xypad16'}
+        {#if control.separator}
+            <hr class="control-separator" />
+        {:else if control.type.type === 'xypad' || control.type.type === 'xypad16'}
             {@const controlValue = values[control.id] || { pan: 128, tilt: 128 }}
             {@const controlDisabled = isControlDisabled(control.id) || !isControlEnabled(control)}
             <div class="control-xypad">
@@ -285,6 +287,13 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
+    }
+
+    .control-separator {
+        border: none;
+        border-top: 1px solid #e0e0e0;
+        margin: 6px 0;
+        width: 100%;
     }
 
     .control {

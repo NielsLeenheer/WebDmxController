@@ -102,6 +102,7 @@ export class CSSSampler {
 		const result = {};
 
 		for (const control of controls) {
+			if (control.separator) continue;
 			const samplingConfig = control.type.getSamplingConfig?.();
 			if (!samplingConfig) continue;
 

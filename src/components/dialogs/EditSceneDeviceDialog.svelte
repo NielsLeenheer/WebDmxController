@@ -95,7 +95,7 @@
 					}
 				}
 				const deviceType = DEVICE_TYPES[device.type];
-				enabledControls = deviceType ? deviceType.controls.map(c => c.id) : [];
+				enabledControls = deviceType ? deviceType.controls.filter(c => !c.separator).map(c => c.id) : [];
 				selectedAnimation = animations[0]?.id || null;
 				duration = 1000;
 				looping = true;

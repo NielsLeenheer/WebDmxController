@@ -186,7 +186,7 @@
 					const device = devs.find(d => d.id === selectedDevice);
 					if (device) {
 						const deviceType = DEVICE_TYPES[device.type];
-						enabledControls = deviceType.controls.map(c => c.name);
+						enabledControls = deviceType.controls.filter(c => !c.separator).map(c => c.id);
 					}
 				}
 			} else if (actionType === 'scene') {

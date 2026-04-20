@@ -211,6 +211,7 @@
             const controlsList = [];
 
             for (const control of deviceType.controls) {
+                if (control.separator) continue;
                 // Use the control definition's id (e.g., 'pantilt', 'color', 'dimmer')
                 controlsList.push(control.id);
             }
@@ -232,6 +233,7 @@
 
             // Dynamically extract data based on device controls
             for (const control of deviceType.controls) {
+                if (control.separator) continue;
                 // Use the control definition's id as the key
                 const value = controlValues[control.id];
                 result[control.id] = value;

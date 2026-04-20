@@ -41,6 +41,9 @@ export class DeviceType {
      */
     _validateControls() {
         for (const control of this.controls) {
+            // Separators are UI-only markers — no channel, no type
+            if (control.separator) continue;
+
             const channelCount = control.type.getChannelCount();
             // Skip validation for non-DMX controls (e.g. ILDA)
             if (channelCount === 0) continue;
@@ -71,15 +74,15 @@ export class DeviceType {
      * @returns {Object|undefined} Control definition
      */
     getControl(id) {
-        return this.controls.find(c => c.id === id);
+        return this.controls.find(c => !c.separator && c.id === id);
     }
 
     /**
-     * Get all control ids
+     * Get all control ids (excludes UI-only separators)
      * @returns {Array<string>} Device control ids
      */
     getControlIds() {
-        return this.controls.map(c => c.id);
+        return this.controls.filter(c => !c.separator).map(c => c.id);
     }
 }
 

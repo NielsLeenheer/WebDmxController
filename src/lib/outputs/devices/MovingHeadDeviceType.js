@@ -27,11 +27,13 @@ export class MovingHeadDeviceType extends DeviceType {
                     type: CONTROL_TYPES.PanTilt,
                     startChannel: 0
                 },
+				{ separator: true },
                 {
                     id: 'dimmer',
                     type: CONTROL_TYPES.Dimmer,
                     startChannel: 2
                 },
+				{ separator: true },
                 {
                     id: 'color',
                     type: CONTROL_TYPES.Color,

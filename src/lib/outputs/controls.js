@@ -28,6 +28,8 @@ export function controlValuesToDMX(deviceType, controlValues) {
 
 	// Process each control defined in the device type
 	for (const controlDef of deviceType.controls) {
+		if (controlDef.separator) continue;
+
 		const value = controlValues?.[controlDef.id];
 		if (value === undefined) {
 			// Control not set, use default from dmxArray
@@ -70,6 +72,7 @@ export function createDefaultControlValues(deviceType) {
 	const controlValues = {};
 
 	for (const controlDef of deviceType.controls) {
+		if (controlDef.separator) continue;
 		controlValues[controlDef.id] = controlDef.type.getDefaultValue();
 	}
 
