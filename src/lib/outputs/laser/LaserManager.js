@@ -540,36 +540,45 @@ export class LaserManager {
 	// ---- Frame Loop ----
 
 	/**
-	 * Frame loop — samples SVG once, runs render pipeline for preview,
-	 * and sends to connected DACs.
+	 * Frame loop — samples SVG at rAF rate and hands the segments to each
+	 * renderer. The heavy pipeline (window/resample/convert/velocity cap)
+	 * runs inside the renderer's DAC send loop on demand, so it executes at
+	 * DAC cadence instead of rAF cadence (no wasted work between sends).
+	 *
+	 * For renderers whose send loop isn't running (no DAC, or disabled),
+	 * we run a simulated send loop here throttled to `targetFps` so the
+	 * preview pipeline executes at the same rate it would on hardware.
 	 */
 	_frameLoop() {
-		// Always sample for preview
 		this.lastSegments = this.sampler.sampleFrame();
 
-		// Process segments on all renderers (connected or preview-only)
 		for (const [deviceId, renderer] of this.renderers) {
 			if (renderer.settings.enabled === false) {
-				// Disabled — clear output so preview shows nothing
+				// Disabled: clear output; send loop is not running either.
+				renderer.pendingSegments = null;
+				renderer.calibrationActive = false;
 				renderer.processSegments([]);
 				continue;
 			}
 
-			if (this.calibrating.get(deviceId)) {
-				const points = renderer.generateTestPattern();
-				const result = renderer.convertTraceToLaserPoints(points, null, {
-					velocityDimming: 0, basePower: 1.0
-				});
-				renderer.lastFrame = result.points.length > 4096
-					? result.points.slice(0, 4096) : result.points;
-			} else {
-				renderer.processSegments(this.lastSegments);
+			const calibrating = !!this.calibrating.get(deviceId);
+			renderer.calibrationActive = calibrating;
+
+			if (renderer.isReady()) {
+				// DAC send loop will pick this up on the next ready cycle.
+				renderer.pendingSegments = this.lastSegments;
+			} else if (this._shouldSimulateSend(renderer)) {
+				// No DAC; simulate the send cadence at targetFps.
+				this._simulatedSend(renderer, this.lastSegments, calibrating);
 			}
 		}
 
-		// If no renderers exist, use standalone preview renderer
+		// Preview-only path (no DAC devices at all)
 		if (this.renderers.size === 0) {
-			this._getPreviewRenderer().processSegments(this.lastSegments);
+			const previewRenderer = this._getPreviewRenderer();
+			if (this._shouldSimulateSend(previewRenderer)) {
+				this._simulatedSend(previewRenderer, this.lastSegments, false);
+			}
 		}
 
 		this.animationFrameId = requestAnimationFrame(this._frameLoop);

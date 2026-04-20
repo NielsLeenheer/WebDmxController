@@ -110,6 +110,7 @@ export class LaserRenderer {
 			blankingPoints: 8,
 			blankingDwell: 3,
 			cornerDwell: 2,
+			anchorDwell: 2,
 			invertX: true,
 			invertY: true,
 			swapXY: false,
@@ -118,8 +119,54 @@ export class LaserRenderer {
 			pincushionV: 0.0,
 			offsetX: 0.0,
 			offsetY: 0.0,
-			velocityDimming: 0.5
+			// Moving-window rendering. When windowWidth < 1, each frame only
+			// draws a sub-section of the path; the entire point budget is spent
+			// on that slice, so detail goes up at the cost of flicker. The
+			// window advances along the path by windowSpeed every frame and
+			// wraps at the end.
+			windowWidth: 1.0,
+			windowSpeed: 0.0,
+			// Galvo compensation techniques (all independently toggleable).
+			//   cornerMode: how to handle sharp corners.
+			//     'off'      — no extra dwell; fastest but rounded corners
+			//     'binary'   — dwell `cornerDwell` samples when angle > 45°
+			//     'weighted' — dwell scales continuously with angle sharpness
+			//   velocityCap: split edges that exceed maxStepDac DAC units so
+			//     the galvo's slew rate is never exceeded.
+			cornerMode: 'binary',
+			velocityCap: false,
+			maxStepDac: 400,
+			// Resampling-time corner bias. Controls how strongly sharp corners
+			// attract sample points away from straight runs during the
+			// resample step — independent of the DAC-level `cornerDwell`.
+			//   cornerBias: weight multiplier for corner attraction (0 = pure
+			//     arc-length sampling; higher values concentrate budget at
+			//     corners at the expense of straight lines).
+			//   cornerSharpness: exponent applied to the sharpness metric
+			//     sin²(θ/2). At 1 it's linear — any bend matters. At 2+, only
+			//     sharp corners matter; shallow bends are treated like straight.
+			cornerBias: 3,
+			cornerSharpness: 1
 		};
+
+		this._windowOffset = 0;
+
+		// Latest SVG segments handed in from LaserManager's rAF loop; the send
+		// loop picks these up just-in-time so the pipeline runs at DAC rate.
+		this.pendingSegments = null;
+		this.calibrationActive = false;
+
+		// Where the galvo ends up after the most recently sent frame (in DAC
+		// coordinates). Used to prepend blanking travel when the next frame
+		// starts somewhere else, avoiding unintended lit strokes between frames.
+		// Initialized to the DAC center which is where `reset()` leaves things
+		// and where the idle-keepalive blank frame parks the mirror.
+		this._lastFrameEndpoint = { x: 2048, y: 2048 };
+
+		// The virtual-space position the galvo is at when the next frame
+		// starts drawing. Used by the second-pass segment reordering below so
+		// the first drawn segment is the one nearest the current beam position.
+		this._lastVirtualStartPoint = { x: 0, y: 0 };
 
 		this.enabled = false;
 		this.lastFrame = [];
@@ -146,6 +193,10 @@ export class LaserRenderer {
 		this.lastResampledPoints = [];
 		// Last processed frame points in virtual space (includes blanking/dwell)
 		this.lastProcessedPoints = [];
+		// Parallel virtual-space point list for the settings-dialog preview —
+		// same sample order as the DAC output, but without the per-device
+		// calibration transform (so keystone doesn't warp the visualization).
+		this.lastVirtualPlan = [];
 		// Cached overhead from previous frame for single-pass optimization
 		this._lastOverhead = 0;
 	}
@@ -289,30 +340,87 @@ export class LaserRenderer {
 	}
 
 	/**
-	 * Generate blanking points to travel from one position to another
+	 * Generate blanking points to travel from one position to another.
+	 * Travel-point count and dwell scale down for short hops (e.g. clipping-induced
+	 * sub-segment breaks), keeping the per-break overhead from dominating the budget.
+	 *
+	 * If virtual-space from/to are provided via `virtualFrom`/`virtualTo`, a
+	 * parallel virtual-space blanking sequence is also built and returned
+	 * alongside the DAC one — used for the dialog visualization which needs
+	 * pre-calibration coordinates.
 	 */
-	generateBlanking(fromX, fromY, toX, toY) {
+	generateBlanking(fromX, fromY, toX, toY, virtualFrom = null, virtualTo = null) {
 		const points = [];
-		const count = this.settings.blankingPoints;
-		const dwell = this.settings.blankingDwell;
+		const virtualPoints = (virtualFrom && virtualTo) ? [] : null;
+		const dx = toX - fromX;
+		const dy = toY - fromY;
+		const dist = Math.sqrt(dx * dx + dy * dy);
 
-		const turnOffDwell = Math.max(2, Math.floor(dwell / 2));
+		const maxCount = this.settings.blankingPoints;
+		const fullDwell = this.settings.blankingDwell;
+
+		const count = dist < 400
+			? Math.max(1, Math.round(dist / 100))
+			: Math.max(0, maxCount);
+		const shortHop = dist < 200;
+		// Dwell can be 0 — the user is telling us not to pad before/after
+		// blanking travel. For short hops we still force 1 so the laser has
+		// a beat to turn off and arrive.
+		const turnOffDwell = shortHop ? 1 : Math.max(0, Math.floor(fullDwell / 2));
+		const endDwell = shortHop ? 1 : Math.max(0, fullDwell);
+
+		const vdx = virtualPoints ? virtualTo.x - virtualFrom.x : 0;
+		const vdy = virtualPoints ? virtualTo.y - virtualFrom.y : 0;
+		const pushVirt = (x, y, kind) => { virtualPoints.push({ x, y, r: 0, g: 0, b: 0, blank: true, kind }); };
+
 		for (let i = 0; i < turnOffDwell; i++) {
 			points.push(HeliosPoint.blank(fromX, fromY));
+			if (virtualPoints) pushVirt(virtualFrom.x, virtualFrom.y, 'bdwell');
 		}
 
-		for (let i = 0; i <= count; i++) {
-			const t = i / count;
-			const x = fromX + (toX - fromX) * t;
-			const y = fromY + (toY - fromY) * t;
-			points.push(HeliosPoint.blank(x, y));
+		// Skip the interpolation loop entirely when count=0 (user explicitly
+		// opted out of blanking travel) — t = i/0 would otherwise be NaN.
+		if (count > 0) {
+			// Accel-then-decel blanking profile: all available samples are
+			// spent ramping velocity up from rest over a fixed physical
+			// distance at the start, and ramping back down to rest over the
+			// same distance at the end. The cruise region between them gets
+			// no samples — the galvo is already moving at peak velocity and
+			// drifts across it in a single DAC sample period. For travels
+			// shorter than 2 × ACCEL_DIST the two ramps meet in the middle
+			// with no gap.
+			const ACCEL_DIST = 250;
+			const easeFrac = Math.min(0.5, ACCEL_DIST / Math.max(dist, 1));
+
+			const nTotal = count + 1;
+			const nAccel = Math.ceil(nTotal / 2);
+			const nDecel = nTotal - nAccel;
+
+			for (let i = 0; i < nAccel; i++) {
+				const tLocal = nAccel > 1 ? i / (nAccel - 1) : 0;
+				// Quadratic position with zero starting velocity — position
+				// grows like tLocal² up to easeFrac by the end of the ramp.
+				const s = easeFrac * tLocal * tLocal;
+				points.push(HeliosPoint.blank(fromX + dx * s, fromY + dy * s));
+				if (virtualPoints) pushVirt(virtualFrom.x + vdx * s, virtualFrom.y + vdy * s, 'travel');
+			}
+			for (let j = 0; j < nDecel; j++) {
+				const tLocal = nDecel > 1 ? j / (nDecel - 1) : 1;
+				// Mirror of the accel ramp: position starts at 1 − easeFrac,
+				// decelerates to 1 with zero velocity.
+				const u = 1 - tLocal;
+				const s = 1 - easeFrac * u * u;
+				points.push(HeliosPoint.blank(fromX + dx * s, fromY + dy * s));
+				if (virtualPoints) pushVirt(virtualFrom.x + vdx * s, virtualFrom.y + vdy * s, 'travel');
+			}
 		}
 
-		for (let i = 0; i < dwell; i++) {
+		for (let i = 0; i < endDwell; i++) {
 			points.push(HeliosPoint.blank(toX, toY));
+			if (virtualPoints) pushVirt(virtualTo.x, virtualTo.y, 'bdwell');
 		}
 
-		return points;
+		return virtualPoints ? { points, virtualPoints } : points;
 	}
 
 	/**
@@ -320,70 +428,107 @@ export class LaserRenderer {
 	 * Each point: { x, y, r?, g?, b?, opacity?, segmentStart? }
 	 * Coordinates in virtual space (-1 to 1)
 	 */
-	convertTraceToLaserPoints(points, speeds, params = {}) {
-		if (!points || points.length < 2) return { points: [], counts: { drawing: 0, blanking: 0, cornerDwell: 0, anchorDwell: 0 } };
+	convertTraceToLaserPoints(points, params = {}) {
+		if (!points || points.length < 2) return { points: [], counts: { drawing: 0, blanking: 0, cornerDwell: 0, anchorDwell: 0 }, virtualPlan: [] };
 
-		const {
-			velocityDimming = this.settings.velocityDimming,
-			basePower = 1.0
-		} = params;
+		const { basePower = 1.0, startFromPoint = null, startFromVirtualPoint = null } = params;
 
 		const laserPoints = [];
+		// Parallel virtual-space point list for the dialog visualization. Each
+		// entry mirrors its DAC counterpart in laserPoints, but without the
+		// per-device calibration transform applied. Coordinates are in the
+		// same [-1, 1] virtual frame the SVG sampler uses.
+		const virtualPlan = [];
 		const { color, intensity, cornerDwell } = this.settings;
 		const counts = { drawing: 0, blanking: 0, cornerDwell: 0, anchorDwell: 0 };
 
 		let prevLaserPoint = null;
+		let prevVirtualXY = null; // { x, y } in virtual space of last drawing position
+		let prevVirtColor = { r: color.r, g: color.g, b: color.b };
 		let prevVirtual = null;
 		let lastWasBlank = true;
+		let lastBlankWasShort = false;
+
+		// If the previous frame left the galvo somewhere other than this
+		// frame's first drawing position, prepend blanking travel so the
+		// mirror moves with the laser off. The closing blanking at the end
+		// of the frame naturally loops back to laserPoints[0] — which, after
+		// the prepend, is the blank-travel start point — so re-plays of the
+		// looped frame stay in sync with the mirror position.
+		if (startFromPoint && points.length > 0) {
+			const firstCoords = this.virtualToLaser(points[0].x, points[0].y);
+			if (startFromPoint.x !== firstCoords.x || startFromPoint.y !== firstCoords.y) {
+				const virtStart = startFromVirtualPoint || { x: 0, y: 0 };
+				const virtEnd = { x: points[0].x, y: points[0].y };
+				const travel = this.generateBlanking(
+					startFromPoint.x, startFromPoint.y,
+					firstCoords.x, firstCoords.y,
+					virtStart, virtEnd
+				);
+				laserPoints.push(...travel.points);
+				virtualPlan.push(...travel.virtualPoints);
+				counts.blanking += travel.points.length;
+				prevLaserPoint = travel.points[travel.points.length - 1];
+				prevVirtualXY = virtEnd; // galvo ends at first-draw-virtual after prepend
+				lastWasBlank = true;
+			}
+		}
 
 		for (let i = 0; i < points.length; i++) {
 			const pt = points[i];
-			const speed = speeds ? speeds[i] : 0;
 
 			const laserCoords = this.virtualToLaser(pt.x, pt.y);
 
-			const speedFactor = 1 - Math.min(speed * velocityDimming, 0.9);
 			const opacityFactor = pt.opacity !== undefined ? pt.opacity : 1;
-			const pointIntensity = intensity * basePower * speedFactor * opacityFactor * 255;
+			const pointIntensity = intensity * basePower * opacityFactor * 255;
 
-			let needsBlanking = pt.segmentStart || i === 0;
-
-			if (!needsBlanking && prevVirtual) {
-				const dx = pt.x - prevVirtual.x;
-				const dy = pt.y - prevVirtual.y;
-				const dist = Math.sqrt(dx * dx + dy * dy);
-				if (dist > 0.15) {
-					needsBlanking = true;
-				}
-			}
+			// segmentStart is already set correctly by the SVG sampler (including
+			// for sub-segments produced by viewport clipping), so we only blank
+			// on explicit breaks — never on large legitimate L-to-L moves inside
+			// one continuous path.
+			const needsBlanking = pt.segmentStart || i === 0;
 
 			if (needsBlanking && prevLaserPoint && !lastWasBlank) {
-				// End-of-segment anchor dwell
-				for (let d = 0; d < cornerDwell; d++) {
+				// Short hops (e.g. clipping-induced sub-segment breaks) barely move
+				// the galvo, so the anchor dwell can shrink to a single point.
+				const hopDx = laserCoords.x - prevLaserPoint.x;
+				const hopDy = laserCoords.y - prevLaserPoint.y;
+				const shortHop = Math.sqrt(hopDx * hopDx + hopDy * hopDy) < 200;
+
+				const anchorCount = shortHop ? 1 : this.settings.anchorDwell;
+				for (let d = 0; d < anchorCount; d++) {
 					laserPoints.push(prevLaserPoint);
-	
+					if (prevVirtualXY) virtualPlan.push({ x: prevVirtualXY.x, y: prevVirtualXY.y, r: prevVirtColor.r, g: prevVirtColor.g, b: prevVirtColor.b, blank: false, kind: 'anchor' });
 					counts.anchorDwell++;
 				}
 				// Blanking travel
+				const fromV = prevVirtualXY || { x: 0, y: 0 };
+				const toV = { x: pt.x, y: pt.y };
 				const blanking = this.generateBlanking(
 					prevLaserPoint.x, prevLaserPoint.y,
-					laserCoords.x, laserCoords.y
+					laserCoords.x, laserCoords.y,
+					fromV, toV
 				);
-				laserPoints.push(...blanking);
-				counts.blanking += blanking.length;
+				laserPoints.push(...blanking.points);
+				virtualPlan.push(...blanking.virtualPoints);
+				counts.blanking += blanking.points.length;
 				lastWasBlank = true;
+				lastBlankWasShort = shortHop;
 			}
 
-			let isCorner = false;
+			// Corner detection — angle between incoming and outgoing edges.
+			let cornerAngle = 0;
 			if (i > 0 && i < points.length - 1 && !lastWasBlank) {
 				const prev = points[i - 1];
 				const next = points[i + 1];
-				const angle = Math.abs(
+				const raw = Math.abs(
 					Math.atan2(next.y - pt.y, next.x - pt.x) -
 					Math.atan2(pt.y - prev.y, pt.x - prev.x)
 				);
-				isCorner = angle > Math.PI / 4;
+				cornerAngle = Math.min(raw, Math.PI);
 			}
+			const cornerMode = this.settings.cornerMode || 'binary';
+			const isCorner = cornerMode !== 'off' && cornerAngle > Math.PI / 4;
 
 			const ptColor = pt.r !== undefined ? pt : color;
 			const laserPoint = new HeliosPoint(
@@ -395,12 +540,41 @@ export class LaserRenderer {
 				Math.round(pointIntensity)
 			);
 
-			const dwellCount = lastWasBlank ? Math.max(cornerDwell, this.settings.blankingDwell) : (isCorner ? cornerDwell : 1);
+			let dwellCount;
+			let dwellKind;
+			if (lastWasBlank) {
+				dwellCount = lastBlankWasShort ? 1 : this.settings.anchorDwell;
+				dwellKind = 'anchor';
+			} else if (cornerMode === 'weighted') {
+				// sin²(θ/2) = (1 − cos θ) / 2: 0 for straight, 1 for reversal.
+				const weight = (1 - Math.cos(cornerAngle)) / 2;
+				dwellCount = Math.max(1, Math.round(cornerDwell * weight));
+				dwellKind = dwellCount > 1 ? 'corner' : 'draw';
+			} else if (cornerMode === 'binary') {
+				dwellCount = isCorner ? cornerDwell : 1;
+				dwellKind = isCorner ? 'corner' : 'draw';
+			} else {
+				dwellCount = 1;
+				dwellKind = 'draw';
+			}
+			// Always emit at least one drawing sample — settings like
+			// cornerDwell=0 are legal for dwell purposes but would otherwise
+			// drop the drawing point entirely.
+			dwellCount = Math.max(1, dwellCount);
+			const virtColor = { r: ptColor.r, g: ptColor.g, b: ptColor.b };
 			for (let d = 0; d < dwellCount; d++) {
 				laserPoints.push(laserPoint);
+				virtualPlan.push({ x: pt.x, y: pt.y, r: virtColor.r, g: virtColor.g, b: virtColor.b, blank: false, kind: dwellKind });
 				if (d === 0) {
 					counts.drawing++;
-				} else if (isCorner) {
+				} else if (lastWasBlank) {
+					// Start-after-blanking dwell (galvo arrival settling) —
+					// independent of corner handling, always anchor dwell.
+					counts.anchorDwell++;
+				} else if (cornerAngle > 0) {
+					// Mid-segment extras only exist at a bend, so these are
+					// genuine corner-dwell samples (binary mode only triggers
+					// above 45°; weighted mode triggers at any non-zero angle).
 					counts.cornerDwell++;
 				} else {
 					counts.anchorDwell++;
@@ -409,25 +583,32 @@ export class LaserRenderer {
 
 			prevLaserPoint = laserPoint;
 			prevVirtual = pt;
+			prevVirtualXY = { x: pt.x, y: pt.y };
+			prevVirtColor = virtColor;
 			lastWasBlank = laserPoint.isBlank();
 		}
 
 		// Close the frame
 		if (laserPoints.length > 0 && prevLaserPoint) {
-			for (let d = 0; d < cornerDwell; d++) {
+			const closingAnchor = this.settings.anchorDwell;
+			for (let d = 0; d < closingAnchor; d++) {
 				laserPoints.push(prevLaserPoint);
+				if (prevVirtualXY) virtualPlan.push({ x: prevVirtualXY.x, y: prevVirtualXY.y, r: prevVirtColor.r, g: prevVirtColor.g, b: prevVirtColor.b, blank: false, kind: 'anchor' });
 				counts.anchorDwell++;
 			}
 			const firstPoint = laserPoints[0];
+			const firstVirt = virtualPlan[0] || { x: 0, y: 0 };
 			const blanking = this.generateBlanking(
 				prevLaserPoint.x, prevLaserPoint.y,
-				firstPoint.x, firstPoint.y
+				firstPoint.x, firstPoint.y,
+				prevVirtualXY || { x: 0, y: 0 }, firstVirt
 			);
-			laserPoints.push(...blanking);
-			counts.blanking += blanking.length;
+			laserPoints.push(...blanking.points);
+			virtualPlan.push(...blanking.virtualPoints);
+			counts.blanking += blanking.points.length;
 		}
 
-		return { points: laserPoints, counts };
+		return { points: laserPoints, counts, virtualPlan };
 	}
 
 	/**
@@ -439,6 +620,19 @@ export class LaserRenderer {
 			this.lastFrame = [];
 			this.lastProcessedPoints = [];
 			this.lastResampledPoints = [];
+			this.lastVirtualPlan = [];
+			// Zero the point-count stats so the dialog reflects "idle" rather
+			// than whatever the last rendered frame happened to contain. The
+			// keepalive send path will fill in the blanking count when it fires.
+			this.stats.pointsPerFrame = 0;
+			this.stats.inputPoints = 0;
+			this.stats.resampledPoints = 0;
+			this.stats.totalBeforeClamp = 0;
+			this.stats.drawingPoints = 0;
+			this.stats.blankingPoints = 0;
+			this.stats.cornerDwellPoints = 0;
+			this.stats.anchorDwellPoints = 0;
+			this.stats.processMs = 0;
 			return null;
 		}
 		const _t0 = performance.now();
@@ -455,26 +649,56 @@ export class LaserRenderer {
 
 		if (points.length < 2) return null;
 
+		// Apply moving-window slicing before resampling so the whole point
+		// budget concentrates on the visible slice.
+		const windowed = this._applyWindow(points);
+		if (windowed.length < 2) return null;
+
+		// Second-pass beam-travel optimization: reorder the segments that
+		// survived the window using nearest-neighbor from the current beam
+		// position. The SVG sampler's first pass gives broad spatial coherence
+		// (so the window tends to contain nearby segments); this pass uses the
+		// actual galvo position at frame start to pick the starting segment
+		// and minimize inter-segment jumps within the window.
+		const reordered = this._reorderByBeamPosition(windowed, this._lastVirtualStartPoint);
+
+		// Remember where this frame starts drawing — that's where the galvo
+		// will be when the next frame begins (after the DAC's closing-blanking
+		// loops back to it).
+		if (reordered.length > 0) {
+			this._lastVirtualStartPoint = { x: reordered[0].x, y: reordered[0].y };
+		}
+
 		const targetPoints = Math.min(Math.floor(this.settings.pps / (this.settings.targetFps || 30)), HELIOS.MAX_POINTS);
 		this.stats.inputPoints = points.length;
-
-		const convertParams = {
-			velocityDimming: this.settings.velocityDimming,
-			basePower: 1.0
-		};
 
 		// Use cached overhead from previous frame for budget estimation.
 		// This avoids a costly two-pass pipeline every frame.
 		// The overhead is recalculated after conversion and cached for the next frame.
 		const drawingBudget = Math.max(20, Math.floor((targetPoints - this._lastOverhead) * 0.98));
-		const resampledPoints = this.resampleInputPoints(points, drawingBudget);
+		const resampledPoints = this.resampleInputPoints(reordered, drawingBudget);
 		this.lastResampledPoints = resampledPoints;
 
-		const result = this.convertTraceToLaserPoints(resampledPoints, null, convertParams);
+		const result = this.convertTraceToLaserPoints(resampledPoints, {
+			basePower: 1.0,
+			startFromPoint: this._lastFrameEndpoint,
+			startFromVirtualPoint: this._lastVirtualStartPoint
+		});
 
 		if (result.points.length === 0) return null;
 
-		const finalPoints = result.points;
+		this.lastVirtualPlan = result.virtualPlan || [];
+
+		// Galvo compensation post-processing: velocity cap (insert
+		// intermediate points so slew rate isn't exceeded).
+		const finalPoints = this._applyVelocityCap(result.points);
+
+		// Remember where this frame leaves the galvo so the next frame's
+		// startFromPoint can prepend blanking if the start position differs.
+		if (finalPoints.length > 0) {
+			const tail = finalPoints[finalPoints.length - 1];
+			this._lastFrameEndpoint = { x: tail.x, y: tail.y };
+		}
 
 		// Cache actual overhead for next frame's budget estimation
 		this._lastOverhead = finalPoints.length - resampledPoints.length;
@@ -500,6 +724,237 @@ export class LaserRenderer {
 		}));
 
 		return finalPoints;
+	}
+
+	/**
+	 * Slice the point list to only what falls inside the current moving window.
+	 * Does NOT advance the offset — that's done by `_advanceWindowOffset()`
+	 * from the send loop, so each window position maps to exactly one frame
+	 * that actually reaches the DAC. If the window covers the full path
+	 * (width >= 1) this is a no-op passthrough. Inter-segment jumps contribute
+	 * zero to the path length so window width is in terms of actually-drawn
+	 * distance.
+	 */
+	_applyWindow(points) {
+		const width = Math.max(0, Math.min(1, this.settings.windowWidth ?? 1));
+
+		if (width >= 1) {
+			this._windowOffset = 0;
+			return points;
+		}
+		if (width <= 0) return [];
+
+		// Cumulative arc length per input point; inter-segment jumps add zero.
+		const cum = new Array(points.length);
+		cum[0] = 0;
+		for (let i = 1; i < points.length; i++) {
+			if (points[i].segmentStart) {
+				cum[i] = cum[i - 1];
+			} else {
+				const dx = points[i].x - points[i - 1].x;
+				const dy = points[i].y - points[i - 1].y;
+				cum[i] = cum[i - 1] + Math.sqrt(dx * dx + dy * dy);
+			}
+		}
+		const total = cum[cum.length - 1];
+		if (total <= 0) return points;
+
+		const offset = this._windowOffset % 1;
+		const startLen = offset * total;
+		const endLen = startLen + width * total;
+
+		if (endLen <= total) {
+			return this._sliceByLength(points, cum, startLen, endLen);
+		}
+		// Window wraps past the end: emit two sub-windows with a pen-up between.
+		const head = this._sliceByLength(points, cum, startLen, total);
+		const tail = this._sliceByLength(points, cum, 0, endLen - total);
+		if (head.length === 0) return tail;
+		if (tail.length === 0) return head;
+		// First point of the second slice must mark a new segment so the
+		// converter blanks across the wrap.
+		tail[0] = { ...tail[0], segmentStart: true };
+		return head.concat(tail);
+	}
+
+	/**
+	 * Advance the moving-window offset. Called by the send loop after a
+	 * successful frame so the offset steps once per DAC frame, not once per
+	 * rAF tick (which is faster than the DAC can consume and would drop
+	 * intermediate window positions).
+	 */
+	_advanceWindowOffset() {
+		const width = Math.max(0, Math.min(1, this.settings.windowWidth ?? 1));
+		if (width >= 1) return;
+		const speed = Math.max(0, this.settings.windowSpeed ?? 0);
+		if (speed <= 0) return;
+		this._windowOffset = (this._windowOffset + speed) % 1;
+		if (!Number.isFinite(this._windowOffset)) this._windowOffset = 0;
+	}
+
+	/**
+	 * Greedy nearest-neighbor reordering of the segments in `points`, using
+	 * `startPoint` (virtual space) as the starting beam position. At each
+	 * step we pick the unvisited segment whose nearer endpoint is closest to
+	 * the current beam position; if that endpoint is the segment's tail we
+	 * reverse it in place so the path joins cleanly.
+	 *
+	 * Complements the broader spatial ordering done in SVGSampler — that pass
+	 * ensures the window slice contains spatially-coherent segments; this
+	 * pass minimizes inter-segment jumps within the slice given the beam's
+	 * actual starting position.
+	 */
+	_reorderByBeamPosition(points, startPoint) {
+		if (points.length < 2) return points;
+
+		// Split the flat point array back into segments by segmentStart markers.
+		const segments = [];
+		let current = null;
+		for (const pt of points) {
+			if (pt.segmentStart || current === null) {
+				if (current && current.length >= 2) segments.push(current);
+				current = [];
+			}
+			current.push(pt);
+		}
+		if (current && current.length >= 2) segments.push(current);
+		if (segments.length <= 1) return points;
+
+		// Greedy nearest-neighbor with optional segment reversal.
+		const ordered = [];
+		const remaining = segments.slice();
+		let curX = startPoint?.x ?? 0;
+		let curY = startPoint?.y ?? 0;
+
+		while (remaining.length > 0) {
+			let bestIdx = 0;
+			let bestDist = Infinity;
+			let bestReverse = false;
+			for (let i = 0; i < remaining.length; i++) {
+				const seg = remaining[i];
+				const head = seg[0];
+				const tail = seg[seg.length - 1];
+				const dHead = (head.x - curX) ** 2 + (head.y - curY) ** 2;
+				const dTail = (tail.x - curX) ** 2 + (tail.y - curY) ** 2;
+				if (dHead < bestDist) { bestDist = dHead; bestIdx = i; bestReverse = false; }
+				if (dTail < bestDist) { bestDist = dTail; bestIdx = i; bestReverse = true; }
+			}
+			let picked = remaining.splice(bestIdx, 1)[0];
+			if (bestReverse) picked = picked.slice().reverse();
+			ordered.push(picked);
+			const last = picked[picked.length - 1];
+			curX = last.x;
+			curY = last.y;
+		}
+
+		// Flatten back to a single point array with segmentStart markers on
+		// the first point of each segment.
+		const result = [];
+		for (const seg of ordered) {
+			for (let i = 0; i < seg.length; i++) {
+				result.push({ ...seg[i], segmentStart: i === 0 });
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * Return the slice of `points` whose cumulative arc length falls in
+	 * [loLen, hiLen], interpolating entry and exit points to hit the
+	 * boundaries exactly. The returned first point is marked segmentStart so
+	 * the converter draws the slice as its own stroke. Inner segment breaks
+	 * are preserved so the converter blanks across them too.
+	 */
+	_sliceByLength(points, cum, loLen, hiLen) {
+		if (hiLen <= loLen) return [];
+
+		const interp = (a, b, t) => {
+			const pt = {
+				x: a.x + (b.x - a.x) * t,
+				y: a.y + (b.y - a.y) * t
+			};
+			if (a.r !== undefined) {
+				pt.r = Math.round(a.r + ((b.r ?? a.r) - a.r) * t);
+				pt.g = Math.round(a.g + ((b.g ?? a.g) - a.g) * t);
+				pt.b = Math.round(a.b + ((b.b ?? a.b) - a.b) * t);
+			}
+			if (a.opacity !== undefined) {
+				pt.opacity = a.opacity + ((b.opacity ?? a.opacity) - a.opacity) * t;
+			}
+			return pt;
+		};
+
+		const out = [];
+		for (let i = 0; i < points.length; i++) {
+			const c = cum[i];
+
+			if (c < loLen) continue;
+
+			if (c <= hiLen) {
+				// First in-range point — interpolate entry if the window
+				// started partway through the edge leading to this point.
+				if (out.length === 0 && i > 0) {
+					const prev = cum[i - 1];
+					const edgeLen = c - prev;
+					if (!points[i].segmentStart && edgeLen > 0 && loLen > prev) {
+						const t = (loLen - prev) / edgeLen;
+						const entry = interp(points[i - 1], points[i], t);
+						entry.segmentStart = true;
+						out.push(entry);
+					}
+				}
+				const copy = { ...points[i] };
+				if (out.length === 0) copy.segmentStart = true;
+				out.push(copy);
+				continue;
+			}
+
+			// c > hiLen: window ended on the edge leading into this point.
+			if (out.length > 0) {
+				const prev = cum[i - 1];
+				const edgeLen = c - prev;
+				if (!points[i].segmentStart && edgeLen > 0 && prev < hiLen) {
+					const t = (hiLen - prev) / edgeLen;
+					out.push(interp(points[i - 1], points[i], t));
+				}
+			}
+			break;
+		}
+		return out;
+	}
+
+	/**
+	 * Velocity cap: if any two consecutive laser points are further apart than
+	 * `maxStepDac` DAC units, insert evenly-spaced intermediate points between
+	 * them so the galvo's slew rate is never exceeded. Intermediate points
+	 * inherit the colour/intensity of the destination point.
+	 */
+	_applyVelocityCap(laserPoints) {
+		if (!this.settings.velocityCap || laserPoints.length < 2) return laserPoints;
+		const maxStep = Math.max(50, this.settings.maxStepDac || 400);
+
+		const result = [laserPoints[0]];
+		for (let i = 1; i < laserPoints.length; i++) {
+			const prev = laserPoints[i - 1];
+			const cur = laserPoints[i];
+			const dx = cur.x - prev.x;
+			const dy = cur.y - prev.y;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+
+			if (dist > maxStep) {
+				const steps = Math.ceil(dist / maxStep);
+				for (let s = 1; s < steps; s++) {
+					const t = s / steps;
+					result.push(new HeliosPoint(
+						prev.x + dx * t,
+						prev.y + dy * t,
+						cur.r, cur.g, cur.b, cur.i
+					));
+				}
+			}
+			result.push(cur);
+		}
+		return result;
 	}
 
 	/**
@@ -643,13 +1098,10 @@ export class LaserRenderer {
 		const segments = [];
 		let segStart = 0;
 		for (let i = 1; i <= points.length; i++) {
-			let isBreak = i === points.length;
-			if (!isBreak && points[i].segmentStart) isBreak = true;
-			if (!isBreak) {
-				const dx = points[i].x - points[i - 1].x;
-				const dy = points[i].y - points[i - 1].y;
-				if (Math.sqrt(dx * dx + dy * dy) > 0.15) isBreak = true;
-			}
+			// Only split on explicit segmentStart flags — long legitimate L-to-L
+			// moves inside one continuous path must stay in the same segment,
+			// otherwise the laser blanks instead of drawing the line.
+			const isBreak = i === points.length || points[i].segmentStart;
 			if (isBreak) {
 				segments.push({ start: segStart, end: i - 1 });
 				segStart = i;
@@ -682,13 +1134,30 @@ export class LaserRenderer {
 					result.push(pt);
 				}
 			} else {
+				// Each edge stores the corner weights at both its endpoints so
+				// the sampling loop can split the edge into a depart half
+				// (cluster near start vertex, if it's a corner) and an
+				// approach half (cluster near end vertex, if it's a corner).
+				// The vertex's total corner weight `cw` is split half/half
+				// between its incoming edge (contributing to `endCw`) and
+				// outgoing edge (contributing to `startCw`), so each corner
+				// still contributes `cw` total to the segment's weight but the
+				// sample budget it attracts is spread physically across both
+				// adjacent edges near the vertex.
+				const edgeLens = [];
+				const startCws = [];
+				const endCws = [];
 				const cumWeight = [0];
 				for (let i = seg.start; i < seg.end; i++) {
 					const dx = points[i + 1].x - points[i].x;
 					const dy = points[i + 1].y - points[i].y;
 					const edgeLen = Math.sqrt(dx * dx + dy * dy);
-					const cornerW = this._inputCornerWeight(points, i + 1, seg.start, seg.end);
-					cumWeight.push(cumWeight[cumWeight.length - 1] + edgeLen + cornerW);
+					const startCw = this._inputCornerWeight(points, i, seg.start, seg.end);
+					const endCw = this._inputCornerWeight(points, i + 1, seg.start, seg.end);
+					edgeLens.push(edgeLen);
+					startCws.push(startCw);
+					endCws.push(endCw);
+					cumWeight.push(cumWeight[cumWeight.length - 1] + edgeLen + (startCw + endCw) / 2);
 				}
 				const totalW = cumWeight[cumWeight.length - 1];
 
@@ -710,12 +1179,36 @@ export class LaserRenderer {
 						else hi = mid;
 					}
 
+					const relW = targetW - cumWeight[lo];
+					const el = edgeLens[lo];
+					const startCw = startCws[lo];
+					const endCw = endCws[lo];
+					const a = points[seg.start + lo];
+					const b = points[Math.min(seg.start + lo + 1, seg.end)];
+
+					// Split the edge into a depart half and an approach half
+					// at physical frac = 0.5. Each half's weight = half the
+					// physical edge length plus half the adjacent corner
+					// weight. Inside a half, a quadratic curve maps uniform
+					// weight progress to physical frac so samples cluster
+					// against the corner without stacking at it.
+					const departHalfW = el / 2 + startCw / 2;
+					const approachHalfW = el / 2 + endCw / 2;
+					let frac;
+					if (el <= 0) {
+						frac = 0;
+					} else if (relW <= departHalfW) {
+						const u = departHalfW > 0 ? relW / departHalfW : 0;
+						const h = startCw > 0 ? u * u : u;
+						frac = 0.5 * h;
+					} else {
+						const u = approachHalfW > 0 ? (relW - departHalfW) / approachHalfW : 1;
+						const h = endCw > 0 ? 1 - (1 - u) * (1 - u) : u;
+						frac = 0.5 + 0.5 * h;
+					}
+
 					let pt;
 					if (isUpsampling) {
-						const edgeW = cumWeight[lo + 1] - cumWeight[lo];
-						const frac = edgeW > 0 ? (targetW - cumWeight[lo]) / edgeW : 0;
-						const a = points[seg.start + lo];
-						const b = points[Math.min(seg.start + lo + 1, seg.end)];
 						pt = {
 							x: a.x + (b.x - a.x) * frac,
 							y: a.y + (b.y - a.y) * frac,
@@ -729,8 +1222,6 @@ export class LaserRenderer {
 							pt.opacity = a.opacity + ((b.opacity !== undefined ? b.opacity : 1) - a.opacity) * frac;
 						}
 					} else {
-						const edgeW = cumWeight[lo + 1] - cumWeight[lo];
-						const frac = edgeW > 0 ? (targetW - cumWeight[lo]) / edgeW : 0;
 						const idx = frac < 0.5 ? seg.start + lo : Math.min(seg.start + lo + 1, seg.end);
 						pt = { ...points[idx] };
 					}
@@ -756,7 +1247,13 @@ export class LaserRenderer {
 		const cosAngle = dot / (magA * magB);
 		const sharpness = Math.max(0, (1 - cosAngle) / 2);
 		const avgEdge = (magA + magB) / 2;
-		return sharpness * avgEdge * (this.settings.cornerDwell || 3);
+		const bias = this.settings.cornerBias ?? 3;
+		const power = this.settings.cornerSharpness ?? 1;
+		// cornerSharpness raises the per-point sharpness to a power, so at
+		// power=1 any bend contributes (linear), at power=2+ only pronounced
+		// corners dominate the weight.
+		const weightedSharpness = power === 1 ? sharpness : Math.pow(sharpness, power);
+		return weightedSharpness * avgEdge * bias;
 	}
 
 	/**
@@ -856,10 +1353,7 @@ export class LaserRenderer {
 				return;
 			}
 			const points = this.generateTestPattern();
-			const result = this.convertTraceToLaserPoints(points, null, {
-				velocityDimming: 0,
-				basePower: 1.0
-			});
+			const result = this.convertTraceToLaserPoints(points, { basePower: 1.0 });
 			if (result.points.length === 0) {
 				this.isSending = false;
 				return;

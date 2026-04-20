@@ -15,7 +15,14 @@
     let blankingPoints = $state(15);
     let blankingDwell = $state(5);
     let cornerDwell = $state(3);
-    let velocityDimming = $state(0.5);
+    let anchorDwell = $state(3);
+    let windowWidth = $state(1.0);
+    let windowSpeed = $state(0.0);
+    let cornerMode = $state('binary');
+    let cornerBias = $state(3);
+    let cornerSharpness = $state(1);
+    let velocityCap = $state(false);
+    let maxStepDac = $state(400);
 
     let pointsPerFrame = $derived(Math.floor(pps / targetFps));
 
@@ -198,7 +205,13 @@
     export function show(id) {
         deviceId = id;
         loadFromDevice();
-        originalSettings = { pps, targetFps, blankingPoints, blankingDwell, cornerDwell, velocityDimming };
+        originalSettings = {
+            pps, targetFps,
+            blankingPoints, blankingDwell, cornerDwell, anchorDwell,
+            windowWidth, windowSpeed,
+            cornerMode, cornerBias, cornerSharpness,
+            velocityCap, maxStepDac
+        };
         requestAnimationFrame(() => dialogRef?.showModal());
     }
 
@@ -206,8 +219,10 @@
         if (!deviceId) return;
         laserManager?.updateDeviceSettings(deviceId, {
             pps, targetFps,
-            blankingPoints, blankingDwell, cornerDwell,
-            velocityDimming
+            blankingPoints, blankingDwell, cornerDwell, anchorDwell,
+            windowWidth, windowSpeed,
+            cornerMode, cornerBias, cornerSharpness,
+            velocityCap, maxStepDac
         });
     }
 
@@ -232,7 +247,14 @@
             blankingPoints = settings.blankingPoints ?? 15;
             blankingDwell = settings.blankingDwell ?? 5;
             cornerDwell = settings.cornerDwell ?? 3;
-            velocityDimming = settings.velocityDimming ?? 0.5;
+            anchorDwell = settings.anchorDwell ?? 3;
+            windowWidth = settings.windowWidth ?? 1.0;
+            windowSpeed = settings.windowSpeed ?? 0.0;
+            cornerMode = settings.cornerMode ?? 'binary';
+            cornerBias = settings.cornerBias ?? 3;
+            cornerSharpness = settings.cornerSharpness ?? 1;
+            velocityCap = settings.velocityCap ?? false;
+            maxStepDac = settings.maxStepDac ?? 400;
         }
     }
 </script>
@@ -262,30 +284,87 @@
             <span class="setting-label">Points/frame</span>
             <span class="setting-value computed">{pointsPerFrame}</span>
         </div>
+        <div class="setting-slider group-start">
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <span class="setting-label clickable" onclick={() => { windowWidth = 1.0; applySettings(); }}>Window</span>
+            <input type="range" min="0.01" max="1" step="0.01" bind:value={windowWidth} oninput={applySettings} />
+            <span class="setting-value">{Math.round(windowWidth * 100)}%</span>
+        </div>
         <div class="setting-slider">
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <span class="setting-label clickable" onclick={() => { windowSpeed = 0.0; applySettings(); }}>Scan Speed</span>
+            <input type="range" min="0" max="1" step="0.01" bind:value={windowSpeed} oninput={applySettings} />
+            <span class="setting-value">{Math.round(windowSpeed * 100)}%</span>
+        </div>
+        <div class="setting-slider group-start">
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
             <span class="setting-label clickable" onclick={() => { blankingPoints = 15; applySettings(); }}>Blanking</span>
-            <input type="range" min="5" max="30" step="1" bind:value={blankingPoints} oninput={applySettings} />
+            <input type="range" min="0" max="30" step="1" bind:value={blankingPoints} oninput={applySettings} />
             <span class="setting-value">{blankingPoints}</span>
         </div>
         <div class="setting-slider">
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <span class="setting-label clickable" onclick={() => { blankingDwell = 5; applySettings(); }}>Dwell</span>
-            <input type="range" min="1" max="30" step="1" bind:value={blankingDwell} oninput={applySettings} />
+            <span class="setting-label clickable" onclick={() => { blankingDwell = 5; applySettings(); }}>Dwell Off</span>
+            <input type="range" min="0" max="30" step="1" bind:value={blankingDwell} oninput={applySettings} />
             <span class="setting-value">{blankingDwell}</span>
         </div>
         <div class="setting-slider">
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <span class="setting-label clickable" onclick={() => { anchorDwell = 3; applySettings(); }}>Dwell On</span>
+            <input type="range" min="0" max="15" step="1" bind:value={anchorDwell} oninput={applySettings} />
+            <span class="setting-value">{anchorDwell}</span>
+        </div>
+
+        <div class="setting-slider group-start">
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
             <span class="setting-label clickable" onclick={() => { cornerDwell = 3; applySettings(); }}>Corner Dwell</span>
-            <input type="range" min="1" max="10" step="1" bind:value={cornerDwell} oninput={applySettings} />
+            <input type="range" min="0" max="10" step="1" bind:value={cornerDwell} oninput={applySettings} />
             <span class="setting-value">{cornerDwell}</span>
+        </div>
+        <div class="setting-row">
+            <span class="setting-label">Corner Mode</span>
+            <select bind:value={cornerMode} onchange={applySettings}>
+                <option value="off">Off</option>
+                <option value="binary">Binary (angle &gt; 45°)</option>
+                <option value="weighted">Weighted (by angle)</option>
+            </select>
         </div>
         <div class="setting-slider">
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <span class="setting-label clickable" onclick={() => { cornerBias = 3; applySettings(); }}>Corner Bias</span>
+            <input type="range" min="0" max="50" step="0.5" bind:value={cornerBias} oninput={applySettings} />
+            <span class="setting-value">{cornerBias.toFixed(1)}×</span>
+        </div>
+        <div class="setting-slider">
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <span class="setting-label clickable" onclick={() => { cornerSharpness = 1; applySettings(); }}>Sharpness</span>
+            <input type="range" min="1" max="4" step="0.25" bind:value={cornerSharpness} oninput={applySettings} />
+            <span class="setting-value">p={cornerSharpness.toFixed(2)}</span>
+        </div>
+
+        <div class="setting-row group-start">
+            <label class="setting-check">
+                <input type="checkbox" bind:checked={velocityCap} onchange={applySettings} />
+                <span>Velocity Cap</span>
+            </label>
+        </div>
+        <div class="setting-slider" class:setting-disabled={!velocityCap}>
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <span class="setting-label clickable" onclick={() => { maxStepDac = 400; applySettings(); }}>Max Step</span>
+            <input type="range" min="50" max="1000" step="10" bind:value={maxStepDac} oninput={applySettings} disabled={!velocityCap} />
+            <span class="setting-value">{maxStepDac}</span>
+        </div>
+      </div>
+
       <div class="settings-column visualization-column">
         <div class="visualization-wrapper">
             <canvas
@@ -449,6 +528,44 @@
         grid-template-columns: 80px 1fr 36px;
         gap: 8px;
         align-items: center;
+    }
+
+    .setting-slider.group-start,
+    .setting-row.group-start {
+        margin-top: 20px;
+    }
+
+    .setting-row {
+        display: grid;
+        grid-template-columns: 80px 1fr;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .setting-row select {
+        font-size: 9pt;
+        padding: 2px 4px;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+    }
+
+    .setting-check {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        grid-column: 1 / -1;
+        font-size: 9pt;
+        color: #333;
+        cursor: pointer;
+    }
+
+    .setting-check input[type="checkbox"] {
+        margin: 0;
+    }
+
+    .setting-disabled {
+        opacity: 0.45;
     }
 
     .setting-computed {
