@@ -266,6 +266,21 @@ export class LaserManager {
 	}
 
 	/**
+	 * Get the parallel virtual-space frame plan (pre-calibration). Same sample
+	 * order as getProcessedPoints() but coordinates are in the SVG sampler's
+	 * [-1, 1] virtual frame — so the settings dialog visualization can show
+	 * point distribution without keystone distortion.
+	 */
+	getVirtualPlan(deviceId = null) {
+		if (deviceId) {
+			const renderer = this.renderers.get(deviceId);
+			if (renderer) return renderer.lastVirtualPlan || [];
+		}
+		const renderer = this._getPreviewRenderer();
+		return renderer.lastVirtualPlan || [];
+	}
+
+	/**
 	 * Get point budget info
 	 */
 	getPointBudget() {

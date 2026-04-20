@@ -20,7 +20,56 @@
     let pointsPerFrame = $derived(Math.floor(pps / targetFps));
 
     let stats = $state(null);
+    let visualizationCanvas = $state(null);
+    // Visualization view state: zoom = 1 shows the full virtual [-1, 1]
+    // field, panX/panY is the virtual coordinate at the canvas center.
+    let visZoom = $state(1);
+    let visPanX = $state(0);
+    let visPanY = $state(0);
+    let visPanning = $state(false);
+    let visDragStart = { mx: 0, my: 0, panX: 0, panY: 0 };
     let originalSettings = null;
+
+    const VIS_PADDING = 12;
+    const VIS_ZOOM_MIN = 0.5;
+    const VIS_ZOOM_MAX = 50;
+
+    function visZoomBy(factor) {
+        visZoom = Math.max(VIS_ZOOM_MIN, Math.min(VIS_ZOOM_MAX, visZoom * factor));
+    }
+
+    function resetVisView() {
+        visZoom = 1;
+        visPanX = 0;
+        visPanY = 0;
+    }
+
+    function handleVisMouseDown(e) {
+        visPanning = true;
+        visDragStart = { mx: e.clientX, my: e.clientY, panX: visPanX, panY: visPanY };
+        e.preventDefault();
+    }
+
+    function handleVisMouseMove(e) {
+        if (!visPanning || !visualizationCanvas) return;
+        const w = visualizationCanvas.width;
+        const h = visualizationCanvas.height;
+        const dx = e.clientX - visDragStart.mx;
+        const dy = e.clientY - visDragStart.my;
+        // Convert pixel drag to virtual-space pan (inverse of the vx/vy mapping).
+        visPanX = visDragStart.panX - (dx * 2) / (visZoom * (w - 2 * VIS_PADDING));
+        visPanY = visDragStart.panY - (dy * 2) / (visZoom * (h - 2 * VIS_PADDING));
+    }
+
+    function handleVisMouseUp() {
+        visPanning = false;
+    }
+
+    function handleVisWheel(e) {
+        e.preventDefault();
+        visZoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15);
+    }
+
     // Poll render stats from the manager while the dialog is visible so the
     // user can see how settings changes affect throughput and point mix.
     $effect(() => {
@@ -31,6 +80,120 @@
         return () => clearInterval(interval);
     });
 
+    // Live frame-plan visualization: thin lines + dots at every point so the
+    // user can see exactly where the point budget is being spent. Drawing
+    // points are the configured stroke colour; blanking/dwell show as
+    // translucent gray. Coordinates are pre-calibration so keystone doesn't
+    // warp the shape — this is purely an inspection view.
+    $effect(() => {
+        if (!visualizationCanvas || !laserManager) return;
+        const ctx = visualizationCanvas.getContext('2d');
+        const w = visualizationCanvas.width;
+        const h = visualizationCanvas.height;
+        let animId;
+
+        const draw = () => {
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, w, h);
+
+            // Virtual-to-canvas mapping. visZoom > 1 zooms in; visPanX/Y is
+            // the virtual coord at the canvas center.
+            const padding = VIS_PADDING;
+            const halfW = (w - 2 * padding) / 2;
+            const halfH = (h - 2 * padding) / 2;
+            const vx = (x) => padding + halfW + (x - visPanX) * visZoom * halfW;
+            const vy = (y) => padding + halfH + (y - visPanY) * visZoom * halfH;
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(vx(-1), vy(-1), vx(1) - vx(-1), vy(1) - vy(-1));
+            // Center crosshair
+            ctx.beginPath();
+            ctx.moveTo(vx(-1), vy(0)); ctx.lineTo(vx(1), vy(0));
+            ctx.moveTo(vx(0), vy(-1)); ctx.lineTo(vx(0), vy(1));
+            ctx.stroke();
+
+            const plan = laserManager.getVirtualPlan(deviceId);
+            if (plan && plan.length > 1) {
+                // Pass 1: thin lines connecting consecutive points.
+                //   - Drawing→drawing: colored thin line.
+                //   - Any segment involving a blank point: transparent gray.
+                for (let i = 1; i < plan.length; i++) {
+                    const prev = plan[i - 1];
+                    const cur = plan[i];
+                    if (prev.blank || cur.blank) {
+                        ctx.strokeStyle = 'rgba(200, 200, 200, 0.2)';
+                        ctx.lineWidth = 0.5;
+                    } else {
+                        ctx.strokeStyle = `rgba(${cur.r}, ${cur.g}, ${cur.b}, 0.9)`;
+                        ctx.lineWidth = 0.8;
+                    }
+                    ctx.beginPath();
+                    ctx.moveTo(vx(prev.x), vy(prev.y));
+                    ctx.lineTo(vx(cur.x), vy(cur.y));
+                    ctx.stroke();
+                }
+
+                // Pass 2: dwell halos, grouped by kind so each type gets its
+                // own styling.
+                //   corner  → filled transparent circle in the laser color
+                //   anchor  → blue outline, no fill
+                //   bdwell  → gray outline, no fill
+                // Other kinds ('draw' samples, 'travel' blanking samples) get
+                // no halo — they're not dwell.
+                let i = 0;
+                while (i < plan.length) {
+                    const pt = plan[i];
+                    let count = 1;
+                    while (i + count < plan.length
+                        && plan[i + count].x === pt.x
+                        && plan[i + count].y === pt.y
+                        && plan[i + count].kind === pt.kind) {
+                        count++;
+                    }
+                    if (count >= 2 && (pt.kind === 'corner' || pt.kind === 'anchor' || pt.kind === 'bdwell')) {
+                        const radius = Math.min(14, 1.8 + count * 1.0);
+                        ctx.beginPath();
+                        ctx.arc(vx(pt.x), vy(pt.y), radius, 0, Math.PI * 2);
+                        if (pt.kind === 'corner') {
+                            ctx.fillStyle = `rgba(${pt.r}, ${pt.g}, ${pt.b}, 0.22)`;
+                            ctx.fill();
+                        } else if (pt.kind === 'anchor') {
+                            ctx.strokeStyle = 'rgba(90, 160, 255, 0.75)';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        } else {
+                            ctx.strokeStyle = 'rgba(180, 180, 180, 0.55)';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        }
+                    }
+                    i += count;
+                }
+
+                // Pass 3: dots at every sample point.
+                for (const pt of plan) {
+                    if (pt.blank) {
+                        ctx.fillStyle = 'rgba(200, 200, 200, 0.35)';
+                        ctx.beginPath();
+                        ctx.arc(vx(pt.x), vy(pt.y), 0.8, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        ctx.fillStyle = `rgb(${pt.r}, ${pt.g}, ${pt.b})`;
+                        ctx.beginPath();
+                        ctx.arc(vx(pt.x), vy(pt.y), 1.2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            animId = requestAnimationFrame(draw);
+        };
+
+        draw();
+        return () => { if (animId) cancelAnimationFrame(animId); };
+    });
 
     export function show(id) {
         deviceId = id;
@@ -123,6 +286,28 @@
         <div class="setting-slider">
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="settings-column visualization-column">
+        <div class="visualization-wrapper">
+            <canvas
+                bind:this={visualizationCanvas}
+                width="380"
+                height="380"
+                class="visualization-canvas"
+                class:panning={visPanning}
+                onmousedown={handleVisMouseDown}
+                onmousemove={handleVisMouseMove}
+                onmouseup={handleVisMouseUp}
+                onmouseleave={handleVisMouseUp}
+                onwheel={handleVisWheel}
+            ></canvas>
+            <div class="visualization-controls">
+                <button type="button" onclick={() => visZoomBy(1.5)} title="Zoom in">+</button>
+                <button type="button" onclick={() => visZoomBy(1 / 1.5)} title="Zoom out">−</button>
+                <button type="button" class="reset" onclick={resetVisView} title="Reset view">⌂</button>
+            </div>
+        </div>
+      </div>
+
       <div class="settings-column stats-column">
         {#if stats}
             <div class="stats-panel">
@@ -200,6 +385,63 @@
         min-width: 260px;
     }
 
+    .visualization-column {
+        flex: 0 0 380px;
+        min-width: 380px;
+        align-items: center;
+    }
+
+    .visualization-wrapper {
+        position: relative;
+        width: 380px;
+        height: 380px;
+    }
+
+    .visualization-canvas {
+        width: 380px;
+        height: 380px;
+        border-radius: 6px;
+        background: #1a1a1a;
+        display: block;
+        cursor: grab;
+    }
+
+    .visualization-canvas.panning {
+        cursor: grabbing;
+    }
+
+    .visualization-controls {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .visualization-controls button {
+        width: 26px;
+        height: 26px;
+        border: none;
+        border-radius: 4px;
+        background: rgba(40, 40, 40, 0.85);
+        color: #ddd;
+        font-size: 14pt;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+    .visualization-controls button:hover {
+        background: rgba(60, 60, 60, 0.95);
+        color: #fff;
+    }
+
+    .visualization-controls button.reset {
+        font-size: 10pt;
     }
 
     .setting-slider {
