@@ -26,6 +26,14 @@ export class LaserManager {
 		// Per-device calibration mode: Map<deviceId, boolean>
 		this.calibrating = new Map();
 
+		// Per-device connection state: 'disconnected' | 'connected'
+		// We intentionally don't auto-retry mid-session: the Helios DAC ships
+		// without a USB serial, so Chrome sees each replug as a new device and
+		// silent re-pairing isn't possible. On any error we drop to
+		// 'disconnected' and let the user click Connect to re-pair via picker.
+		this.states = new Map();
+		this._stateListeners = [];
+
 		this.container = null;
 		this.svgElements = new Map(); // drawingId -> SVG element
 		this.scriptedSvgs = new Set(); // SVG elements that contain scripts
@@ -33,6 +41,7 @@ export class LaserManager {
 		this.lastSegments = [];
 
 		this._frameLoop = this._frameLoop.bind(this);
+		this._handleUSBDisconnect = this._handleUSBDisconnect.bind(this);
 	}
 
 	/**
@@ -47,6 +56,15 @@ export class LaserManager {
 		// Restore renderers for devices that have persisted ILDA settings
 		this._restoreRenderers();
 
+		// Watch for USB unplug events so we can flip the renderer to disconnected
+		// immediately instead of waiting for the send loop to pile up errors.
+		if ('usb' in navigator && navigator.usb.addEventListener) {
+			navigator.usb.addEventListener('disconnect', this._handleUSBDisconnect);
+		}
+
+		// Silently reconnect DACs that were connected before reload.
+		this._autoReconnectAll();
+
 		this._startFrameLoop();
 	}
 
@@ -54,40 +72,46 @@ export class LaserManager {
 	 * Connect a specific device to a Helios DAC via WebUSB picker
 	 */
 	async connect(deviceId) {
-		let renderer = this.renderers.get(deviceId);
-		if (!renderer) {
-			renderer = new LaserRenderer();
-			this.renderers.set(deviceId, renderer);
-		}
-
-		const device = this.deviceLibrary.get(deviceId);
-		if (device?.ildaSettings) {
-			if (device.ildaSettings.settings) {
-				renderer.updateSettings(device.ildaSettings.settings);
-			}
-			if (device.ildaSettings.calibration) {
-				renderer.calibration.fromJSON(device.ildaSettings.calibration);
-			}
-		}
-
-		const result = await renderer.connect();
-		if (result) {
+		const renderer = this._ensureRenderer(deviceId);
+		const ok = await renderer.connect();
+		if (ok) {
 			renderer.setEnabled(true);
 			renderer.startSendLoop();
+			this._onRendererError(deviceId, renderer);
+			this._setAutoReconnect(deviceId, true);
+			this._setState(deviceId, 'connected');
+		} else {
+			this._setState(deviceId, 'disconnected');
 		}
-		return result;
+		return ok;
 	}
 
 	/**
-	 * Disconnect a specific device's DAC
+	 * Disconnect a specific device's DAC (user-initiated).
+	 * Clears the auto-reconnect flag so we don't silently re-open on reload.
 	 */
 	async disconnect(deviceId) {
-		const renderer = this.renderers.get(deviceId);
-		if (renderer) {
-			renderer.stopSendLoop();
-			renderer.setEnabled(false);
-			await renderer.disconnect();
-		}
+		this._setAutoReconnect(deviceId, false);
+		await this._teardownRenderer(deviceId);
+		this._setState(deviceId, 'disconnected');
+	}
+
+	/**
+	 * Get the current connection state for a device.
+	 */
+	getDeviceState(deviceId) {
+		return this.states.get(deviceId) || 'disconnected';
+	}
+
+	/**
+	 * Subscribe to device state changes. Callback receives ({ deviceId, state }).
+	 */
+	onStateChange(callback) {
+		this._stateListeners.push(callback);
+		return () => {
+			const idx = this._stateListeners.indexOf(callback);
+			if (idx !== -1) this._stateListeners.splice(idx, 1);
+		};
 	}
 
 	/**
@@ -489,6 +513,47 @@ export class LaserManager {
 	}
 
 	/**
+	 * Should a simulated send fire for this renderer on this rAF tick?
+	 * Throttles to the renderer's configured targetFps.
+	 */
+	_shouldSimulateSend(renderer) {
+		const targetFps = renderer.settings?.targetFps || 30;
+		const interval = 1000 / targetFps;
+		const now = performance.now();
+		const last = renderer._lastSimulatedSend || 0;
+		if (now - last >= interval) {
+			renderer._lastSimulatedSend = now;
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * One iteration of a simulated send — runs the pipeline, advances the
+	 * moving-window offset, and bumps the fps counter. Used when no DAC is
+	 * connected so the preview matches how the hardware would behave.
+	 */
+	_simulatedSend(renderer, segments, calibrating) {
+		if (calibrating) {
+			const points = renderer.generateTestPattern();
+			const result = renderer.convertTraceToLaserPoints(points, { basePower: 1.0 });
+			renderer.lastFrame = result.points.length > 4096
+				? result.points.slice(0, 4096) : result.points;
+		} else {
+			renderer.processSegments(segments);
+		}
+		renderer._advanceWindowOffset();
+
+		renderer.framesSentThisSecond = (renderer.framesSentThisSecond || 0) + 1;
+		const now = performance.now();
+		if (!renderer.lastStatsTime || now - renderer.lastStatsTime > 1000) {
+			renderer.stats.framesPerSecond = renderer.framesSentThisSecond;
+			renderer.framesSentThisSecond = 0;
+			renderer.lastStatsTime = now;
+		}
+	}
+
+	/**
 	 * Get or create the renderer used for preview processing
 	 */
 	_getPreviewRenderer() {
@@ -511,6 +576,115 @@ export class LaserManager {
 		if (this.animationFrameId) {
 			cancelAnimationFrame(this.animationFrameId);
 			this.animationFrameId = null;
+		}
+	}
+
+	// ---- State & reconnection ----
+
+	/**
+	 * Lazily create a renderer for a device, applying any persisted settings.
+	 */
+	_ensureRenderer(deviceId) {
+		let renderer = this.renderers.get(deviceId);
+		if (!renderer) {
+			renderer = new LaserRenderer();
+			this.renderers.set(deviceId, renderer);
+		}
+		const device = this.deviceLibrary.get(deviceId);
+		if (device?.ildaSettings) {
+			if (device.ildaSettings.settings) {
+				renderer.updateSettings(device.ildaSettings.settings);
+			}
+			if (device.ildaSettings.calibration) {
+				renderer.calibration.fromJSON(device.ildaSettings.calibration);
+			}
+		}
+		return renderer;
+	}
+
+	/**
+	 * Wire the renderer's error status so we tear down on failure.
+	 * No retry — the DAC has no USB serial, so silent re-pairing isn't
+	 * possible after an unplug. The user reconnects manually via the picker.
+	 */
+	_onRendererError(deviceId, renderer) {
+		renderer.onStatusChange = (evt) => {
+			if (evt?.status === 'error' && this.getDeviceState(deviceId) === 'connected') {
+				console.warn(`Laser ${deviceId}: renderer error, disconnecting`);
+				this._teardownRenderer(deviceId).finally(() => {
+					this._setState(deviceId, 'disconnected');
+				});
+			}
+		};
+	}
+
+	async _teardownRenderer(deviceId) {
+		const renderer = this.renderers.get(deviceId);
+		if (!renderer) return;
+		renderer.stopSendLoop();
+		renderer.setEnabled(false);
+		try { await renderer.disconnect(); } catch {}
+	}
+
+	_setState(deviceId, state) {
+		if (this.getDeviceState(deviceId) === state) return;
+		this.states.set(deviceId, state);
+		for (const cb of this._stateListeners) {
+			try { cb({ deviceId, state }); } catch (e) { console.warn('Laser state listener error:', e); }
+		}
+	}
+
+	_setAutoReconnect(deviceId, value) {
+		const device = this.deviceLibrary.get(deviceId);
+		if (!device) return;
+		const existing = device.ildaSettings || {};
+		if (existing.autoReconnect === value) return;
+		this.deviceLibrary.update(deviceId, {
+			ildaSettings: { ...existing, autoReconnect: value }
+		});
+	}
+
+	/**
+	 * On startup, silently re-open any DACs that were connected before reload.
+	 * Single attempt — if the device isn't there, we just stay disconnected.
+	 */
+	async _autoReconnectAll() {
+		if (!this.deviceLibrary) return;
+		for (const device of this.deviceLibrary.getAll()) {
+			if (!device.ildaSettings?.autoReconnect) continue;
+			const renderer = this._ensureRenderer(device.id);
+			let ok = false;
+			try {
+				ok = await renderer.reconnectSilent();
+			} catch (error) {
+				console.warn(`Laser ${device.id}: auto-reconnect failed:`, error);
+			}
+			if (ok) {
+				renderer.setEnabled(true);
+				renderer.startSendLoop();
+				this._onRendererError(device.id, renderer);
+				this._setState(device.id, 'connected');
+			} else {
+				this._setState(device.id, 'disconnected');
+			}
+		}
+	}
+
+	/**
+	 * Browser fires this when the USB cable is yanked — drop to disconnected
+	 * without trying to auto-recover (see class comment about USB serial).
+	 */
+	_handleUSBDisconnect(event) {
+		const usbDevice = event.device;
+		if (!usbDevice) return;
+		for (const [deviceId, renderer] of this.renderers) {
+			if (renderer.device?.usbDevice === usbDevice && this.getDeviceState(deviceId) === 'connected') {
+				console.log(`Laser ${deviceId}: USB disconnect event`);
+				this._teardownRenderer(deviceId).finally(() => {
+					this._setState(deviceId, 'disconnected');
+				});
+				break;
+			}
 		}
 	}
 
@@ -557,6 +731,9 @@ export class LaserManager {
 
 	destroy() {
 		this._stopFrameLoop();
+		if ('usb' in navigator && navigator.usb.removeEventListener) {
+			navigator.usb.removeEventListener('disconnect', this._handleUSBDisconnect);
+		}
 		for (const el of this.svgElements.values()) {
 			el.remove();
 		}

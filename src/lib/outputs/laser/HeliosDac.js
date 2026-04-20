@@ -219,14 +219,26 @@ export class HeliosDevice {
             console.log('[Helios] Claiming interface 0...');
             await this.usbDevice.claimInterface(0);
             console.log('[Helios] Interface 0 claimed');
-            
+
             console.log('[Helios] Selecting alternate interface 0, setting 1...');
             await this.usbDevice.selectAlternateInterface(0, 1);
             console.log('[Helios] Alternate interface selected');
-            
+
             // Auto-detect endpoints from the selected alternate interface
             this.#detectEndpoints();
-            
+
+            // Soft-reset clears any dangling streaming state (e.g. from a previous
+            // page session that didn't close cleanly before reload). Without this,
+            // transferIn on the interrupt endpoint can hang waiting for a response
+            // the still-streaming DAC never sends.
+            try {
+                console.log('[Helios] Resetting device...');
+                await this.usbDevice.reset();
+                console.log('[Helios] Device reset');
+            } catch (error) {
+                console.warn('[Helios] Device reset failed (continuing):', error);
+            }
+
             console.log('[Helios] Initializing device...');
             await this.init();
             console.log('[Helios] Device initialized - Name:', this.#name, 'Firmware:', this.#firmwareVersion);
@@ -249,16 +261,18 @@ export class HeliosDevice {
      */
     async init() {
         this.closed = false;
-        
-        // Try to get firmware version and name, but don't fail if they're not available
-        // Some devices may not respond to these queries but still work for sending frames
+
+        // Some clones don't answer one of these queries but still work for frames,
+        // so we accept a partial response. If both fail the device is unresponsive
+        // — better to fail now than loop the send-loop error handler.
         const fwResult = await this.#getFirmwareVersion();
         const nameResult = await this.#getName();
-        
+
         console.log('[Helios] Init complete - firmware:', this.#firmwareVersion, 'name:', this.#name || '(unnamed)');
-        
-        // Even if we couldn't get firmware/name, the device may still work
-        // Only the frame sending is essential
+
+        if (fwResult === HELIOS_ERROR && nameResult === HELIOS_ERROR) {
+            throw new Error('Device did not respond to any control query');
+        }
     }
 
     /**
@@ -315,22 +329,36 @@ export class HeliosDevice {
      * Note: Always read at least 32 bytes (interrupt endpoint packet size) to avoid babble errors
      */
     async sendControl(buffer, receiveLength) {
-        // Always request at least 32 bytes (interrupt endpoint packet size) to avoid babble errors
         const actualReceiveLength = Math.max(receiveLength, 32);
         console.log(`[Helios] sendControl: command=0x${buffer[0].toString(16)}, sending to EP ${this.#epIntOut}, expecting ${actualReceiveLength} bytes from EP ${this.#epIntIn}`);
         try {
             await this.usbDevice.transferOut(this.#epIntOut, buffer);
             console.log('[Helios] transferOut succeeded');
-            
-            // Small delay to give device time to process command
             await new Promise(resolve => setTimeout(resolve, 10));
-            
-            const result = await this.usbDevice.transferIn(this.#epIntIn, actualReceiveLength);
+            const result = await this.#transferInWithTimeout(this.#epIntIn, actualReceiveLength, 1500);
             console.log('[Helios] transferIn result:', result, 'byteLength:', result.data?.byteLength);
             return result;
         } catch (error) {
             console.error('[Helios] Error in control transfer:', error);
             return HELIOS_ERROR;
+        }
+    }
+
+    /**
+     * transferIn wrapped with a timeout so a stuck device doesn't hang init/connect forever.
+     * The dangling transferIn promise is swallowed to avoid unhandled-rejection warnings.
+     */
+    async #transferInWithTimeout(endpoint, length, timeoutMs) {
+        const transferPromise = this.usbDevice.transferIn(endpoint, length);
+        transferPromise.catch(() => {}); // absorb late rejection if we time out first
+        let timer;
+        const timeoutPromise = new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`transferIn timeout after ${timeoutMs}ms`)), timeoutMs);
+        });
+        try {
+            return await Promise.race([transferPromise, timeoutPromise]);
+        } finally {
+            clearTimeout(timer);
         }
     }
 
@@ -499,8 +527,9 @@ export class HeliosDevice {
 
         try {
             const result = await this.sendControlQuiet(buffer, 32);
-            if (result && result.status === 'ok' && 
-                result.data && 
+            // sendControlQuiet throws on transfer error; any non-response shape is just "busy".
+            if (result && result.status === 'ok' &&
+                result.data &&
                 result.data.byteLength >= 2 &&
                 result.data.getUint8(0) === HELIOS_STATUS_RESPONSE_CODE) {
                 if (result.data.getUint8(1) === 1) {
@@ -514,16 +543,14 @@ export class HeliosDevice {
     }
 
     /**
-     * Send control without logging (for frequent calls like getStatus)
+     * Send control without logging (for frequent calls like getStatus).
+     * Does NOT swallow transfer errors — callers distinguish "device unreachable"
+     * (throw/catch) from "device responded but not ready" (return value).
      */
     async sendControlQuiet(buffer, receiveLength) {
         const actualReceiveLength = Math.max(receiveLength, 32);
-        try {
-            await this.usbDevice.transferOut(this.#epIntOut, buffer);
-            return await this.usbDevice.transferIn(this.#epIntIn, actualReceiveLength);
-        } catch (error) {
-            return HELIOS_ERROR;
-        }
+        await this.usbDevice.transferOut(this.#epIntOut, buffer);
+        return await this.#transferInWithTimeout(this.#epIntIn, actualReceiveLength, 1500);
     }
 
     /**

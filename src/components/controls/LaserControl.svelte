@@ -12,9 +12,19 @@
 		power = $bindable(255)
 	} = $props();
 
-	let connected = $state(false);
+	let connectionState = $state('disconnected'); // 'disconnected' | 'connected' | 'reconnecting'
 	let stats = $state(null);
 	let canvasRef = $state(null);
+
+	// Sync connection state from the manager and stay subscribed to changes.
+	$effect(() => {
+		if (!laserManager) return;
+		connectionState = laserManager.getDeviceState(device.id);
+		const unsubscribe = laserManager.onStateChange(({ deviceId, state }) => {
+			if (deviceId === device.id) connectionState = state;
+		});
+		return unsubscribe;
+	});
 
 	// Load initial settings
 	$effect(() => {
@@ -36,12 +46,11 @@
 		laserManager?.updateDeviceSettings(device.id, { intensity: power / 255 });
 	}
 
-	// Poll connection status and stats
+	// Poll stats while connected (state is pushed via onStateChange).
 	$effect(() => {
 		if (!laserManager) return;
 		const interval = setInterval(() => {
-			connected = laserManager.isDeviceConnected(device.id);
-			stats = connected ? laserManager.getDeviceStats(device.id) : null;
+			stats = connectionState === 'connected' ? laserManager.getDeviceStats(device.id) : null;
 		}, 500);
 		return () => clearInterval(interval);
 	});
@@ -110,12 +119,10 @@
 
 	async function handleConnect() {
 		await laserManager?.connect(device.id);
-		connected = laserManager?.isDeviceConnected(device.id);
 	}
 
 	async function handleDisconnect() {
 		await laserManager?.disconnect(device.id);
-		connected = false;
 	}
 
 </script>
@@ -167,7 +174,7 @@
 	</div>
 
 	<div class="laser-connect">
-		{#if connected}
+		{#if connectionState === 'connected'}
 			<Button onclick={handleDisconnect} variant="secondary" size="small">
 				{@html disconnectIcon}
 				Disconnect ILDA

@@ -94,6 +94,7 @@ export class LaserRenderer {
 		this.minFrameInterval = 20;
 		this.pendingFrame = null;
 		this.isSending = false;
+		this._lastKeepaliveTime = 0;
 
 		// Stats tracking
 		this.framesSentThisSecond = 0;
@@ -154,29 +155,60 @@ export class LaserRenderer {
 	}
 
 	async connect() {
+		return this._connectWith(() => connectHeliosDevice());
+	}
+
+	/**
+	 * Reconnect silently to a previously-authorized Helios device.
+	 * Uses navigator.usb.getDevices() — no user picker.
+	 * @returns {Promise<boolean>} True when a device was found and opened.
+	 */
+	async reconnectSilent() {
+		return this._connectWith(async () => {
+			const devices = await getHeliosDevices();
+			return devices.length > 0 ? devices[0] : null;
+		});
+	}
+
+	async _connectWith(acquireDevice) {
 		try {
 			this.emitStatus('connecting');
-			this.device = await connectHeliosDevice();
+			this.device = await acquireDevice();
 
-			if (this.device) {
-				this.device.pps = this.settings.pps;
-				this.device.onStatusChange = (status) => {
-					if (this.onStatusChange) {
-						this.onStatusChange(status);
-					}
-				};
-
-				const result = await this.device.connect();
-				this.emitStatus('connected', {
-					name: this.device.name,
-					firmware: this.device.firmwareVersion
-				});
-				return true;
+			if (!this.device) {
+				console.log('[LaserRenderer] connect: no paired Helios device found');
+				return false;
 			}
-			return false;
+
+			// Fresh connection: USB reset parks the galvo at center, and we
+			// have no prior endpoint to travel from. Reset the tracker so the
+			// first frame prepends blanking from center.
+			this._lastFrameEndpoint = { x: 2048, y: 2048 };
+
+			this.device.pps = this.settings.pps;
+			this.device.onStatusChange = (status) => {
+				if (this.onStatusChange) {
+					this.onStatusChange(status);
+				}
+			};
+
+			const result = await this.device.connect();
+			if (result !== HELIOS.SUCCESS) {
+				console.warn('[LaserRenderer] Device connect returned non-success:', result);
+				try { await this.device.close(); } catch {}
+				this.device = null;
+				return false;
+			}
+
+			this.emitStatus('connected', {
+				name: this.device.name,
+				firmware: this.device.firmwareVersion
+			});
+			return true;
 		} catch (error) {
 			console.error('[LaserRenderer] Failed to connect:', error);
 			this.emitStatus('error', { error: error.message });
+			this.device = null;
 			return false;
 		}
 	}
@@ -486,26 +518,80 @@ export class LaserRenderer {
 	}
 
 	async _runSendLoop() {
+		const MAX_CONSECUTIVE_ERRORS = 10;
+		let consecutiveErrors = 0;
+
+		const recordError = (msg) => {
+			consecutiveErrors++;
+			if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+				this.emitStatus('error', { error: msg });
+				return true;
+			}
+			return false;
+		};
+
 		while (this._sendLoopRunning && this.isReady()) {
 			try {
 				const _ts0 = performance.now();
 				const status = await this.device.getStatus();
 				this.stats.statusMs = performance.now() - _ts0;
 
+				if (status === -1) {
+					if (recordError('Too many consecutive device errors')) break;
+					await new Promise(r => setTimeout(r, 50));
+					continue;
+				}
+
 				if (status !== 1) {
 					continue;
 				}
 
+				// Run the render pipeline just-in-time so the pipeline rate
+				// matches the DAC consumption rate (rather than rAF rate).
+				// The LaserManager stashes the latest SVG segments on each
+				// rAF tick; we pick them up here.
+				if (this.calibrationActive) {
+					const testPoints = this.generateTestPattern();
+					const testResult = this.convertTraceToLaserPoints(testPoints, { basePower: 1.0 });
+					this.lastFrame = testResult.points.length > 4096
+						? testResult.points.slice(0, 4096) : testResult.points;
+				} else if (this.pendingSegments) {
+					this.processSegments(this.pendingSegments);
+				}
+
 				const frame = this.lastFrame;
 				if (!frame || frame.length === 0) {
-					// Send a blank frame to clear the projector
-					if (!this._sentBlank) {
+					// Idle keep-alive: periodically re-send a blank frame so the
+					// DAC keeps receiving bulk traffic and any wedged endpoint
+					// surfaces as an error via the normal return-value path.
+					const KEEPALIVE_INTERVAL_MS = 500;
+					const now = performance.now();
+					if (!this._sentBlank || (now - this._lastKeepaliveTime) > KEEPALIVE_INTERVAL_MS) {
 						const blankPoints = [];
 						for (let i = 0; i < 100; i++) {
 							blankPoints.push(HeliosPoint.blank(2048, 2048));
 						}
-						await this.device.sendFrame(blankPoints, this.settings.pps);
+						const blankResult = await this.device.sendFrame(blankPoints, this.settings.pps);
+						if (blankResult === -1) {
+							if (recordError('Frame send failed')) break;
+							continue;
+						}
 						this._sentBlank = true;
+						this._lastKeepaliveTime = now;
+						// Keepalive parks the galvo at center; next real frame
+						// needs to prepend blanking to move to its first draw.
+						this._lastFrameEndpoint = { x: 2048, y: 2048 };
+						// Reflect what we actually sent in the stats panel —
+						// otherwise the dialog keeps showing stats from the
+						// last real frame while we're idle.
+						this.stats.pointsPerFrame = blankPoints.length;
+						this.stats.blankingPoints = blankPoints.length;
+						this.stats.drawingPoints = 0;
+						this.stats.cornerDwellPoints = 0;
+						this.stats.anchorDwellPoints = 0;
+						this.stats.inputPoints = 0;
+						this.stats.resampledPoints = 0;
+						this.framesSentThisSecond++;
 					}
 					await new Promise(r => setTimeout(r, 10));
 					continue;
@@ -513,9 +599,21 @@ export class LaserRenderer {
 				this._sentBlank = false;
 
 				const _ts1 = performance.now();
-				await this.device.sendFrame(frame, this.settings.pps);
+				const sendResult = await this.device.sendFrame(frame, this.settings.pps);
 				this.stats.sendMs = performance.now() - _ts1;
+
+				if (sendResult === -1) {
+					// sendFrame catches transfer errors internally and returns HELIOS_ERROR.
+					if (recordError('Frame send failed')) break;
+					continue;
+				}
+
 				this.framesSentThisSecond++;
+				consecutiveErrors = 0;
+				// Advance the moving window once per frame that actually reached
+				// the DAC — otherwise rAF-rate offset advances drop intermediate
+				// window positions (e.g. at 50/50 you'd only ever see one half).
+				this._advanceWindowOffset();
 
 				const now = performance.now();
 				if (now - this.lastStatsTime > 1000) {
@@ -526,6 +624,7 @@ export class LaserRenderer {
 				}
 			} catch (error) {
 				console.error('[LaserRenderer] Send loop error:', error);
+				if (recordError(error.message || 'Send loop failure')) break;
 				await new Promise(r => setTimeout(r, 100));
 			}
 		}
