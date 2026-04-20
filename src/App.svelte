@@ -23,7 +23,7 @@
     import { loadRuntimeState, saveRuntimeState, clearRuntimeState } from './lib/runtimeState.js';
 
     let view = $state('devices');
-    let connected = $state(false);
+    let connectionState = $state('disconnected'); // 'disconnected' | 'connected' | 'reconnecting'
     let dmxController = $state(new DMXController());
     let devicesViewRef = $state(null);
     let universeMode = $state('view'); // 'view' or 'edit'
@@ -48,7 +48,6 @@
     async function handleConnect() {
         try {
             await dmxController.connect();
-            connected = true;
         } catch (error) {
             // Silently ignore user cancellation
             if (error.name === 'NotFoundError') return;
@@ -58,6 +57,12 @@
 
     function handleDisconnect() {
         dmxController.disconnect();
+    }
+
+    function handleCancelReconnect() {
+        dmxController.cancelReconnect();
+    }
+
     function handleClearState() {
         if (!confirm('Clear all button and scene state?\n\nToggle buttons will turn off, group selections will reset, and scenes will return to default.')) return;
         inputController.clearRuntimeState();
@@ -157,6 +162,18 @@
         // Subscribe to sampled values for DMX output
         const unsubscribe = cssManager.subscribe(handleSampledValues);
 
+        // Track DMX connection state (connected / reconnecting / disconnected)
+        const unsubscribeState = dmxController.onStateChange((state) => {
+            connectionState = state;
+        });
+
+        // Try to reconnect to a previously authorized DMX controller.
+        // WebUSB remembers granted devices across reloads, so we can silently
+        // re-open without a user prompt.
+        dmxController.reconnect().catch(error => {
+            console.warn('DMX auto-reconnect failed:', error);
+        });
+
         // Flush all pending saves before page unload
         const handleBeforeUnload = () => {
             deviceLibrary.flush();
@@ -182,7 +199,9 @@
 <Header
     onconnect={handleConnect}
     ondisconnect={handleDisconnect}
+    oncancelreconnect={handleCancelReconnect}
     onclearstate={handleClearState}
+    {connectionState}
     {inputController}
 />
 

@@ -160,6 +160,40 @@ class DMXOutputManager {
 	}
 
 	/**
+	 * Attempt to reconnect to a previously authorized DMX controller.
+	 * Queries navigator.usb.getDevices() for devices the user has already
+	 * granted access to (persists across page reloads), then connects to
+	 * the first compatible one.
+	 * @returns {Promise<DMXDriver|null>} The connected driver, or null if none found.
+	 */
+	async reconnect() {
+		if (!('usb' in navigator)) return null;
+
+		let devices;
+		try {
+			devices = await navigator.usb.getDevices();
+		} catch (error) {
+			console.warn('Failed to query authorized USB devices:', error);
+			return null;
+		}
+
+		for (const device of devices) {
+			const driver = this.findDriverForDevice(device);
+			if (!driver) continue;
+
+			try {
+				await driver.connect(device);
+				this.activeDriver = driver;
+				return driver;
+			} catch (error) {
+				console.warn(`Failed to reconnect to ${driver.name}:`, error);
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Get the currently active driver
 	 * @returns {DMXDriver|null}
 	 */
@@ -216,30 +250,145 @@ export class DMXController {
 		this.manager = new DMXOutputManager();
 		this.driver = null;
 		this.connected = false;
+		this.state = 'disconnected'; // 'disconnected' | 'connected' | 'reconnecting'
+
+		this._reconnectTimer = null;
+		this._reconnectAttempt = 0;
+		// Retry schedule: 5× at 1s, 5× at 2s, 5× at 4s (15 attempts, ~35s total).
+		this._reconnectDelays = [
+			1000, 1000, 1000, 1000, 1000,
+			2000, 2000, 2000, 2000, 2000,
+			4000, 4000, 4000, 4000, 4000
+		];
+		this._stateListeners = [];
 
 		// Forward manager events
 		this.manager.on('connected', ({ driver }) => {
 			this.driver = driver;
-			this.connected = true;
+			this._reconnectAttempt = 0;
+			this._clearReconnectTimer();
 			// Start continuous output for the driver
 			if (typeof driver.startOutput === 'function') {
 				driver.startOutput(this.universe);
 			}
+			this._setState('connected');
 		});
 
 		this.manager.on('disconnected', () => {
 			this.driver = null;
-			this.connected = false;
+			// Ignore the disconnect emitted while we're tearing down for a retry —
+			// the 'reconnecting' state is owned by the retry loop.
+			if (this.state !== 'reconnecting') {
+				this._setState('disconnected');
+			}
+		});
+
+		// A driver giving up after consecutive transfer failures (e.g. the USB
+		// cable was yanked) kicks off the automatic reconnect loop.
+		this.manager.on('error', () => {
+			if (this.state === 'connected') {
+				this._startReconnecting();
+			}
 		});
 	}
 
 	async connect() {
+		this._clearReconnectTimer();
+		this._reconnectAttempt = 0;
 		await this.manager.requestDevice();
 		return true;
 	}
 
+	/**
+	 * Attempt to reconnect to a previously authorized device.
+	 * @returns {Promise<boolean>} True if a device was reconnected.
+	 */
+	async reconnect() {
+		const driver = await this.manager.reconnect();
+		return driver !== null;
+	}
+
 	disconnect() {
+		this._clearReconnectTimer();
+		this._reconnectAttempt = 0;
 		this.manager.disconnect();
+		this._setState('disconnected');
+	}
+
+	/**
+	 * Cancel an in-progress auto-reconnect loop (user clicked the reconnecting
+	 * button). Returns to the disconnected state so the user can reconnect manually.
+	 */
+	cancelReconnect() {
+		if (this.state !== 'reconnecting') return;
+		this._clearReconnectTimer();
+		this._reconnectAttempt = 0;
+		this._setState('disconnected');
+	}
+
+	/**
+	 * Subscribe to connection state changes. Returns an unsubscribe function.
+	 */
+	onStateChange(callback) {
+		this._stateListeners.push(callback);
+		return () => {
+			const idx = this._stateListeners.indexOf(callback);
+			if (idx !== -1) this._stateListeners.splice(idx, 1);
+		};
+	}
+
+	_setState(newState) {
+		if (this.state === newState) return;
+		this.state = newState;
+		this.connected = newState === 'connected';
+		for (const cb of this._stateListeners) {
+			try { cb(newState); } catch (e) { console.warn('DMX state listener error:', e); }
+		}
+	}
+
+	_startReconnecting() {
+		this._setState('reconnecting');
+		this._reconnectAttempt = 0;
+		this.manager.disconnect();
+		this._scheduleRetry();
+	}
+
+	_scheduleRetry() {
+		const delay = this._reconnectDelays[this._reconnectAttempt];
+		this._reconnectTimer = setTimeout(() => this._attemptReconnect(), delay);
+	}
+
+	async _attemptReconnect() {
+		this._reconnectTimer = null;
+		if (this.state !== 'reconnecting') return;
+
+		this._reconnectAttempt++;
+		console.log(`DMX: reconnect attempt ${this._reconnectAttempt}/${this._reconnectDelays.length}`);
+
+		let driver = null;
+		try {
+			driver = await this.manager.reconnect();
+		} catch (error) {
+			console.warn('DMX: reconnect attempt failed:', error);
+		}
+
+		if (this.state !== 'reconnecting') return; // user canceled during await
+		if (driver) return; // 'connected' listener handles state transition
+
+		if (this._reconnectAttempt >= this._reconnectDelays.length) {
+			console.warn('DMX: gave up after', this._reconnectAttempt, 'reconnect attempts');
+			this._reconnectAttempt = 0;
+			this._setState('disconnected');
+			return;
+		}
+		this._scheduleRetry();
+	}
+
+	_clearReconnectTimer() {
+		if (this._reconnectTimer) {
+			clearTimeout(this._reconnectTimer);
+			this._reconnectTimer = null;
+		}
 	}
 
 	setChannel(channel, value) {

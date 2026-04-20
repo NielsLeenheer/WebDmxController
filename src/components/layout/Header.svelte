@@ -13,11 +13,13 @@
     import Dialog from '../common/Dialog.svelte';
     import ContextMenu from '../common/ContextMenu.svelte';
     import ContextAction from '../common/ContextAction.svelte';
+    import ContextSeparator from '../common/ContextSeparator.svelte';
     import settingsIcon from '../../assets/icons/settings.svg?raw';
     import openIcon from '../../assets/icons/open.svg?raw';
     import saveIcon from '../../assets/icons/save.svg?raw';
+    import clearIcon from '../../assets/icons/clear.svg?raw';
 
-    let { onconnect, ondisconnect, onclearstate, connected, inputController } = $props();
+    let { onconnect, ondisconnect, onclearstate, oncancelreconnect, connectionState = 'disconnected', inputController } = $props();
 
     let devicesDialog = $state(null);
     let settingsMenuRef = $state(null);
@@ -220,15 +222,20 @@
 </script>
 
 <header>
-    {#if !connected}
-        <button id="start" onclick={onconnect}>
-            <Icon data={connectIcon} />
-            Connect DMX controller
-        </button>
-    {:else}
+    {#if connectionState === 'connected'}
         <button id="stop" onclick={ondisconnect}>
             <Icon data={disconnectIcon} />
             Disconnect
+        </button>
+    {:else if connectionState === 'reconnecting'}
+        <button id="reconnecting" onclick={oncancelreconnect} title="Click to cancel reconnection">
+            <Icon data={connectIcon} />
+            Reconnecting…
+        </button>
+    {:else}
+        <button id="start" onclick={onconnect}>
+            <Icon data={connectIcon} />
+            Connect DMX controller
         </button>
     {/if}
 
@@ -343,6 +350,24 @@
     button#stop {
         background-color: #fff;
         color: #000;
+    }
+
+    button#reconnecting {
+        background-color: #fff;
+        color: #000;
+    }
+
+    button#reconnecting :global(svg path) {
+        fill: #b71c1c;
+    }
+
+    button#reconnecting :global(svg) {
+        animation: reconnecting-pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes reconnecting-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
     }
 
     button#devices-button,
