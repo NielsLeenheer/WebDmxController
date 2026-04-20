@@ -5,6 +5,7 @@
     import { inputLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import InputCard from '../cards/InputCard.svelte';
+    import GroupCard from '../cards/GroupCard.svelte';
     import Button from '../common/Button.svelte';
     import ContextMenu from '../common/ContextMenu.svelte';
     import ContextAction from '../common/ContextAction.svelte';
@@ -16,6 +17,8 @@
     import editIcon from '../../assets/icons/edit.svg?raw';
     import removeIcon from '../../assets/icons/remove.svg?raw';
     import audioIcon from '../../assets/icons/audio.svg?raw';
+    import backIcon from '../../assets/icons/back.svg?raw';
+    import forwardIcon from '../../assets/icons/forward.svg?raw';
 
     let {
         inputController
@@ -35,6 +38,56 @@
     // Input listening controller
     let listeningController = $state(null);
     let isListening = $state(false);
+
+    // Groups sidebar state
+    let sidebarOpen = $state(false);
+
+    // Derive groups from select-mode inputs. All `scene:*` inputs collapse into
+    // a single "Scenes" group (matching the exclusive-selection semantics in
+    // InputController._handleTrigger). Single-item groups with no explicit
+    // selectGroup are skipped — they're not meaningful as a "group".
+    let groups = $derived.by(() => {
+        const byKey = new Map(); // key → { key, label, inputs[] }
+        for (const input of inputs) {
+            if (!isButton(input) || input.buttonMode !== 'select') continue;
+            if (!input.selectGroup) continue;
+
+            const isScene = input.selectGroup.startsWith('scene:');
+            const key = isScene ? '__scene__' : input.selectGroup;
+            const label = isScene ? 'Scenes' : input.selectGroup;
+
+            let group = byKey.get(key);
+            if (!group) {
+                group = { key, label, inputs: [] };
+                byKey.set(key, group);
+            }
+            group.inputs.push(input);
+        }
+        return [...byKey.values()];
+    });
+
+    // Build the per-group items passed to each GroupCard. `selected` comes
+    // from inputStates[id].state, which is kept in sync by the input-trigger
+    // listener and seeded on mount from the persisted selectGroupStates.
+    let groupCards = $derived(
+        groups.map(group => ({
+            key: group.key,
+            label: group.label,
+            items: group.inputs.map(input => ({
+                input,
+                selected: inputStates[input.id]?.state === 'selected',
+                inputState: inputStates[input.id] || {}
+            }))
+        }))
+    );
+
+    function toggleSidebar() {
+        sidebarOpen = !sidebarOpen;
+    }
+
+    function selectFromSidebar(input) {
+        inputController.triggerInput(input);
+    }
 
     // Drag and drop helper
     const dnd = createDragDrop({
@@ -144,6 +197,20 @@
         // Create the listening controller
         listeningController = new InputListeningController(inputController, inputLibrary);
 
+        // Seed select-state from persisted selectGroupStates so the sidebar
+        // checkmarks match reality after a reload, before any input events
+        // have had a chance to repopulate inputStates.
+        for (const input of inputs) {
+            if (!isButton(input) || input.buttonMode !== 'select') continue;
+            const rawGroup = input.selectGroup || input.id;
+            const groupKey = rawGroup.startsWith('scene:') ? '__scene__' : rawGroup;
+            const selectedId = inputController.selectGroupStates.get(groupKey);
+            inputStates[input.id] = {
+                ...inputStates[input.id],
+                state: selectedId === input.id ? 'selected' : 'deselected'
+            };
+        }
+
         // Reset euler values to null when Thingy devices disconnect
         inputController.on('deviceremoved', (device) => {
             if (device.type === 'thingy') {
@@ -168,12 +235,20 @@
             if (mapping.buttonMode === 'toggle') {
                 inputStates[mapping.id] = { ...inputStates[mapping.id], state: toggleState ? 'on' : 'off', pressed: true };
             } else if (mapping.buttonMode === 'select') {
-                // For select buttons, mark this one as selected and deselect others in the group
-                const group = mapping.selectGroup || mapping.id;
+                // For select buttons, mark this one as selected and deselect others in the group.
+                // All scene:* selectGroups collapse into one exclusive group, matching the
+                // controller's logic in _handleTrigger. Without the collapse, clicking
+                // "scene B" wouldn't clear the "scene A" selection.
+                const groupKeyOf = (i) => {
+                    const raw = i.selectGroup || i.id;
+                    return raw.startsWith('scene:') ? '__scene__' : raw;
+                };
+                const group = groupKeyOf(mapping);
                 for (const input of inputs) {
-                    if (input.buttonMode === 'select' && (input.selectGroup || input.id) === group && input.id !== mapping.id) {
-                        inputStates[input.id] = { ...inputStates[input.id], state: 'deselected', pressed: false };
-                    }
+                    if (input.buttonMode !== 'select') continue;
+                    if (input.id === mapping.id) continue;
+                    if (groupKeyOf(input) !== group) continue;
+                    inputStates[input.id] = { ...inputStates[input.id], state: 'deselected', pressed: false };
                 }
                 inputStates[mapping.id] = { ...inputStates[mapping.id], state: 'selected', pressed: true };
             } else if (isButton(mapping)) {
@@ -232,23 +307,50 @@
                 Start Listening
             </Button>
         {/if}
+        {#if groups.length > 0}
+            <button
+                type="button"
+                class="sidebar-toggle"
+                onclick={toggleSidebar}
+                title={sidebarOpen ? 'Hide groups' : 'Show groups'}
+                aria-pressed={sidebarOpen}
+            >
+                {@html sidebarOpen ? backIcon : forwardIcon}
+            </button>
+        {/if}
     </div>
 
-    <div class="inputs-grid">
-        {#if inputs.length === 0}
-            <div class="empty-state">
-                <p>No inputs detected yet. Start listening to detect inputs!</p>
-            </div>
-        {:else}
-            {#each inputs as input (input.id)}
-                <InputCard
-                    {input}
-                    {dnd}
-                    inputState={inputStates[input.id] || {}}
-                    onEdit={(input, anchor) => { contextInput = input; contextMenuRef?.show(input, anchor); }}
-                />
-            {/each}
+    <div class="inputs-body">
+        {#if groups.length > 0}
+            <aside class="groups-sidebar" class:open={sidebarOpen} aria-hidden={!sidebarOpen}>
+                <div class="groups-sidebar-inner">
+                    {#each groupCards as card (card.key)}
+                        <GroupCard
+                            label={card.label}
+                            items={card.items}
+                            onSelect={selectFromSidebar}
+                        />
+                    {/each}
+                </div>
+            </aside>
         {/if}
+
+        <div class="inputs-grid">
+            {#if inputs.length === 0}
+                <div class="empty-state">
+                    <p>No inputs detected yet. Start listening to detect inputs!</p>
+                </div>
+            {:else}
+                {#each inputs as input (input.id)}
+                    <InputCard
+                        {input}
+                        {dnd}
+                        inputState={inputStates[input.id] || {}}
+                        onEdit={(input, anchor) => { contextInput = input; contextMenuRef?.show(input, anchor); }}
+                    />
+                {/each}
+            {/if}
+        </div>
     </div>
 </div>
 
@@ -295,9 +397,44 @@
     }
 
     .listen-section {
+        position: relative;
         padding: 20px;
         display: flex;
         justify-content: center;
+    }
+
+    .sidebar-toggle {
+        position: absolute;
+        left: 40px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: #666;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.15s;
+    }
+
+    .sidebar-toggle :global(svg) {
+        width: 20px;
+        height: 20px;
+    }
+
+    .sidebar-toggle:hover {
+        color: #333;
+    }
+
+    .inputs-body {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+        overflow: hidden;
     }
 
     .inputs-grid {
@@ -308,6 +445,28 @@
         grid-template-columns: repeat(auto-fill, minmax(18em, 1fr));
         gap: 16px;
         align-content: start;
+    }
+
+    .groups-sidebar {
+        flex-shrink: 0;
+        width: 0;
+        overflow: hidden;
+        transition: width 0.25s ease;
+    }
+
+    .groups-sidebar.open {
+        width: 300px;
+    }
+
+    .groups-sidebar-inner {
+        width: 240px;
+        height: 100%;
+        padding: 20px 20px 20px 40px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        box-sizing: content-box;
     }
 
     .empty-state {

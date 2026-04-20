@@ -1041,6 +1041,16 @@ export class InputController {
 	}
 
 	/**
+	 * Programmatically simulate a press on an input. Used by UI like the
+	 * groups sidebar to switch the selected item in a select-group without
+	 * going through hardware. Runs the same code path as a physical trigger.
+	 */
+	triggerInput(input) {
+		if (!input?.deviceId || !input?.controlId) return;
+		this._handleTrigger(input.deviceId, input.controlId, 127);
+	}
+
+	/**
 	 * Request Stream Deck device
 	 */
 	async requestStreamDeck() {
