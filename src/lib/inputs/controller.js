@@ -9,6 +9,7 @@ import { isButton } from './utils.js';
 import { getInputType } from './types/index.js';
 import { PathRecorder } from './PathRecorder.js';
 import { toCSSIdentifier } from '../css/utils.js';
+import { loadRuntimeState, saveRuntimeState } from '../runtimeState.js';
 
 export class InputController {
 	constructor(inputLibrary, customPropertyManager, triggerManager, triggerLibrary = null) {
@@ -23,8 +24,92 @@ export class InputController {
 		this.toggleStates = new Map(); // Track toggle button states: "deviceId:controlId" -> boolean
 		this.selectGroupStates = new Map(); // Track select group states: "groupName" -> input id
 		this.sceneController = null;
+		this._restorePersistedState();
 		this._setupInputListeners();
 		this._setupLibraryListeners();
+	}
+
+	/**
+	 * Restore toggle and select-group state from localStorage.
+	 * CSS classes and LED colors are (re)applied later in initialize() once
+	 * the trigger container and input devices are ready.
+	 */
+	_restorePersistedState() {
+		const state = loadRuntimeState();
+		if (state.toggleStates) {
+			for (const [key, value] of Object.entries(state.toggleStates)) {
+				this.toggleStates.set(key, value);
+			}
+		}
+		if (state.selectGroupStates) {
+			for (const [key, value] of Object.entries(state.selectGroupStates)) {
+				this.selectGroupStates.set(key, value);
+			}
+		}
+	}
+
+	_persistState() {
+		saveRuntimeState({
+			toggleStates: Object.fromEntries(this.toggleStates),
+			selectGroupStates: Object.fromEntries(this.selectGroupStates),
+		});
+	}
+
+	/**
+	 * Re-apply restored button state to the CSS container (toggle on/off classes
+	 * and non-scene group-selection attributes). Called once the trigger
+	 * container has been set during initialize().
+	 */
+	_applyRestoredButtonState() {
+		const inputs = this.inputLibrary.getAll();
+
+		for (const input of inputs) {
+			if (!isButton(input)) continue;
+			const cssId = input.cssIdentifier;
+			if (!cssId) continue;
+			if (input.buttonMode !== 'toggle') continue;
+
+			const key = `${input.deviceId}:${input.controlId}`;
+			if (!this.toggleStates.has(key)) continue;
+
+			const isOn = this.toggleStates.get(key);
+			this.triggerManager.addRawClass(`${cssId}-${isOn ? 'on' : 'off'}`);
+		}
+
+		for (const [group, selectedId] of this.selectGroupStates) {
+			if (group === '__scene__') continue; // handled by SceneController
+			const selectedInput = inputs.find(i => i.id === selectedId);
+			if (!selectedInput?.cssIdentifier) continue;
+			const groupCssId = toCSSIdentifier(group);
+			this.triggerManager._emit('groupSelection', {
+				groupCssId,
+				inputCssId: selectedInput.cssIdentifier
+			});
+		}
+	}
+
+	/**
+	 * Reset all toggle and select-group state and refresh CSS / LEDs.
+	 */
+	clearRuntimeState() {
+		const inputs = this.inputLibrary.getAll();
+
+		// Remove any CSS classes tied to the current toggle states.
+		for (const input of inputs) {
+			if (!isButton(input) || input.buttonMode !== 'toggle') continue;
+			const cssId = input.cssIdentifier;
+			if (!cssId) continue;
+			this.triggerManager.removeRawClass(`${cssId}-on`);
+			this.triggerManager.removeRawClass(`${cssId}-off`);
+		}
+
+		this.toggleStates.clear();
+		this.selectGroupStates.clear();
+		this._persistState();
+
+		this.applyColorsToDevices().catch(err => {
+			console.warn('Failed to refresh button colors after clear:', err);
+		});
 	}
 
 	/**
@@ -138,6 +223,10 @@ export class InputController {
 		// Apply colors to all devices after initialization
 		// Use a small delay to ensure devices are fully ready
 		setTimeout(() => {
+			// Restored toggle/select state is now surfaced to CSS and LEDs.
+			// Deferred until here so the trigger container (set by CSSManager
+			// during App mount) is guaranteed to exist.
+			this._applyRestoredButtonState();
 			this.applyColorsToDevices().catch(err => {
 				console.warn('Failed to apply colors on initial load:', err);
 			});
@@ -678,6 +767,7 @@ export class InputController {
 					const currentState = this.toggleStates.get(toggleKey) || false;
 					const newState = !currentState;
 					this.toggleStates.set(toggleKey, newState);
+					this._persistState();
 
 					// Apply on/off classes based on new state
 					const onClass = `${cssId}-on`;
@@ -718,6 +808,7 @@ export class InputController {
 
 					// Update selection state
 					this.selectGroupStates.set(group, input.id);
+					this._persistState();
 
 					if (isSceneGroup) {
 						// Scene group: change scene directly via priority stack

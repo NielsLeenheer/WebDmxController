@@ -25,6 +25,7 @@ export class SceneController {
 	constructor(sceneLibrary) {
 		this.sceneLibrary = sceneLibrary;
 		this.onSceneChange = null;
+		this.onStateChange = null;
 	}
 
 	/**
@@ -34,6 +35,40 @@ export class SceneController {
 	setOnSceneChange(callback) {
 		this.onSceneChange = callback;
 		this._notifySceneChange();
+	}
+
+	/**
+	 * Set callback invoked whenever the persistent part of the scene state
+	 * (toggle stack or select scene) changes. Used to persist runtime state.
+	 * @param {Function} callback - Called with { toggleStack, selectSceneId }
+	 */
+	setOnStateChange(callback) {
+		this.onStateChange = callback;
+	}
+
+	/**
+	 * Restore persisted scene state. Must be called before setOnSceneChange
+	 * so the initial notification reflects the restored scene.
+	 * @param {object} state
+	 * @param {Array} [state.toggleStack]
+	 * @param {string|null} [state.selectSceneId]
+	 */
+	restoreState({ toggleStack, selectSceneId } = {}) {
+		if (Array.isArray(toggleStack)) {
+			this._toggleStack = toggleStack.filter(e => this.sceneLibrary.get(e.sceneId));
+		}
+		if (typeof selectSceneId === 'string' && this.sceneLibrary.get(selectSceneId)) {
+			this._selectSceneId = selectSceneId;
+		}
+		this._resolveActiveScene();
+	}
+
+	_notifyStateChange() {
+		if (!this.onStateChange) return;
+		this.onStateChange({
+			toggleStack: [...this._toggleStack],
+			selectSceneId: this._selectSceneId,
+		});
 	}
 
 	/**
@@ -82,6 +117,7 @@ export class SceneController {
 		this._toggleStack = this._toggleStack.filter(e => e.id !== id);
 		this._toggleStack.push({ id, sceneId });
 		this._resolveActiveScene();
+		this._notifyStateChange();
 	}
 
 	/**
@@ -91,6 +127,7 @@ export class SceneController {
 	removeToggleScene(id) {
 		this._toggleStack = this._toggleStack.filter(e => e.id !== id);
 		this._resolveActiveScene();
+		this._notifyStateChange();
 	}
 
 	/**
@@ -100,6 +137,7 @@ export class SceneController {
 	setSelectScene(sceneId) {
 		this._selectSceneId = sceneId;
 		this._resolveActiveScene();
+		this._notifyStateChange();
 	}
 
 	/**
@@ -117,6 +155,7 @@ export class SceneController {
 		this._toggleStack = [];
 		this._selectSceneId = sceneId;
 		this._resolveActiveScene();
+		this._notifyStateChange();
 		return true;
 	}
 
@@ -128,6 +167,7 @@ export class SceneController {
 		this._toggleStack = [];
 		this._selectSceneId = null;
 		this._resolveActiveScene();
+		this._notifyStateChange();
 	}
 
 	/**
@@ -176,5 +216,17 @@ export class SceneController {
 			this._selectSceneId = null;
 		}
 		this._resolveActiveScene();
+		this._notifyStateChange();
+	}
+
+	/**
+	 * Reset all persistent scene state and notify listeners.
+	 */
+	clearRuntimeState() {
+		this._momentaryStack = [];
+		this._toggleStack = [];
+		this._selectSceneId = null;
+		this._resolveActiveScene();
+		this._notifyStateChange();
 	}
 }
