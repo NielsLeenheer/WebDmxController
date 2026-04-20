@@ -20,6 +20,7 @@
     import DrawingView from './components/views/DrawingView.svelte';
     import FloatingPreview from './components/common/FloatingPreview.svelte';
     import { LaserManager } from './lib/outputs/laser/LaserManager.js';
+    import { loadRuntimeState, saveRuntimeState, clearRuntimeState } from './lib/runtimeState.js';
 
     let view = $state('devices');
     let connected = $state(false);
@@ -57,7 +58,11 @@
 
     function handleDisconnect() {
         dmxController.disconnect();
-        connected = false;
+    function handleClearState() {
+        if (!confirm('Clear all button and scene state?\n\nToggle buttons will turn off, group selections will reset, and scenes will return to default.')) return;
+        inputController.clearRuntimeState();
+        sceneController.clearRuntimeState();
+        clearRuntimeState();
     }
 
     // Handle sampled CSS values from CSSManager
@@ -95,6 +100,20 @@
 
         // Give input controller access to scene state for LED feedback
         inputController.setSceneController(sceneController);
+
+        // Restore persisted scene state before wiring the change callback so
+        // the initial notification reflects the restored scene.
+        const persistedState = loadRuntimeState();
+        sceneController.restoreState({
+            toggleStack: persistedState.toggleStack,
+            selectSceneId: persistedState.selectSceneId
+        });
+        sceneController.setOnStateChange((state) => {
+            saveRuntimeState({
+                toggleStack: state.toggleStack,
+                selectSceneId: state.selectSceneId
+            });
+        });
 
         // Wire up scene controller to CSS manager and LED refresh
         sceneController.setOnSceneChange((cssIdentifier) => {
@@ -152,6 +171,7 @@
         // Return cleanup function
         return () => {
             unsubscribe();
+            unsubscribeState();
             laserManager.destroy();
             cssManager.destroy();
             window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -162,7 +182,7 @@
 <Header
     onconnect={handleConnect}
     ondisconnect={handleDisconnect}
-    {connected}
+    onclearstate={handleClearState}
     {inputController}
 />
 

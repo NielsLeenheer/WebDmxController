@@ -17,7 +17,7 @@
     import openIcon from '../../assets/icons/open.svg?raw';
     import saveIcon from '../../assets/icons/save.svg?raw';
 
-    let { onconnect, ondisconnect, connected, inputController } = $props();
+    let { onconnect, ondisconnect, onclearstate, connected, inputController } = $props();
 
     let devicesDialog = $state(null);
     let settingsMenuRef = $state(null);
@@ -318,6 +318,8 @@
 <ContextMenu bind:contextRef={settingsMenuRef}>
     <ContextAction onclick={exportProject}>{@html saveIcon} Export Project</ContextAction>
     <ContextAction onclick={importProject}>{@html openIcon} Import Project</ContextAction>
+    <ContextSeparator />
+    <ContextAction onclick={() => onclearstate?.()}>{@html clearIcon} Clear State</ContextAction>
 </ContextMenu>
 
 <style>
