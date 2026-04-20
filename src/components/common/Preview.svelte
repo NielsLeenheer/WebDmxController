@@ -1292,6 +1292,29 @@
         transition: opacity 0.2s ease-out;
     }
 
+    /* Sparks layer — asterisks sit on top without clipping the glow */
+    .control-sparks {
+        overflow: visible;
+    }
+
+    /* Cleaning mode — solid black overlay */
+    .control-sparks-cleaning {
+        background: #000;
+    }
+
+    /* Individual spark asterisks */
+    .spark {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        aspect-ratio: 1 / 1;
+        overflow: visible;
+        pointer-events: none;
+        filter:
+            drop-shadow(0 0 1px #fff6d0)
+            drop-shadow(0 0 2px #ffd24a)
+            drop-shadow(0 0 3px rgba(255, 160, 20, 0.8));
+    }
+
     /* Dimmer layer (black overlay) */
     .control-dimmer {
         pointer-events: none;
