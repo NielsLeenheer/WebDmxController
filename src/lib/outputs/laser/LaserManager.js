@@ -14,6 +14,48 @@ import { resolveEnv } from '../../env.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+// Parser selection for SVG injection.
+//   'html'  — permissive HTML parser (via <template>). Accepts missing xmlns,
+//             unclosed tags, unquoted attributes, etc. Matches how browsers
+//             handle SVG inside HTML documents elsewhere on the page.
+//   'xml'   — strict XML parser (DOMParser with 'image/svg+xml'). Rejects
+//             malformed input with a parsererror node; kept as a fallback in
+//             case the HTML path misbehaves on some drawing.
+const SVG_PARSER = 'html';
+
+/**
+ * Parse an SVG markup string using the HTML parser (permissive).
+ * Returns the root <svg> element (detached from any document), or null.
+ */
+function parseSvgHTML(svgMarkup) {
+	const template = document.createElement('template');
+	template.innerHTML = svgMarkup;
+	const svg = template.content.querySelector('svg');
+	return svg || null;
+}
+
+/**
+ * Parse an SVG markup string using DOMParser (strict XML).
+ * Returns the imported <svg> element, or null on parse error.
+ */
+function parseSvgXML(svgMarkup) {
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(svgMarkup, 'image/svg+xml');
+	const parseError = doc.querySelector('parsererror');
+	if (parseError) {
+		console.warn('SVG parse error:', parseError.textContent);
+		return null;
+	}
+	return document.importNode(doc.documentElement, true);
+}
+
+/**
+ * Parse an SVG markup string. Dispatches to the parser selected by SVG_PARSER.
+ */
+function parseSvgMarkup(svgMarkup) {
+	return SVG_PARSER === 'html' ? parseSvgHTML(svgMarkup) : parseSvgXML(svgMarkup);
+}
+
 export class LaserManager {
 	constructor(deviceLibrary, drawingLibrary) {
 		this.deviceLibrary = deviceLibrary;
@@ -285,6 +327,9 @@ export class LaserManager {
 					cleanupScripts(this._previewSvgElement);
 				}
 
+				const svgElement = parseSvgMarkup(svgMarkup);
+				if (!svgElement) return [];
+
 				// Detach scripts and onload before appendChild to prevent
 				// auto-execution (see note in _injectDrawing).
 				const detachedScripts = Array.from(svgElement.querySelectorAll('script'));
@@ -423,17 +468,11 @@ export class LaserManager {
 		}
 
 		try {
-			const parser = new DOMParser();
-			const doc = parser.parseFromString(svgMarkup, 'image/svg+xml');
-			const parsedSvg = doc.documentElement;
-
-			const parseError = doc.querySelector('parsererror');
-			if (parseError) {
-				console.warn(`SVG parse error for drawing "${drawing.name}":`, parseError.textContent);
+			const svgElement = parseSvgMarkup(svgMarkup);
+			if (!svgElement) {
+				console.warn(`SVG parse error for drawing "${drawing.name}"`);
 				return;
 			}
-
-			const svgElement = document.importNode(parsedSvg, true);
 
 			// Set id from cssIdentifier
 			svgElement.id = drawing.cssIdentifier;
