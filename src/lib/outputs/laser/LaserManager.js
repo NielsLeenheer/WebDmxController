@@ -318,7 +318,7 @@ export class LaserManager {
 			} else if (trimmed.includes('<')) {
 				svgMarkup = `<svg xmlns="${SVG_NS}">${trimmed}</svg>`;
 			} else {
-				svgMarkup = `<svg xmlns="${SVG_NS}"><path d="${trimmed}" fill="none" stroke="green"/></svg>`;
+				svgMarkup = `<svg xmlns="${SVG_NS}"><path d="${trimmed}" fill="none" stroke="#00ff00"/></svg>`;
 			}
 
 			try {
@@ -464,7 +464,7 @@ export class LaserManager {
 		} else if (trimmed.includes('<')) {
 			svgMarkup = `<svg xmlns="${SVG_NS}">${trimmed}</svg>`;
 		} else {
-			svgMarkup = `<svg xmlns="${SVG_NS}"><path d="${trimmed}" fill="none" stroke="green"/></svg>`;
+			svgMarkup = `<svg xmlns="${SVG_NS}"><path d="${trimmed}" fill="none" stroke="#00ff00"/></svg>`;
 		}
 
 		try {
