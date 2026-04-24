@@ -5,6 +5,7 @@
     import { inputLibrary } from '../../stores.svelte.js';
     import { createDragDrop } from '../../lib/ui/dragdrop.svelte.js';
     import InputCard from '../cards/InputCard.svelte';
+    import InputDeviceCard from '../cards/InputDeviceCard.svelte';
     import GroupCard from '../cards/GroupCard.svelte';
     import Button from '../common/Button.svelte';
     import ContextMenu from '../common/ContextMenu.svelte';
@@ -19,6 +20,8 @@
     import audioIcon from '../../assets/icons/audio.svg?raw';
     import backIcon from '../../assets/icons/back.svg?raw';
     import forwardIcon from '../../assets/icons/forward.svg?raw';
+    import gridIcon from '../../assets/icons/grid.svg?raw';
+    import groupIcon from '../../assets/icons/group.svg?raw';
 
     let {
         inputController
@@ -38,6 +41,9 @@
     // Input listening controller
     let listeningController = $state(null);
     let isListening = $state(false);
+
+    // View mode: 'inputs' shows individual cards, 'devices' groups by device
+    let viewMode = $state('inputs');
 
     // Groups sidebar state
     let sidebarOpen = $state(false);
@@ -64,6 +70,20 @@
             group.inputs.push(input);
         }
         return [...byKey.values()];
+    });
+
+    // Group inputs by device for the devices view
+    let deviceGroups = $derived.by(() => {
+        const byDevice = new Map();
+        for (const input of inputs) {
+            const key = input.deviceId || '__unknown__';
+            const label = input.deviceName || input.deviceId || 'Unknown Device';
+            if (!byDevice.has(key)) {
+                byDevice.set(key, { deviceId: key, deviceName: label, inputs: [] });
+            }
+            byDevice.get(key).inputs.push(input);
+        }
+        return [...byDevice.values()];
     });
 
     // Build the per-group items passed to each GroupCard. `selected` comes
@@ -345,6 +365,29 @@
                 {@html sidebarOpen ? backIcon : forwardIcon}
             </button>
         {/if}
+
+        <div class="view-toggle">
+            <button
+                type="button"
+                class="view-toggle-btn"
+                class:active={viewMode === 'inputs'}
+                onclick={() => viewMode = 'inputs'}
+                title="Individual inputs"
+                aria-pressed={viewMode === 'inputs'}
+            >
+                {@html gridIcon}
+            </button>
+            <button
+                type="button"
+                class="view-toggle-btn"
+                class:active={viewMode === 'devices'}
+                onclick={() => viewMode = 'devices'}
+                title="Group by device"
+                aria-pressed={viewMode === 'devices'}
+            >
+                {@html groupIcon}
+            </button>
+        </div>
     </div>
 
     <div class="inputs-body">
@@ -362,17 +405,27 @@
             </aside>
         {/if}
 
-        <div class="inputs-grid">
+        <div class="inputs-grid" class:device-mode={viewMode === 'devices'}>
             {#if inputs.length === 0}
                 <div class="empty-state">
                     <p>No inputs detected yet. Start listening to detect inputs!</p>
                 </div>
-            {:else}
+            {:else if viewMode === 'inputs'}
                 {#each inputs as input (input.id)}
                     <InputCard
                         {input}
                         {dnd}
                         inputState={inputStates[input.id] || {}}
+                        onEdit={(input, anchor) => { contextInput = input; contextMenuRef?.show(input, anchor); }}
+                    />
+                {/each}
+            {:else}
+                {#each deviceGroups as group (group.deviceId)}
+                    <InputDeviceCard
+                        deviceId={group.deviceId}
+                        deviceName={group.deviceName}
+                        inputs={group.inputs}
+                        {inputStates}
                         onEdit={(input, anchor) => { contextInput = input; contextMenuRef?.show(input, anchor); }}
                     />
                 {/each}
@@ -457,6 +510,45 @@
         color: #333;
     }
 
+    .view-toggle {
+        position: absolute;
+        right: 40px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        gap: 4px;
+        align-items: center;
+    }
+
+    .view-toggle-btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        background: transparent;
+        color: #aaa;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.15s, background 0.15s, border-color 0.15s;
+    }
+
+    .view-toggle-btn :global(svg) {
+        width: 16px;
+        height: 16px;
+    }
+
+    .view-toggle-btn:hover {
+        color: #555;
+    }
+
+    .view-toggle-btn.active {
+        color: #333;
+        background: #f0f0f0;
+    }
+
     .inputs-body {
         flex: 1;
         display: flex;
@@ -472,6 +564,10 @@
         grid-template-columns: repeat(auto-fill, minmax(18em, 1fr));
         gap: 16px;
         align-content: start;
+    }
+
+    .inputs-grid.device-mode {
+        grid-template-columns: repeat(auto-fill, minmax(22em, 1fr));
     }
 
     .groups-sidebar {
