@@ -959,6 +959,17 @@
         font-weight: 700;
     }
 
+    .preview-small {
+        .gamepad-symbol {
+            font-size: 10px;
+            margin-top: calc(3px + var(--adjust-symbol-y, 0px) - var(--depth));
+
+        }
+        .gamepad-symbol.small-text {
+            font-size: 8px;
+        }
+    }
+
     .brand-sony.input-cross .gamepad-symbol { color: rgb(177, 177, 250); }
     .brand-sony.input-circle .gamepad-symbol { color: rgb(245, 186, 150); }
     .brand-sony.input-square .gamepad-symbol { color: rgb(215, 157, 215); }
