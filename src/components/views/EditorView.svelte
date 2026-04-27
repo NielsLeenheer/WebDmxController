@@ -175,6 +175,7 @@
                                     size="large"
                                     controls={previewData.controls}
                                     data={previewData.data}
+                                    deviceType={device.type}
                                     title={device.name}
                                     {laserManager}
                                 />

@@ -207,6 +207,7 @@
 				size="medium"
 				controls={controlPreview.controls}
 				data={controlPreview.data}
+				deviceType={device?.type}
 				class="trigger-preview"
 			/>
 			<div class="trigger-text">
@@ -228,6 +229,7 @@
 				size="medium"
 				controls={valuesPreview.controls}
 				data={valuesPreview.data}
+				deviceType={device?.type}
 				class="trigger-preview"
 			/>
 			<div class="trigger-text">

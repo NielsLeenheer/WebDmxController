@@ -22,6 +22,7 @@
         controls = [],
         data = {},
         state = {},       // Raw state object: { value?, x?, y?, state?, roll?, pitch?, yaw? }
+        deviceType = null, // Device type ID string — needed for wheel controls in type='controls' mode
         laserManager = null,
         class: className = '',
     } = $props();
@@ -352,7 +353,7 @@
         <!-- Color wheel layer (selected swatch color) -->
         {#if hasControl('color-wheel')}
             {@const wheelValue = effectiveData()['color-wheel'] ?? { index: 0, modifier: false, speed: 0 }}
-            {@const wheelControl = DEVICE_TYPES[data.type]?.controls.find(c => c.id === 'color-wheel')}
+            {@const wheelControl = DEVICE_TYPES[deviceType ?? data.type]?.controls.find(c => c.id === 'color-wheel')}
             {@const slot = wheelSelectedSlot(wheelControl, wheelValue)}
             <div class="control-layer control-color-wheel" style="background: {wheelSlotBackground(slot)}"></div>
         {/if}

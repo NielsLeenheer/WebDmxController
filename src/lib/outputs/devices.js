@@ -58,6 +58,10 @@ export function getDevicePreviewData(deviceType, controlValues) {
             // XY Pad control (Pan/Tilt) - keep as pantilt object
             controls.push('pantilt');
             data.pantilt = value;  // Keep as { pan, tilt } object
+        } else if (controlTypeId === 'wheel') {
+            // Wheel control (Color wheel / Pattern disk) - keep as-is
+            controls.push(control.id);  // 'color-wheel' or 'pattern-disk'
+            data[control.id] = value;
         }
     }
 

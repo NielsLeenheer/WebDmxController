@@ -79,6 +79,7 @@
 				size="medium"
 				controls={valuesPreview.controls}
 				data={valuesPreview.data}
+				deviceType={device.type}
 				class="scene-preview"
 			/>
 			<div class="scene-text">
