@@ -63,7 +63,7 @@
 <div
     class="floating-preview"
     bind:this={panelRef}
-    style="left: {panelX}px; {panelY !== null ? `top: ${panelY}px; bottom: auto;` : ''}"
+    style="{panelX !== null ? `left: ${panelX}px;` : ''} {panelY !== null ? `top: ${panelY}px; bottom: auto;` : ''}"
 >
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="preview-header" onmousedown={startDrag}>
@@ -76,7 +76,7 @@
     .floating-preview {
         position: fixed;
         bottom: 40px;
-        left: 40px;
+        right: 40px;
         z-index: 50;
         border-radius: 8px;
         overflow: hidden;
