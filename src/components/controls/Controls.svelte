@@ -1,6 +1,7 @@
 <script>
     import XYPad from './XYPad.svelte';
     import ToggleSwitch from '../common/ToggleSwitch.svelte';
+    import { remapDMXAxis } from '../../lib/outputs/controls.js';
 
     let {
         controls, // Array of control definitions
@@ -166,6 +167,14 @@
         {:else if control.type.type === 'xypad' || control.type.type === 'xypad16'}
             {@const controlValue = values[control.id] || { pan: 128, tilt: 128 }}
             {@const controlDisabled = isControlDisabled(control.id) || !isControlEnabled(control)}
+            {@const hasRemap = control.panMin !== undefined || control.panMax !== undefined || control.invertPan
+                || control.tiltMin !== undefined || control.tiltMax !== undefined || control.invertTilt}
+            {@const displayPan = hasRemap
+                ? remapDMXAxis(controlValue.pan, control.panMin ?? 0, control.panMax ?? 255, !!control.invertPan)
+                : null}
+            {@const displayTilt = hasRemap
+                ? remapDMXAxis(controlValue.tilt, control.tiltMin ?? 0, control.tiltMax ?? 255, !!control.invertTilt)
+                : null}
             <div class="control-xypad">
                 <div class="control-header">
                     {#if showCheckboxes}
@@ -186,26 +195,32 @@
                     />
                 </div>
                 <div class="xypad-inputs">
-                    <input
-                        type="text"
-                        value={controlValue.pan}
-                        oninput={handleTextInput}
-                        onchange={(e) => !controlDisabled && handleXYPadChange(control.id, parseInt(e.target.value) || 0, controlValue.tilt)}
-                        class="value-input"
-                        title="Pan"
-                        disabled={controlDisabled}
-                        maxlength="3"
-                    />
-                    <input
-                        type="text"
-                        value={controlValue.tilt}
-                        oninput={handleTextInput}
-                        onchange={(e) => !controlDisabled && handleXYPadChange(control.id, controlValue.pan, parseInt(e.target.value) || 0)}
-                        class="value-input"
-                        title="Tilt"
-                        disabled={controlDisabled}
-                        maxlength="3"
-                    />
+                    <div class="xypad-input-row">
+                        <input
+                            type="text"
+                            value={controlValue.pan}
+                            oninput={handleTextInput}
+                            onchange={(e) => !controlDisabled && handleXYPadChange(control.id, parseInt(e.target.value) || 0, controlValue.tilt)}
+                            class="value-input"
+                            title="Pan"
+                            disabled={controlDisabled}
+                            maxlength="3"
+                        />
+                        {#if displayPan !== null}<div class="dmx-value" title="DMX pan">{displayPan}</div>{/if}
+                    </div>
+                    <div class="xypad-input-row">
+                        <input
+                            type="text"
+                            value={controlValue.tilt}
+                            oninput={handleTextInput}
+                            onchange={(e) => !controlDisabled && handleXYPadChange(control.id, controlValue.pan, parseInt(e.target.value) || 0)}
+                            class="value-input"
+                            title="Tilt"
+                            disabled={controlDisabled}
+                            maxlength="3"
+                        />
+                        {#if displayTilt !== null}<div class="dmx-value" title="DMX tilt">{displayTilt}</div>{/if}
+                    </div>
                 </div>
             </div>
         {:else if control.type.type === 'rgb'}
@@ -690,7 +705,21 @@
         gap: 4px;
     }
 
+    .xypad-input-row {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+
     .xypad-inputs input {
+        width: 4em;
+    }
+
+    .dmx-value {
+        font-size: 8pt;
+        color: #888;
+        text-align: right;
         width: 4em;
     }
 

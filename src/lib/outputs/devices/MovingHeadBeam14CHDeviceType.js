@@ -22,6 +22,10 @@ import { CONTROL_TYPES } from '../controls/index.js';
  *
  * UI order mirrors the other moving heads (pantilt, speed, dimmer, strobe, color, …)
  * — channel assignments are unchanged; only the render order differs.
+ *
+ * Tilt is restricted to DMX 128–255 (upper half of the physical range)
+ * to avoid the head spinning through the full rotation on vertical movement.
+ * Set `invertTilt: true` on the pantilt control definition to flip the tilt direction.
  */
 export class MovingHeadBeam14CHDeviceType extends DeviceType {
 	constructor() {
@@ -29,12 +33,16 @@ export class MovingHeadBeam14CHDeviceType extends DeviceType {
 			id: 'moving-head-beam-14ch',
 			name: 'Moving Head Beam (14ch)',
 			channels: 14,
-			defaultValues: [0, 0, 255, 0, 0, 64, 0, 128, 0, 128, 0, 0, 0, 0],
+			//                           col str dim pat prm mac foc  pan panF tilt tltF spd aut rst
+			defaultValues: [0, 0, 255, 0, 0, 64, 0, 128, 0, 192, 0, 0, 0, 0],
 			controls: [
 				{
 					id: 'pantilt',
 					type: CONTROL_TYPES.PanTilt16,
-					startChannel: 7
+					startChannel: 7,
+					tiltMin: 128,  // Restrict to upper half — avoids full rotation on tilt
+					invertTilt: true,  // Uncomment to invert the tilt axis
+					// invertPan: true,   // Uncomment to invert the pan axis
 				},
 				{
 					id: 'speed',

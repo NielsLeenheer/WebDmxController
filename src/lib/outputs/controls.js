@@ -26,6 +26,12 @@ export function controlValuesToDMX(deviceType, controlValues) {
 	// Start with device default values (all channels)
 	const dmxArray = [...deviceType.defaultValues];
 
+	// Remaps a 0-255 internal value to a [min, max] DMX sub-range, with optional inversion.
+	function remapDMX(value, min, max, invert) {
+		const mapped = min + (value / 255) * (max - min);
+		return Math.round(invert ? max + min - mapped : mapped);
+	}
+
 	// Process each control defined in the device type
 	for (const controlDef of deviceType.controls) {
 		if (controlDef.separator) continue;
@@ -39,6 +45,20 @@ export function controlValuesToDMX(deviceType, controlValues) {
 		// Get DMX values from control type
 		// Input: plain object/number, Output: plain array
 		const controlDMX = controlDef.type.valueToDMX(value);
+
+		// Per-axis range remapping and inversion for pantilt (xypad/xypad16) controls.
+		// panMin/panMax/invertPan and tiltMin/tiltMax/invertTilt can be set on the control
+		// definition to constrain or flip individual axes without touching the control type.
+		const ct = controlDef.type.type;
+		if (ct === 'xypad' || ct === 'xypad16') {
+			const tiltIdx = ct === 'xypad16' ? 2 : 1;
+			if (controlDef.panMin !== undefined || controlDef.panMax !== undefined || controlDef.invertPan) {
+				controlDMX[0] = remapDMX(controlDMX[0], controlDef.panMin ?? 0, controlDef.panMax ?? 255, !!controlDef.invertPan);
+			}
+			if (controlDef.tiltMin !== undefined || controlDef.tiltMax !== undefined || controlDef.invertTilt) {
+				controlDMX[tiltIdx] = remapDMX(controlDMX[tiltIdx], controlDef.tiltMin ?? 0, controlDef.tiltMax ?? 255, !!controlDef.invertTilt);
+			}
+		}
 
 		// Write to correct channels. `inverted: true` flips each channel
 		// (255 - n) — useful when the physical device expects the opposite
@@ -72,6 +92,11 @@ export function controlValuesToDMX(deviceType, controlValues) {
  * //   ...
  * // }
  */
+export function remapDMXAxis(value, min, max, invert) {
+	const mapped = min + (value / 255) * (max - min);
+	return Math.round(invert ? max + min - mapped : mapped);
+}
+
 export function createDefaultControlValues(deviceType) {
 	const controlValues = {};
 
